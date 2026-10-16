@@ -1,0 +1,26 @@
+# Shared commit-message rules, fetched on `install` and pinned to a tag.
+remotes:
+  - git_url: https://github.com/shbernal/lefthook-rules
+    ref: v1
+    configs:
+      - rules/no-ai-attribution.yml
+    refetch_frequency: 24h
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: format
+      glob: "*.py"
+      run: uv run ruff format {staged_files}
+      stage_fixed: true
+    - name: lint
+      glob: "*.py"
+      run: uv run ruff check {staged_files}
+    - name: types
+      glob: "*.py"
+      run: uv run ty check
+
+pre-push:
+  jobs:
+    - name: test
+      run: uv run pytest

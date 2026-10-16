@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+# Personal data for local development and live tests: answers, resumes,
+# posting URLs, sessions. Never committed.
+.env
+.tmp/

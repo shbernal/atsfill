@@ -1,0 +1,59 @@
+import argparse
+import dataclasses
+import json
+import sys
+from pathlib import Path
+
+from atsfill import core
+from atsfill.core.results import Result, Status, StatusReport
+
+OK = {Status.READY, Status.SUBMITTED}
+
+
+def parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="atsfill")
+    p.add_argument("--data-dir", type=Path)
+    sub = p.add_subparsers(dest="command", required=True)
+    sub.add_parser("read").add_argument("url")
+    for name in ("fill", "send"):
+        c = sub.add_parser(name)
+        c.add_argument("url")
+        c.add_argument("--answers", required=True, help="JSON file, - for stdin")
+    sub.choices["send"].add_argument("--resend", action="store_true")
+    sub.add_parser("status")
+    for name in ("login", "logout"):
+        sub.add_parser(name).add_argument("adapter")
+    return p
+
+
+def load_answers(path: str) -> dict:
+    return json.load(sys.stdin) if path == "-" else json.loads(Path(path).read_text())
+
+
+def run(args: argparse.Namespace) -> int:
+    match args.command:
+        case "read":
+            result = core.read(args.url, data_dir=args.data_dir)
+        case "fill":
+            result = core.fill(args.url, load_answers(args.answers), data_dir=args.data_dir)
+        case "send":
+            answers = load_answers(args.answers)
+            result = core.send(args.url, answers, resend=args.resend, data_dir=args.data_dir)
+        case "status":
+            report = core.status(data_dir=args.data_dir)
+            emit(report)
+            return 0
+        case "login" | "logout":
+            getattr(core, args.command)(args.adapter, data_dir=args.data_dir)
+            return 0
+    emit(result)
+    return 0 if result.status in OK else 1
+
+
+def emit(value: Result | StatusReport) -> None:
+    json.dump(dataclasses.asdict(value), sys.stdout, default=str, ensure_ascii=False, indent=2)
+    sys.stdout.write("\n")
+
+
+def main() -> None:
+    sys.exit(run(parser().parse_args()))
