@@ -7,6 +7,7 @@ Fields are identified by a stable `id` from the form (the input's `name`, the sy
 `fill` and `send` take one JSON map `{field_id: value}` from the answers file. Its value is typed by the field:
 
 - `text`, `phone`, `choice`, `typeahead`: a string, for a typeahead the text to type;
+- `date`: a string, `YYYY-MM-DD`, whatever the page displays;
 - `multi_choice`: a list of strings;
 - `file`: an absolute path.
 
@@ -17,6 +18,7 @@ The read-back is compared to the answers by field type:
 | Type | Matches when |
 |---|---|
 | `text` | equal after trimming whitespace and Unicode normalization |
+| `date` | equal |
 | `choice`, `multi_choice` | each value equals one of the field's options |
 | `typeahead` | the picked suggestion was chosen from the answer's text ("Paris" for "Paris, Île-de-France, France") |
 | `file` | the base names are equal |

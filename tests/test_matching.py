@@ -17,6 +17,8 @@ def field(kind: FieldType, options: list[str] | None = None, required: bool = Tr
         (FieldType.TEXT, None, " Île ", "Île", True),
         (FieldType.TEXT, None, "I\u0302le", "Île", True),
         (FieldType.TEXT, None, "a", "b", False),
+        (FieldType.DATE, None, "2026-11-02", "2026-11-02", True),
+        (FieldType.DATE, None, "2026-11-02", "2026-02-11", False),
         (FieldType.CHOICE, LEVELS, LEVELS[1], LEVELS[1], True),
         (FieldType.CHOICE, LEVELS, LEVELS[1], LEVELS[0], False),
         (FieldType.CHOICE, LEVELS, "Fluent", "Fluent", False),
@@ -43,6 +45,9 @@ def test_problems_before_filling():
         "cv: a file answer is an absolute path",
     ]
     assert problems(fields, {}) == ["no answer for required f (F)"]
+    date = Field("d", "Start", FieldType.DATE, False)
+    assert problems([date], {"d": "11/02/2026"}) == ["d: a date answer is YYYY-MM-DD"]
+    assert problems([date], {"d": "2026-11-02"}) == []
 
 
 def test_a_click_without_outcome_blocks_the_next_send(tmp_path):

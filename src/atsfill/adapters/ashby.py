@@ -1,26 +1,37 @@
-"""Ashby (`jobs.ashbyhq.com`).
+"""Ashby (`jobs.ashbyhq.com`, and career pages embedding it), as docs/adapters/ashby.md observes.
 
-Every change posts `ApiSetFormValue`, whose response holds the whole form as Ashby will
-receive it: that is the read-back. The location combobox saves only a picked suggestion.
-Radio inputs are hidden behind their option's text. Submit runs reCAPTCHA Enterprise; a low
-score comes back as `RECAPTCHA_SCORE_BELOW_THRESHOLD`, shown as "flagged as possible spam".
+Every change posts `ApiSetFormValue`, whose response holds the form as Ashby will receive it:
+that is the read-back, kept per form since a survey answer returns the survey alone.
 """
 
 import json
 import time
+import urllib.request
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core.adapter import Blocked, Unsupported
-from atsfill.core.browser import Page, Response
+from atsfill.core.browser import Page, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "jobs.ashbyhq.com"
+GRAPHQL = f"https://{HOST}/api/non-user-graphql?op=ApiJobPosting"
+# The fields of the page's own ApiJobPosting query that `read_form` uses.
+JOB_POSTING = """query ApiJobPosting($org: String!, $job: String!) {
+  jobPosting(organizationHostedJobsPageName: $org, jobPostingId: $job) {
+    applicationForm { ...Form }
+    surveyForms { ...Form }
+  }
+}
+fragment Form on FormRender {
+  sections { isHidden fieldEntries { field isRequired isHidden } }
+}"""
+EMBED_TIMEOUT_MS = 15_000
 TYPES = {
     "String": FieldType.TEXT,
     "Email": FieldType.TEXT,
     "LongText": FieldType.TEXT,
-    "Date": FieldType.TEXT,
+    "Date": FieldType.DATE,
     "Number": FieldType.TEXT,
     "Phone": FieldType.PHONE,
     "File": FieldType.FILE,
@@ -32,6 +43,16 @@ TYPES = {
 SETTLE_S = 1.5
 READ_BACK_TIMEOUT_S = 30
 SUBMIT_TIMEOUT_MS = 90_000
+
+
+def _hosted(url: str) -> str:
+    """`https://jobs.ashbyhq.com/<org>/<job id>`, without the page or query after it."""
+    org, job = urlsplit(url).path.strip("/").split("/")[:2]
+    return f"https://{HOST}/{org}/{job}"
+
+
+def _paths(render: dict[str, Any]) -> set[str]:
+    return {e["field"]["path"] for s in render["sections"] for e in s["fieldEntries"]}
 
 
 def _op(response: Response) -> str:
@@ -48,19 +69,53 @@ class Ashby:
     ]
 
     def __init__(self) -> None:
-        self._render: dict[str, Any] | None = None
+        self._forms: list[dict[str, Any]] = []  # the application form, then each survey
         self._pending = 0
         self._last_change = 0.0
+        self._hosted: str | None = None  # the jobs.ashbyhq.com posting a custom domain embeds
 
     def detect(self, url: str, page: Page | None) -> bool:
-        return urlsplit(url).hostname == HOST
+        """`jobs.ashbyhq.com`, or a career page whose Ashby embed opens the `ashby_jid` job."""
+        if urlsplit(url).hostname == HOST:
+            return True
+        jid = parse_qs(urlsplit(url).query).get("ashby_jid", [None])[0]
+        if page is None or jid is None:
+            return False
+        frame = page.locator(f'iframe[src^="https://{HOST}/"][src*="/{jid}"]').first
+        try:
+            frame.wait_for(state="attached", timeout=EMBED_TIMEOUT_MS)
+        except Timeout:
+            return False
+        self._hosted = _hosted(frame.get_attribute("src") or "")
+        return True
 
     def posting(self, url: str) -> str:
-        org, job = urlsplit(url).path.strip("/").split("/")[:2]
-        return f"https://{HOST}/{org}/{job}"
+        return _hosted(url) if urlsplit(url).hostname == HOST else self._hosted or url
 
     def read_api(self, url: str) -> list[Field] | None:
-        return None
+        """The fields from the GraphQL query the job page itself sends, for a hosted URL."""
+        if urlsplit(url).hostname != HOST:
+            return None
+        org, job = urlsplit(_hosted(url)).path.strip("/").split("/")
+        variables = {"org": org, "job": job}
+        request = urllib.request.Request(
+            GRAPHQL,
+            json.dumps({"query": JOB_POSTING, "variables": variables}).encode(),
+            {
+                "Content-Type": "application/json",
+                "apollographql-client-name": "frontend_non_user",
+                "User-Agent": "atsfill",  # Cloudflare turns away Python-urllib
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                job_posting = json.load(response)["data"]["jobPosting"]
+            if not job_posting:
+                return None
+            self._forms = [job_posting["applicationForm"], *job_posting["surveyForms"]]
+            return [self._field(e) for e in self._entries()]
+        except OSError, ValueError, KeyError, TypeError, Unsupported:
+            return None
 
     def read_form(self, page: Page) -> list[Field]:
         page.on("request", self._on_request)
@@ -72,9 +127,7 @@ class Ashby:
         job = posting.value.json()["data"]["jobPosting"]
         if job is None:
             raise Unsupported("posting_gone")
-        if job.get("surveyForms"):
-            raise Unsupported("form_shape: survey forms after the application form")
-        self._render = job["applicationForm"]
+        self._forms = [job["applicationForm"], *job["surveyForms"]]
         page.wait_for_selector(".ashby-application-form-submit-button")
         return [self._field(e) for e in self._entries()]
 
@@ -84,7 +137,7 @@ class Ashby:
             entry = page.locator(f'[data-field-path="{field_id}"]')
             entry.scroll_into_view_if_needed()
             match fields[field_id].type, answer:
-                case FieldType.TEXT | FieldType.PHONE, str():
+                case FieldType.TEXT | FieldType.DATE | FieldType.PHONE, str():
                     box = entry.locator("input, textarea").first
                     box.fill(answer)
                     box.blur()
@@ -118,7 +171,7 @@ class Ashby:
 
     def submit(self, page: Page) -> str | None:
         with page.expect_response(
-            lambda r: _op(r).startswith("ApiSubmit") and _op(r).endswith("FormAction"),
+            lambda r: _op(r).startswith("ApiSubmit") and _op(r).endswith("Action"),
             timeout=SUBMIT_TIMEOUT_MS,
         ) as submitted:
             page.locator(".ashby-application-form-submit-button").click()
@@ -139,10 +192,10 @@ class Ashby:
         raise Blocked(f"form_errors: {errors}")
 
     def _entries(self) -> list[dict[str, Any]]:
-        assert self._render is not None
         return [
             e
-            for s in self._render["sections"]
+            for form in self._forms
+            for s in form["sections"]
             if not s.get("isHidden")
             for e in s["fieldEntries"]
             if not e.get("isHidden")
@@ -185,6 +238,14 @@ class Ashby:
             case _:
                 return labels.get(value, str(value))
 
+    def _replace(self, render: dict[str, Any]) -> None:
+        """Puts a returned render in place of the form holding the same fields: a survey
+        answer returns the survey alone, under an id of its own."""
+        paths = _paths(render)
+        for i, form in enumerate(self._forms):
+            if _paths(form) == paths:
+                self._forms[i] = render
+
     def _on_request(self, request: Any) -> None:
         if "/api/non-user-graphql" in request.url:
             self._pending += 1
@@ -198,4 +259,4 @@ class Ashby:
         if _op(response) == "ApiSetFormValue" and response.ok:
             render = response.json()["data"]["setFormValue"]
             if render:
-                self._render = render
+                self._replace(render)

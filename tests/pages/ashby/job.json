@@ -1,0 +1,33 @@
+{
+  "applicationForm": {
+    "id": "application",
+    "sections": [
+      {
+        "isHidden": null,
+        "fieldEntries": [
+          {"isRequired": true, "isHidden": null, "field": {"path": "_systemfield_name", "title": "Name", "type": "String"}},
+          {"isRequired": true, "isHidden": null, "field": {"path": "_systemfield_resume", "title": "Resume", "type": "File"}},
+          {"isRequired": false, "isHidden": null, "field": {"path": "_systemfield_location", "title": "Location", "type": "Location"}},
+          {"isRequired": false, "isHidden": null, "field": {"path": "start", "title": "Earliest start date", "type": "Date"}},
+          {"isRequired": true, "isHidden": null, "field": {"path": "right", "title": "Do you have the right to work in France?", "type": "Boolean"}},
+          {"isRequired": false, "isHidden": null, "field": {"path": "level", "title": "English level", "type": "ValueSelect", "selectableValues": [{"label": "Native", "value": "native"}, {"label": "Fluent", "value": "fluent"}]}},
+          {"isRequired": false, "isHidden": null, "field": {"path": "langs", "title": "Languages", "type": "MultiValueSelect", "selectableValues": [{"label": "French", "value": "fr"}, {"label": "English", "value": "en"}]}},
+          {"isRequired": false, "isHidden": true, "field": {"path": "hidden", "title": "Hidden", "type": "String"}}
+        ]
+      }
+    ]
+  },
+  "surveyForms": [
+    {
+      "id": "survey-definition",
+      "sections": [
+        {
+          "isHidden": null,
+          "fieldEntries": [
+            {"isRequired": false, "isHidden": null, "field": {"path": "age", "title": "What is your age?", "type": "ValueSelect", "selectableValues": [{"label": "30-39", "value": "age_30_39"}, {"label": "I prefer not to answer", "value": "decline"}]}}
+          ]
+        }
+      ]
+    }
+  ]
+}

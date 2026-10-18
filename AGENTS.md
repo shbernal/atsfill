@@ -6,6 +6,7 @@
 
 - Key documentation
   - [docs/adr/](docs/adr/README.md) the decisions the design rests on
+  - [docs/adapters/](docs/adapters/) each hiring system as observed
 
 - Rules
   - Public repository. Personal data (answers, resumes, posting URLs, sessions) lives only in the gitignored `.env` and `.tmp/`, never in commits, fixtures or docs.

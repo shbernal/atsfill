@@ -14,6 +14,7 @@ class Status(StrEnum):
 
 class FieldType(StrEnum):
     TEXT = "text"
+    DATE = "date"  # answered YYYY-MM-DD
     CHOICE = "choice"
     MULTI_CHOICE = "multi_choice"
     TYPEAHEAD = "typeahead"

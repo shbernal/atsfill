@@ -28,6 +28,8 @@ def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
     match field.type:
         case FieldType.TEXT:
             return _norm(answer) == _norm(read_back)
+        case FieldType.DATE:
+            return answer == read_back
         case FieldType.CHOICE:
             return answer == read_back and _in_options(field, [answer])
         case FieldType.TYPEAHEAD:
@@ -61,6 +63,8 @@ def _answer_problem(field: Field, answer: object) -> str | None:
         values = [answer]
     if field.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE) and not _in_options(field, values):
         return f"{answer!r} is not one of {field.options}"
+    if field.type is FieldType.DATE and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", values[0]):
+        return "a date answer is YYYY-MM-DD"
     if field.type is FieldType.FILE:
         path = Path(values[0])
         if not path.is_absolute():

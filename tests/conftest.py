@@ -1,4 +1,5 @@
 import functools
+import os
 import threading
 from collections.abc import Generator
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -29,3 +30,17 @@ def server() -> Generator[str]:
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         yield f"http://localhost:{httpd.server_port}"
         httpd.shutdown()
+
+
+def _load_env() -> None:
+    """Live tests read their postings and answers from the gitignored .env."""
+    path = Path(__file__).parent.parent / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        key, sep, value = line.partition("=")
+        if sep and not key.startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip())
+
+
+_load_env()

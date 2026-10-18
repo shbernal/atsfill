@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- Ashby's application page as the adapter meets it: every change is posted to
+     ApiSetFormValue, radios and checkboxes hide behind their text, the location saves only a
+     picked suggestion, and survey answers go to the survey's own render. -->
+<style>input[hidden] { display: none; }</style>
+<form>
+  <fieldset data-field-path="_systemfield_name"><input data-form="application"></fieldset>
+  <fieldset data-field-path="_systemfield_resume"><input type="file" data-form="application"></fieldset>
+  <fieldset data-field-path="_systemfield_location">
+    <input role="combobox" id="location">
+    <div id="suggestions"></div>
+  </fieldset>
+  <fieldset data-field-path="start"><input placeholder="Pick date..." data-form="application"></fieldset>
+  <fieldset data-field-path="right">
+    <label><input type="radio" name="right" value="true" hidden data-form="application"><span>Yes</span></label>
+    <label><input type="radio" name="right" value="false" hidden data-form="application"><span>No</span></label>
+  </fieldset>
+  <fieldset data-field-path="level">
+    <label><input type="radio" name="level" value="native" hidden data-form="application"><span>Native</span></label>
+    <label><input type="radio" name="level" value="fluent" hidden data-form="application"><span>Fluent</span></label>
+  </fieldset>
+  <fieldset data-field-path="langs">
+    <label><input type="checkbox" name="langs" value="fr" hidden data-form="application"><span>French</span></label>
+    <label><input type="checkbox" name="langs" value="en" hidden data-form="application"><span>English</span></label>
+  </fieldset>
+  <fieldset data-field-path="age">
+    <label><input type="radio" name="age" value="age_30_39" hidden data-form="survey-render"><span>30-39</span></label>
+    <label><input type="radio" name="age" value="decline" hidden data-form="survey-render"><span>I prefer not to answer</span></label>
+  </fieldset>
+  <button type="button" class="ashby-application-form-submit-button">Submit Application</button>
+</form>
+<script>
+  const api = (op, variables) => fetch(`/api/non-user-graphql?op=${op}`, {
+    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({variables}),
+  });
+  const save = (form, path, value) => api("ApiSetFormValue", {formRenderIdentifier: form, path, value});
+  api("ApiJobPosting", {});
+  document.querySelectorAll("[data-form]").forEach(input => input.addEventListener("change", () => {
+    const path = input.closest("[data-field-path]").dataset.fieldPath;
+    const form = input.dataset.form;
+    if (input.type === "file") return save(form, path, {filename: input.files[0].name});
+    if (input.type === "checkbox") {
+      return save(form, path, [...document.querySelectorAll(`[name=${input.name}]:checked`)].map(e => e.value));
+    }
+    if (input.type === "radio") return save(form, path, input.value === "true" ? true : input.value === "false" ? false : input.value);
+    save(form, path, input.value);
+  }));
+  const location_ = document.getElementById("location");
+  location_.addEventListener("input", () => {
+    const suggestions = document.getElementById("suggestions");
+    suggestions.innerHTML = "";
+    if (location_.value.length < 2) return;
+    const option = document.createElement("div");
+    option.setAttribute("role", "option");
+    option.textContent = "Paris, Île-de-France, France";
+    option.onclick = () => {
+      location_.value = option.textContent;
+      suggestions.innerHTML = "";
+      save("application", "_systemfield_location", {text: option.textContent});
+    };
+    suggestions.append(option);
+  });
+  document.querySelector(".ashby-application-form-submit-button").onclick = () => api("ApiSubmitMultipleFormsAction", {});
+</script>
