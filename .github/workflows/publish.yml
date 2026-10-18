@@ -19,8 +19,12 @@ jobs:
           UV_PUBLISH_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
       - name: Install from TestPyPI
         run: |
-          uvx --index https://test.pypi.org/simple/ --index-strategy unsafe-best-match \
-            "atsfill@$(uv version --short)" --help
+          for wait in 10 20 40 80; do
+            sleep "$wait"
+            uvx --refresh --index https://test.pypi.org/simple/ --index-strategy unsafe-best-match \
+              "atsfill@$(uv version --short)" --help && exit 0
+          done
+          exit 1
       - name: Publish to PyPI
         run: uv publish --check-url https://pypi.org/simple/
         env:
