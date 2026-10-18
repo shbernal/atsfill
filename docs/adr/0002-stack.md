@@ -13,6 +13,6 @@
 
 ## Consequences
 
-Camoufox passes Ashby's reCAPTCHA Enterprise, whose refusal only shows on submit: real Ashby `send`s, on a virtual display and in plain headless (ADR 0004), ended `FormSubmitSuccess` on 2026-10-18, where stock Playwright is refused with `RECAPTCHA_SCORE_BELOW_THRESHOLD`. Camoufox downloads its own Firefox build (about 300 MB) instead of using an installed browser.
+Camoufox passes Ashby's reCAPTCHA Enterprise, whose refusal only shows on submit: real Ashby `send`s, on a virtual display and in plain headless (ADR 0004), ended `FormSubmitSuccess` on 2026-10-18, where stock Playwright is refused with `RECAPTCHA_SCORE_BELOW_THRESHOLD`. Camoufox downloads its own Firefox build (1.3 GB, about 2.5 GB unpacked) instead of using an installed browser.
 
 `camoufox` and `playwright` are imported in one module, the browser launcher. Everything else takes a page or a context, so a change of browser library touches one file.
