@@ -6,15 +6,25 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
+from camoufox.exceptions import CamoufoxNotInstalled
 from camoufox.fingerprints import Screen, generate_fingerprint
+from camoufox.pkgman import installed_verstr
 from camoufox.sync_api import Camoufox
 from playwright.sync_api import Browser, Page, Response
 from playwright.sync_api import TimeoutError as Timeout
 
-__all__ = ["Page", "Response", "Timeout", "open_page"]
+__all__ = ["Page", "Response", "Timeout", "open_page", "version"]
 
 MIN_SCREEN_HEIGHT = 1050  # leaves the window the 900px Greenhouse and Teamtailor need
 HOST_OS = {"Linux": "linux", "Darwin": "macos", "Windows": "windows"}[platform.system()]
+
+
+def version() -> str:
+    """The installed Camoufox build, or `not installed`."""
+    try:
+        return installed_verstr()
+    except CamoufoxNotInstalled:
+        return "not installed"
 
 
 def identity(data_dir: Path) -> dict:

@@ -1,7 +1,8 @@
+from importlib.metadata import version
 from pathlib import Path
 
 from atsfill.adapters import ADAPTERS
-from atsfill.core import attempts, matching, paths
+from atsfill.core import attempts, browser, matching, paths
 from atsfill.core.adapter import Adapter, Blocked, Unsupported
 from atsfill.core.browser import Page, open_page
 from atsfill.core.results import Answer, Result, Status, StatusReport
@@ -31,8 +32,16 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) ->
     return result
 
 
+type Sessions = dict[str, Path]
+
+
 def _form_command(
-    url: str, answers: dict[str, Answer], data_dir: Path | None, send: bool, resend: bool
+    url: str,
+    answers: dict[str, Answer],
+    data_dir: Path | None,
+    sessions: Sessions | None,
+    send: bool,
+    resend: bool,
 ) -> Result:
     data = paths.data_dir(data_dir)
     with open_page(data) as page:
@@ -64,12 +73,18 @@ def _form_command(
         return result
 
 
-def read(url: str, *, data_dir: Path | None = None) -> Result:
+def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = None) -> Result:
     raise NotImplementedError
 
 
-def fill(url: str, answers: dict[str, Answer], *, data_dir: Path | None = None) -> Result:
-    return _form_command(url, answers, data_dir, send=False, resend=False)
+def fill(
+    url: str,
+    answers: dict[str, Answer],
+    *,
+    data_dir: Path | None = None,
+    sessions: Sessions | None = None,
+) -> Result:
+    return _form_command(url, answers, data_dir, sessions, send=False, resend=False)
 
 
 def send(
@@ -78,12 +93,19 @@ def send(
     *,
     resend: bool = False,
     data_dir: Path | None = None,
+    sessions: Sessions | None = None,
 ) -> Result:
-    return _form_command(url, answers, data_dir, send=True, resend=resend)
+    return _form_command(url, answers, data_dir, sessions, send=True, resend=resend)
 
 
 def status(*, data_dir: Path | None = None) -> StatusReport:
-    raise NotImplementedError
+    return StatusReport(
+        version=version("atsfill"),
+        data_dir=paths.data_dir(data_dir),
+        config=paths.config_file(),
+        browser=browser.version(),
+        adapters=[],
+    )
 
 
 def login(adapter: str, *, data_dir: Path | None = None) -> None:

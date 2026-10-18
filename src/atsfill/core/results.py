@@ -75,5 +75,6 @@ class AdapterState:
 class StatusReport:
     version: str
     data_dir: Path
+    config: Path
     browser: str
     adapters: list[AdapterState]
