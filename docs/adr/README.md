@@ -7,7 +7,7 @@ One file per decision, numbered in the order they were taken. A decision that ch
 | [0001](0001-application-forms-as-a-cli.md) | Application forms as a CLI: `read`, `fill` (dry run), `send` |
 | [0002](0002-stack.md) | Python with ty, Camoufox, uv, MIT, PyPI |
 | [0003](0003-adapters.md) | One adapter per hiring system, rules owned by the core |
-| [0004](0004-browser.md) | A logged-out Camoufox per command on a virtual display, one saved identity, a fresh context each time, one command at a time |
+| [0004](0004-browser.md) | A logged-out headless Camoufox per command, one saved identity, a fresh context each time, one command at a time |
 | [0005](0005-answers-and-read-back.md) | Answers keyed by field id, read-back matched by field type |
 | [0006](0006-submit-gate.md) | Dry run by default, submit enabled in the user's config file, fixed statuses, a double-send guard |
 | [0007](0007-data-directory-and-sessions.md) | Data directory, per-adapter sessions and the login command |

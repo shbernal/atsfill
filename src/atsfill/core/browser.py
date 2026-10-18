@@ -29,14 +29,10 @@ def identity(data_dir: Path) -> dict:
 
 
 @contextmanager
-def open_page(data_dir: Path, *, headless: bool | None = None) -> Generator[Page]:
-    """A page in a fresh context of a fresh logged-out browser, closed on exit.
-
-    Linux runs headed on a private virtual display unless `headless` is set.
-    """
-    mode = ("virtual" if HOST_OS == "linux" else True) if headless is None else headless
+def open_page(data_dir: Path) -> Generator[Page]:
+    """A page in a fresh context of a fresh logged-out headless browser, closed on exit."""
     with Camoufox(
-        headless=mode,
+        headless=True,
         fingerprint=identity(data_dir),
         os=HOST_OS,
         i_know_what_im_doing=True,
