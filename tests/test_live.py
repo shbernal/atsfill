@@ -8,6 +8,7 @@ import pytest
 
 from atsfill import core
 from atsfill.adapters.ashby import Ashby
+from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.core import browser
 from atsfill.core.results import Status
 
@@ -20,17 +21,22 @@ def env(name: str) -> str:
     return value
 
 
-def test_ashby_reads_the_same_fields_over_http_and_from_the_page(tmp_path):
-    url = env("ATSFILL_LIVE_ASHBY_URL")
-    over_http = Ashby().read_api(url)
+@pytest.mark.parametrize("adapter", [Ashby, Greenhouse])
+def test_reads_the_same_fields_over_http_and_from_the_page(adapter, tmp_path):
+    """Same ids, types and required flags; the API carries no length limit or file types."""
+    url = env(f"ATSFILL_LIVE_{adapter.__name__.upper()}_URL")
+    over_http = adapter().read_api(url)
     assert over_http is not None
-    adapter = Ashby()
+    on_page = adapter()
     with browser.open_page(tmp_path) as page:
         page.goto(url)
-        assert adapter.read_form(page) == over_http
+        on_page.detect(url, page)
+        from_page = on_page.read_form(page)
+    shape = lambda fields: sorted((f.id, f.type, f.required) for f in fields)  # noqa: E731
+    assert shape(from_page) == shape(over_http)
 
 
-@pytest.mark.parametrize("system", ["ashby", "teamtailor"])
+@pytest.mark.parametrize("system", ["ashby", "teamtailor", "greenhouse"])
 def test_dry_run_is_ready(system, tmp_path):
     url = env(f"ATSFILL_LIVE_{system.upper()}_URL")
     answers = json.loads(Path(env(f"ATSFILL_LIVE_{system.upper()}_ANSWERS")).read_text())

@@ -1,0 +1,110 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- A Greenhouse job board application as the adapter meets it: react-selects that open only
+     once the page is live (Country saves only on Enter and shows a flag, Location suggests as
+     you type), a checkbox group, a consent box that appears with the live page, and an attach
+     that swaps its input for the file's name. -->
+<style>.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; }</style>
+<form id="application-form">
+  <div class="field-wrapper">
+    <label id="first_name-label" for="first_name">First Name<span aria-hidden="true">*</span></label>
+    <input id="first_name" type="text" maxlength="255" aria-required="true">
+  </div>
+  <fieldset class="phone-input"><legend class="visually-hidden">Phone</legend>
+    <div class="select" data-options="France +33:fr|Canada +1:ca|United States +1:us" data-enter-only>
+      <label id="country-label" for="country">Country<span aria-hidden="true">*</span></label>
+      <input id="country" role="combobox" aria-required="true">
+    </div>
+    <label id="phone-label" for="phone">Phone<span aria-hidden="true">*</span></label>
+    <input id="phone" type="tel" aria-required="true">
+  </fieldset>
+  <div class="select" data-suggest="Paris, France|Paris, Texas, United States">
+    <label id="candidate-location-label" for="candidate-location">Location (City)<span aria-hidden="true">*</span></label>
+    <input id="candidate-location" role="combobox" aria-required="true">
+  </div>
+  <div role="group" aria-labelledby="upload-label-resume" aria-required="true" class="file-upload">
+    <div id="upload-label-resume" class="label upload-label">Resume/CV<span class="required">*</span></div>
+    <div class="file-upload__wrapper">
+      <button type="button">Attach</button>
+      <label class="visually-hidden" for="resume">Attach</label>
+      <input id="resume" class="visually-hidden" type="file" accept=".pdf,.doc">
+    </div>
+  </div>
+  <div class="select" data-options="Yes|No">
+    <label id="question_1-label" for="question_1">Do you need sponsorship?<span aria-hidden="true">*</span></label>
+    <input id="question_1" role="combobox" aria-required="true">
+  </div>
+  <fieldset class="checkbox" id="question_2[]" aria-required="false">
+    <legend>Which languages do you speak?</legend>
+    <input type="checkbox" id="question_2[]_1" name="question_2[]" value="1"><label for="question_2[]_1">French</label>
+    <input type="checkbox" id="question_2[]_2" name="question_2[]" value="2"><label for="question_2[]_2">English</label>
+  </fieldset>
+  <div class="select" data-options="Male|Female|Decline To Self Identify">
+    <label id="4000952002-label" for="4000952002">Gender</label>
+    <input id="4000952002" role="combobox" aria-required="false">
+  </div>
+  <div id="late"></div>
+  <button type="submit">Submit application</button>
+</form>
+<script>
+  // The page goes live late, like a hydrating React app: until then selects do not open.
+  setTimeout(() => {
+    document.getElementById("late").outerHTML = `
+      <div class="checkbox" id="gdpr_processing_consent_given">
+        <input type="checkbox" id="gdpr_processing_consent_given_1" name="gdpr_processing_consent_given" value="1" aria-required="true">
+        <label for="gdpr_processing_consent_given_1">I agree to the processing of my data.<span class="required">*</span></label>
+      </div>`;
+    document.querySelectorAll(".select").forEach(live);
+  }, 800);
+
+  function live(select) {
+    const input = select.querySelector("input");
+    const id = input.id;
+    const shown = document.createElement("div");
+    shown.className = "select__single-value";
+    select.append(shown);
+    const fixed = (select.dataset.options || "").split("|").filter(Boolean).map(o => o.split(":"));
+    const suggest = select.dataset.suggest?.split("|");
+    let focused = null, listbox = null;
+    const close = () => { listbox?.remove(); listbox = null; focused = null; };
+    const pick = ([label, flag]) => {
+      shown.innerHTML = flag ? `<div class="iti__flag iti__${flag}"></div><span>${label.split(" ").pop()}</span>` : label;
+      input.value = "";
+      close();
+    };
+    const open = () => {
+      close();
+      const query = input.value.toLowerCase();
+      const items = suggest ? (query.length > 1 ? suggest.map(s => [s]) : []) : fixed.filter(([l]) => l.toLowerCase().includes(query));
+      listbox = document.createElement("div");
+      listbox.id = `react-select-${id}-listbox`;
+      listbox.setAttribute("role", "listbox");
+      for (const item of items) {
+        const option = document.createElement("div");
+        option.setAttribute("role", "option");
+        option.innerHTML = item[1] ? `<div class="iti__flag iti__${item[1]}"></div>${item[0]}` : item[0];
+        option.onmouseover = () => focused = item;
+        option.onmousedown = e => { e.preventDefault(); if (!("enterOnly" in select.dataset)) pick(item); };
+        listbox.append(option);
+      }
+      focused = items[0] ?? null;
+      if (items.length || !suggest) select.append(listbox);
+    };
+    input.addEventListener("mousedown", open);
+    input.addEventListener("input", () => suggest ? setTimeout(open, 200) : open());
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter" && focused) { e.preventDefault(); pick(focused); }
+      if (e.key === "Escape") close();
+    });
+  }
+
+  document.getElementById("resume").addEventListener("change", e => {
+    const name = e.target.files[0].name;
+    e.target.closest(".file-upload__wrapper").innerHTML =
+      `<div class="file-upload__filename"><p>${name}</p><button type="button" aria-label="Remove file"></button></div>`;
+  });
+  document.getElementById("application-form").onsubmit = e => {
+    e.preventDefault();
+    location.href = location.pathname + "/confirmation";
+  };
+</script>
