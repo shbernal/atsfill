@@ -1,0 +1,96 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- A Teamtailor application page as the adapter meets it: the cookie banner is a modal dialog
+     that leaves the form inert, the resume uploads to storage and the form keeps its address,
+     required labels carry an asterisk, and a choice can be a dropdown over hidden radios. -->
+<style>.hidden { display: none; } [role=menu][hidden] { display: none; }</style>
+<dialog id="cookies">
+  <button data-action="click->common--cookies--alert#acceptAll">Accept all cookies</button>
+  <button data-action="click->common--cookies--alert#disableAll">Decline all non-necessary cookies</button>
+</dialog>
+<form id="job-application-form" action="/applications" method="post">
+  <input type="hidden" name="authenticity_token" value="x">
+  <input type="hidden" name="candidate[linkedin_url]">
+  <div data-controller="forms--inputs--text">
+    <label for="candidate_first_name">Prénom<sup data-asterisk="true">*</sup><span class="sr-only">Requis</span></label>
+    <input type="text" maxlength="50" name="candidate[first_name]" id="candidate_first_name">
+  </div>
+  <div data-controller="forms--inputs--text">
+    <label for="candidate_email">E-mail<sup data-asterisk="true">*</sup><span class="sr-only">Requis</span></label>
+    <input type="email" name="candidate[email]" id="candidate_email">
+  </div>
+  <div data-controller="forms--inputs--upload">
+    <label for="candidate_resume_remote_url">Importer un CV<sup data-asterisk="true">*</sup></label>
+    <input type="file" accept=".pdf,.docx" id="candidate_resume_remote_url">
+  </div>
+  <div class="question" data-question-mandatory="true" data-question-multiple-choice="false">
+    <input type="hidden" name="candidate[answers_attributes][0][question_id]" value="101">
+    <fieldset><legend><span>Êtes-vous disponible ?<sup data-asterisk="true">*</sup></span></legend>
+      <div><input type="radio" value="true" name="candidate[answers_attributes][0][boolean]" id="b-true"><label for="b-true"> Oui </label></div>
+      <div><input type="radio" value="false" name="candidate[answers_attributes][0][boolean]" id="b-false"><label for="b-false"> Non </label></div>
+    </fieldset>
+  </div>
+  <div class="question" data-question-mandatory="false" data-question-multiple-choice="false">
+    <input type="hidden" name="candidate[answers_attributes][1][question_id]" value="102">
+    <fieldset><legend><span>Où avez-vous vu l'annonce ?</span></legend>
+      <div class="hidden">
+        <input type="radio" value="1" name="candidate[answers_attributes][1][choice]" id="c-1"><label for="c-1">LinkedIn</label>
+        <input type="radio" value="2" name="candidate[answers_attributes][1][choice]" id="c-2"><label for="c-2">Site carrière</label>
+      </div>
+      <button type="button" aria-haspopup="menu" aria-expanded="false">Choisir une option</button>
+      <div role="menu" hidden>
+        <button type="button" role="menuitemradio" data-value="1" data-search-text="LinkedIn">LinkedIn</button>
+        <button type="button" role="menuitemradio" data-value="2" data-search-text="Site carrière">Site carrière</button>
+      </div>
+    </fieldset>
+  </div>
+  <div class="question" data-question-mandatory="false" data-question-multiple-choice="true">
+    <input type="hidden" name="candidate[answers_attributes][2][question_id]" value="103">
+    <fieldset><legend><span>Langues</span></legend>
+      <div><input type="checkbox" value="1" name="candidate[answers_attributes][2][choices][]" id="l-1"><label for="l-1">Français</label></div>
+      <div><input type="checkbox" value="2" name="candidate[answers_attributes][2][choices][]" id="l-2"><label for="l-2">Anglais</label></div>
+    </fieldset>
+  </div>
+  <div class="question" data-question-mandatory="false" data-question-multiple-choice="false">
+    <input type="hidden" name="candidate[answers_attributes][3][question_id]" value="104">
+    <label for="d">Date de début</label>
+    <input type="date" name="candidate[answers_attributes][3][date]" id="d">
+  </div>
+  <div>
+    <input name="candidate[consent_given]" type="hidden" value="0">
+    <input type="checkbox" value="1" name="candidate[consent_given]" id="candidate_consent_given">
+    <label for="candidate_consent_given"><span class="sr-only">Requis.</span>J'accepte la politique de confidentialité.<sup data-asterisk="true">*</sup></label>
+  </div>
+  <input type="submit" name="commit" value="Envoyer">
+</form>
+<footer><a href="https://www.teamtailor.com/?utm_campaign=poweredby">Outil de recrutement de Teamtailor</a></footer>
+<script>
+  const cookies = document.getElementById("cookies");
+  cookies.showModal();
+  cookies.querySelectorAll("button").forEach(b => b.onclick = () => cookies.close());
+  document.getElementById("candidate_resume_remote_url").addEventListener("change", e => {
+    const name = e.target.files[0].name;
+    setTimeout(() => {
+      const held = document.createElement("input");
+      Object.assign(held, {type: "text", className: "hidden", name: "candidate[resume_remote_url]",
+        value: `https://storage.example/tmpuploads/0f1e/${encodeURIComponent(name)}`});
+      e.target.parentElement.append(held);
+    }, 300);
+  });
+  document.querySelectorAll("[aria-haspopup]").forEach(trigger => {
+    const menu = trigger.nextElementSibling;
+    trigger.onclick = () => {
+      menu.hidden = !menu.hidden;
+      trigger.setAttribute("aria-expanded", String(!menu.hidden));
+    };
+    menu.querySelectorAll("[role=menuitemradio]").forEach(item => item.onclick = () => {
+      trigger.closest(".question").querySelector(`input[value="${item.dataset.value}"]`).checked = true;
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+    });
+  });
+  document.getElementById("job-application-form").onsubmit = e => {
+    e.preventDefault();
+    location.href = location.pathname.replace("/applications/new", "/applications/456/thanks");
+  };
+</script>

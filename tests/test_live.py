@@ -30,8 +30,9 @@ def test_ashby_reads_the_same_fields_over_http_and_from_the_page(tmp_path):
         assert adapter.read_form(page) == over_http
 
 
-def test_ashby_dry_run_is_ready(tmp_path):
-    url = env("ATSFILL_LIVE_ASHBY_URL")
-    answers = json.loads(Path(env("ATSFILL_LIVE_ASHBY_ANSWERS")).read_text())
+@pytest.mark.parametrize("system", ["ashby", "teamtailor"])
+def test_dry_run_is_ready(system, tmp_path):
+    url = env(f"ATSFILL_LIVE_{system.upper()}_URL")
+    answers = json.loads(Path(env(f"ATSFILL_LIVE_{system.upper()}_ANSWERS")).read_text())
     result = core.fill(url, answers, data_dir=tmp_path)
-    assert result.status is Status.READY, result.reason
+    assert (result.status, result.system) == (Status.READY, system), result.reason
