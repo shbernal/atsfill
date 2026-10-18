@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from atsfill import core
+from atsfill.core import browser
 from atsfill.core.results import Result, Status, StatusReport
 
 OK = {Status.READY, Status.SUBMITTED}
@@ -36,6 +37,7 @@ def parser() -> argparse.ArgumentParser:
             c.add_argument("--answers", required=True, help="JSON file, - for stdin")
     sub.choices["send"].add_argument("--resend", action="store_true")
     sub.add_parser("status")
+    sub.add_parser("install-browser", help="download the Camoufox build atsfill is pinned to")
     for name in ("login", "logout"):
         sub.add_parser(name).add_argument("adapter")
     return p
@@ -67,6 +69,8 @@ def run(args: argparse.Namespace) -> int:
             report = core.status(data_dir=args.data_dir)
             emit(report)
             return 0
+        case "install-browser":
+            return browser.install()
         case "login" | "logout":
             getattr(core, args.command)(args.adapter, data_dir=args.data_dir)
             return 0

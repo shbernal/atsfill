@@ -4,7 +4,7 @@ from pathlib import Path
 from atsfill.adapters import ADAPTERS
 from atsfill.core import attempts, browser, matching, paths
 from atsfill.core.adapter import Adapter, Blocked, Unsupported
-from atsfill.core.browser import Page, open_page
+from atsfill.core.browser import OutOfTime, Page, open_page
 from atsfill.core.results import Answer, Result, Status, StatusReport
 
 
@@ -44,6 +44,13 @@ def _form_command(
     resend: bool,
 ) -> Result:
     data = paths.data_dir(data_dir)
+    try:
+        return _on_page(data, url, answers, send, resend)
+    except OutOfTime as e:  # past the click, `_on_page` reports `unknown` itself
+        return Result(Status.BLOCKED, url, reason=f"time_budget: {e}")
+
+
+def _on_page(data: Path, url: str, answers: dict[str, Answer], send: bool, resend: bool) -> Result:
     with open_page(data) as page:
         page.goto(url)
         adapter = _adapter(url, page)
