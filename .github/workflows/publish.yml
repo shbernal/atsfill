@@ -22,6 +22,6 @@ jobs:
           uv run --isolated --no-project --index testpypi --index-strategy unsafe-best-match \
             --with "atsfill==$(uv version --short)" atsfill --help
       - name: Publish to PyPI
-        run: uv publish
+        run: uv publish --check-url https://pypi.org/simple/
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
