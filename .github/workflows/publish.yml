@@ -1,11 +1,23 @@
 name: Publish
 
 on:
+  # Pushing a `vX.Y.Z` tag is the release.
   push:
     tags: ["v*"]
+  # The next channel: every push to `main` that passes CI, published as a dev release.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+# Only the newest commit on `main` is worth a next build; a release never cancels.
+concurrency:
+  group: ${{ github.event_name == 'workflow_run' && 'publish-next' || format('publish-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_run' }}
 
 jobs:
   publish:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -29,3 +41,31 @@ jobs:
         run: uv publish --check-url https://pypi.org/simple/
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+
+  # PyPI has no dist-tags. A dev release (`0.0.3.dev42`: next patch, publish run number)
+  # plays the part, since pip and uv skip pre-releases unless asked for one. PyPI refuses
+  # local versions, so the commit is in the run, not the version. The version is written to
+  # the working tree only, never committed. A CI run for a commit `main` has moved past
+  # publishes nothing; the run for the newer commit does.
+  next:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.head_sha == github.sha
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - uses: astral-sh/setup-uv@v10.3.0
+      - name: Set the dev version
+        run: uv version --bump patch --bump "dev=$GITHUB_RUN_NUMBER" --frozen
+      - run: uv build
+      - name: Publish to PyPI
+        run: uv publish
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      - name: Summary
+        run: echo "Published \`atsfill==$(uv version --short)\`." >> "$GITHUB_STEP_SUMMARY"
