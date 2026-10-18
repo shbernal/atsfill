@@ -15,6 +15,16 @@ def _in_options(field: Field, values: list[str]) -> bool:
     return field.options is None or all(v in field.options for v in values)
 
 
+def _picked_from(answer: str, suggestion: str) -> bool:
+    """The suggestion starts with the answer, or holds its comma-separated parts in order:
+    "Paris" and "Paris, France" both pick "Paris, Île-de-France, France"."""
+    answer, suggestion = _norm(answer).casefold(), _norm(suggestion).casefold()
+    if suggestion.startswith(answer):
+        return True
+    parts = iter(p.strip() for p in suggestion.split(","))
+    return all(any(p == wanted.strip() for p in parts) for wanted in answer.split(","))
+
+
 def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
     if read_back is None:
         return False
@@ -33,7 +43,7 @@ def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
         case FieldType.CHOICE:
             return answer == read_back and _in_options(field, [answer])
         case FieldType.TYPEAHEAD:
-            return _norm(read_back).casefold().startswith(_norm(answer).casefold())
+            return _picked_from(answer, read_back)
         case FieldType.FILE:
             return PurePath(answer).name == PurePath(read_back).name
         case FieldType.PHONE:

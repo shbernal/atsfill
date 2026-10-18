@@ -20,7 +20,7 @@ The read-back is compared to the answers by field type:
 | `text` | equal after trimming whitespace and Unicode normalization |
 | `date` | equal |
 | `choice`, `multi_choice` | each value equals one of the field's options |
-| `typeahead` | the picked suggestion was chosen from the answer's text ("Paris" for "Paris, Île-de-France, France") |
+| `typeahead` | the picked suggestion starts with the answer's text, or holds its comma-separated parts in order ("Paris" or "Paris, France" for "Paris, Île-de-France, France") |
 | `file` | the base names are equal |
 | `phone` | the digits and the country are equal |
 

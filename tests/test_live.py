@@ -36,9 +36,11 @@ def test_reads_the_same_fields_over_http_and_from_the_page(adapter, tmp_path):
     assert shape(from_page) == shape(over_http)
 
 
-@pytest.mark.parametrize("system", ["ashby", "teamtailor", "greenhouse"])
+@pytest.mark.parametrize("system", ["ashby", "teamtailor", "greenhouse", "wttj"])
 def test_dry_run_is_ready(system, tmp_path):
     url = env(f"ATSFILL_LIVE_{system.upper()}_URL")
     answers = json.loads(Path(env(f"ATSFILL_LIVE_{system.upper()}_ANSWERS")).read_text())
-    result = core.fill(url, answers, data_dir=tmp_path)
+    session = os.environ.get(f"ATSFILL_LIVE_{system.upper()}_SESSION")
+    sessions = {system: Path(session)} if session else None
+    result = core.fill(url, answers, data_dir=tmp_path, sessions=sessions)
     assert (result.status, result.system) == (Status.READY, system), result.reason

@@ -26,6 +26,8 @@ def field(kind: FieldType, options: list[str] | None = None, required: bool = Tr
         (FieldType.MULTI_CHOICE, LEVELS, LEVELS, LEVELS[:1], False),
         (FieldType.TYPEAHEAD, None, "Paris", "Paris, Île-de-France, France", True),
         (FieldType.TYPEAHEAD, None, "Paris", "Lyon, France", False),
+        (FieldType.TYPEAHEAD, None, "Paris, France", "Paris, Île-de-France, France", True),
+        (FieldType.TYPEAHEAD, None, "Paris, France", "Paris, Texas, United States", False),
         (FieldType.FILE, None, "/a/resume.pdf", "resume.pdf", True),
         (FieldType.FILE, None, "/a/resume.pdf", "cv.pdf", False),
         (FieldType.PHONE, None, "+33 6 12 34 56 78", "+33612345678", True),

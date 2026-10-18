@@ -6,7 +6,7 @@ from pathlib import Path
 from atsfill.adapters import ADAPTERS
 from atsfill.core import accounts, attempts, browser, matching, paths
 from atsfill.core.adapter import Adapter, Blocked, NeedsAccount, Unsupported
-from atsfill.core.browser import OutOfTime, Page, open_page
+from atsfill.core.browser import Covered, OutOfTime, Page, open_page
 from atsfill.core.results import (
     AdapterState,
     Answer,
@@ -73,13 +73,20 @@ def _stops(result: Result) -> Generator[None]:
         result.status, result.reason = Status.UNSUPPORTED, str(e)
     except Blocked as e:
         result.status, result.reason = Status.BLOCKED, str(e)
+    except Covered as e:
+        result.status, result.reason = Status.BLOCKED, f"covered: {e}"
 
 
 def _in_budget(url: str, command: Callable[[], Result]) -> Result:
+    """Runs a command to a status whatever happens: past the click it reports `unknown` itself,
+    before it an error the adapter did not expect means the page is not one it handles."""
     try:
         return command()
-    except OutOfTime as e:  # past the click, the send reports `unknown` itself
+    except OutOfTime as e:
         return Result(Status.BLOCKED, url, reason=f"time_budget: {e}")
+    except Exception as e:
+        reason = f"adapter_error: {type(e).__name__}: {e}"
+        return Result(Status.UNSUPPORTED, url, reason=reason)
 
 
 def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) -> Result:
@@ -120,7 +127,7 @@ def _form_command(
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
-        posting = adapter.posting(url)
+        posting = adapter.posting(page.url)  # past any redirect a link goes through
         if send and not paths.submit_enabled(adapter.name):
             reason = f"submit_not_enabled: add {adapter.name} to `submit` in {paths.config_file()}"
             return Result(Status.REFUSED, url, adapter.name, reason=reason)

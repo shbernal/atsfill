@@ -1,0 +1,180 @@
+"""Welcome to the Jungle (`welcometothejungle.com` jobs and their `easyapply.jobs` links), as
+docs/adapters/wttj.md observes.
+
+Applying needs an account: the form opens in a modal, prefilled from the profile. Nothing is
+sent before submit, so the read-back is the form's inputs and the CV's shown name.
+"""
+
+import re
+import time
+from typing import Any
+from urllib.parse import urlsplit
+
+from atsfill.core import browser, matching
+from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.browser import Locator, Page, Request, Timeout
+from atsfill.core.results import Answer, Field, FieldType, SideEffect
+
+HOST = "www.welcometothejungle.com"
+JOB = re.compile(r"^/(?:[a-z]{2}/)?companies/([^/]+)/jobs/([^/?#]+)")
+FORM = "form:has([name=cover_letter])"
+ME = "https://api.welcometothejungle.com/api/v2/users/me"
+FORM_TIMEOUT_MS = 20_000
+SIGNED_IN_TIMEOUT_S = 10
+SUBMIT_TIMEOUT_MS = 90_000
+YES_NO = ["Yes", "No"]
+
+# The fillable fields: an input's name is its id. Email comes from the account, disabled.
+_READ = """form => [...form.querySelectorAll("input[name], textarea[name]")]
+  .filter(e => !e.disabled && e.name !== "avatar")
+  .map(e => {
+    const label = form.querySelector(`label[for="${CSS.escape(e.id)}"]`);
+    return {id: e.name, tag: e.tagName.toLowerCase(), type: e.type,
+            label: (label ?? e.closest("fieldset")?.querySelector("legend"))?.textContent
+              .replace(/\\s+/g, " ").trim() ?? "",
+            required: e.required || label?.hasAttribute("required"),
+            accept: e.accept ? e.accept.split(",") : null};
+  })"""
+
+_READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
+  const e = form.querySelector(`[name="${id}"]`);
+  if (e?.type === "checkbox") return [id, e.checked ? "Yes" : "No"];
+  if (e?.type === "file") {
+    return [id, e.parentElement.querySelector("[data-id]")?.dataset.id ?? null];
+  }
+  return [id, e?.value ?? null];
+}))"""
+
+
+class WelcomeToTheJungle:
+    name = "wttj"
+    login_url = f"https://{HOST}/en/signin"
+    side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
+
+    def __init__(self) -> None:
+        self._fields: dict[str, Field] = {}
+
+    def detect(self, url: str, page: Page | None) -> bool:
+        parts = urlsplit(url)
+        if parts.hostname == "easyapply.jobs":
+            return parts.path.startswith("/r/")
+        return parts.hostname == HOST and bool(JOB.match(parts.path))
+
+    def posting(self, url: str) -> str:
+        """`easyapply.jobs` links resolve to the job, so the key comes from the loaded page."""
+        match = JOB.match(urlsplit(url).path)
+        return f"https://{HOST}/companies/{match[1]}/jobs/{match[2]}" if match else url
+
+    def signed_in(self, request: Request) -> bool:
+        """`users/me` answers 200 for an account, 204 for a visitor."""
+        return request.get(ME).status == 200
+
+    def read_api(self, url: str) -> list[Field] | None:
+        return None
+
+    def read_form(self, page: Page) -> list[Field]:
+        """Opens the apply modal; a job that applies on another site has no form here."""
+        if not JOB.match(urlsplit(page.url).path):
+            raise Unsupported(f"form_shape: {page.url} is not a Welcome to the Jungle job")
+        apply = page.locator('[data-testid="job_header-button-apply"]').first
+        apply.wait_for()
+        href = apply.get_attribute("href")
+        deadline = time.monotonic() + SIGNED_IN_TIMEOUT_S
+        while href and "/signin" in href and time.monotonic() < deadline:
+            page.wait_for_timeout(250)  # rendered for a visitor until the page knows the account
+            href = apply.get_attribute("href")
+        if href and "/signin" in href:
+            raise Blocked("login_required: run `atsfill login wttj`")
+        if href:
+            raise Unsupported(f"form_shape: the job applies on another site ({href})")
+        form = page.locator(FORM).first
+        if not form.is_visible():  # an easyapply link opens the form by itself
+            try:
+                browser.click(apply)
+            except browser.Covered:
+                if not form.is_visible():
+                    raise
+        try:
+            form.wait_for(timeout=FORM_TIMEOUT_MS)
+        except Timeout:
+            raise Unsupported("form_shape: the apply button opened no form") from None
+        fields = []
+        for raw in form.evaluate(_READ):
+            field = _field(raw)
+            if field is None and raw["required"]:
+                raise Unsupported(f"form_shape: {raw['label']!r} is a {raw['type']} question")
+            if field is not None:
+                fields.append(field)
+        self._fields = {f.id: f for f in fields}
+        return fields
+
+    def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        form = page.locator(FORM).first
+        for field_id, answer in answers.items():
+            target = form.locator(f'[name="{field_id}"]')
+            match self._fields[field_id].type, answer:
+                case FieldType.FILE, str():
+                    remove = target.locator("xpath=..").locator("button[title=Remove]")
+                    if remove.count():
+                        remove.click()  # the profile's CV; never made the default
+                    target.set_input_files(answer)
+                    form.locator(f'[data-id="{answer.rsplit("/", 1)[-1]}"]').wait_for()
+                case FieldType.CHOICE, str():
+                    if target.is_checked() != (answer == "Yes"):
+                        browser.click(form.locator(f'label[for="{target.get_attribute("id")}"]'))
+                case FieldType.TYPEAHEAD, str():
+                    _suggest(page, self._fields[field_id], target, answer)
+                case FieldType.TEXT | FieldType.PHONE, str():
+                    target.fill(answer)
+                case kind, _:
+                    reason = f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
+                    raise Unsupported(reason)
+
+    def read_back(self, page: Page) -> dict[str, Answer]:
+        values = page.locator(FORM).first.evaluate(_READ_BACK, list(self._fields))
+        return {k: v for k, v in values.items() if v not in (None, "")}
+
+    def submit(self, page: Page) -> str | None:
+        with page.expect_response(
+            lambda r: r.request.method == "POST" and r.url.split("?")[0].endswith("/applications"),
+            timeout=SUBMIT_TIMEOUT_MS,
+        ) as sent:
+            browser.click(page.locator('[data-testid="apply-form-submit"]'))
+        response = sent.value
+        if response.status == 201:
+            reference = response.json().get("application", {}).get("reference")
+            return f"POST {urlsplit(response.url).path} {response.status}, reference {reference}"
+        raise RuntimeError(f"POST {response.url} answered {response.status}")
+
+
+def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
+    """Retypes the answer key by key, which loads the suggestions, and picks the first that
+    matches it, never "current position" (the item with an icon, which geolocates)."""
+    box.click()
+    box.press("Control+a")  # `fill("")`, select-all and Delete, leaves the profile's value
+    box.press("Backspace")
+    box.press_sequentially(answer, delay=30)
+    options = page.locator("[role=option]:visible").filter(has_not=page.locator("svg"))
+    options.first.wait_for()
+    for i in range(options.count()):
+        if matching.matches(field, answer, options.nth(i).inner_text().strip()):
+            options.nth(i).click()
+            return
+    raise Unsupported(f"form_shape: no suggestion for {answer!r} in {field.id}")
+
+
+def _field(raw: dict[str, Any]) -> Field | None:
+    """The field an input is, None for one atsfill cannot fill."""
+    name, kind, options = raw["id"], None, None
+    match raw["type"]:
+        case "file":
+            kind = FieldType.FILE
+        case "checkbox" if name == "consent":
+            kind, options = FieldType.CHOICE, YES_NO
+        case "text" | "textarea" | "email":
+            kind = {"phone": FieldType.PHONE, "location": FieldType.TYPEAHEAD}.get(
+                name, FieldType.TEXT
+            )
+    if kind is None:
+        return None
+    return Field(name, raw["label"], kind, bool(raw["required"]), options, None, raw["accept"])

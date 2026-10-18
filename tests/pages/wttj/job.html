@@ -1,0 +1,78 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- A Welcome to the Jungle job as the adapter meets it, signed in: the apply button is a
+     sign-in link until the page knows the account, the form opens in a modal prefilled from the
+     profile with its CV, the location suggests only as you type with "current position" first,
+     the location box keeps the profile's value unless emptied with Backspace, and the send is a
+     POST to /api/v1/applications. -->
+<a data-testid="job_header-button-apply" href="/en/authenticate/signin">Postuler</a>
+<div id="portal"></div>
+<template id="modal">
+  <form novalidate>
+    <fieldset><legend>Mes informations</legend>
+      <label for="firstname" required><span>Prénom</span></label>
+      <input id="firstname" name="firstname" type="text" required value="Ada">
+      <label for="email"><span>E-mail</span></label>
+      <input id="email" name="email" type="email" disabled value="ada@example.com">
+      <label for="phone" required><span>Téléphone</span></label>
+      <input id="phone" name="phone" type="text" required value="+33 6 00 00 00 00">
+      <label for="location"><span>Lieu de résidence actuel</span></label>
+      <div role="combobox"><input id="location" name="location" autocomplete="off" value="Lyon, France"></div>
+      <ul role="listbox" id="suggestions"></ul>
+    </fieldset>
+    <fieldset><legend>Mon expérience</legend>
+      <label for="resume" required><span>CV</span></label>
+      <div>
+        <div id="cv"><div data-id="profile-resume.pdf"><div>profile-resume.pdf</div><button title="Remove" type="button">×</button></div></div>
+        <input accept="application/pdf" name="resume" id="resume" required type="file">
+      </div>
+      <label for="questions.ab12" required><span>Why this role?</span></label>
+      <textarea name="questions.ab12" id="questions.ab12" required></textarea>
+    </fieldset>
+    <fieldset><legend>Lettre de motivation</legend>
+      <textarea name="cover_letter" id="cover_letter"></textarea>
+    </fieldset>
+    <input type="checkbox" name="consent" id="consent" required>
+    <label for="consent">J'accepte que mes données soient traitées.</label>
+    <button type="submit" data-testid="apply-form-submit">J’envoie ma candidature !</button>
+  </form>
+</template>
+<script>
+  const apply = document.querySelector("[data-testid=job_header-button-apply]");
+  setTimeout(() => apply.removeAttribute("href"), 500);  // the page now knows the account
+  apply.addEventListener("click", e => {
+    if (apply.hasAttribute("href")) return;
+    document.getElementById("portal").append(document.getElementById("modal").content.cloneNode(true));
+    const form = document.querySelector("#portal form");
+    form.querySelector("[title=Remove]").onclick = () => document.getElementById("cv").innerHTML = "";
+    form.querySelector("#resume").onchange = e => {
+      const name = e.target.files[0].name;
+      document.getElementById("cv").innerHTML = `<div data-id="${name}"><div>${name}</div></div>`;
+    };
+    const location_ = form.querySelector("#location");
+    let key = null;  // emptied other than by Backspace (Playwright's fill("") presses Delete), it comes back
+    location_.addEventListener("keydown", e => key = e.key);
+    location_.addEventListener("keyup", () => key = null);
+    location_.addEventListener("input", () => {
+      if (location_.value === "" && key !== "Backspace") {
+        location_.value = location_.defaultValue;
+      }
+    });
+    location_.addEventListener("keyup", () => {
+      const list = document.getElementById("suggestions");
+      list.innerHTML = location_.value.length < 3 ? "" :
+        '<li role="option"><svg></svg><span>Position actuelle</span></li>' +
+        ["Paris, Île-de-France, France", "Paris La Défense, Île-de-France, France"]
+          .filter(s => s.toLowerCase().startsWith(location_.value.split(",")[0].toLowerCase()))
+          .map(s => `<li role="option"><span>${s}</span></li>`).join("");
+      list.querySelectorAll("li").forEach(li => li.onclick = () => {
+        location_.value = li.textContent;
+        list.innerHTML = "";
+      });
+    });
+    form.onsubmit = async e => {
+      e.preventDefault();
+      await fetch("https://api.welcometothejungle.com/api/v1/applications", {method: "POST", body: new FormData(form)});
+    };
+  });
+</script>

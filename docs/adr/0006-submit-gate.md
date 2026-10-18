@@ -21,7 +21,7 @@
 | `unknown` | submit was clicked and no evidence came before the time budget ran out |
 | `unsupported` | no adapter for the system, an account required, or a form shape the adapter does not handle; the reason comes back |
 
-The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `email_code`, `time_budget`, `no_adapter`, `form_shape: …`, `no_evidence`, `error_after_click: …`.
+The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `email_code`, `time_budget`, `covered: …` (what sits on a control), `no_adapter`, `form_shape: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`.
 
 The exit code is 0 for `ready` and `submitted`, 1 for any other status, 2 for a usage error.
 
