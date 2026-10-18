@@ -55,7 +55,7 @@ class Result:
     status: Status
     url: str
     system: str | None = None
-    reason: str | None = None
+    reason: str | None = None  # `code` or `code: detail`, the code in snake_case
     fields: list[Field] = field(default_factory=list)
     checks: list[Check] = field(default_factory=list)
     side_effects: list[SideEffect] = field(default_factory=list)

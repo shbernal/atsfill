@@ -22,7 +22,7 @@ def test_out_of_time_before_the_click_is_blocked(server, tmp_path, monkeypatch):
     def slow(*args, **kwargs):
         raise OutOfTime("time budget of 180s ran out")
 
-    monkeypatch.setattr("atsfill.core.commands._on_page", slow)
+    monkeypatch.setattr("atsfill.core.commands._form_command", slow)
     result = core.fill(f"{server}/button.html", {}, data_dir=tmp_path)
     assert result.status is Status.BLOCKED
     assert result.reason and result.reason.startswith("time_budget")

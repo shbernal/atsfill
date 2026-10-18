@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="hiring-system" content="fake">
+<form onsubmit="event.preventDefault(); history.pushState(null, '', '?sent=1')">
+  <input name="name">
+  <select name="level"><option></option><option>Native</option><option>Fluent</option></select>
+  <label><input type="checkbox" name="langs" value="French"> French</label>
+  <label><input type="checkbox" name="langs" value="English"> English</label>
+  <input type="file" name="cv">
+  <button>Submit</button>
+</form>

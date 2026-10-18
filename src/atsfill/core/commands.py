@@ -1,3 +1,5 @@
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from importlib.metadata import version
 from pathlib import Path
 
@@ -5,63 +7,89 @@ from atsfill.adapters import ADAPTERS
 from atsfill.core import attempts, browser, matching, paths
 from atsfill.core.adapter import Adapter, Blocked, Unsupported
 from atsfill.core.browser import OutOfTime, Page, open_page
-from atsfill.core.results import Answer, Result, Status, StatusReport
+from atsfill.core.results import AdapterState, Answer, Result, Status, StatusReport
+
+type Sessions = dict[str, Path]
 
 
-def _adapter(url: str, page: Page) -> Adapter | None:
+def _detect(url: str, page: Page | None = None) -> Adapter | None:
     return next((a for a in ADAPTERS if a.detect(url, page)), None)
 
 
-def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) -> Result:
-    """Fills and reads back; `ready` when every answer reads back as given."""
-    result = Result(Status.READY, url, adapter.name, side_effects=adapter.side_effects)
+def _load(page: Page, url: str) -> Adapter | None:
+    """Loads the URL; the adapter that claims it by its URL, else by its page."""
+    adapter = _detect(url)
+    page.goto(url)
+    return adapter or _detect(url, page)
+
+
+def _result(adapter: Adapter, url: str) -> Result:
+    shown = [] if paths.acknowledged(adapter.name) else adapter.side_effects
+    return Result(Status.READY, url, adapter.name, side_effects=shown)
+
+
+def _no_adapter(url: str) -> Result:
+    return Result(Status.UNSUPPORTED, url, reason="no_adapter: no adapter for this hiring system")
+
+
+@contextmanager
+def _stops(result: Result) -> Generator[None]:
+    """Turns an adapter's `Unsupported` or `Blocked` into the result's status."""
     try:
-        result.fields = adapter.read_form(page)
-        if problems := matching.problems(result.fields, answers):
-            result.status, result.reason = Status.REFUSED, "; ".join(problems)
-            return result
-        adapter.fill(page, answers)
-        result.checks = matching.check(result.fields, answers, adapter.read_back(page))
+        yield
     except Unsupported as e:
         result.status, result.reason = Status.UNSUPPORTED, str(e)
     except Blocked as e:
         result.status, result.reason = Status.BLOCKED, str(e)
-    else:
+
+
+def _in_budget(url: str, command: Callable[[], Result]) -> Result:
+    try:
+        return command()
+    except OutOfTime as e:  # past the click, the send reports `unknown` itself
+        return Result(Status.BLOCKED, url, reason=f"time_budget: {e}")
+
+
+def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) -> Result:
+    """Fills and reads back; `ready` when every answer reads back as given."""
+    result = _result(adapter, url)
+    with _stops(result):
+        result.fields = adapter.read_form(page)
+        if problems := matching.problems(result.fields, answers):
+            result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
+            return result
+        adapter.fill(page, answers)
+        result.checks = matching.check(result.fields, answers, adapter.read_back(page))
         if mismatched := [c.field_id for c in result.checks if not c.match]:
             result.status, result.reason = Status.REFUSED, f"mismatch: {', '.join(mismatched)}"
     return result
 
 
-type Sessions = dict[str, Path]
+def _read_page(data: Path, url: str) -> Result:
+    with open_page(data) as page:
+        adapter = _load(page, url)
+        if adapter is None:
+            return _no_adapter(url)
+        result = _result(adapter, url)
+        with _stops(result):
+            result.fields = adapter.read_form(page)
+        return result
 
 
 def _form_command(
-    url: str,
-    answers: dict[str, Answer],
-    data_dir: Path | None,
-    sessions: Sessions | None,
-    send: bool,
-    resend: bool,
+    data: Path, url: str, answers: dict[str, Answer], send: bool, resend: bool
 ) -> Result:
-    data = paths.data_dir(data_dir)
-    try:
-        return _on_page(data, url, answers, send, resend)
-    except OutOfTime as e:  # past the click, `_on_page` reports `unknown` itself
-        return Result(Status.BLOCKED, url, reason=f"time_budget: {e}")
-
-
-def _on_page(data: Path, url: str, answers: dict[str, Answer], send: bool, resend: bool) -> Result:
     with open_page(data) as page:
-        page.goto(url)
-        adapter = _adapter(url, page)
+        adapter = _load(page, url)
         if adapter is None:
-            return Result(Status.UNSUPPORTED, url, reason="no adapter for this hiring system")
+            return _no_adapter(url)
         posting = adapter.posting(url)
         if send and not paths.submit_enabled(adapter.name):
-            reason = f"submit is not enabled for {adapter.name} in {paths.config_file()}"
+            reason = f"submit_not_enabled: add {adapter.name} to `submit` in {paths.config_file()}"
             return Result(Status.REFUSED, url, adapter.name, reason=reason)
         if send and not resend and attempts.blocks_send(data, posting):
-            reason = f"already sent (last attempt {attempts.last(data, posting)}); pass --resend"
+            last = attempts.last(data, posting)
+            reason = f"already_sent: last attempt ended {last}; pass --resend"
             return Result(Status.REFUSED, url, adapter.name, reason=reason)
         result = _fill(page, adapter, url, answers)
         if not send or result.status is not Status.READY:
@@ -69,11 +97,15 @@ def _on_page(data: Path, url: str, answers: dict[str, Answer], send: bool, resen
         attempts.record(data, posting, attempts.PENDING, url=url)
         try:
             result.evidence = adapter.submit(page)
-            result.status = Status.SUBMITTED if result.evidence else Status.UNKNOWN
+            if result.evidence:
+                result.status = Status.SUBMITTED
+            else:
+                result.status, result.reason = Status.UNKNOWN, "no_evidence"
         except Blocked as e:
             result.status, result.reason = Status.BLOCKED, str(e)
         except Exception as e:  # after the click, nothing tells a failed send from a sent one
-            result.status, result.reason = Status.UNKNOWN, f"{type(e).__name__}: {e}"
+            result.status = Status.UNKNOWN
+            result.reason = f"error_after_click: {type(e).__name__}: {e}"
         attempts.record(
             data, posting, result.status, evidence=result.evidence, reason=result.reason
         )
@@ -81,7 +113,14 @@ def _on_page(data: Path, url: str, answers: dict[str, Answer], send: bool, resen
 
 
 def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = None) -> Result:
-    raise NotImplementedError
+    """Lists the form's fields, over HTTP when an adapter can (ADR 0011), else from the page."""
+    for adapter in ADAPTERS:
+        if (fields := adapter.read_api(url)) is not None:
+            result = _result(adapter, url)
+            result.fields = fields
+            return result
+    data = paths.data_dir(data_dir)
+    return _in_budget(url, lambda: _read_page(data, url))
 
 
 def fill(
@@ -91,7 +130,8 @@ def fill(
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
-    return _form_command(url, answers, data_dir, sessions, send=False, resend=False)
+    data = paths.data_dir(data_dir)
+    return _in_budget(url, lambda: _form_command(data, url, answers, send=False, resend=False))
 
 
 def send(
@@ -102,7 +142,8 @@ def send(
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
-    return _form_command(url, answers, data_dir, sessions, send=True, resend=resend)
+    data = paths.data_dir(data_dir)
+    return _in_budget(url, lambda: _form_command(data, url, answers, send=True, resend=resend))
 
 
 def status(*, data_dir: Path | None = None) -> StatusReport:
@@ -111,7 +152,15 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         data_dir=paths.data_dir(data_dir),
         config=paths.config_file(),
         browser=browser.version(),
-        adapters=[],
+        adapters=[
+            AdapterState(
+                a.name,
+                submit_enabled=paths.submit_enabled(a.name),
+                side_effects=a.side_effects,
+                side_effects_acknowledged=paths.acknowledged(a.name),
+            )
+            for a in ADAPTERS
+        ],
     )
 
 

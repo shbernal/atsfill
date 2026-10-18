@@ -2,7 +2,7 @@
 
 import re
 import unicodedata
-from pathlib import PurePath
+from pathlib import Path, PurePath
 
 from atsfill.core.results import Answer, Check, Field, FieldType
 
@@ -50,8 +50,28 @@ def check(
     ]
 
 
+def _answer_problem(field: Field, answer: object) -> str | None:
+    if field.type is FieldType.MULTI_CHOICE:
+        if not (isinstance(answer, list) and all(isinstance(v, str) for v in answer)):
+            return "a multi_choice answer is a list of strings"
+        values = answer
+    elif not isinstance(answer, str):
+        return f"a {field.type} answer is a string"
+    else:
+        values = [answer]
+    if field.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE) and not _in_options(field, values):
+        return f"{answer!r} is not one of {field.options}"
+    if field.type is FieldType.FILE:
+        path = Path(values[0])
+        if not path.is_absolute():
+            return "a file answer is an absolute path"
+        if not path.is_file():
+            return f"no file at {path}"
+    return None
+
+
 def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
-    """What refuses a fill before typing: unknown ids, missing required answers, bad options."""
+    """What refuses a fill before typing: unknown ids, missing required answers, bad values."""
     by_id = {f.id: f for f in fields}
     out = [f"no field {i}" for i in answers if i not in by_id]
     out += [
@@ -59,15 +79,9 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
         for f in fields
         if f.required and f.id not in answers
     ]
-    for i, a in answers.items():
-        f = by_id.get(i)
-        choices = f and f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE)
-        if choices and not _in_options(f, [a] if isinstance(a, str) else a):
-            out.append(f"{i}: {a!r} is not one of {f.options}")
-        if (
-            f
-            and f.type is FieldType.FILE
-            and not (isinstance(a, str) and PurePath(a).is_absolute())
-        ):
-            out.append(f"{i}: a file answer is an absolute path")
+    out += [
+        f"{i}: {problem}"
+        for i, a in answers.items()
+        if i in by_id and (problem := _answer_problem(by_id[i], a))
+    ]
     return out

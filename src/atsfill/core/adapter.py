@@ -5,11 +5,14 @@ from atsfill.core.results import Answer, Field, SideEffect
 
 
 class Blocked(Exception):
-    """The system stopped the command: a captcha, a score refusal, an emailed code, a login wall."""
+    """The system stopped the command: a captcha, a score refusal, an emailed code, a login wall.
+
+    The message is the result's reason, `code` or `code: detail`.
+    """
 
 
 class Unsupported(Exception):
-    """A form shape the adapter does not handle."""
+    """A form shape the adapter does not handle; the message is `code: detail`."""
 
 
 class Adapter(Protocol):
@@ -19,7 +22,9 @@ class Adapter(Protocol):
     side_effects: list[SideEffect]
     needs_session: bool
 
-    def detect(self, url: str, page: Page) -> bool: ...
+    def detect(self, url: str, page: Page | None) -> bool:
+        """Claims the form from its URL (`page` is None), else from the loaded page."""
+        ...
 
     def posting(self, url: str) -> str:
         """The posting's key for the double-send guard: every URL of one posting gives the same."""

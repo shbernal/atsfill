@@ -32,4 +32,4 @@ def test_status(tmp_path, monkeypatch, capsys):
     assert report["data_dir"] == str(tmp_path / "data")
     assert report["config"] == str(tmp_path / "conf/atsfill/config.toml")
     assert report["version"] and report["browser"]
-    assert report["adapters"] == []
+    assert [a["name"] for a in report["adapters"]] == ["ashby"]

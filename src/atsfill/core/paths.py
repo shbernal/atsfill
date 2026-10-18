@@ -23,9 +23,18 @@ def config_file() -> Path:
     return Path.home() / (".config/atsfill/config.toml" if LINUX else ".atsfill/config.toml")
 
 
-def submit_enabled(adapter: str) -> bool:
-    """Whether the user's config file lists the adapter under `submit` (ADR 0006)."""
+def config() -> dict:
+    """The user's config file (ADR 0006), empty when there is none."""
     path = config_file()
-    if not path.exists():
-        return False
-    return adapter in tomllib.loads(path.read_text()).get("submit", [])
+    return tomllib.loads(path.read_text()) if path.exists() else {}
+
+
+def submit_enabled(adapter: str) -> bool:
+    """Whether the config lists the adapter under `submit`: there is no other way to enable it."""
+    return adapter in config().get("submit", [])
+
+
+def acknowledged(adapter: str) -> bool:
+    """Whether the user muted the adapter's side effects with `ack_side_effects` (ADR 0008)."""
+    acked = config().get("ack_side_effects", [])
+    return adapter in acked or "all" in acked

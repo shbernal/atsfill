@@ -53,7 +53,7 @@ class Ashby:
         self._pending = 0
         self._last_change = 0.0
 
-    def detect(self, url: str, page: Page) -> bool:
+    def detect(self, url: str, page: Page | None) -> bool:
         return urlsplit(url).hostname == HOST
 
     def posting(self, url: str) -> str:
@@ -72,9 +72,9 @@ class Ashby:
             page.goto(self.posting(page.url) + "/application")
         job = posting.value.json()["data"]["jobPosting"]
         if job is None:
-            raise Unsupported("the posting is gone")
+            raise Unsupported("posting_gone")
         if job.get("surveyForms"):
-            raise Unsupported("survey forms after the application form")
+            raise Unsupported("form_shape: survey forms after the application form")
         self._render = job["applicationForm"]
         page.wait_for_selector(".ashby-application-form-submit-button")
         return [self._field(e) for e in self._entries()]
@@ -101,7 +101,9 @@ class Ashby:
                 case FieldType.FILE, str():
                     entry.locator("input[type=file]").set_input_files(answer)
                 case kind, _:
-                    raise Unsupported(f"{field_id}: cannot fill a {kind} with {answer!r}")
+                    raise Unsupported(
+                        f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
+                    )
         self._answered = list(answers)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -152,7 +154,7 @@ class Ashby:
         f = entry["field"]
         kind = TYPES.get(f["type"])
         if kind is None:
-            raise Unsupported(f"{f['path']}: Ashby field type {f['type']}")
+            raise Unsupported(f"form_shape: {f['path']} is an Ashby {f['type']} field")
         options = [v["label"] for v in f.get("selectableValues") or []] or None
         if f["type"] == "Boolean":
             options = ["Yes", "No"]
