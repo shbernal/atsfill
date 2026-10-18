@@ -19,4 +19,6 @@ Sessions get in through a login window only a person can complete:
 - `atsfill logout <adapter>` deletes it.
 - `atsfill status` also checks every stored session and exits 1 if one is signed out.
 
+Whether a session is signed in is the adapter's call: one request to the system carrying the session's cookies. `login` polls it in the window's context, `status` runs it over plain HTTP without a browser, and a form command runs it after loading the page.
+
 Sessions are never imported from the user's everyday browser.

@@ -40,7 +40,6 @@ def _op(response: Response) -> str:
 
 class Ashby:
     name = "ashby"
-    needs_session = False
     side_effects = [
         SideEffect(
             "fill", "hiring_system", "each answer and the resume are saved to Ashby as typed"

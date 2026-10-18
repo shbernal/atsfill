@@ -1,6 +1,6 @@
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
-from atsfill.core.browser import Page
+from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, SideEffect
 
 
@@ -20,7 +20,6 @@ class Adapter(Protocol):
 
     name: str
     side_effects: list[SideEffect]
-    needs_session: bool
 
     def detect(self, url: str, page: Page | None) -> bool:
         """Claims the form from its URL (`page` is None), else from the loaded page."""
@@ -45,4 +44,15 @@ class Adapter(Protocol):
 
         Raises `Blocked` when the system refuses the send.
         """
+        ...
+
+
+@runtime_checkable
+class NeedsAccount(Protocol):
+    """An adapter whose system needs a signed-in session (ADR 0007)."""
+
+    login_url: str
+
+    def signed_in(self, request: Request) -> bool:
+        """Whether the cookies `request` carries are signed in, from one request to the system."""
         ...

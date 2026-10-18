@@ -4,10 +4,17 @@ from importlib.metadata import version
 from pathlib import Path
 
 from atsfill.adapters import ADAPTERS
-from atsfill.core import attempts, browser, matching, paths
-from atsfill.core.adapter import Adapter, Blocked, Unsupported
+from atsfill.core import accounts, attempts, browser, matching, paths
+from atsfill.core.adapter import Adapter, Blocked, NeedsAccount, Unsupported
 from atsfill.core.browser import OutOfTime, Page, open_page
-from atsfill.core.results import AdapterState, Answer, Result, Status, StatusReport
+from atsfill.core.results import (
+    AdapterState,
+    Answer,
+    Result,
+    SessionReport,
+    Status,
+    StatusReport,
+)
 
 type Sessions = dict[str, Path]
 
@@ -16,11 +23,36 @@ def _detect(url: str, page: Page | None = None) -> Adapter | None:
     return next((a for a in ADAPTERS if a.detect(url, page)), None)
 
 
-def _load(page: Page, url: str) -> Adapter | None:
-    """Loads the URL; the adapter that claims it by its URL, else by its page."""
+def _login_required(url: str, adapter: Adapter) -> Result:
+    reason = f"login_required: run `atsfill login {adapter.name}`"
+    return Result(Status.BLOCKED, url, adapter.name, reason=reason)
+
+
+@contextmanager
+def _opened(
+    data: Path, url: str, sessions: Sessions | None
+) -> Generator[tuple[Page, Adapter] | Result]:
+    """The loaded page and the adapter that claims it by its URL, else by its page; or the
+    result that ends the command first. An adapter that needs an account gets its session,
+    and only that adapter's (ADR 0007)."""
     adapter = _detect(url)
-    page.goto(url)
-    return adapter or _detect(url, page)
+    session = None
+    if isinstance(adapter, NeedsAccount):
+        session = (sessions or {}).get(adapter.name) or accounts.session_file(data, adapter.name)
+        if not session.exists():
+            yield _login_required(url, adapter)
+            return
+    with open_page(data, session) as page:
+        page.goto(url)
+        adapter = adapter or _detect(url, page)
+        if adapter is None:
+            yield _no_adapter(url)
+        elif isinstance(adapter, NeedsAccount) and not (
+            session and adapter.signed_in(page.request)
+        ):
+            yield _login_required(url, adapter)
+        else:
+            yield page, adapter
 
 
 def _result(adapter: Adapter, url: str) -> Result:
@@ -65,11 +97,11 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) ->
     return result
 
 
-def _read_page(data: Path, url: str) -> Result:
-    with open_page(data) as page:
-        adapter = _load(page, url)
-        if adapter is None:
-            return _no_adapter(url)
+def _read_page(data: Path, url: str, sessions: Sessions | None) -> Result:
+    with _opened(data, url, sessions) as opened:
+        if isinstance(opened, Result):
+            return opened
+        page, adapter = opened
         result = _result(adapter, url)
         with _stops(result):
             result.fields = adapter.read_form(page)
@@ -77,12 +109,17 @@ def _read_page(data: Path, url: str) -> Result:
 
 
 def _form_command(
-    data: Path, url: str, answers: dict[str, Answer], send: bool, resend: bool
+    data: Path,
+    url: str,
+    answers: dict[str, Answer],
+    sessions: Sessions | None,
+    send: bool,
+    resend: bool,
 ) -> Result:
-    with open_page(data) as page:
-        adapter = _load(page, url)
-        if adapter is None:
-            return _no_adapter(url)
+    with _opened(data, url, sessions) as opened:
+        if isinstance(opened, Result):
+            return opened
+        page, adapter = opened
         posting = adapter.posting(url)
         if send and not paths.submit_enabled(adapter.name):
             reason = f"submit_not_enabled: add {adapter.name} to `submit` in {paths.config_file()}"
@@ -120,7 +157,7 @@ def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = 
             result.fields = fields
             return result
     data = paths.data_dir(data_dir)
-    return _in_budget(url, lambda: _read_page(data, url))
+    return _in_budget(url, lambda: _read_page(data, url, sessions))
 
 
 def fill(
@@ -131,7 +168,9 @@ def fill(
     sessions: Sessions | None = None,
 ) -> Result:
     data = paths.data_dir(data_dir)
-    return _in_budget(url, lambda: _form_command(data, url, answers, send=False, resend=False))
+    return _in_budget(
+        url, lambda: _form_command(data, url, answers, sessions, send=False, resend=False)
+    )
 
 
 def send(
@@ -143,13 +182,23 @@ def send(
     sessions: Sessions | None = None,
 ) -> Result:
     data = paths.data_dir(data_dir)
-    return _in_budget(url, lambda: _form_command(data, url, answers, send=True, resend=resend))
+    return _in_budget(
+        url, lambda: _form_command(data, url, answers, sessions, send=True, resend=resend)
+    )
+
+
+def _session_state(adapter: Adapter, data: Path) -> str | None:
+    if not isinstance(adapter, NeedsAccount):
+        return None
+    return accounts.state(adapter, accounts.session_file(data, adapter.name))
 
 
 def status(*, data_dir: Path | None = None) -> StatusReport:
+    """Also asks each system that needs an account about its stored session."""
+    data = paths.data_dir(data_dir)
     return StatusReport(
         version=version("atsfill"),
-        data_dir=paths.data_dir(data_dir),
+        data_dir=data,
         config=paths.config_file(),
         browser=browser.version(),
         adapters=[
@@ -158,15 +207,30 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
                 submit_enabled=paths.submit_enabled(a.name),
                 side_effects=a.side_effects,
                 side_effects_acknowledged=paths.acknowledged(a.name),
+                session=_session_state(a, data),
             )
             for a in ADAPTERS
         ],
     )
 
 
-def login(adapter: str, *, data_dir: Path | None = None) -> None:
-    raise NotImplementedError
+def _account(name: str) -> NeedsAccount:
+    adapter = next((a for a in ADAPTERS if a.name == name), None)
+    if not isinstance(adapter, NeedsAccount):
+        raise ValueError(f"{name} is not an adapter that needs an account")
+    return adapter
 
 
-def logout(adapter: str, *, data_dir: Path | None = None) -> None:
-    raise NotImplementedError
+def login(adapter: str, *, data_dir: Path | None = None) -> SessionReport:
+    """Opens a window on the system's login page and stores the session once signed in."""
+    account, data = _account(adapter), paths.data_dir(data_dir)
+    session = accounts.session_file(data, adapter)
+    reason = accounts.sign_in(account, data, session)
+    return SessionReport(adapter, "signed_in" if reason is None else "missing", session, reason)
+
+
+def logout(adapter: str, *, data_dir: Path | None = None) -> SessionReport:
+    _account(adapter)
+    session = accounts.session_file(paths.data_dir(data_dir), adapter)
+    session.unlink(missing_ok=True)
+    return SessionReport(adapter, "missing", session)

@@ -5,8 +5,10 @@ import sys
 from pathlib import Path
 
 from atsfill import core
+from atsfill.adapters import ADAPTERS
 from atsfill.core import browser
-from atsfill.core.results import Result, Status, StatusReport
+from atsfill.core.adapter import NeedsAccount
+from atsfill.core.results import Result, SessionReport, Status, StatusReport
 
 OK = {Status.READY, Status.SUBMITTED}
 
@@ -62,10 +64,13 @@ def parser() -> argparse.ArgumentParser:
     )
     sub.add_parser("status", help="version, paths, browser, and each adapter's state")
     sub.add_parser("install-browser", help="download the Camoufox build atsfill is pinned to")
-    sub.add_parser("login", help="sign in to a system that needs an account").add_argument(
-        "adapter"
+    accounts = [a.name for a in ADAPTERS if isinstance(a, NeedsAccount)]
+    sub.add_parser(
+        "login", help="sign in, in a visible window, to a system that needs an account"
+    ).add_argument("adapter", choices=accounts)
+    sub.add_parser("logout", help="delete a stored session").add_argument(
+        "adapter", choices=accounts
     )
-    sub.add_parser("logout", help="delete a stored session").add_argument("adapter")
     return p
 
 
@@ -98,17 +103,21 @@ def run(args: argparse.Namespace) -> int:
         case "status":
             report = core.status(data_dir=args.data_dir)
             emit(report)
-            return 0
+            return 1 if any(a.session == "signed_out" for a in report.adapters) else 0
         case "install-browser":
             return browser.install()
-        case "login" | "logout":
-            getattr(core, args.command)(args.adapter, data_dir=args.data_dir)
+        case "login":
+            session = core.login(args.adapter, data_dir=args.data_dir)
+            emit(session)
+            return 0 if session.session == "signed_in" else 1
+        case "logout":
+            emit(core.logout(args.adapter, data_dir=args.data_dir))
             return 0
     emit(result)
     return 0 if result.status in OK else 1
 
 
-def emit(value: Result | StatusReport) -> None:
+def emit(value: Result | StatusReport | SessionReport) -> None:
     json.dump(dataclasses.asdict(value), sys.stdout, default=str, ensure_ascii=False, indent=2)
     sys.stdout.write("\n")
 

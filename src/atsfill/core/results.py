@@ -68,7 +68,7 @@ class AdapterState:
     submit_enabled: bool
     side_effects: list[SideEffect]
     side_effects_acknowledged: bool
-    session: str | None = None  # signed_in | signed_out, when the system needs an account
+    session: str | None = None  # signed_in | signed_out | missing, for a system with accounts
 
 
 @dataclass
@@ -78,3 +78,11 @@ class StatusReport:
     config: Path
     browser: str
     adapters: list[AdapterState]
+
+
+@dataclass
+class SessionReport:
+    adapter: str
+    session: str  # signed_in | missing
+    path: Path
+    reason: str | None = None  # why a login stored nothing: window_closed | login_timeout

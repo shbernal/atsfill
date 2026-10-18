@@ -16,20 +16,27 @@ from camoufox.exceptions import CamoufoxNotInstalled
 from camoufox.fingerprints import Screen, generate_fingerprint
 from camoufox.pkgman import installed_verstr
 from camoufox.sync_api import Camoufox
-from playwright.sync_api import Browser, Locator, Page, Response
+from playwright.sync_api import APIRequestContext as Request
+from playwright.sync_api import Browser, Locator, Page, Response, sync_playwright
+from playwright.sync_api import Error as BrowserError
 from playwright.sync_api import TimeoutError as Timeout
 
 __all__ = [
+    "BrowserError",
     "Covered",
     "Locator",
     "OutOfTime",
     "Page",
+    "Request",
     "Response",
     "Timeout",
     "click",
     "install",
     "lock",
+    "login_window",
     "open_page",
+    "save_session",
+    "session_request",
     "version",
 ]
 
@@ -95,6 +102,19 @@ def lock(data_dir: Path, deadline: float) -> Generator[None]:
 
 
 @contextmanager
+def _launch(data_dir: Path, headless: bool) -> Generator[Browser]:
+    with Camoufox(
+        headless=headless,
+        fingerprint=identity(data_dir),
+        os=HOST_OS,
+        locale=machine_locale(),
+        i_know_what_im_doing=True,
+    ) as browser:
+        assert isinstance(browser, Browser)  # not a persistent context
+        yield browser
+
+
+@contextmanager
 def open_page(
     data_dir: Path, session: Path | None = None, seconds: float = BUDGET
 ) -> Generator[Page]:
@@ -105,17 +125,7 @@ def open_page(
     is raised as `OutOfTime`; a command that handles the breakage itself returns as it is.
     """
     deadline = time.monotonic() + seconds
-    with (
-        lock(data_dir, deadline),
-        Camoufox(
-            headless=True,
-            fingerprint=identity(data_dir),
-            os=HOST_OS,
-            locale=machine_locale(),
-            i_know_what_im_doing=True,
-        ) as browser,
-    ):
-        assert isinstance(browser, Browser)  # not a persistent context
+    with lock(data_dir, deadline), _launch(data_dir, headless=True) as browser:
         expired = threading.Event()
 
         def expire() -> None:  # on the timer's thread: hand the close to Playwright's loop
@@ -135,6 +145,33 @@ def open_page(
             raise
         finally:
             timer.cancel()
+
+
+@contextmanager
+def login_window(data_dir: Path, url: str, headless: bool = False) -> Generator[Page]:
+    """A visible window on `url`, the one browser a person drives (ADR 0007). It takes no
+    lock: the session is written once, at the end, and commands meanwhile run as usual."""
+    with _launch(data_dir, headless=headless) as browser:
+        page = browser.new_context().new_page()
+        page.goto(url)
+        yield page
+
+
+def save_session(page: Page, path: Path) -> None:
+    path.parent.mkdir(mode=0o700, exist_ok=True)
+    path.touch(mode=0o600)
+    page.context.storage_state(path=path)
+
+
+@contextmanager
+def session_request(path: Path) -> Generator[Request]:
+    """HTTP requests carrying a stored session's cookies, without a browser."""
+    with sync_playwright() as playwright:
+        request = playwright.request.new_context(storage_state=path)
+        try:
+            yield request
+        finally:
+            request.dispose()
 
 
 # What sits on top of a point (the element's centre by default), null when the element

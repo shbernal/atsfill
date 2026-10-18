@@ -3,7 +3,7 @@
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.browser import Page
+from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 FIELDS = [
@@ -16,7 +16,6 @@ FIELDS = [
 
 class Fake:
     name = "fake"
-    needs_session = False
     side_effects = [SideEffect("fill", "hiring_system", "answers are saved as typed")]
 
     def __init__(self) -> None:
@@ -72,3 +71,20 @@ class Fake:
             raise self.submit_raises
         page.wait_for_url("**?sent=1")
         return page.url if self.evidence else None
+
+
+class FakeAccount(Fake):
+    """The same form on a system that needs an account, signed in by tests/pages/login.html."""
+
+    name = "fakeaccount"
+
+    def __init__(self, server: str) -> None:
+        super().__init__()
+        self.server = server
+        self.login_url = f"{server}/login.html"
+
+    def detect(self, url: str, page: Page | None) -> bool:
+        return urlsplit(url).query == "account"
+
+    def signed_in(self, request: Request) -> bool:
+        return request.get(f"{self.server}/me").ok
