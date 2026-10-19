@@ -1,12 +1,14 @@
 """Ashby (`jobs.ashbyhq.com`, and career pages embedding it), as docs/adapters/ashby.md observes.
 
-Every change posts `ApiSetFormValue`, whose response holds the form as Ashby will receive it:
-that is the read-back, kept per form since a survey answer returns the survey alone.
+Every change posts a mutation whose response holds the form as Ashby will receive it: that is
+the read-back, kept per form since a survey answer returns the survey alone.
 """
 
 import json
 import time
 import urllib.request
+from collections.abc import Callable
+from functools import partial
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -31,6 +33,7 @@ TYPES = {
     "String": FieldType.TEXT,
     "Email": FieldType.TEXT,
     "LongText": FieldType.TEXT,
+    "Url": FieldType.TEXT,
     "Date": FieldType.DATE,
     "Number": FieldType.TEXT,
     "Phone": FieldType.PHONE,
@@ -42,6 +45,7 @@ TYPES = {
 }
 SETTLE_S = 1.5
 READ_BACK_TIMEOUT_S = 30
+SAVE_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 
 
@@ -70,7 +74,7 @@ class Ashby:
 
     def __init__(self) -> None:
         self._forms: list[dict[str, Any]] = []  # the application form, then each survey
-        self._pending = 0
+        self._pending: set[Any] = set()  # GraphQL requests in flight, since `read_form`
         self._last_change = 0.0
         self._hosted: str | None = None  # the jobs.ashbyhq.com posting a custom domain embeds
 
@@ -132,6 +136,7 @@ class Ashby:
         return [self._field(e) for e in self._entries()]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        """One save at a time: saves in flight together overwrite each other at Ashby."""
         fields = {e["field"]["path"]: self._field(e) for e in self._entries()}
         for field_id, answer in answers.items():
             entry = page.locator(f'[data-field-path="{field_id}"]')
@@ -140,30 +145,49 @@ class Ashby:
                 case FieldType.TEXT | FieldType.DATE | FieldType.PHONE, str():
                     box = entry.locator("input, textarea").first
                     box.fill(answer)
-                    box.blur()
+                    self._saved(page, box.blur)
+                case FieldType.CHOICE, str() if entry.locator("input[role=combobox]").count():
+                    entry.locator("input[role=combobox]").fill(answer)
+                    option = page.get_by_role("option", name=answer, exact=True)
+                    self._saved(page, option.click)
                 case FieldType.CHOICE, str():
-                    entry.get_by_text(answer, exact=True).click()
+                    self._saved(page, entry.get_by_text(answer, exact=True).click)
                 case FieldType.MULTI_CHOICE, list():
                     for value in answer:
-                        entry.get_by_text(value, exact=True).click()
+                        self._saved(page, entry.get_by_text(value, exact=True).click)
                 case FieldType.TYPEAHEAD, str():
-                    box = entry.locator("input[role=combobox]")
-                    box.fill(answer)
-                    page.get_by_role("option").filter(has_text=answer).first.click()
+                    entry.locator("input[role=combobox]").fill(answer)
+                    option = page.get_by_role("option").filter(has_text=answer).first
+                    self._saved(page, option.click)
                 case FieldType.FILE, str():
-                    entry.locator("input[type=file]").set_input_files(answer)
+                    upload = entry.locator("input[type=file]")
+                    self._saved(page, partial(upload.set_input_files, answer))
                 case kind, _:
                     raise Unsupported(
                         f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
         self._answered = list(answers)
 
+    def _saved(self, page: Page, change: Callable[[], None]) -> None:
+        """Makes the change, then waits for its save and any other request it set off. A
+        change Ashby does not save shows in the read-back."""
+        try:
+            with page.expect_response(
+                lambda r: _op(r).startswith("ApiSetFormValue"), timeout=SAVE_TIMEOUT_MS
+            ):
+                change()
+        except Timeout:
+            return
+        deadline = time.monotonic() + SAVE_TIMEOUT_MS / 1000
+        while self._pending and time.monotonic() < deadline:
+            page.wait_for_timeout(100)
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Ashby's last returned form, once every answer is held and no request is in flight."""
         deadline = time.monotonic() + READ_BACK_TIMEOUT_S
         while time.monotonic() < deadline:
             values = self._values()
-            quiet = self._pending == 0 and time.monotonic() - self._last_change > SETTLE_S
+            quiet = not self._pending and time.monotonic() - self._last_change > SETTLE_S
             if quiet and all(values.get(i) is not None for i in self._answered):
                 break
             page.wait_for_timeout(250)
@@ -248,15 +272,18 @@ class Ashby:
 
     def _on_request(self, request: Any) -> None:
         if "/api/non-user-graphql" in request.url:
-            self._pending += 1
+            self._pending.add(request)
 
     def _on_finished(self, request: Any) -> None:
         if "/api/non-user-graphql" in request.url:
-            self._pending -= 1
+            self._pending.discard(request)
             self._last_change = time.monotonic()
 
     def _on_response(self, response: Response) -> None:
-        if _op(response) == "ApiSetFormValue" and response.ok:
-            render = response.json()["data"]["setFormValue"]
-            if render:
+        """Any response holding a form render: a value goes to `ApiSetFormValue`, a file to
+        `ApiSetFormValueToFile` once its upload ends, after saves made later."""
+        if not _op(response).startswith("ApiSetFormValue") or not response.ok:
+            return
+        for render in (response.json().get("data") or {}).values():
+            if isinstance(render, dict) and "sections" in render:
                 self._replace(render)

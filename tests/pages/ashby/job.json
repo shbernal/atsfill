@@ -8,9 +8,11 @@
           {"isRequired": true, "isHidden": null, "field": {"path": "_systemfield_name", "title": "Name", "type": "String"}},
           {"isRequired": true, "isHidden": null, "field": {"path": "_systemfield_resume", "title": "Resume", "type": "File"}},
           {"isRequired": false, "isHidden": null, "field": {"path": "_systemfield_location", "title": "Location", "type": "Location"}},
+          {"isRequired": false, "isHidden": null, "field": {"path": "site", "title": "Website", "type": "Url"}},
           {"isRequired": false, "isHidden": null, "field": {"path": "start", "title": "Earliest start date", "type": "Date"}},
           {"isRequired": true, "isHidden": null, "field": {"path": "right", "title": "Do you have the right to work in France?", "type": "Boolean"}},
           {"isRequired": false, "isHidden": null, "field": {"path": "level", "title": "English level", "type": "ValueSelect", "selectableValues": [{"label": "Native", "value": "native"}, {"label": "Fluent", "value": "fluent"}]}},
+          {"isRequired": false, "isHidden": null, "field": {"path": "source", "title": "How did you hear about us?", "type": "ValueSelect", "selectableValues": [{"label": "LinkedIn", "value": "LinkedIn"}, {"label": "LinkedIn Learning", "value": "LinkedIn Learning"}, {"label": "A friend", "value": "A friend"}]}},
           {"isRequired": false, "isHidden": null, "field": {"path": "langs", "title": "Languages", "type": "MultiValueSelect", "selectableValues": [{"label": "French", "value": "fr"}, {"label": "English", "value": "en"}]}},
           {"isRequired": false, "isHidden": true, "field": {"path": "hidden", "title": "Hidden", "type": "String"}}
         ]
