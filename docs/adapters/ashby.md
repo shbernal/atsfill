@@ -28,7 +28,7 @@ Each type, how the page renders it, and on how many of 15 companies' postings (2
 | `ValueSelect` | `choice` | combobox, from 10 options seen | 2 |
 | `MultiValueSelect` | `multi_choice` | checkbox group | 6 |
 
-A type outside this table is `form_shape`.
+A type outside this table is `form_shape`, as is `EducationHistory`, a list of schools seen on one posting.
 
 Survey forms come after the application form on the same page, on about half the postings sampled. Their questions seen so far are optional demographic selects with an "I prefer not to answer" option.
 

@@ -74,7 +74,7 @@ class Ashby:
 
     def __init__(self) -> None:
         self._forms: list[dict[str, Any]] = []  # the application form, then each survey
-        self._pending = 0
+        self._pending: set[Any] = set()  # GraphQL requests in flight, since `read_form`
         self._last_change = 0.0
         self._hosted: str | None = None  # the jobs.ashbyhq.com posting a custom domain embeds
 
@@ -178,7 +178,8 @@ class Ashby:
                 change()
         except Timeout:
             return
-        while self._pending:
+        deadline = time.monotonic() + SAVE_TIMEOUT_MS / 1000
+        while self._pending and time.monotonic() < deadline:
             page.wait_for_timeout(100)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -186,7 +187,7 @@ class Ashby:
         deadline = time.monotonic() + READ_BACK_TIMEOUT_S
         while time.monotonic() < deadline:
             values = self._values()
-            quiet = self._pending == 0 and time.monotonic() - self._last_change > SETTLE_S
+            quiet = not self._pending and time.monotonic() - self._last_change > SETTLE_S
             if quiet and all(values.get(i) is not None for i in self._answered):
                 break
             page.wait_for_timeout(250)
@@ -271,11 +272,11 @@ class Ashby:
 
     def _on_request(self, request: Any) -> None:
         if "/api/non-user-graphql" in request.url:
-            self._pending += 1
+            self._pending.add(request)
 
     def _on_finished(self, request: Any) -> None:
         if "/api/non-user-graphql" in request.url:
-            self._pending -= 1
+            self._pending.discard(request)
             self._last_change = time.monotonic()
 
     def _on_response(self, response: Response) -> None:
