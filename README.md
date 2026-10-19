@@ -29,7 +29,7 @@ It is built for agents with a shell: every command prints one JSON document and 
 ## Supported hiring systems
 
 <!-- badges -->
-![ashby: send verified 2026-10-19](https://img.shields.io/badge/ashby-send%20verified%202026--10--19-9ece6a) ![greenhouse: dry run verified 2026-10-19](https://img.shields.io/badge/greenhouse-dry%20run%20verified%202026--10--19-7aa2f7) ![teamtailor: dry run verified 2026-10-19](https://img.shields.io/badge/teamtailor-dry%20run%20verified%202026--10--19-7aa2f7) ![wttj: unverified](https://img.shields.io/badge/wttj-unverified-565f89)
+![ashby: send verified 2026-10-19](https://img.shields.io/badge/ashby-send%20verified%202026--10--19-9ece6a) ![greenhouse: dry run verified 2026-10-19](https://img.shields.io/badge/greenhouse-dry%20run%20verified%202026--10--19-7aa2f7) ![teamtailor: dry run verified 2026-10-19](https://img.shields.io/badge/teamtailor-dry%20run%20verified%202026--10--19-7aa2f7) ![wttj: dry run verified 2026-10-19](https://img.shields.io/badge/wttj-dry%20run%20verified%202026--10--19-7aa2f7)
 <!-- /badges -->
 
 | System | Account needed | `read` without a browser |

@@ -11,7 +11,7 @@ Fields are identified by a stable `id` from the form (the input's `name`, the sy
 - `multi_choice`: a list of strings;
 - `file`: an absolute path.
 
-A field missing from the map is left as the page has it, empty or prefilled by an account. A required field missing from the map refuses the command.
+A field missing from the map is left as the page has it, empty or prefilled by an account. A required field missing from the map refuses the command, unless the account prefilled it (`prefilled` in `read`).
 
 The read-back is compared to the answers by field type:
 

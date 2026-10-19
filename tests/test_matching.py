@@ -47,6 +47,8 @@ def test_problems_before_filling():
         "cv: a file answer is an absolute path",
     ]
     assert problems(fields, {}) == ["no answer for required f (F)"]
+    prefilled = Field("f", "F", FieldType.TEXT, True, prefilled=True)
+    assert problems([prefilled], {}) == []  # left to the account's value
     assert problems(fields, {"f": ["Fluent"], "cv": "/no/resume.pdf"}) == [
         "f: a choice answer is a string",
         "cv: no file at /no/resume.pdf",

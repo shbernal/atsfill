@@ -17,11 +17,14 @@ from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "www.welcometothejungle.com"
 JOB = re.compile(r"^/(?:[a-z]{2}/)?companies/([^/]+)/jobs/([^/?#]+)")
-FORM = "form:has([name=cover_letter])"
+FORM = "form:has([data-testid=apply-form-submit])"
 ME = "https://api.welcometothejungle.com/api/v2/users/me"
 FORM_TIMEOUT_MS = 20_000
 SIGNED_IN_TIMEOUT_S = 10
 SUBMIT_TIMEOUT_MS = 90_000
+SUGGEST_TRIES = 3
+LOCATION_TIMEOUT_S = 3
+SUGGEST_TIMEOUT_S = 5
 YES_NO = ["Yes", "No"]
 
 # The fillable fields: an input's name is its id. Email comes from the account, disabled.
@@ -33,7 +36,9 @@ _READ = """form => [...form.querySelectorAll("input[name], textarea[name]")]
             label: (label ?? e.closest("fieldset")?.querySelector("legend"))?.textContent
               .replace(/\\s+/g, " ").trim() ?? "",
             required: e.required || label?.hasAttribute("required"),
-            accept: e.accept ? e.accept.split(",") : null};
+            accept: e.accept ? e.accept.split(",") : null,
+            prefilled: e.type === "checkbox" ? e.checked
+              : e.type === "file" ? !!e.parentElement.querySelector("[data-id]") : !!e.value};
   })"""
 
 _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
@@ -98,6 +103,10 @@ class WelcomeToTheJungle:
             form.wait_for(timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("form_shape: the apply button opened no form") from None
+        location = form.locator("[name=location]")
+        deadline = time.monotonic() + LOCATION_TIMEOUT_S
+        while location.count() and not location.input_value() and time.monotonic() < deadline:
+            page.wait_for_timeout(200)  # the profile's location comes last, a second later
         fields = []
         for raw in form.evaluate(_READ):
             field = _field(raw)
@@ -114,11 +123,12 @@ class WelcomeToTheJungle:
             target = form.locator(f'[name="{field_id}"]')
             match self._fields[field_id].type, answer:
                 case FieldType.FILE, str():
-                    remove = target.locator("xpath=..").locator("button[title=Remove]")
+                    box = target.locator("xpath=..")
+                    remove = box.locator("button[title=Remove]")
                     if remove.count():
                         remove.click()  # the profile's CV; never made the default
                     target.set_input_files(answer)
-                    form.locator(f'[data-id="{answer.rsplit("/", 1)[-1]}"]').wait_for()
+                    box.locator(f'[data-id="{answer.rsplit("/", 1)[-1]}"]').wait_for()
                 case FieldType.CHOICE, str():
                     if target.is_checked() != (answer == "Yes"):
                         browser.click(form.locator(f'label[for="{target.get_attribute("id")}"]'))
@@ -149,17 +159,21 @@ class WelcomeToTheJungle:
 
 def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
     """Retypes the answer key by key, which loads the suggestions, and picks the first that
-    matches it, never "current position" (the item with an icon, which geolocates)."""
-    box.click()
-    box.press("Control+a")  # `fill("")`, select-all and Delete, leaves the profile's value
-    box.press("Backspace")
-    box.press_sequentially(answer, delay=30)
+    matches it, never "current position" (the item with an icon, which geolocates). Typed too
+    early, the answer loads no suggestions at all: it is typed again."""
     options = page.locator("[role=option]:visible").filter(has_not=page.locator("svg"))
-    options.first.wait_for()
-    for i in range(options.count()):
-        if matching.matches(field, answer, options.nth(i).inner_text().strip()):
-            options.nth(i).click()
-            return
+    for _ in range(SUGGEST_TRIES):
+        box.click()
+        box.press("Control+a")  # `fill("")`, select-all and Delete, leaves the profile's value
+        box.press("Backspace")
+        box.press_sequentially(answer, delay=30)
+        deadline = time.monotonic() + SUGGEST_TIMEOUT_S
+        while time.monotonic() < deadline:
+            for option in options.all():
+                if matching.matches(field, answer, option.inner_text().strip()):
+                    option.click()
+                    return
+            page.wait_for_timeout(250)
     raise Unsupported(f"form_shape: no suggestion for {answer!r} in {field.id}")
 
 
@@ -177,4 +191,7 @@ def _field(raw: dict[str, Any]) -> Field | None:
             )
     if kind is None:
         return None
-    return Field(name, raw["label"], kind, bool(raw["required"]), options, None, raw["accept"])
+    return Field(
+        name, raw["label"], kind, bool(raw["required"]), options, None, raw["accept"],
+        raw["prefilled"],
+    )  # fmt: skip

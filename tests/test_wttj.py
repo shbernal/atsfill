@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from atsfill.adapters import wttj
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.core import browser, matching
 
@@ -48,20 +49,24 @@ def test_read_form_waits_for_the_account(opened):
         "phone",
         "location",
         "resume",
+        "portfolio",
         "questions.ab12",
-        "cover_letter",
         "consent",
     ]  # the account's email is not the form's to change
-    assert by_id["cover_letter"].label == "Lettre de motivation"
+    assert by_id["questions.ab12"].label == "Why this role?"
     assert by_id["resume"].required and by_id["resume"].accept == ["application/pdf"]
+    prefilled = [f.id for f in fields if f.prefilled]
+    assert prefilled == ["firstname", "phone", "location", "resume"]  # from the profile
 
 
-def test_every_answer_reads_back(opened, page, resume):
+def test_every_answer_reads_back(opened, page, resume, monkeypatch):
+    monkeypatch.setattr(wttj, "SUGGEST_TIMEOUT_S", 0.5)  # the location is typed twice
     adapter, fields = opened
     answers = {
         "firstname": "Ada",
         "location": "Paris, France",
         "resume": resume,
+        "portfolio": resume,
         "questions.ab12": "Because.",
         "consent": "Yes",
     }

@@ -65,8 +65,9 @@ def test_the_persona_answers_from_the_fields(tmp_path):
         Field("s", "Expected salary", FieldType.TEXT, False),
         Field("q", "Why us?", FieldType.TEXT, False),
         Field("d", "Start date", FieldType.DATE, False),
-        Field("c", "Resume", FieldType.FILE, True),
+        Field("c", "Resume", FieldType.FILE, True, prefilled=True),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
+        Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
     ]
     answers = persona.answers(fields, cv)
     assert answers == {

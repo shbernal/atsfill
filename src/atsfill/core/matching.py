@@ -91,7 +91,7 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
     out += [
         f"no answer for required {f.id} ({f.label})"
         for f in fields
-        if f.required and f.id not in answers
+        if f.required and not f.prefilled and f.id not in answers
     ]
     out += [
         f"{i}: {problem}"

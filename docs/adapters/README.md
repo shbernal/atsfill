@@ -7,4 +7,4 @@ Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `
 | ashby | ats |  | none | hosted, embedded |  | [send_verified](ashby.md) |
 | greenhouse | ats |  | none | hosted, embedded |  | [dry_run_verified](greenhouse.md) |
 | teamtailor | ats |  | none | hosted |  | [dry_run_verified](teamtailor.md) |
-| wttj | board |  | to_send | hosted |  | [adapter](wttj.md) |
+| wttj | board |  | to_send | hosted |  | [dry_run_verified](wttj.md) |

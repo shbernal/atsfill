@@ -41,3 +41,4 @@ kind = "board"
 account = "to_send"
 hosting = ["hosted"]
 adapter = "wttj"
+dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "ad9f478" }
