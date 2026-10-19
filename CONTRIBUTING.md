@@ -16,8 +16,6 @@ uv sync
 uv run atsfill install-browser
 ```
 
-[lefthook](https://lefthook.dev) runs the format, lint and type checks before each commit and the tests before each push, once installed with `lefthook install`.
-
 ## Checks
 
 ```sh
