@@ -37,6 +37,8 @@ uv run pytest
 - the [freehire CLI](https://github.com/strelov1/freehire-cli): `mise use -g github:strelov1/freehire-cli`;
 - the `freehire-search` skill, committed under `.agents/` and `.claude/skills/`; to reinstall it: `npx skills add shbernal/skills --skill freehire-search -a claude-code -a codex -y`.
 
+`uv run python -m scripts.gate <system> [--fresh]` says whether an adapter is done: the fixture page and doc, the checks, a dry run `ready` on three companies, `read_api` parity. On PASS it records `dry_run_verified` in the registry. Its output names no company or posting, so it can go in a pull request.
+
 `uv run scripts/backlog.py` regenerates [docs/adapters/README.md](docs/adapters/README.md) from the registry.
 
 ## Rules
