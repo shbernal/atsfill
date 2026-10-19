@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "freehire-search": {
+      "source": "shbernal/skills",
+      "sourceType": "github",
+      "skillPath": "skills/freehire-search/SKILL.md",
+      "computedHash": "6925b4a292133e206f453a02d4912c1831fcc16726a712bde286714332070a13"
+    }
+  }
+}
