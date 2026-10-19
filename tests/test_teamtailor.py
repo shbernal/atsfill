@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.teamtailor import Teamtailor
+from atsfill.adapters.teamtailor import Teamtailor, _stored_name
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import FieldType
@@ -137,3 +137,17 @@ def test_a_follow_up_not_asked_is_not_filled(opened, page):
 def test_submit_returns_the_thanks_page(opened, page):
     opened[0].fill(page, {"question:100": "Oui"})
     assert opened[0].submit(page) == JOB + "/applications/456/thanks"
+
+
+@pytest.mark.parametrize(
+    ("name", "stored"),
+    [
+        ("Jane DOE - Resume - Acme.pdf", "jane_doe_-_resume_-_acme.pdf"),
+        ("CV Élodie (2026)  v2.pdf", "cv_elodie_2026_v2.pdf"),
+        ("Jane_O'Doe, CV+final.pdf", "jane_o_doe_cv_final.pdf"),
+        ("ñandú ça.Résumé.pdf", "nandu_ca.resume.pdf"),
+        ("ABC--x__y  z.pdf", "abc--x_y_z.pdf"),
+    ],
+)
+def test_a_file_reads_back_under_the_name_teamtailor_stores(name, stored):
+    assert _stored_name(name) == stored
