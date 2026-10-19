@@ -34,7 +34,7 @@ The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with 
 No question rendered as a checkbox, radio or select: those, and any other checkbox, read as unsupported when required, and are left out otherwise.
 
 - The email comes from the account and is disabled; the avatar is not read.
-- A field holding a value when the form opens is `prefilled`; one not answered keeps what the profile put there, required or not.
+- A field holding a value when the form opens is `prefilled`; one not answered keeps what the profile put there, required or not. The profile's location arrives up to a second after the rest, so the form is read once it has, or after 3 seconds.
 - The profile's CV shows first, with a Remove button: remove it, then upload the tailored PDF. "Utiliser comme CV par défaut", which would replace the profile's CV, is never ticked.
 - Location suggestions load only while typing key by key, into a box cleared by select-all and Backspace: Playwright's `fill("")` (select-all and Delete) leaves the profile's value in it, and the answer lands after it. The first suggestion, "Position actuelle", geolocates and is skipped. Suggestions read `Paris, Île-de-France, France`. The first answer typed on a page sometimes loads none, "Position actuelle" alone, for good: it is typed again.
 - Nothing is sent before submit, the CV included, so the read-back is the form's inputs and the CV's shown name (`[data-id]`).

@@ -23,6 +23,7 @@ FORM_TIMEOUT_MS = 20_000
 SIGNED_IN_TIMEOUT_S = 10
 SUBMIT_TIMEOUT_MS = 90_000
 SUGGEST_TRIES = 3
+LOCATION_TIMEOUT_S = 3
 SUGGEST_TIMEOUT_S = 5
 YES_NO = ["Yes", "No"]
 
@@ -102,6 +103,10 @@ class WelcomeToTheJungle:
             form.wait_for(timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("form_shape: the apply button opened no form") from None
+        location = form.locator("[name=location]")
+        deadline = time.monotonic() + LOCATION_TIMEOUT_S
+        while location.count() and not location.input_value() and time.monotonic() < deadline:
+            page.wait_for_timeout(200)  # the profile's location comes last, a second later
         fields = []
         for raw in form.evaluate(_READ):
             field = _field(raw)
