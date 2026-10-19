@@ -103,7 +103,8 @@ def run(args: argparse.Namespace) -> int:
         case "status":
             report = core.status(data_dir=args.data_dir)
             emit(report)
-            return 1 if any(a.session == "signed_out" for a in report.adapters) else 0
+            signed_out = any(a.session == "signed_out" for a in report.adapters)
+            return 1 if signed_out or report.browser != report.browser_pinned else 0
         case "install-browser":
             return browser.install()
         case "login":

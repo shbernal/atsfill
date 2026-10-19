@@ -61,6 +61,7 @@ class Result:
     checks: list[Check] = field(default_factory=list)
     side_effects: list[SideEffect] = field(default_factory=list)
     evidence: str | None = None
+    warning: str | None = None  # `code: detail`, on a send that went ahead anyway
 
 
 @dataclass
@@ -69,6 +70,8 @@ class AdapterState:
     submit_enabled: bool
     side_effects: list[SideEffect]
     side_effects_acknowledged: bool
+    verified: str | None = None  # mapped | dry_run_verified | send_verified (ADR 0012)
+    verified_version: str | None = None
     session: str | None = None  # signed_in | signed_out | missing, for a system with accounts
 
 
@@ -77,7 +80,8 @@ class StatusReport:
     version: str
     data_dir: Path
     config: Path
-    browser: str
+    browser: str  # the installed build
+    browser_pinned: str
     adapters: list[AdapterState]
 
 

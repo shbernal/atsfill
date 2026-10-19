@@ -100,7 +100,8 @@ Every push to `main` that passes CI is also published as a dev release; `uvx --p
    ```
 
 A dry run is not invisible: some systems save answers or the resume as they are typed.
-`atsfill status` lists each system's side effects and whether it is allowed to submit.
+`atsfill status` lists each system's side effects, whether it is allowed to submit, and how far atsfill has verified it: [the systems](docs/adapters/README.md).
+A `send` through an adapter no send was verified on goes ahead with a `warning`.
 
 ## How it works
 
@@ -123,7 +124,7 @@ The exit code is 0 for `ready` and `submitted`, 1 otherwise, 2 for a usage error
 ## More
 
 - [Architecture decisions](docs/adr/README.md): the contract, the submit gate, the browser, sessions.
-- [Hiring systems](docs/adapters/): each system's form as observed.
+- [Hiring systems](docs/adapters/README.md): every system mapped so far, in backlog order, and each one's form as observed.
 - `atsfill --help` for every command and option.
 
 [pypi]: https://pypi.org/project/atsfill/

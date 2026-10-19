@@ -4,7 +4,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from atsfill.adapters import ADAPTERS
-from atsfill.core import accounts, attempts, browser, matching, paths
+from atsfill.core import accounts, attempts, browser, matching, paths, registry
 from atsfill.core.adapter import Adapter, Blocked, NeedsAccount, Unsupported
 from atsfill.core.browser import Covered, OutOfTime, Page, open_page
 from atsfill.core.results import (
@@ -138,6 +138,7 @@ def _form_command(
         result = _fill(page, adapter, url, answers)
         if not send or result.status is not Status.READY:
             return result
+        result.warning = _unverified(adapter.name)
         attempts.record(data, posting, attempts.PENDING, url=url)
         try:
             result.evidence = adapter.submit(page)
@@ -194,6 +195,15 @@ def send(
     )
 
 
+def _unverified(adapter: str) -> str | None:
+    """The warning a send carries when no send through the adapter was verified (ADR 0012)."""
+    system = registry.for_adapter(adapter)
+    if system and system.send_verified:
+        return None
+    state = system.state if system else None
+    return f"not_send_verified: {adapter} is {state or 'not in the registry'}"
+
+
 def _session_state(adapter: Adapter, data: Path) -> str | None:
     if not isinstance(adapter, NeedsAccount):
         return None
@@ -208,16 +218,22 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         data_dir=data,
         config=paths.config_file(),
         browser=browser.version(),
-        adapters=[
-            AdapterState(
-                a.name,
-                submit_enabled=paths.submit_enabled(a.name),
-                side_effects=a.side_effects,
-                side_effects_acknowledged=paths.acknowledged(a.name),
-                session=_session_state(a, data),
-            )
-            for a in ADAPTERS
-        ],
+        browser_pinned=browser.BUILD,
+        adapters=[_adapter_state(a, data) for a in ADAPTERS],
+    )
+
+
+def _adapter_state(adapter: Adapter, data: Path) -> AdapterState:
+    system = registry.for_adapter(adapter.name)
+    verified = system.state if system else None
+    return AdapterState(
+        adapter.name,
+        submit_enabled=paths.submit_enabled(adapter.name),
+        side_effects=adapter.side_effects,
+        side_effects_acknowledged=paths.acknowledged(adapter.name),
+        verified=verified,
+        verified_version=getattr(system, verified).version if system and verified else None,
+        session=_session_state(adapter, data),
     )
 
 
