@@ -27,6 +27,8 @@ BY_LABEL = [
     (re.compile(r"last.?name|family name|surname", re.IGNORECASE), LAST),
     (re.compile(r"name", re.IGNORECASE), f"{FIRST} {LAST}"),
     (re.compile(r"phone|mobile", re.IGNORECASE), PHONE),
+    (re.compile(r"how many|number of|years of", re.IGNORECASE), "3"),
+    (re.compile(r"\byear\b", re.IGNORECASE), "2020"),
     (re.compile(r"salary|compensation|pay\b", re.IGNORECASE), SALARY),
     (re.compile(r"linkedin|github|website|portfolio|url|link", re.IGNORECASE), WEBSITE),
     (re.compile(r"city|location|where", re.IGNORECASE), CITY),

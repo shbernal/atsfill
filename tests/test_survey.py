@@ -29,6 +29,10 @@ def test_a_block_page_names_its_vendor(page, server):
     )
 
 
+def test_a_vendor_script_on_a_page_that_loads_is_no_block(page, server):
+    assert probe(page, f"{server}/survey/protected.html").label is None
+
+
 def test_a_password_field_is_a_login_wall(page, server):
     assert probe(page, f"{server}/survey/login.html").label == "login_wall"
 
