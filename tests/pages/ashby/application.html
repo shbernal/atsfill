@@ -1,8 +1,9 @@
 <!doctype html>
 <meta charset="utf-8">
 <!-- Ashby's application page as the adapter meets it: every change is posted to
-     ApiSetFormValue, radios and checkboxes hide behind their text, the location saves only a
-     picked suggestion, and survey answers go to the survey's own render. -->
+     ApiSetFormValue, a file goes through an upload handle and ApiSetFormValueToFile once its
+     upload ends, radios and checkboxes hide behind their text, a long select and the location
+     save only a picked suggestion, and survey answers go to the survey's own render. -->
 <style>input[hidden] { display: none; }</style>
 <form>
   <fieldset data-field-path="_systemfield_name"><input data-form="application"></fieldset>
@@ -11,6 +12,7 @@
     <input role="combobox" id="location">
     <div id="suggestions"></div>
   </fieldset>
+  <fieldset data-field-path="site"><input type="url" data-form="application"></fieldset>
   <fieldset data-field-path="start"><input placeholder="Pick date..." data-form="application"></fieldset>
   <fieldset data-field-path="right">
     <label><input type="radio" name="right" value="true" hidden data-form="application"><span>Yes</span></label>
@@ -19,6 +21,10 @@
   <fieldset data-field-path="level">
     <label><input type="radio" name="level" value="native" hidden data-form="application"><span>Native</span></label>
     <label><input type="radio" name="level" value="fluent" hidden data-form="application"><span>Fluent</span></label>
+  </fieldset>
+  <fieldset data-field-path="source">
+    <input role="combobox" id="source">
+    <div id="sources"></div>
   </fieldset>
   <fieldset data-field-path="langs">
     <label><input type="checkbox" name="langs" value="fr" hidden data-form="application"><span>French</span></label>
@@ -35,11 +41,17 @@
     method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({variables}),
   });
   const save = (form, path, value) => api("ApiSetFormValue", {formRenderIdentifier: form, path, value});
+  const upload = async (form, path, file) => {
+    const handle = await (await api("ApiCreateFileUploadHandle", {filename: file.name})).json();
+    await fetch(handle.data.fileUploadHandle.url, {method: "POST", body: file});
+    await new Promise(done => setTimeout(done, 1500));  // a slow upload ends after other saves
+    api("ApiSetFormValueToFile", {formRenderIdentifier: form, path, fileHandle: handle.data.fileUploadHandle.handle});
+  };
   api("ApiJobPosting", {});
   document.querySelectorAll("[data-form]").forEach(input => input.addEventListener("change", () => {
     const path = input.closest("[data-field-path]").dataset.fieldPath;
     const form = input.dataset.form;
-    if (input.type === "file") return save(form, path, {filename: input.files[0].name});
+    if (input.type === "file") return upload(form, path, input.files[0]);
     if (input.type === "checkbox") {
       return save(form, path, [...document.querySelectorAll(`[name=${input.name}]:checked`)].map(e => e.value));
     }
@@ -60,6 +72,23 @@
       save("application", "_systemfield_location", {text: option.textContent});
     };
     suggestions.append(option);
+  });
+  const source = document.getElementById("source");
+  source.addEventListener("input", () => {
+    const options = document.getElementById("sources");
+    options.innerHTML = "";
+    for (const label of ["LinkedIn", "LinkedIn Learning", "A friend"]) {
+      if (!label.toLowerCase().includes(source.value.toLowerCase())) continue;
+      const option = document.createElement("div");
+      option.setAttribute("role", "option");
+      option.textContent = label;
+      option.onclick = () => {
+        source.value = label;
+        options.innerHTML = "";
+        save("application", "source", label);
+      };
+      options.append(option);
+    }
   });
   document.querySelector(".ashby-application-form-submit-button").onclick = () => api("ApiSubmitMultipleFormsAction", {});
 </script>

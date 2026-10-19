@@ -14,6 +14,7 @@ from atsfill.core.results import FieldType
 PAGES = Path(__file__).parent / "pages/ashby"
 URL = "https://jobs.ashbyhq.com/acme/0b6c9f4e-1d1a-4c5e-9d43-7f0f3c1e2a10"
 SURVEY_RENDER = "survey-render"  # the id survey saves come back under, not the posting's
+UPLOAD = "https://jobs.ashbyhq.com/upload"  # Ashby hands out an S3 address
 
 
 class Ashby_API:
@@ -35,6 +36,8 @@ class Ashby_API:
 
     def handle(self, route) -> None:
         url = route.request.url
+        if url == UPLOAD:
+            return route.fulfill(status=204)
         if "/api/non-user-graphql" not in url:
             return route.fulfill(path=PAGES / "application.html")
         op = url.partition("?op=")[2]
@@ -42,13 +45,17 @@ class Ashby_API:
         match op:
             case "ApiJobPosting":
                 data = {"jobPosting": self.job}
-            case "ApiSetFormValue":
-                self.values[variables["path"]] = variables["value"]
+            case "ApiCreateFileUploadHandle":
+                handle = {"handle": variables["filename"], "url": UPLOAD, "fields": {}}
+                data = {"fileUploadHandle": handle}
+            case "ApiSetFormValue" | "ApiSetFormValueToFile":
+                value = variables.get("value", {"filename": variables.get("fileHandle")})
+                self.values[variables["path"]] = value
                 if variables["formRenderIdentifier"] == SURVEY_RENDER:
                     render = self.render(self.job["surveyForms"][0]) | {"id": SURVEY_RENDER}
                 else:
                     render = self.render(self.job["applicationForm"])
-                data = {"setFormValue": render}
+                data = {op[3].lower() + op[4:]: render}
             case _:
                 if isinstance(self.submit, str):
                     return route.fulfill(json={"errors": [{"message": self.submit}]})
@@ -85,15 +92,18 @@ def test_read_form_lists_the_visible_fields_of_every_form(ashby, page):
         "_systemfield_name",
         "_systemfield_resume",
         "_systemfield_location",
+        "site",
         "start",
         "right",
         "level",
+        "source",
         "langs",
         "age",
     ]
     types = {f.id: f.type for f in fields}
     assert types["start"] is FieldType.DATE
     assert types["_systemfield_location"] is FieldType.TYPEAHEAD
+    assert types["site"] is FieldType.TEXT
     assert next(f for f in fields if f.id == "right").options == ["Yes", "No"]
 
 
@@ -105,9 +115,11 @@ def test_every_answer_reads_back_from_ashby(ashby, page, resume):
         "_systemfield_name": "Ada Lovelace",
         "_systemfield_resume": resume,
         "_systemfield_location": "Paris",
+        "site": "https://ada.example",
         "start": "2026-11-02",
         "right": "Yes",
         "level": "Fluent",
+        "source": "LinkedIn",
         "langs": ["French", "English"],
         "age": "I prefer not to answer",
     }

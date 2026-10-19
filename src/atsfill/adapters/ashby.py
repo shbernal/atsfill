@@ -1,7 +1,7 @@
 """Ashby (`jobs.ashbyhq.com`, and career pages embedding it), as docs/adapters/ashby.md observes.
 
-Every change posts `ApiSetFormValue`, whose response holds the form as Ashby will receive it:
-that is the read-back, kept per form since a survey answer returns the survey alone.
+Every change posts a mutation whose response holds the form as Ashby will receive it: that is
+the read-back, kept per form since a survey answer returns the survey alone.
 """
 
 import json
@@ -31,6 +31,7 @@ TYPES = {
     "String": FieldType.TEXT,
     "Email": FieldType.TEXT,
     "LongText": FieldType.TEXT,
+    "Url": FieldType.TEXT,
     "Date": FieldType.DATE,
     "Number": FieldType.TEXT,
     "Phone": FieldType.PHONE,
@@ -141,6 +142,9 @@ class Ashby:
                     box = entry.locator("input, textarea").first
                     box.fill(answer)
                     box.blur()
+                case FieldType.CHOICE, str() if entry.locator("input[role=combobox]").count():
+                    entry.locator("input[role=combobox]").fill(answer)
+                    page.get_by_role("option", name=answer, exact=True).click()
                 case FieldType.CHOICE, str():
                     entry.get_by_text(answer, exact=True).click()
                 case FieldType.MULTI_CHOICE, list():
@@ -256,7 +260,10 @@ class Ashby:
             self._last_change = time.monotonic()
 
     def _on_response(self, response: Response) -> None:
-        if _op(response) == "ApiSetFormValue" and response.ok:
-            render = response.json()["data"]["setFormValue"]
-            if render:
+        """Any response holding a form render: a value goes to `ApiSetFormValue`, a file to
+        `ApiSetFormValueToFile` once its upload ends, after saves made later."""
+        if not _op(response).startswith("ApiSetFormValue") or not response.ok:
+            return
+        for render in (response.json().get("data") or {}).values():
+            if isinstance(render, dict) and "sections" in render:
                 self._replace(render)
