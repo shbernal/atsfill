@@ -26,12 +26,11 @@ def page(tmp_path_factory):
 
 
 @pytest.fixture
-def opened(page) -> Teamtailor:
+def opened(page) -> tuple[Teamtailor, list]:
     adapter = Teamtailor()
     page.goto(JOB + "?utm_source=LinkedIn")
     assert adapter.detect(page.url, page)
-    adapter.read_form(page)
-    return adapter
+    return adapter, adapter.read_form(page)
 
 
 @pytest.fixture
@@ -51,8 +50,8 @@ def test_detection_and_posting():
     )
 
 
-def test_read_form(opened, page):
-    fields = {f.id: f for f in opened.read_form(page)}
+def test_read_form(opened):
+    fields = {f.id: f for f in opened[1]}
     assert list(fields) == [
         "candidate[first_name]",
         "candidate[email]",
@@ -84,12 +83,12 @@ def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume):
         "question:103": ["Français", "Anglais"],
         "question:104": "2026-11-02",
     }
-    fields = opened.read_form(page)
-    opened.fill(page, answers)
-    checks = matching.check(fields, answers, opened.read_back(page))
+    adapter, fields = opened
+    adapter.fill(page, answers)
+    checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
 
 
 def test_submit_returns_the_thanks_page(opened, page):
-    assert opened.submit(page) == JOB + "/applications/456/thanks"
+    assert opened[0].submit(page) == JOB + "/applications/456/thanks"

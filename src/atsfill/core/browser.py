@@ -1,5 +1,6 @@
 """The browser launcher, the only module that imports camoufox and playwright (ADR 0002)."""
 
+import asyncio
 import fcntl
 import json
 import locale
@@ -9,6 +10,7 @@ import sys
 import threading
 import time
 from collections.abc import Generator
+from concurrent.futures import Future
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -129,11 +131,15 @@ def open_page(
     deadline = time.monotonic() + seconds
     with lock(data_dir, deadline), _launch(data_dir, headless=True) as browser:
         expired = threading.Event()
+        closing: list[Future] = []
 
         def expire() -> None:  # on the timer's thread: hand the close to Playwright's loop
             expired.set()
             close = browser._impl_obj.close(reason="time budget ran out")
-            browser._loop.call_soon_threadsafe(browser._loop.create_task, close)
+            closing.append(asyncio.run_coroutine_threadsafe(close, browser._loop))
+
+        async def closed() -> None:
+            await asyncio.wrap_future(closing[0])
 
         timer = threading.Timer(max(0.0, deadline - time.monotonic()), expire)
         timer.start()
@@ -147,6 +153,9 @@ def open_page(
             raise
         finally:
             timer.cancel()
+            timer.join()
+            if closing:  # Playwright stops on exit, so the close ends first
+                browser._sync(closed())
 
 
 @contextmanager

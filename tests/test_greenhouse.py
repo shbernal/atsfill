@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from atsfill.adapters import greenhouse
 from atsfill.adapters.greenhouse import Greenhouse, _api_fields
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
@@ -27,7 +28,11 @@ def serve(route) -> None:
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    with browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page:
+    with (
+        pytest.MonkeyPatch.context() as mp,  # the fixture's selects open at once
+        browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
+    ):
+        mp.setattr(greenhouse, "OPTIONS_TIMEOUT_MS", 500)
         for host in ("https://job-boards.greenhouse.io/**", "https://www.example.com/**"):
             page.context.route(host, serve)
         yield page

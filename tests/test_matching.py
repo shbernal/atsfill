@@ -47,6 +47,12 @@ def test_problems_before_filling():
         "cv: a file answer is an absolute path",
     ]
     assert problems(fields, {}) == ["no answer for required f (F)"]
+    assert problems(fields, {"f": ["Fluent"], "cv": "/no/resume.pdf"}) == [
+        "f: a choice answer is a string",
+        "cv: no file at /no/resume.pdf",
+    ]
+    langs = Field("l", "Languages", FieldType.MULTI_CHOICE, False, LEVELS)
+    assert problems([langs], {"l": LEVELS[0]}) == ["l: a multi_choice answer is a list of strings"]
     date = Field("d", "Start", FieldType.DATE, False)
     assert problems([date], {"d": "11/02/2026"}) == ["d: a date answer is YYYY-MM-DD"]
     assert problems([date], {"d": "2026-11-02"}) == []

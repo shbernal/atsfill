@@ -38,6 +38,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.17.1",
     "ty==0.0.89",
 ]
@@ -54,7 +55,7 @@ testpaths = ["tests"]
 markers = [
     "live: drives a real hiring system page with data from .env and .tmp/; opt-in with -m live",
 ]
-addopts = "-m 'not live'"
+addopts = "-m 'not live' -n 8"
 
 [[tool.uv.index]]
 name = "testpypi"

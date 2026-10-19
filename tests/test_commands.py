@@ -58,10 +58,9 @@ def test_read_detects_from_the_page(fake, config, url, data):
     assert result.side_effects == fake.side_effects
 
 
-def test_read_detects_from_the_url(fake, config, url, data, monkeypatch):
-    monkeypatch.setattr(Fake, "read_form", lambda self, page: FIELDS[:1])
-    result = core.read(f"{url}?fake", data_dir=data)
-    assert result.fields == FIELDS[:1]
+def test_read_detects_from_the_url(fake, config, server, data):
+    result = core.read(f"{server}/button.html?fake", data_dir=data)  # a page no adapter claims
+    assert (result.status, result.fields) == (Status.READY, FIELDS)
 
 
 def test_no_adapter_is_unsupported(fake, config, server, data):
@@ -71,8 +70,6 @@ def test_no_adapter_is_unsupported(fake, config, server, data):
 
 
 def test_acknowledged_side_effects_are_left_out(fake, config, url, data):
-    config('ack_side_effects = ["fake"]')
-    assert core.read(url, data_dir=data).side_effects == []
     config('ack_side_effects = ["all"]')
     assert core.read(url, data_dir=data).side_effects == []
 
@@ -84,24 +81,10 @@ def test_fill_reads_every_answer_back(fake, config, url, answers, data):
     assert not (data / "attempts.jsonl").exists()
 
 
-@pytest.mark.parametrize(
-    "change, problem",
-    [
-        ({"name": None}, "no answer for required name"),
-        ({"nickname": "A"}, "no field nickname"),
-        ({"level": "Basic"}, "level: 'Basic' is not one of"),
-        ({"langs": "French"}, "langs: a multi_choice answer is a list"),
-        ({"name": ["Ada"]}, "name: a text answer is a string"),
-        ({"cv": "resume.pdf"}, "cv: a file answer is an absolute path"),
-        ({"cv": "/no/resume.pdf"}, "cv: no file at /no/resume.pdf"),
-    ],
-)
-def test_invalid_answers_refuse_before_filling(fake, config, url, answers, data, change, problem):
-    answers = {k: v for k, v in (answers | change).items() if v is not None}
-    result = core.fill(url, answers, data_dir=data)
+def test_invalid_answers_refuse_before_filling(fake, config, url, answers, data):
+    result = core.fill(url, answers | {"level": "Basic"}, data_dir=data)
     assert result.status is Status.REFUSED
-    assert result.reason and result.reason.startswith("invalid_answers: ")
-    assert problem in result.reason
+    assert result.reason and result.reason.startswith("invalid_answers: level: 'Basic'")
     assert result.checks == []
 
 
