@@ -244,7 +244,7 @@ class Teamtailor:
 
     def submit(self, page: Page) -> str | None:
         _click(page, page.locator(f"{FORM} [type=submit]"))
-        page.wait_for_url(re.compile(r"/applications/\d+/thanks"), timeout=SUBMIT_TIMEOUT_MS)
+        page.wait_for_url(re.compile(r"/applications/[^/]+/thanks"), timeout=SUBMIT_TIMEOUT_MS)
         return page.url
 
     def _fill(self, form: Locator, field_id: str, answer: Answer) -> None:

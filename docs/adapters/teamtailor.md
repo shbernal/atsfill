@@ -59,4 +59,4 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 ## Read-back and submit
 
 - Nothing reaches the company before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
-- Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, titled "Applied to <role>". An optional "Connect" step that follows is skipped.
+- Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, the id a UUID, titled "Applied to <role>". An optional "Connect" step that follows is skipped.

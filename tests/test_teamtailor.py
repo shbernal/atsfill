@@ -136,7 +136,8 @@ def test_a_follow_up_not_asked_is_not_filled(opened, page):
 
 def test_submit_returns_the_thanks_page(opened, page):
     opened[0].fill(page, {"question:100": "Oui"})
-    assert opened[0].submit(page) == JOB + "/applications/456/thanks"
+    application = "1b8f2c3e-0000-4000-8000-00000000a456"
+    assert opened[0].submit(page) == f"{JOB}/applications/{application}/thanks"
 
 
 @pytest.mark.parametrize(
