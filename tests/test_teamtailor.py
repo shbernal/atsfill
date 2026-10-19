@@ -6,6 +6,8 @@ import pytest
 
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.core import browser, matching
+from atsfill.core.adapter import Unsupported
+from atsfill.core.results import FieldType
 
 PAGE = Path(__file__).parent / "pages/teamtailor/new.html"
 JOB = "https://careers.example.com/fr/jobs/1234567-solution-engineer"
@@ -56,12 +58,19 @@ def test_read_form(opened):
         "candidate[first_name]",
         "candidate[email]",
         "candidate[resume_remote_url]",
+        "candidate[file_remote_url]",
+        "candidate[location][query]",
+        "candidate[location_ids][]",
         "candidate[consent_given]",
+        "question:100",
         "question:101",
+        "question:108",
         "question:102",
+        "question:105",
+        "question:106",
         "question:103",
         "question:104",
-    ]
+    ]  # the optional video question is left out
     assert fields["candidate[first_name]"].label == "Prénom"
     assert fields["candidate[first_name]"].max_length == 50
     assert fields["candidate[consent_given]"].required
@@ -70,6 +79,17 @@ def test_read_form(opened):
     assert fields["question:102"].options == ["LinkedIn", "Site carrière"]
     assert not fields["question:102"].required
     assert fields["candidate[resume_remote_url]"].accept == [".pdf", ".docx"]
+    assert fields["candidate[location][query]"].type is FieldType.TYPEAHEAD
+    assert fields["candidate[location_ids][]"].options == ["Paris", "Lyon"]
+    assert fields["candidate[location_ids][]"].required
+    assert fields["question:100"].required  # qualifying questions are always answered
+    assert (
+        fields["question:108"].label
+        == 'À partir de quand ? (asked when "Êtes-vous disponible ?" is "Oui")'
+    )
+    assert not fields["question:108"].required  # only once an earlier answer asks it
+    assert fields["question:105"].options == ["Samedi", "Dimanche"]
+    assert fields["question:106"].options == [str(n) for n in range(11)]
 
 
 def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume):
@@ -77,9 +97,16 @@ def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume):
         "candidate[first_name]": "Ada",
         "candidate[email]": "ada@example.com",
         "candidate[resume_remote_url]": resume,
+        "candidate[file_remote_url]": resume,
+        "candidate[location][query]": "London",
+        "candidate[location_ids][]": ["Lyon"],
         "candidate[consent_given]": "Yes",
+        "question:100": "Oui",
         "question:101": "Oui",
+        "question:108": "Lundi",
         "question:102": "Site carrière",
+        "question:105": ["Samedi", "Dimanche"],
+        "question:106": "7",
         "question:103": ["Français", "Anglais"],
         "question:104": "2026-11-02",
     }
@@ -90,5 +117,23 @@ def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume):
     assert len(checks) == len(answers)
 
 
+def test_a_disqualifying_answer_leaves_the_form_locked(opened, page):
+    with pytest.raises(Unsupported, match="not_qualified"):
+        opened[0].fill(page, {"question:100": "Non", "candidate[first_name]": "Ada"})
+
+
+def test_an_unanswered_follow_up_stops_the_fill(opened, page):
+    with pytest.raises(Unsupported, match="missing_answer"):
+        opened[0].fill(page, {"question:100": "Oui", "question:101": "Oui"})
+
+
+def test_a_follow_up_not_asked_is_not_filled(opened, page):
+    adapter, fields = opened
+    answers = {"question:100": "Oui", "question:101": "Non", "question:108": "Lundi"}
+    adapter.fill(page, answers)
+    assert "question:108" not in adapter.read_back(page)
+
+
 def test_submit_returns_the_thanks_page(opened, page):
+    opened[0].fill(page, {"question:100": "Oui"})
     assert opened[0].submit(page) == JOB + "/applications/456/thanks"

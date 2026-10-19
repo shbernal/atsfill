@@ -1,39 +1,62 @@
 # Teamtailor
 
-Observed on live postings, last on 2026-10-18. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as a company's career site in `tests/test_teamtailor.py`.
+Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as a company's career site in `tests/test_teamtailor.py`.
 
 ## Where the form is
 
 - Career sites live at `<company>.teamtailor.com` or on the company's domain (`careers.<company>.com`, `jobs.<company>.fr`), sometimes under a locale (`/fr/jobs/…`). A job is `/jobs/<id>-<slug>`; the double-send key is `https://<host>/jobs/<id>`.
-- On a custom domain, the page shows itself by the "powered by" link to `www.teamtailor.com` in its footer. The footer text is translated ("Career site by Teamtailor", "Outil de recrutement de Teamtailor"), the link is not.
+- On a custom domain, the page shows itself by the "powered by" link to `www.teamtailor.com` in its footer. The footer text is translated ("Career site by Teamtailor", "Outil de recrutement de Teamtailor"), the link is not. Some sites drop the link; they still load Teamtailor's `careersite-*.js` from `teamtailor-cdn.com`.
 - The form has its own page, `<job>/applications/new`. "Apply for this job" on the job page opens the same form in an overlay; "Apply with LinkedIn" sits above it and is never used.
+- A career site can send its applications elsewhere: `applications/new` then redirects to another host, and the posting is `unsupported` as applying on another site.
 
 ## Reading the form
 
 - `form#job-application-form`. Standard fields are named `candidate[first_name]`, `candidate[last_name]`, `candidate[email]`, `candidate[phone]`, `candidate[job_applications_attributes][0][cover_letter]`, and the consent boxes `candidate[consent_given]` and `candidate[consent_given_future_jobs]`, which atsfill reads as `Yes`/`No` choices. Which of them a form shows, and which are required, depends on the company.
 - A required field's label holds `<sup data-asterisk>`; the translated "Required" next to it is screen-reader text. Inputs carry no `required` attribute.
 - The resume is a drop zone over `input[type=file]#candidate_resume_remote_url`; "Additional files" is `#candidate_file_remote_url`.
-- Custom questions are `.question` blocks with `data-question-mandatory`, a hidden `[question_id]` (the field id is `question:<question id>`) and an answer input whose name ends in its kind:
+- Custom questions are `.question` blocks with `data-question-mandatory`, a hidden `[question_id]` (the field id is `question:<question id>`) and an answer input whose name ends in its kind. A qualifying question is a `[data-careersite--form-target=qualifyingAnswers]` block of the same make, always required. A follow-up question carries `data-question-show-if-uuid` (its earlier question's `data-question-uuid`) and `data-question-show-if-value` (the option value that shows it); it is read as optional, its label ending in `(asked when "<earlier question>" is "<option>")`.
 
-| Answer input | Field type |
-|---|---|
-| `[text]` (input or textarea), `[number]` | `text` |
-| `[date]` (`input[type=date]`) | `date` |
-| `[boolean]` radios, labels translated | `choice` |
-| `[choice]` radios, or a dropdown of `menuitemradio` buttons over hidden radios | `choice` |
-| `[choices][]` checkboxes, or a dropdown | `multi_choice` |
+Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
-  Range, file and video answers are not handled: a required one makes the form `unsupported`, an optional one is left out.
+| Page | Field type | Postings |
+|---|---|---|
+| `candidate[first_name]`, `[email]`… text inputs, the cover letter textarea | `text` | 15, the cover letter on 9 |
+| `candidate[phone]` (intl-tel-input) | `phone` | 15 |
+| consent checkboxes | `choice`, `Yes`/`No` | 15 |
+| resume drop zone `#candidate_resume_remote_url` | `file` | 15 |
+| "Additional files" `#candidate_file_remote_url`, several files allowed | `file`, one | 13 |
+| address autocomplete `candidate[location][query]` (`role=combobox`) | `typeahead` | 7 |
+| office locations, `fieldset` of `candidate[location_ids][]` checkboxes | `multi_choice` | 2 |
+| question `[text]`, input or textarea | `text` | 11 |
+| question `[number]` | `text`, a number | 4 |
+| question `[boolean]` radios, labels translated | `choice` | 8 |
+| question `[choice]` radios | `choice` | 4 |
+| question `[choice]` dropdown of `menuitemradio` buttons over hidden radios | `choice` | 3 |
+| question `[choices][]` checkboxes | `multi_choice` | 2 |
+| question `[choices][]` dropdown of `menuitemcheckbox` buttons, with a search box | `multi_choice` | 1 |
+| question `[range]`, a slider with `min`, `max`, `step` | `choice` of each step | 0, seen before |
+| question `[date]` (`input[type=date]`) | `date` | 0, seen before |
+| qualifying question | `choice` | 1 |
+| follow-up question | as its kind, optional | 2 |
+| video question (`[picked_video_attributes]`: record, or upload a clip) | not handled | 3, required on 2 |
+| file question | not handled | 0 |
+
+  A required question atsfill does not handle makes the form `unsupported`; an optional one is left out.
 
 ## Filling
 
 - The cookie banner is a modal `<dialog>`. While it is open the rest of the page is inert: typing into a field does nothing and raises nothing. Decline it (`[data-action*="cookies--alert#disableAll"]`) before filling. It can come back over the consent box and the submit button, so clicks check what is on top first.
+- Qualifying questions are answered first. While one is unanswered, or answered with what the employer does not accept, the rest of the form sits under `[data-careersite--form-target=formContentWrapper].cursor-not-allowed` and takes no clicks; atsfill then stops with `not_qualified`.
+- A follow-up question shows once its earlier question has the answer it waits for. An answer to one that stays hidden is not filled, so it reads back as a mismatch; a required one that shows without an answer stops the fill with `missing_answer`.
 - Click the consent box's label.
 - A picked file uploads at once: `POST /uploads/presigned_data`, then to Teamtailor's S3. The form then holds the file's address in `candidate[resume_remote_url]`, whose last path segment is the file name.
 - The phone field (intl-tel-input) takes an international number and keeps it as `+<digits>`.
-- In a dropdown choice the hidden radios still have labels: pick from the dropdown, not the hidden label.
+- In a dropdown choice the hidden radios still have labels: pick from the dropdown, not the hidden label. A multiple choice dropdown stays open after a pick, over the fields below it, so it is closed once its options are picked.
+- The address is typed key by key, and the first suggestion (`[role=option]`, its text in `data-description`) matching it is picked; only a pick fills `candidate[location][place_id]` and the city, country and coordinates beside it.
+- A range question is set on its slider, `input[type=range]`.
+- A number question takes only a number; any other answer leaves it empty, a mismatch.
 
 ## Read-back and submit
 
-- Nothing reaches the company before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), and for a file the name at the end of its stored address.
+- Nothing reaches the company before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
 - Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, titled "Applied to <role>". An optional "Connect" step that follows is skipped.
