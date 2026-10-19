@@ -22,6 +22,8 @@ ME = "https://api.welcometothejungle.com/api/v2/users/me"
 FORM_TIMEOUT_MS = 20_000
 SIGNED_IN_TIMEOUT_S = 10
 SUBMIT_TIMEOUT_MS = 90_000
+SUGGEST_TRIES = 3
+SUGGEST_TIMEOUT_S = 5
 YES_NO = ["Yes", "No"]
 
 # The fillable fields: an input's name is its id. Email comes from the account, disabled.
@@ -33,7 +35,9 @@ _READ = """form => [...form.querySelectorAll("input[name], textarea[name]")]
             label: (label ?? e.closest("fieldset")?.querySelector("legend"))?.textContent
               .replace(/\\s+/g, " ").trim() ?? "",
             required: e.required || label?.hasAttribute("required"),
-            accept: e.accept ? e.accept.split(",") : null};
+            accept: e.accept ? e.accept.split(",") : null,
+            prefilled: e.type === "checkbox" ? e.checked
+              : e.type === "file" ? !!e.parentElement.querySelector("[data-id]") : !!e.value};
   })"""
 
 _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
@@ -149,17 +153,21 @@ class WelcomeToTheJungle:
 
 def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
     """Retypes the answer key by key, which loads the suggestions, and picks the first that
-    matches it, never "current position" (the item with an icon, which geolocates)."""
-    box.click()
-    box.press("Control+a")  # `fill("")`, select-all and Delete, leaves the profile's value
-    box.press("Backspace")
-    box.press_sequentially(answer, delay=30)
+    matches it, never "current position" (the item with an icon, which geolocates). Typed too
+    early, the answer loads no suggestions at all: it is typed again."""
     options = page.locator("[role=option]:visible").filter(has_not=page.locator("svg"))
-    options.first.wait_for()
-    for i in range(options.count()):
-        if matching.matches(field, answer, options.nth(i).inner_text().strip()):
-            options.nth(i).click()
-            return
+    for _ in range(SUGGEST_TRIES):
+        box.click()
+        box.press("Control+a")  # `fill("")`, select-all and Delete, leaves the profile's value
+        box.press("Backspace")
+        box.press_sequentially(answer, delay=30)
+        deadline = time.monotonic() + SUGGEST_TIMEOUT_S
+        while time.monotonic() < deadline:
+            for option in options.all():
+                if matching.matches(field, answer, option.inner_text().strip()):
+                    option.click()
+                    return
+            page.wait_for_timeout(250)
     raise Unsupported(f"form_shape: no suggestion for {answer!r} in {field.id}")
 
 
@@ -177,4 +185,7 @@ def _field(raw: dict[str, Any]) -> Field | None:
             )
     if kind is None:
         return None
-    return Field(name, raw["label"], kind, bool(raw["required"]), options, None, raw["accept"])
+    return Field(
+        name, raw["label"], kind, bool(raw["required"]), options, None, raw["accept"],
+        raw["prefilled"],
+    )  # fmt: skip

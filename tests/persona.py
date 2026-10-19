@@ -97,5 +97,10 @@ def answer(field: Field, cv: Path) -> Answer | None:
 
 
 def answers(fields: list[Field], cv: Path) -> dict[str, Answer]:
-    """Answers every field it can, so the dry run reaches each one."""
-    return {f.id: a for f in fields if (a := answer(f, cv)) is not None}
+    """Answers every field it can, so the dry run reaches each one, but leaves what the account
+    prefilled to the account, a résumé aside."""
+    return {
+        f.id: a
+        for f in fields
+        if (a := answer(f, cv)) is not None and not (f.prefilled and f.type is not FieldType.FILE)
+    }
