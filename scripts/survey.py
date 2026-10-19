@@ -31,16 +31,21 @@ CORPUS = ROOT / ".tmp/corpus"
 DELAY_S = 5.0
 IDLE_MS = 15_000
 
-# Each vendor's block page, by a header, a cookie or the page source, checked in this order.
-VENDORS = [
-    ("DataDome", re.compile(r"x-datadome|datadome=|captcha-delivery\.com", re.IGNORECASE)),
-    (
-        "Cloudflare",
-        re.compile(r"cf-mitigated|challenges\.cloudflare\.com|/cdn-cgi/challenge-platform|cf-chl"),
-    ),
-    ("PerimeterX", re.compile(r"_pxhd|px-captcha|captcha\.px-cdn\.net|perimeterx", re.IGNORECASE)),
-    ("Akamai", re.compile(r"akamaighost|errors\.edgesuite\.net|_abck=", re.IGNORECASE)),
+# A challenge or block page, by a header or the page source: a block on its own.
+CHALLENGES = [
+    ("DataDome", re.compile(r"captcha-delivery\.com", re.IGNORECASE)),
+    ("Cloudflare", re.compile(r"cf-mitigated: challenge|cf_chl_opt|<title>Just a moment")),
+    ("PerimeterX", re.compile(r"px-captcha|captcha\.px-cdn\.net|Press & Hold", re.IGNORECASE)),
+    ("Akamai", re.compile(r"errors\.edgesuite\.net", re.IGNORECASE)),
 ]
+# A vendor's protection on any page it serves: it names the vendor of a 403 or a 429 only.
+PROTECTIONS = [
+    ("DataDome", re.compile(r"x-datadome|datadome=", re.IGNORECASE)),
+    ("Cloudflare", re.compile(r"cf-ray|/cdn-cgi/challenge-platform")),
+    ("PerimeterX", re.compile(r"_px\w*=|perimeterx", re.IGNORECASE)),
+    ("Akamai", re.compile(r"akamaighost|_abck=", re.IGNORECASE)),
+]
+NOT_A_BLOCK = ("covered", "time_budget")  # `blocked` statuses that are atsfill's own limits
 LOGIN_PATH = re.compile(r"/(log-?in|sign-?in|auth|authenticate|sso)\b", re.IGNORECASE)
 
 
@@ -54,8 +59,8 @@ class Probe:
     vendor: str | None = None
 
 
-def _vendor(text: str) -> tuple[str, str] | None:
-    for vendor, pattern in VENDORS:
+def _vendor(text: str, signals: list[tuple[str, re.Pattern]]) -> tuple[str, str] | None:
+    for vendor, pattern in signals:
         if m := pattern.search(text):
             return vendor, m.group(0)
     return None
@@ -72,10 +77,13 @@ def probe(page: Page, url: str, response: Response | None) -> Probe:
     headers = response.all_headers() if response else {}
     cookies = "; ".join(f"{c.get('name')}={c.get('value')}" for c in page.context.cookies())
     text = "\n".join([*(f"{k}: {v}" for k, v in headers.items()), cookies, page.content()])
-    if hit := _vendor(text):
+    status = response.status if response else None
+    if hit := _vendor(text, CHALLENGES):
         found.label, found.vendor, found.signal = "blocked", *hit
-    elif response and response.status in (403, 429):
-        found.label, found.vendor, found.signal = "blocked", "unknown", f"http {response.status}"
+    elif status in (403, 429):
+        vendor, signal = _vendor(text, PROTECTIONS) or ("unknown", "")
+        found.label, found.vendor = "blocked", vendor
+        found.signal = f"http {status}" + (f", {signal}" if signal else "")
     elif (
         LOGIN_PATH.search(urlsplit(page.url).path)
         or page.locator("input[type=password]:visible").count()
@@ -107,7 +115,7 @@ def _evidence(page: Page, response: Response | None, key: str) -> Path:
     return path
 
 
-def survey(url: str, source: str | None, data: Path, cv: Path) -> dict:
+def survey(url: str, company: str, source: str | None, data: Path, cv: Path) -> dict:
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
     with browser.open_page(data) as page:
         response = page.goto(url)
@@ -122,15 +130,16 @@ def survey(url: str, source: str | None, data: Path, cv: Path) -> dict:
     step = None
     if found.label == "blocked":
         step = "posting"
-    elif result.status is Status.BLOCKED:
+    elif result.status is Status.BLOCKED and (result.reason or "").startswith("login_required"):
+        found.label, found.signal = "login_wall", result.reason
+    elif result.status is Status.BLOCKED and not (result.reason or "").startswith(NOT_A_BLOCK):
         step = "upload" if "upload" in (result.reason or "") else "form"
-        found.label = found.label or "blocked"
-        found.vendor = found.vendor or "unknown"
-        found.signal = found.signal or result.reason
+        found.label, found.vendor, found.signal = "blocked", "unknown", result.reason
     if result.status is not Status.READY and found.label is None:
         found.label = "unclear"
     return {
         "source": source,
+        "company": company,
         "url": url,
         "final_url": found.final_url,
         "system": result.system,
@@ -147,8 +156,8 @@ def survey(url: str, source: str | None, data: Path, cv: Path) -> dict:
     }
 
 
-def freehire(source: str, companies: int) -> list[str]:
-    """One posting each from `companies` different companies on a freehire source."""
+def freehire(source: str, companies: int) -> list[tuple[str, str]]:
+    """One posting, with its company, from each of `companies` companies on a freehire source."""
     urls: dict[str, str] = {}
     offset, page_size = 0, 50
     while len(urls) < companies:
@@ -165,7 +174,38 @@ def freehire(source: str, companies: int) -> list[str]:
         for job in jobs:
             urls.setdefault(job["company_slug"], job["url"])
         offset += page_size
-    return list(urls.values())[:companies]
+    return [(url, company) for company, url in urls.items()][:companies]
+
+
+def run(
+    postings: list[tuple[str, str]],
+    source: str | None,
+    data_dir: Path = CORPUS / "data",
+    delay: float = DELAY_S,
+    echo: bool = True,
+) -> list[dict]:
+    """Surveys each (URL, company), appending its row to .tmp/corpus/<source>.jsonl."""
+    CORPUS.mkdir(parents=True, exist_ok=True)
+    cv = persona.resume(CORPUS / "resume.pdf")
+    data = paths.data_dir(data_dir)
+    out, rows = CORPUS / f"{source or 'urls'}.jsonl", []
+    for n, (url, company) in enumerate(postings):
+        if n:
+            time.sleep(delay)
+        try:
+            row = survey(url, company, source, data, cv)
+        except Exception as e:  # one posting's failure is a row, not the end of the survey
+            row = {"source": source, "company": company, "url": url, "label": "unclear",
+                   "reason": f"survey_error: {type(e).__name__}: {e}",
+                   "date": date.today().isoformat()}  # fmt: skip
+        with out.open("a") as f:
+            f.write(json.dumps(row, default=str) + "\n")
+        if echo:
+            print(
+                json.dumps({k: row.get(k) for k in ("url", "system", "status", "label", "reason")})
+            )
+        rows.append(row)
+    return rows
 
 
 def main() -> None:
@@ -178,23 +218,8 @@ def main() -> None:
     args = p.parse_args()
     if not args.urls and not args.source:
         p.error("give URLs or --source")
-    urls = args.urls or freehire(args.source, args.companies)
-    CORPUS.mkdir(parents=True, exist_ok=True)
-    cv = persona.resume(CORPUS / "resume.pdf")
-    data = paths.data_dir(args.data_dir)
-    out = CORPUS / f"{args.source or 'urls'}.jsonl"
-    for n, url in enumerate(urls):
-        if n:
-            time.sleep(args.delay)
-        try:
-            row = survey(url, args.source, data, cv)
-        except Exception as e:  # one posting's failure is a row, not the end of the survey
-            row = {"source": args.source, "url": url, "label": "unclear",
-                   "reason": f"survey_error: {type(e).__name__}: {e}",
-                   "date": date.today().isoformat()}  # fmt: skip
-        with out.open("a") as f:
-            f.write(json.dumps(row, default=str) + "\n")
-        print(json.dumps({k: row.get(k) for k in ("url", "system", "status", "label", "reason")}))
+    postings = [(u, _host(u)) for u in args.urls] or freehire(args.source, args.companies)
+    run(postings, args.source, args.data_dir, args.delay)
 
 
 if __name__ == "__main__":
