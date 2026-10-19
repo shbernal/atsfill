@@ -27,6 +27,7 @@ kind = "ats"
 account = "none"
 hosting = ["hosted"]
 adapter = "teamtailor"
+dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "91a0bba" }
 
 [greenhouse]
 kind = "ats"
