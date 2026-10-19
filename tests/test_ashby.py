@@ -65,7 +65,11 @@ class Ashby_API:
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    with browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page:
+    with (
+        pytest.MonkeyPatch.context() as mp,
+        browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
+    ):
+        mp.setattr("atsfill.adapters.ashby.SETTLE_S", 0.3)  # shorter than the fixture's slow upload
         yield page
 
 

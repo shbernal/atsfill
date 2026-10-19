@@ -14,6 +14,7 @@ from tests.fake import FakeAccount
 def account(server, monkeypatch) -> FakeAccount:
     adapter = FakeAccount(server)
     monkeypatch.setattr(commands, "ADAPTERS", [adapter])
+    monkeypatch.setattr(accounts, "POLL_MS", 100)
     monkeypatch.setattr(
         browser, "login_window", functools.partial(browser.login_window, headless=True)
     )
@@ -52,7 +53,7 @@ def test_login_stores_the_session(account, data):
 
 
 def test_login_gives_up_when_nobody_signs_in(account, data, monkeypatch):
-    monkeypatch.setattr(accounts, "LOGIN_TIMEOUT_S", 0.5)
+    monkeypatch.setattr(accounts, "LOGIN_TIMEOUT_S", 0.2)
     report = core.login("fakeaccount", data_dir=data)
     assert (report.session, report.reason) == ("missing", "login_timeout")
     assert not report.path.exists()

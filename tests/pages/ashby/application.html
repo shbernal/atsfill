@@ -44,7 +44,7 @@
   const upload = async (form, path, file) => {
     const handle = await (await api("ApiCreateFileUploadHandle", {filename: file.name})).json();
     await fetch(handle.data.fileUploadHandle.url, {method: "POST", body: file});
-    await new Promise(done => setTimeout(done, 1500));  // a slow upload ends after other saves
+    await new Promise(done => setTimeout(done, 600));  // a slow upload ends after other saves
     api("ApiSetFormValueToFile", {formRenderIdentifier: form, path, fileHandle: handle.data.fileUploadHandle.handle});
   };
   api("ApiJobPosting", {});
