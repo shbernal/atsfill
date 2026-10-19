@@ -91,6 +91,22 @@ def systems() -> dict[str, System]:
     return parse(files("atsfill").joinpath("registry.toml").read_text())
 
 
+def with_state(text: str, source: str, state: str, v: Verification) -> str:
+    """The registry file's text with `state` of `source` set to `v`, the rest untouched."""
+    lines = text.splitlines()
+    start = lines.index(f"[{source}]")
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("[")), len(lines))
+    while lines[end - 1] == "":
+        end -= 1
+    entry = f'{state} = {{ date = {v.date}, version = "{v.version}", by = "{v.by}" }}'
+    at = next((i for i in range(start, end) if lines[i].startswith(f"{state} =")), None)
+    if at is None:
+        lines.insert(end, entry)
+    else:
+        lines[at] = entry
+    return "\n".join(lines) + "\n"
+
+
 def for_adapter(name: str) -> System | None:
     return next((s for s in systems().values() if s.adapter == name), None)
 

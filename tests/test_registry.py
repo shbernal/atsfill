@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -78,3 +79,13 @@ account = "none"
 def test_the_committed_backlog_is_current():
     committed = (ROOT / "docs/adapters/README.md").read_text()
     assert committed == registry.backlog(), "run `uv run scripts/backlog.py`"
+
+
+def test_a_state_is_written_into_its_entry_only():
+    text = '[a]\nkind = "ats"\naccount = "none"\n\n[b]\nkind = "ats"\naccount = "none"\n'
+    v = registry.Verification(date(2026, 10, 19), "0.0.2+abc1234", "gate")
+    once = registry.with_state(text, "a", "dry_run_verified", v)
+    twice = registry.with_state(once, "a", "dry_run_verified", v)
+    assert once == twice
+    systems = registry.parse(twice)
+    assert (systems["a"].dry_run_verified, systems["b"].state) == (v, None)
