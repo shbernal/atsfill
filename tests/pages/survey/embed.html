@@ -1,0 +1,9 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Careers</title>
+<h1>Join us</h1>
+<iframe id="apply" width="800" height="600"></iframe>
+<script>
+  // the form on another origin: 127.0.0.1 on the same port
+  apply.src = location.origin.replace("localhost", "127.0.0.1") + "/form.html";
+</script>
