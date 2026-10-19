@@ -2,13 +2,14 @@
 pages embedding them), as docs/adapters/greenhouse.md observes.
 
 Nothing but an attached file reaches Greenhouse before submit, so the read-back is the page:
-input values, the shown value of each select, the phone country's flag, the attached file's name.
+input values, the shown value of each select, the phone's dial code, the attached file's name.
 """
 
 import json
 import re
 import time
 import urllib.request
+from contextlib import suppress
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
@@ -25,6 +26,7 @@ EMBED_TIMEOUT_MS = 15_000
 OPTIONS_TIMEOUT_MS = 3_000
 HYDRATE_TIMEOUT_MS = 15_000
 FORM_TIMEOUT_MS = 20_000
+ANSWER_TIMEOUT_MS = 15_000  # an upload's file name, a suggestion: past it, a mismatch
 SUBMIT_TIMEOUT_MS = 90_000
 API_TYPES = {
     "input_text": FieldType.TEXT,
@@ -34,6 +36,9 @@ API_TYPES = {
     "multi_value_multi_select": FieldType.MULTI_CHOICE,
 }
 YES_NO = ["Yes", "No"]
+# Sections the page adds or names its own way, or shows a question of only on another answer
+# (EEOC race after Hispanic/Latino): `read_api` declines a posting with any (ADR 0011).
+UNMAPPED = ("education", "compliance", "demographic_questions")
 
 # The fields in page order. A select's options are read by opening it, from Python.
 _READ = """form => {
@@ -48,12 +53,14 @@ _READ = """form => {
   const required = el => el.getAttribute("aria-required") === "true" || el.required;
   const found = [];
   for (const el of form.querySelectorAll("input, textarea")) {
-    if (!el.id || ["hidden", "search", "file", "checkbox", "radio"].includes(el.type)) continue;
+    if (!el.id || ["hidden", "search", "file", "checkbox"].includes(el.type)) continue;
     const combo = el.getAttribute("role") === "combobox";
+    if (combo && el.closest(".phone-input")) continue;  // the phone's country, set by its number
     const shell = el.closest(".select");
     const multi = combo && !!shell?.querySelector(".select__value-container--is-multi");
     found.push([el, {id: el.id, label: text(labelFor(el)), required: required(el),
-      kind: combo ? (multi ? "multi" : "select") : el.type === "tel" ? "tel" : "text",
+      kind: combo ? (multi ? "multi" : "select")
+        : ["tel", "number", "radio"].includes(el.type) ? el.type : "text",
       maxLength: el.maxLength > 0 ? el.maxLength : null}]);
   }
   for (const group of form.querySelectorAll("fieldset.checkbox")) {
@@ -80,8 +87,8 @@ _READ = """form => {
   return found.map(([, field]) => field);
 }"""
 
-# What each field shows: a select its shown value (the phone country its flag's code), a file
-# its attached name, a checkbox group its checked labels.
+# What each field shows: a select its shown value, a file its attached name, a checkbox group
+# its checked labels, the phone its country's dial code then its number.
 _READ_BACK = """(form, ids) => {
   const text = el => el ? el.textContent.replace(/\\s+/g, " ").trim() : null;
   const out = {};
@@ -94,10 +101,12 @@ _READ_BACK = """(form, ids) => {
         .map(b => text(document.querySelector(`label[for="${CSS.escape(b.id)}"]`)));
     } else if (el?.getAttribute("role") === "combobox") {
       const select = el.closest(".select");
-      const flag = select.querySelector(".select__single-value .iti__flag");
       const multi = [...select.querySelectorAll(".select__multi-value__label")].map(text);
-      out[id] = flag ? "flag:" + [...flag.classList].find(c => /^iti__[a-z]{2}$/.test(c)).slice(5)
-        : multi.length ? multi : text(select.querySelector(".select__single-value"));
+      out[id] = multi.length ? multi : text(select.querySelector(".select__single-value"));
+    } else if (el?.type === "tel" && el.closest(".phone-input")) {
+      const dial = text(el.closest(".phone-input").querySelector(".select__single-value"));
+      const number = el.value.startsWith(dial) ? el.value.slice(dial.length).trim() : el.value;
+      out[id] = dial && number ? `${dial} ${number}` : null;
     } else {
       const box = form.querySelector(`input[type=checkbox][name="${id}"]`) ?? el;
       out[id] = box?.type === "checkbox" ? (box.checked ? "Yes" : "No") : el?.value ?? null;
@@ -117,11 +126,11 @@ class Greenhouse:
     def __init__(self) -> None:
         self._fields: dict[str, Field] = {}
         self._kinds: dict[str, str] = {}  # how the page renders each field
-        self._flags: dict[str, dict[str, str]] = {}  # per select, option text by flag code
         self._embed: str | None = None  # the job_app URL a company page embeds
 
     def detect(self, url: str, page: Page | None) -> bool:
         """A board URL, or a company page whose `#grnhse_iframe` embeds a job application."""
+        self._embed = None  # one process detects many postings: a survey, the gate
         if _board_job(url):
             return True
         if page is None:
@@ -181,7 +190,8 @@ class Greenhouse:
                 case "file":
                     upload = page.locator(_upload(field_id))
                     upload.locator("input[type=file]").set_input_files(values[0])
-                    upload.locator(".file-upload__filename").wait_for()
+                    with suppress(Timeout):
+                        upload.locator(".file-upload__filename").wait_for(timeout=ANSWER_TIMEOUT_MS)
                 case "consent":
                     box = page.locator(f"{FORM} input[type=checkbox][name='{field_id}']").first
                     if box.is_checked() != (answer == "Yes"):
@@ -194,15 +204,15 @@ class Greenhouse:
                     suggested = self._fields[field_id].type is FieldType.TYPEAHEAD
                     for value in values:
                         _select(page, field_id, value, suggested)
+                case "tel":  # the number's dial code picks the country
+                    page.locator(_by_id(field_id)).press_sequentially(values[0], delay=20)
+                case "number" if not re.fullmatch(r"-?\d+(\.\d+)?", values[0]):
+                    pass  # the input takes no text: left empty, it reads back as a mismatch
                 case _:
                     page.locator(_by_id(field_id)).fill(values[0])
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, list(self._fields))
-        for field_id, flags in self._flags.items():
-            shown = values.get(field_id)
-            if isinstance(shown, str) and shown.startswith("flag:"):
-                values[field_id] = flags.get(shown[5:], shown)
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def submit(self, page: Page) -> str | None:
@@ -213,7 +223,7 @@ class Greenhouse:
     def _field(self, page: Page, raw: dict[str, Any]) -> Field:
         kind, options = raw["kind"], raw.get("options")
         match kind:
-            case "text":
+            case "text" | "number":
                 field_type = FieldType.TEXT
             case "tel":
                 field_type = FieldType.PHONE
@@ -229,7 +239,7 @@ class Greenhouse:
                     field_type = FieldType.TYPEAHEAD
                 else:
                     field_type = FieldType.MULTI_CHOICE if kind == "multi" else FieldType.CHOICE
-            case _:
+            case _:  # a radio input, not seen on a posting yet
                 raise Unsupported(f"form_shape: {raw['id']} is a {kind}")
         return Field(
             raw["id"],
@@ -252,12 +262,6 @@ class Greenhouse:
             box.press("Escape")
             return None
         options = [t.strip() for t in menu.all_inner_texts()]
-        flags = menu.evaluate_all(
-            "items => items.map(i => [...(i.querySelector('.iti__flag')?.classList ?? [])]"
-            ".find(c => /^iti__[a-z]{2}$/.test(c))?.slice(5))"
-        )
-        if any(flags):
-            self._flags[field_id] = {f: o for f, o in zip(flags, options, strict=True) if f}
         box.press("Escape")
         return options
 
@@ -294,39 +298,22 @@ def _board_job(url: str) -> tuple[str, str] | None:
 
 
 def _api_fields(job: dict[str, Any]) -> list[Field] | None:
-    if job.get("education") or any(
+    if any(job.get(k) for k in UNMAPPED) or any(
         c.get("requires_consent") or c.get("requires_processing_consent")
         for c in job.get("data_compliance") or []
     ):
-        return None  # the page adds education rows or consent boxes the API does not list
+        return None
     fields = []
     for question in job["questions"] + (job.get("location_questions") or []):
         entry = question["fields"][0]  # a file's paste-in textarea comes second
-        if entry["type"] == "input_hidden":
+        if entry["type"] == "input_hidden":  # a location's latitude and longitude
             continue
         name = entry["name"]
-        field_type = API_TYPES[entry["type"]]
-        options = [v["label"] for v in entry.get("values") or []] or None
-        if name == "phone":
-            fields.append(Field("country", "Country", FieldType.CHOICE, question["required"]))
-            field_type = FieldType.PHONE
+        field_type = FieldType.PHONE if name == "phone" else API_TYPES[entry["type"]]
         if name == "location":
             name, field_type = "candidate-location", FieldType.TYPEAHEAD
+        options = [v["label"] for v in entry.get("values") or []] or None
         fields.append(Field(name, question["label"], field_type, question["required"], options))
-    for section in job.get("compliance") or []:
-        for question in section["questions"]:
-            entry = question["fields"][0]
-            options = [v["label"] for v in entry.get("values") or []] or None
-            kind = API_TYPES[entry["type"]]
-            fields.append(
-                Field(entry["name"], question["label"], kind, question["required"], options)
-            )
-    for question in (job.get("demographic_questions") or {}).get("questions", []):
-        options = [o["label"] for o in question["answer_options"]]
-        kind = API_TYPES[question["type"]]
-        fields.append(
-            Field(str(question["id"]), question["label"], kind, question["required"], options)
-        )
     return fields
 
 
@@ -345,12 +332,16 @@ def _exact(value: str) -> re.Pattern[str]:
 
 def _select(page: Page, field_id: str, value: str, suggested: bool) -> None:
     """Types into a react-select and picks the option: hovered then Enter, which every select
-    takes (Country saves only on Enter). A suggestion list takes its first suggestion."""
+    takes. A suggestion list takes its first suggestion. No option leaves the select empty."""
     box = page.locator(_by_id(field_id))
     box.click()
     box.press_sequentially(value, delay=20)
     menu = page.locator(f"{_by_id(f'react-select-{field_id}-listbox')} [role=option]")
     option = menu.first if suggested else menu.filter(has_text=_exact(value)).first
-    option.wait_for()
+    try:
+        option.wait_for(timeout=ANSWER_TIMEOUT_MS)
+    except Timeout:
+        box.press("Escape")
+        return
     option.hover()
     box.press("Enter")

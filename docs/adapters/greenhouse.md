@@ -1,33 +1,37 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-18. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding company page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding company page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 
 - Job boards: `job-boards.greenhouse.io`, `boards.greenhouse.io` and their EU hosts (`job-boards.eu.greenhouse.io`), at `/<board>/jobs/<id>`, the form on the job page itself. The double-send key is `https://job-boards.greenhouse.io/<board>/jobs/<id>`.
 - A company page with `?gh_jid=<id>` loads Greenhouse's embed, `iframe#grnhse_iframe` on `job-boards.greenhouse.io/embed/job_app?for=<board>&token=<id>`. atsfill opens that URL itself, keeping `gh_src`. A posting that is gone shows the embed without a form.
-- Many company career sites list Greenhouse jobs on pages of their own with no embed; those are not claimed.
+- Many company career sites list Greenhouse jobs on pages of their own with no embed, `?gh_jid=` in the URL all the same: a form the employer built, or another system's apply flow (Phenom's `/apply?jobSeqNo=`, behind a Cloudflare challenge on a first visit). Those are not claimed.
 
 ## Reading the form
 
-The Job Board API answers without a key: `boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true` (EU boards too). Its `questions`, `location_questions`, `compliance` (US EEOC) and `demographic_questions` give the field names the page uses as input ids, except:
+The Job Board API answers without a key: `boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true` (EU boards too). Its `questions` give the field names the page uses as input ids, the file's paste-in textarea aside, and its `location_questions` the location, `candidate-location` on the page beside hidden latitude and longitude. Its other sections do not map to the page for certain, so `read_api` returns `None` on a posting with any of them and `read` falls back to the page:
 
-- the phone's Country select (`country`), which every page shows and the API does not list;
-- the location, `location` in the API and `candidate-location` on the page;
-- the hidden latitude and longitude;
-- education rows (`school--0`, `degree--0`, …) and GDPR consent boxes, which the page adds when the API's `education` or `data_compliance` asks for them. `read` then falls back to the page.
+- `education` and `data_compliance` consents: the page adds education rows (`school--0`, …) and consent boxes the API does not list;
+- `compliance` (US EEOC): the page shows race only once Hispanic/Latino is answered No;
+- `demographic_questions`: rendered under their own ids.
 
-On the page, `form#application-form`:
+On the page, `form#application-form`, each field rendering and on how many of 18 postings' pages (2026-10-19):
 
-| Page | Field type |
-|---|---|
-| text input, textarea | `text` |
-| `input[type=tel]#phone` | `phone` |
-| react-select (`role=combobox`) whose options show on opening | `choice`, `multi_choice` when multi |
-| react-select that suggests only as you type (location, some schools) | `typeahead` |
-| `fieldset.checkbox` with a box per option | `multi_choice` |
-| a lone checkbox (GDPR consent) | `choice`, `Yes`/`No` |
-| `.file-upload` group | `file` |
+| Page | Field type | Postings |
+|---|---|---|
+| text input | `text` | 18 |
+| textarea | `text` | 9 |
+| `input[type=number]` (education years) | `text`, filled only with a number | 4 |
+| `fieldset.phone-input`: a Country react-select and `input[type=tel]#phone` running intl-tel-input | one `phone`, answered with its dial code | 18 |
+| react-select (`role=combobox`) whose options show on opening | `choice` | 18 |
+| react-select taking several values (`.select__value-container--is-multi`) | `multi_choice` | 2 |
+| react-select that suggests only as you type (location, some schools) | `typeahead` | 12 |
+| `fieldset.checkbox` with a box per option | `multi_choice` | 6 |
+| a lone checkbox (GDPR consent, an employment row's "Current role") | `choice`, `Yes`/`No` | 3 |
+| `.file-upload` group, with an "Enter manually" textarea behind a button | `file` | 18 |
+
+Sections built of these: employment rows (company, title, month selects, four-character year inputs) on 2, education rows on 5, US EEOC selects on 9, demographic selects with a consent box on 1. A radio input has not been seen; the read stops on one as `form_shape`.
 
 Required fields carry `aria-required="true"`. Labels hold a `*` marker hidden from screen readers.
 
@@ -35,13 +39,14 @@ The form is server-rendered and goes live a second or two later. Until then a se
 
 ## Filling
 
-- React-selects: type, then hover the option with the exact text and press Enter. Country saves only on Enter, and its options carry the dialing code (`France +33`).
+- React-selects: type, then hover the option with the exact text and press Enter, which every select takes.
+- The phone is typed with its dial code: intl-tel-input picks the country from it (by area code too: `+1 514` is Canada), spaces the number and sets the Country select, which then shows only `+1` and a flag.
 - Location wants one of its suggestions; the first one for the typed text is taken.
 - The resume goes to `#resume`, which an attach replaces with the file's name. Attaching uploads the file to Greenhouse's S3 at once.
 - "Autofill my application" is never used.
 
 ## Read-back and submit
 
-- Nothing but the files reaches Greenhouse before submit, so the read-back is the page: input values, each select's shown value, the checked boxes' labels, the attached file's name. Country shows only `+33` and a flag; the flag (`iti__fr`) maps back to the option, since `+1` alone does not tell the United States from Canada.
+- Nothing but the files reaches Greenhouse before submit, so the read-back is the page: input values, each select's shown value, the checked boxes' labels, the attached file's name. The phone reads back as the Country select's dial code then the number; it is empty until a country is set.
 - Submit runs an invisible reCAPTCHA Enterprise check. The evidence is the redirect to `…/confirmation`, titled "Thank you for applying".
 - An emailed verification code can stop the send. Its markup has not been observed, so such a send ends `unknown`.
