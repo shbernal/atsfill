@@ -30,6 +30,15 @@ uv run pytest
 
 `uv run pytest -m live` dry-runs real postings from a gitignored `.env` and `.tmp/`. It never sends.
 
+## Survey
+
+`uv run python -m scripts.survey` reads and dry-runs postings with the committed test persona and writes one row per URL to `.tmp/corpus/` ([ADR 0013](docs/adr/0013-survey-and-adapter-rounds.md)). It never sends. Sampling a source needs:
+
+- the [freehire CLI](https://github.com/strelov1/freehire-cli): `mise use -g github:strelov1/freehire-cli`;
+- the `freehire-search` skill, committed under `.agents/` and `.claude/skills/`; to reinstall it: `npx skills add shbernal/skills --skill freehire-search -a claude-code -a codex -y`.
+
+`uv run scripts/backlog.py` regenerates [docs/adapters/README.md](docs/adapters/README.md) from the registry.
+
 ## Rules
 
 - The repository is public and holds no personal data: answers, resumes, posting URLs and sessions stay in `.env` and `.tmp/`. Test pages are hand-made, never captured from an employer.
