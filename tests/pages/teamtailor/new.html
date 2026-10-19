@@ -1,9 +1,16 @@
 <!doctype html>
 <meta charset="utf-8">
 <!-- A Teamtailor application page as the adapter meets it: the cookie banner is a modal dialog
-     that leaves the form inert, the resume uploads to storage and the form keeps its address,
-     required labels carry an asterisk, and a choice can be a dropdown over hidden radios. -->
-<style>.hidden { display: none; } [role=menu][hidden] { display: none; }</style>
+     that leaves the form inert, a qualifying question locks the rest of the form until it is
+     answered "Yes", files upload to storage and the form keeps their addresses, the address is
+     kept only once a suggestion is picked, required labels carry an asterisk, a choice can be a
+     dropdown over hidden inputs, and a multiple choice dropdown stays open over what follows. -->
+<style>
+  .hidden { display: none; } [role=menu][hidden], [role=listbox]:empty { display: none; }
+  .cursor-not-allowed { pointer-events: none; }
+  [role=menu] { position: absolute; z-index: 1; background: white; height: 200px; width: 300px; }
+  fieldset { position: relative; }
+</style>
 <dialog id="cookies">
   <button data-action="click->common--cookies--alert#acceptAll">Accept all cookies</button>
   <button data-action="click->common--cookies--alert#disableAll">Decline all non-necessary cookies</button>
@@ -11,6 +18,14 @@
 <form id="job-application-form" action="/applications" method="post">
   <input type="hidden" name="authenticity_token" value="x">
   <input type="hidden" name="candidate[linkedin_url]">
+  <div data-careersite--form-target="qualifyingAnswers" data-question-id="100">
+    <input type="hidden" name="candidate[answers_attributes][9][question_id]" value="100">
+    <fieldset><legend><span>Résidez-vous en France ?<sup data-asterisk="true">*</sup></span></legend>
+      <div><input type="radio" value="true" name="candidate[answers_attributes][9][boolean]" id="q-true"><label for="q-true"> Oui </label></div>
+      <div><input type="radio" value="false" name="candidate[answers_attributes][9][boolean]" id="q-false"><label for="q-false"> Non </label></div>
+    </fieldset>
+  </div>
+  <div data-careersite--form-target="formContentWrapper" class="cursor-not-allowed opacity-50">
   <div data-controller="forms--inputs--text">
     <label for="candidate_first_name">Prénom<sup data-asterisk="true">*</sup><span class="sr-only">Requis</span></label>
     <input type="text" maxlength="50" name="candidate[first_name]" id="candidate_first_name">
@@ -23,12 +38,34 @@
     <label for="candidate_resume_remote_url">Importer un CV<sup data-asterisk="true">*</sup></label>
     <input type="file" accept=".pdf,.docx" id="candidate_resume_remote_url">
   </div>
-  <div class="question" data-question-mandatory="true" data-question-multiple-choice="false">
+  <div data-controller="forms--inputs--upload">
+    <label for="candidate_file_remote_url">Autres fichiers</label>
+    <input type="file" multiple accept="" id="candidate_file_remote_url">
+  </div>
+  <div data-controller="forms--inputs--location">
+    <label for="candidate_location">Adresse<sup data-asterisk="true">*</sup></label>
+    <input name="candidate[location][query]" role="combobox" type="text" maxlength="200" id="candidate_location">
+    <input name="candidate[location][place_id]" type="hidden" id="candidate_place_id">
+    <div role="listbox"></div>
+  </div>
+  <fieldset>
+    <legend><span>Lieux<sup data-asterisk="true">*</sup></span></legend>
+    <div><input type="checkbox" value="11" name="candidate[location_ids][]" id="loc-11"><label for="loc-11">Paris</label></div>
+    <div><input type="checkbox" value="12" name="candidate[location_ids][]" id="loc-12"><label for="loc-12">Lyon</label></div>
+  </fieldset>
+  <div class="question" data-question-uuid="uuid-101" data-question-mandatory="true" data-question-multiple-choice="false">
     <input type="hidden" name="candidate[answers_attributes][0][question_id]" value="101">
     <fieldset><legend><span>Êtes-vous disponible ?<sup data-asterisk="true">*</sup></span></legend>
       <div><input type="radio" value="true" name="candidate[answers_attributes][0][boolean]" id="b-true"><label for="b-true"> Oui </label></div>
       <div><input type="radio" value="false" name="candidate[answers_attributes][0][boolean]" id="b-false"><label for="b-false"> Non </label></div>
     </fieldset>
+  </div>
+  <div class="hidden" id="follow-up">
+    <div class="question" data-question-show-if-uuid="uuid-101" data-question-show-if-value="true" data-question-mandatory="true" data-question-multiple-choice="false">
+      <input type="hidden" name="candidate[answers_attributes][7][question_id]" value="108">
+      <label for="f">À partir de quand ?<sup data-asterisk="true">*</sup></label>
+      <input type="text" name="candidate[answers_attributes][7][text]" id="f">
+    </div>
   </div>
   <div class="question" data-question-mandatory="false" data-question-multiple-choice="false">
     <input type="hidden" name="candidate[answers_attributes][1][question_id]" value="102">
@@ -43,6 +80,31 @@
         <button type="button" role="menuitemradio" data-value="2" data-search-text="Site carrière">Site carrière</button>
       </div>
     </fieldset>
+  </div>
+  <div class="question" data-question-mandatory="false" data-question-multiple-choice="true">
+    <input type="hidden" name="candidate[answers_attributes][4][question_id]" value="105">
+    <fieldset><legend><span>Disponibilités</span></legend>
+      <div class="hidden">
+        <input type="checkbox" value="1" name="candidate[answers_attributes][4][choices][]" id="j-1">
+        <input type="checkbox" value="2" name="candidate[answers_attributes][4][choices][]" id="j-2">
+      </div>
+      <button type="button" aria-haspopup="menu" aria-expanded="false">Choisir</button>
+      <div role="menu" hidden>
+        <button type="button" role="menuitemcheckbox" data-value="1" data-search-text="Samedi">Samedi</button>
+        <button type="button" role="menuitemcheckbox" data-value="2" data-search-text="Dimanche">Dimanche</button>
+      </div>
+    </fieldset>
+  </div>
+  <div class="question" data-question-mandatory="true" data-question-multiple-choice="false">
+    <input type="hidden" name="candidate[answers_attributes][5][question_id]" value="106">
+    <label for="r">Niveau d'anglais<sup data-asterisk="true">*</sup></label>
+    <input type="number" name="range-custom_number" min="0" max="10" value="0">
+    <input type="range" min="0" max="10" step="1" value="0" name="candidate[answers_attributes][5][range]" id="r">
+  </div>
+  <div class="question" data-question-mandatory="false" data-question-multiple-choice="false">
+    <input type="hidden" name="candidate[answers_attributes][6][question_id]" value="107">
+    <label>Présentez-vous en vidéo</label>
+    <input type="text" disabled name="candidate[answers_attributes][6][picked_video_attributes][video_attributes][file]">
   </div>
   <div class="question" data-question-mandatory="false" data-question-multiple-choice="true">
     <input type="hidden" name="candidate[answers_attributes][2][question_id]" value="103">
@@ -62,29 +124,55 @@
     <label for="candidate_consent_given"><span class="sr-only">Requis.</span>J'accepte la politique de confidentialité.<sup data-asterisk="true">*</sup></label>
   </div>
   <input type="submit" name="commit" value="Envoyer">
+  </div>
 </form>
 <footer><a href="https://www.teamtailor.com/?utm_campaign=poweredby">Outil de recrutement de Teamtailor</a></footer>
 <script>
   const cookies = document.getElementById("cookies");
   cookies.showModal();
   cookies.querySelectorAll("button").forEach(b => b.onclick = () => cookies.close());
-  document.getElementById("candidate_resume_remote_url").addEventListener("change", e => {
-    const name = e.target.files[0].name;
+  const upload = (id, name) => document.getElementById(id).addEventListener("change", e => {
+    const file = e.target.files[0].name;
     setTimeout(() => {
       const held = document.createElement("input");
-      Object.assign(held, {type: "text", className: "hidden", name: "candidate[resume_remote_url]",
-        value: `https://storage.example/tmpuploads/0f1e/${encodeURIComponent(name)}`});
+      Object.assign(held, {type: "text", className: "hidden", name,
+        value: `https://storage.example/tmpuploads/0f1e/${encodeURIComponent(file)}`});
       e.target.parentElement.append(held);
     }, 300);
   });
+  upload("candidate_resume_remote_url", "candidate[resume_remote_url]");
+  upload("candidate_file_remote_url", "candidate[uploads_attributes][1][file_remote_url]");
+  document.getElementsByName("candidate[answers_attributes][9][boolean]").forEach(radio =>
+    radio.onchange = () => document.querySelector("[data-careersite--form-target=formContentWrapper]")
+      .classList.toggle("cursor-not-allowed", radio.value !== "true"));
+  document.getElementsByName("candidate[answers_attributes][0][boolean]").forEach(radio =>
+    radio.onchange = () =>
+      document.getElementById("follow-up").classList.toggle("hidden", radio.value !== "true"));
+  const address = document.getElementById("candidate_location");
+  let typing;
+  address.oninput = () => typing = clearTimeout(typing) ?? setTimeout(() => {
+    const list = address.parentElement.querySelector("[role=listbox]");
+    list.innerHTML = ["Londonderry, United Kingdom", "London, United Kingdom"]
+      .map(d => `<button type="button" role="option" data-description="${d}">${d}</button>`).join("");
+    list.querySelectorAll("[role=option]").forEach(o => o.onclick = () => {
+      address.value = o.dataset.description;
+      document.getElementById("candidate_place_id").value = "place-1";
+      list.innerHTML = "";
+    });
+  }, 200);
   document.querySelectorAll("[aria-haspopup]").forEach(trigger => {
     const menu = trigger.nextElementSibling;
     trigger.onclick = () => {
       menu.hidden = !menu.hidden;
       trigger.setAttribute("aria-expanded", String(!menu.hidden));
     };
-    menu.querySelectorAll("[role=menuitemradio]").forEach(item => item.onclick = () => {
-      trigger.closest(".question").querySelector(`input[value="${item.dataset.value}"]`).checked = true;
+    menu.querySelectorAll("[role^=menuitem]").forEach(item => item.onclick = () => {
+      const input = trigger.closest(".question").querySelector(`input[value="${item.dataset.value}"]`);
+      if (item.role === "menuitemcheckbox") {
+        input.checked = !input.checked;  // the menu stays open
+        return;
+      }
+      input.checked = true;
       menu.hidden = true;
       trigger.setAttribute("aria-expanded", "false");
     });
