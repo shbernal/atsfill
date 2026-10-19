@@ -22,6 +22,7 @@ from playwright.sync_api import Error as BrowserError
 from playwright.sync_api import TimeoutError as Timeout
 
 __all__ = [
+    "BUILD",
     "BrowserError",
     "Covered",
     "Locator",
@@ -43,6 +44,7 @@ __all__ = [
 MIN_SCREEN_HEIGHT = 1050  # leaves the window the 900px Greenhouse and Teamtailor need
 HOST_OS = {"Linux": "linux", "Darwin": "macos", "Windows": "windows"}[platform.system()]
 BUDGET = 180.0  # seconds per command, lock wait included
+BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compare across machines
 
 
 class OutOfTime(Exception):
@@ -62,8 +64,8 @@ def version() -> str:
 
 
 def install() -> int:
-    """Fetches the browser build the pinned camoufox release pairs with."""
-    return subprocess.call([sys.executable, "-m", "camoufox", "fetch"])
+    """Fetches the pinned browser build."""
+    return subprocess.call([sys.executable, "-m", "camoufox", "fetch", f"official/{BUILD}"])
 
 
 def identity(data_dir: Path) -> dict:

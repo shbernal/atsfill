@@ -5,6 +5,7 @@ import pytest
 
 from atsfill.adapters import ADAPTERS
 from atsfill.cli import parser, run
+from atsfill.core import browser
 
 
 def test_send_requires_answers():
@@ -34,3 +35,10 @@ def test_status(tmp_path, monkeypatch, capsys):
     assert report["config"] == str(tmp_path / "conf/atsfill/config.toml")
     assert report["version"] and report["browser"]
     assert [a["name"] for a in report["adapters"]] == [a.name for a in ADAPTERS]
+
+
+def test_status_fails_on_another_browser_build(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
+    monkeypatch.setattr(browser, "version", lambda: "135.0-beta.25")
+    assert run(parser().parse_args(["--data-dir", str(tmp_path / "data"), "status"])) == 1
+    assert json.loads(capsys.readouterr().out)["browser_pinned"] == browser.BUILD

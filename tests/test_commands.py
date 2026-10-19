@@ -1,7 +1,7 @@
 import pytest
 
 from atsfill import core
-from atsfill.core import attempts, commands
+from atsfill.core import attempts, commands, registry
 from atsfill.core.adapter import Blocked, Unsupported
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Status
@@ -179,3 +179,31 @@ def test_status_lists_each_adapter(fake, config, data):
         True,
     )
     assert state.side_effects == fake.side_effects
+
+
+VERIFIED = registry.parse("""
+[fake]
+kind = "ats"
+account = "none"
+adapter = "fake"
+send_verified = { date = 2026-10-18, version = "0.0.2", by = "user" }
+""")
+
+
+def test_a_send_warns_on_an_adapter_not_send_verified(fake, config, url, answers, data):
+    config('submit = ["fake"]')
+    result = core.send(url, answers, data_dir=data)
+    assert (result.status, result.warning) == (
+        Status.SUBMITTED,
+        "not_send_verified: fake is not in the registry",
+    )
+
+
+def test_a_send_verified_adapter_sends_without_warning(
+    fake, config, url, answers, data, monkeypatch
+):
+    monkeypatch.setattr(registry, "systems", lambda: VERIFIED)
+    config('submit = ["fake"]')
+    assert core.send(url, answers, data_dir=data).warning is None
+    (state,) = core.status(data_dir=data).adapters
+    assert (state.verified, state.verified_version) == ("send_verified", "0.0.2")

@@ -1,0 +1,39 @@
+# The hiring systems atsfill has mapped (ADR 0012), one table per freehire `source`.
+# `docs/adapters/README.md` is generated from this file: `uv run scripts/backlog.py`.
+#
+# kind      ats | board | aggregator | custom
+# share     fraction of freehire's postings, worldwide, from its `source` facet
+# account   none | to_send | to_read
+# hosting   hosted, embedded: where the form is found
+# adapter   the adapter's name, when there is one
+# block     vendor, signal, step (posting | form | upload), date, version, camoufox, browser
+# mapped, dry_run_verified, send_verified
+#           date, version, by; only the user sets send_verified
+
+[ashby]
+kind = "ats"
+account = "none"
+hosting = ["hosted", "embedded"]
+adapter = "ashby"
+send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }
+
+[teamtailor]
+kind = "ats"
+account = "none"
+hosting = ["hosted"]
+adapter = "teamtailor"
+send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }
+
+[greenhouse]
+kind = "ats"
+account = "none"
+hosting = ["hosted", "embedded"]
+adapter = "greenhouse"
+send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }
+
+[wttj]
+kind = "board"
+account = "to_send"
+hosting = ["hosted"]
+adapter = "wttj"
+send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }
