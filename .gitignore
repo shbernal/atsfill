@@ -10,3 +10,5 @@ build/
 # posting URLs, sessions. Never committed.
 .env
 .tmp/
+
+.claude/worktrees/
