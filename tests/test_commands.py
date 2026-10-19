@@ -122,6 +122,16 @@ def test_the_adapter_stops_a_fill(fake, config, url, answers, data, error, statu
     assert (result.status, result.reason) == (status, str(error))
 
 
+def test_an_unexpected_error_keeps_the_detected_adapter(fake, config, url, answers, data):
+    fake.fill_raises = RuntimeError("boom")
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.system, result.reason) == (
+        Status.UNSUPPORTED,
+        "fake",
+        "adapter_error: RuntimeError: boom",
+    )
+
+
 def test_send_needs_the_adapter_in_the_config(fake, config, url, answers, data):
     result = core.send(url, answers, data_dir=data)
     assert result.status is Status.REFUSED
@@ -207,3 +217,33 @@ def test_a_send_verified_adapter_sends_without_warning(
     assert core.send(url, answers, data_dir=data).warning is None
     (state,) = core.status(data_dir=data).adapters
     assert (state.verified, state.verified_version) == ("send_verified", "0.0.2")
+
+
+BROKEN = registry.parse("""
+[fake]
+kind = "ats"
+account = "none"
+adapter = "fake"
+send_verified = { date = 2026-10-18, version = "0.0.1", by = "user", commit = "aaaaaaa" }
+
+[fake.send_broken]
+date = 2026-10-19
+version = "0.0.2"
+commit = "bbbbbbb"
+by = "user"
+reason = "resume empty"
+""")
+
+
+def test_a_broken_send_warns_and_shows_in_status(fake, config, url, answers, data, monkeypatch):
+    monkeypatch.setattr(registry, "systems", lambda: BROKEN)
+    monkeypatch.setattr(commands, "version", lambda _: "0.0.2")
+    config('submit = ["fake"]')
+    broken = "send broken since 2026-10-19 (0.0.2), resume empty; last verified 2026-10-18 (0.0.1)"
+    assert core.send(url, answers, data_dir=data).warning == f"send_broken: {broken}"
+    (state,) = core.status(data_dir=data).adapters
+    assert (state.verified, state.verified_release, state.send_broken) == (
+        "send_verified",
+        "older",
+        broken,
+    )

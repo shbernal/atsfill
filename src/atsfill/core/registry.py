@@ -12,13 +12,28 @@ HOSTING = ("hosted", "embedded")
 VENDORS = ("DataDome", "Cloudflare", "Akamai", "PerimeterX", "unknown")
 STEPS = ("posting", "form", "upload")
 STATES = ("mapped", "dry_run_verified", "send_verified")
+CAUSES = ("system", "code", "unknown")
+RELEASES = ("this_release", "older", "newer")
 
 
 @dataclass(frozen=True)
 class Verification:
     date: date
-    version: str
+    version: str  # the release, compared with the installed one
     by: str
+    commit: str | None = None  # the exact code
+
+
+@dataclass(frozen=True)
+class Broken:
+    """A send that worked fails now (ADR 0012); `reason` names fields and steps, never postings."""
+
+    date: date
+    version: str
+    commit: str
+    by: str
+    reason: str
+    cause: str = "unknown"
 
 
 @dataclass(frozen=True)
@@ -43,7 +58,8 @@ class System:
     block: Block | None = None
     mapped: Verification | None = None
     dry_run_verified: Verification | None = None
-    send_verified: Verification | None = None
+    send_verified: Verification | None = None  # the last known good, kept through a break
+    send_broken: Broken | None = None
 
     @property
     def state(self) -> str | None:
@@ -70,6 +86,10 @@ def _system(source: str, entry: dict) -> System:
         _one_of(source, "block.step", block.get("step"), STEPS)
         block = Block(**block)
     states = {s: Verification(**entry[s]) for s in STATES if s in entry}
+    broken = entry.get("send_broken")
+    if broken is not None:
+        _one_of(source, "send_broken.cause", broken.get("cause", "unknown"), CAUSES)
+        broken = Broken(**broken)
     return System(
         source,
         entry["kind"],
@@ -79,6 +99,7 @@ def _system(source: str, entry: dict) -> System:
         entry.get("share"),
         block,
         **states,
+        send_broken=broken,
     )
 
 
@@ -91,20 +112,36 @@ def systems() -> dict[str, System]:
     return parse(files("atsfill").joinpath("registry.toml").read_text())
 
 
-def with_state(text: str, source: str, state: str, v: Verification) -> str:
-    """The registry file's text with `state` of `source` set to `v`, the rest untouched."""
+def _toml(value: object) -> str:
+    return str(value) if isinstance(value, date) else f'"{value}"'
+
+
+def with_state(text: str, source: str, key: str, value: Verification | Broken) -> str:
+    """The registry file's text with `key` of `source` set to `value`, the rest untouched.
+    Writing `send_verified` ends a `send_broken`."""
     lines = text.splitlines()
     start = lines.index(f"[{source}]")
     end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("[")), len(lines))
     while lines[end - 1] == "":
         end -= 1
-    entry = f'{state} = {{ date = {v.date}, version = "{v.version}", by = "{v.by}" }}'
-    at = next((i for i in range(start, end) if lines[i].startswith(f"{state} =")), None)
-    if at is None:
-        lines.insert(end, entry)
-    else:
-        lines[at] = entry
-    return "\n".join(lines) + "\n"
+    gone = {key, "send_broken"} if key == "send_verified" else {key}
+    entry = lines[start:end]
+    at = next((i for i, x in enumerate(entry) if x.split(" =")[0] in gone), len(entry))
+    entry = [x for x in entry if x.split(" =")[0] not in gone]
+    pairs = ", ".join(
+        f"{f.name} = {_toml(getattr(value, f.name))}"
+        for f in fields(value)
+        if getattr(value, f.name) is not None
+    )
+    entry.insert(min(at, len(entry)), f"{key} = {{ {pairs} }}")
+    return "\n".join(lines[:start] + entry + lines[end:]) + "\n"
+
+
+def release(verified: str, installed: str) -> str:
+    """Whether a verified release is the installed one, `older` or `newer`."""
+    as_tuple = lambda v: tuple(int(n) for n in v.split("+")[0].split("."))  # noqa: E731
+    a, b = as_tuple(verified), as_tuple(installed)
+    return "this_release" if a == b else "older" if a < b else "newer"
 
 
 def for_adapter(name: str) -> System | None:
@@ -118,7 +155,7 @@ def _backlog_key(s: System) -> tuple:
 def _row(s: System) -> str:
     share = f"{s.share:.1%}" if s.share is not None else ""
     block = f"{s.block.vendor} at {s.block.step}" if s.block else ""
-    state = s.state or ""
+    state = "send_broken" if s.send_broken else s.state or ""
     if s.adapter:
         state = f"[{state}]({s.adapter}.md)" if state else f"[adapter]({s.adapter}.md)"
     cells = [s.source, s.kind, share, s.account, ", ".join(s.hosting), block, state]
@@ -151,3 +188,28 @@ def backlog(registry: dict[str, System] | None = None) -> str:
         text += ["", "Aggregators and company-built forms, counted and not adapted:", "", head]
         text += map(_row, others)
     return "\n".join(text) + "\n"
+
+
+BADGES = ("<!-- badges -->", "<!-- /badges -->")
+COLORS = {"send_verified": "9ece6a", "dry_run_verified": "7aa2f7", "mapped": "a9b1d6"}
+
+
+def _badge(s: System) -> str:
+    if s.send_broken:
+        message, color = f"send broken {s.send_broken.date}", "f7768e"
+    elif s.state:
+        v: Verification = getattr(s, s.state)
+        message, color = f"{s.state.replace('_', ' ')} {v.date}", COLORS[s.state]
+    else:
+        message, color = "unverified", "565f89"
+    escape = lambda t: t.replace("-", "--").replace("_", "__").replace(" ", "%20")  # noqa: E731
+    url = f"https://img.shields.io/badge/{escape(s.adapter or s.source)}-{escape(message)}-{color}"
+    return f"![{s.adapter}: {message}]({url})"
+
+
+def with_badges(readme: str, registry: dict[str, System] | None = None) -> str:
+    """The README with one badge per adapter between its badge markers."""
+    registry = systems() if registry is None else registry
+    start, end = readme.index(BADGES[0]) + len(BADGES[0]), readme.index(BADGES[1])
+    badges = " ".join(_badge(s) for s in sorted(registry.values(), key=_backlog_key) if s.adapter)
+    return f"{readme[:start]}\n{badges}\n{readme[end:]}"

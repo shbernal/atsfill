@@ -72,6 +72,8 @@ class AdapterState:
     side_effects_acknowledged: bool
     verified: str | None = None  # mapped | dry_run_verified | send_verified (ADR 0012)
     verified_version: str | None = None
+    verified_release: str | None = None  # this_release | older | newer than the installed one
+    send_broken: str | None = None  # since when and why, with the last verified send
     session: str | None = None  # signed_in | signed_out | missing, for a system with accounts
 
 

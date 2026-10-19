@@ -8,32 +8,34 @@
 # adapter   the adapter's name, when there is one
 # block     vendor, signal, step (posting | form | upload), date, version, camoufox, browser
 # mapped, dry_run_verified, send_verified
-#           date, version, by; only the user sets send_verified
+#           date, version (the release), commit (the exact code), by; only the user sets
+#           send_verified
+# send_broken
+#           date, version, commit, by, cause (system | code | unknown), reason: a send that
+#           worked fails now; send_verified stays as the last known good
 
 [ashby]
 kind = "ats"
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "ashby"
-send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }
+send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal", commit = "ff8ea46" }
+send_broken = { date = 2026-10-19, version = "0.0.2", commit = "916319c", by = "shbernal", reason = "the résumé reads back empty after its upload", cause = "unknown" }
 
 [teamtailor]
 kind = "ats"
 account = "none"
 hosting = ["hosted"]
 adapter = "teamtailor"
-send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }
 
 [greenhouse]
 kind = "ats"
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "greenhouse"
-send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }
 
 [wttj]
 kind = "board"
 account = "to_send"
 hosting = ["hosted"]
 adapter = "wttj"
-send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal" }

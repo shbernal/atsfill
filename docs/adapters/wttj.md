@@ -1,6 +1,6 @@
 # Welcome to the Jungle
 
-Observed on live postings, last on 2026-10-18; sends were made by hand through the same form on 2026-10-04. The fixture page is [tests/pages/wttj/job.html](../../tests/pages/wttj/job.html), served as a signed-in job page in `tests/test_wttj.py`.
+Observed on live postings, last on 2026-10-18. The fixture page is [tests/pages/wttj/job.html](../../tests/pages/wttj/job.html), served as a signed-in job page in `tests/test_wttj.py`.
 
 ## Where the form is
 

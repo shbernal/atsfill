@@ -2,8 +2,9 @@
 
     uv run python -m scripts.survey URL...
     uv run python -m scripts.survey --source greenhouse --companies 5
+    uv run python -m scripts.survey --session wttj=PATH URL...
 
-Never sends.
+Never sends. A row records the commit it ran at, or null on a tree with uncommitted changes.
 """
 
 import argparse
@@ -13,6 +14,7 @@ import re
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import date
@@ -21,8 +23,11 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from atsfill import core
+from atsfill.adapters import ADAPTERS
+from atsfill.cli import session as session_arg
 from atsfill.core import browser, paths
 from atsfill.core.browser import Page, Response
+from atsfill.core.commands import Sessions
 from atsfill.core.results import Status
 from tests import persona
 
@@ -115,18 +120,30 @@ def _evidence(page: Page, response: Response | None, key: str) -> Path:
     return path
 
 
-def survey(url: str, company: str, source: str | None, data: Path, cv: Path) -> dict:
+def commit() -> str | None:
+    """HEAD, when the tree has no uncommitted changes."""
+    git = lambda *a: subprocess.run(["git", *a], capture_output=True, text=True, cwd=ROOT).stdout  # noqa: E731
+    return None if git("status", "--porcelain").strip() else git("rev-parse", "HEAD").strip()
+
+
+def survey(
+    url: str, company: str, source: str | None, data: Path, cv: Path, sessions: Sessions
+) -> dict:
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
-    with browser.open_page(data) as page:
+    session = next(
+        (sessions[a.name] for a in ADAPTERS if a.name in sessions and a.detect(url, None)), None
+    )
+    with browser.open_page(data, session) as page:
         response = page.goto(url)
         with suppress(browser.Timeout):  # a page that keeps polling is still labelled
             page.wait_for_load_state("networkidle", timeout=IDLE_MS)
         found = probe(page, url, response)
         evidence = _evidence(page, response, key)
-    read = core.read(url, data_dir=data)
+    read = core.read(url, data_dir=data, sessions=sessions)
     result = read
     if read.status is Status.READY:
-        result = core.fill(url, persona.answers(read.fields, cv), data_dir=data)
+        answers = persona.answers(read.fields, cv)
+        result = core.fill(url, answers, data_dir=data, sessions=sessions)
     step = None
     if found.label == "blocked":
         step = "posting"
@@ -149,6 +166,7 @@ def survey(url: str, company: str, source: str | None, data: Path, cv: Path) -> 
         **asdict(found),
         "step": step,
         "date": date.today().isoformat(),
+        "commit": commit(),
         "atsfill": version("atsfill"),
         "camoufox": version("camoufox"),
         "browser": browser.version(),
@@ -156,8 +174,15 @@ def survey(url: str, company: str, source: str | None, data: Path, cv: Path) -> 
     }
 
 
-def freehire(source: str, companies: int) -> list[tuple[str, str]]:
-    """One posting, with its company, from each of `companies` companies on a freehire source."""
+def freehire(
+    source: str,
+    companies: int,
+    keep: Callable[[str], bool] = lambda url: True,
+    exclude: set[str] = set(),  # noqa: B006
+) -> list[tuple[str, str]]:
+    """One posting, with its company, from each of `companies` companies on a freehire source,
+    sampling until enough postings pass `keep` or the source runs out; `exclude`d companies
+    are skipped."""
     urls: dict[str, str] = {}
     offset, page_size = 0, 50
     while len(urls) < companies:
@@ -172,7 +197,8 @@ def freehire(source: str, companies: int) -> list[tuple[str, str]]:
         if not jobs:
             break
         for job in jobs:
-            urls.setdefault(job["company_slug"], job["url"])
+            if job["company_slug"] not in exclude and keep(job["url"]):
+                urls.setdefault(job["company_slug"], job["url"])
         offset += page_size
     return [(url, company) for company, url in urls.items()][:companies]
 
@@ -183,22 +209,24 @@ def run(
     data_dir: Path = CORPUS / "data",
     delay: float = DELAY_S,
     echo: bool = True,
+    sessions: Sessions | None = None,
+    out: str | None = None,
 ) -> list[dict]:
-    """Surveys each (URL, company), appending its row to .tmp/corpus/<source>.jsonl."""
+    """Surveys each (URL, company), appending its row to .tmp/corpus/<out or source>.jsonl."""
     CORPUS.mkdir(parents=True, exist_ok=True)
     cv = persona.resume(CORPUS / "resume.pdf")
     data = paths.data_dir(data_dir)
-    out, rows = CORPUS / f"{source or 'urls'}.jsonl", []
+    path, rows = CORPUS / f"{out or source or 'urls'}.jsonl", []
     for n, (url, company) in enumerate(postings):
         if n:
             time.sleep(delay)
         try:
-            row = survey(url, company, source, data, cv)
+            row = survey(url, company, source, data, cv, sessions or {})
         except Exception as e:  # one posting's failure is a row, not the end of the survey
             row = {"source": source, "company": company, "url": url, "label": "unclear",
                    "reason": f"survey_error: {type(e).__name__}: {e}",
                    "date": date.today().isoformat()}  # fmt: skip
-        with out.open("a") as f:
+        with path.open("a") as f:
             f.write(json.dumps(row, default=str) + "\n")
         if echo:
             print(
@@ -215,11 +243,15 @@ def main() -> None:
     p.add_argument("--companies", type=int, default=5, help="distinct companies to sample")
     p.add_argument("--data-dir", type=Path, default=CORPUS / "data")
     p.add_argument("--delay", type=float, default=DELAY_S, help="seconds between postings")
+    p.add_argument(
+        "--session", type=session_arg, action="append", default=[], metavar="ADAPTER=PATH",
+        help="a stored session for an adapter that needs an account",
+    )  # fmt: skip
     args = p.parse_args()
     if not args.urls and not args.source:
         p.error("give URLs or --source")
     postings = [(u, _host(u)) for u in args.urls] or freehire(args.source, args.companies)
-    run(postings, args.source, args.data_dir, args.delay)
+    run(postings, args.source, args.data_dir, args.delay, sessions=dict(args.session))
 
 
 if __name__ == "__main__":
