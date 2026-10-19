@@ -6,7 +6,8 @@ import pytest
 
 from atsfill.adapters.greenhouse import Greenhouse, _api_fields
 from atsfill.core import browser, matching
-from atsfill.core.results import FieldType
+from atsfill.core.adapter import Unsupported
+from atsfill.core.results import Answer, FieldType
 
 PAGE = Path(__file__).parent / "pages/greenhouse/job.html"
 JOB = "https://job-boards.greenhouse.io/acme/jobs/1234"
@@ -51,17 +52,21 @@ def test_read_form_waits_for_the_live_page(page):
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
         "first_name",
-        "country",
         "phone",
         "candidate-location",
         "resume",
         "question_1",
+        "question_3",
+        "start-year--0",
+        "question_4",
         "question_2[]",
         "4000952002",
         "gdpr_processing_consent_given",
     ]
-    assert by_id["country"].options == ["France +33", "Canada +1", "United States +1"]
+    assert by_id["phone"].type is FieldType.PHONE
     assert by_id["candidate-location"].type is FieldType.TYPEAHEAD
+    assert by_id["start-year--0"].type is FieldType.TEXT
+    assert by_id["question_4"].type is FieldType.MULTI_CHOICE
     assert by_id["question_2[]"].type is FieldType.MULTI_CHOICE
     assert by_id["gdpr_processing_consent_given"].label == "I agree to the processing of my data."
     assert by_id["resume"].accept == [".pdf", ".doc"]
@@ -72,11 +77,13 @@ def test_every_answer_reads_back(page, resume):
     adapter, fields = opened(page)
     answers = {
         "first_name": "Ada",
-        "country": "Canada +1",  # +1 is shared: the flag tells it apart
-        "phone": "514 555 0100",
+        "phone": "+15145550100",
         "candidate-location": "Paris",
         "resume": resume,
         "question_1": "No",
+        "question_3": "Placeholder answer.",
+        "start-year--0": "2020",
+        "question_4": ["Rust", "Go"],
         "question_2[]": ["French", "English"],
         "4000952002": "Decline To Self Identify",
         "gdpr_processing_consent_given": "Yes",
@@ -85,6 +92,23 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_a_number_input_left_empty_for_text(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"start-year--0": "twenty"}
+    adapter.fill(page, answers)
+    assert not matching.check(fields, answers, adapter.read_back(page))[0].match
+
+
+def test_a_radio_is_not_supported(page):
+    page.goto(JOB)
+    page.evaluate(
+        """() => document.getElementById("application-form").insertAdjacentHTML("afterbegin",
+        '<label for="r1">Remote</label><input type="radio" id="r1" name="remote">')"""
+    )
+    with pytest.raises(Unsupported, match="form_shape: r1 is a radio"):
+        Greenhouse().read_form(page)
 
 
 def test_submit_returns_the_confirmation(page):
@@ -99,6 +123,10 @@ def test_an_embedding_company_page(page):
     )
     assert adapter.posting(COMPANY) == JOB
     assert fields
+    page.goto(JOB)
+    assert adapter.detect(JOB, None)
+    adapter.read_form(page)
+    assert page.url == JOB  # not the earlier posting's embed
 
 
 def test_board_urls():
@@ -147,39 +175,30 @@ def test_api_fields():
                 ],
             },
         ],
-        "location_questions": [
-            {
-                "label": "Latitude",
-                "required": True,
-                "fields": [{"name": "latitude", "type": "input_hidden"}],
-            },
-            {
-                "label": "Location",
-                "required": True,
-                "fields": [{"name": "location", "type": "input_text"}],
-            },
-        ],
-        "demographic_questions": {
-            "questions": [
-                {
-                    "id": 4000952002,
-                    "label": "Gender",
-                    "required": False,
-                    "type": "multi_value_single_select",
-                    "answer_options": [{"label": "Male"}, {"label": "Female"}],
-                },
-            ]
-        },
     }
     assert [(f.id, f.type, f.required) for f in _api_fields(job) or []] == [
         ("first_name", FieldType.TEXT, True),
-        ("country", FieldType.CHOICE, True),
         ("phone", FieldType.PHONE, True),
         ("resume", FieldType.FILE, True),
         ("question_1", FieldType.CHOICE, True),
-        ("candidate-location", FieldType.TYPEAHEAD, True),
-        ("4000952002", FieldType.CHOICE, False),
     ]
+    location = [
+        {
+            "label": "Latitude",
+            "required": True,
+            "fields": [{"name": "latitude", "type": "input_hidden"}],
+        },
+        {
+            "label": "Location",
+            "required": True,
+            "fields": [{"name": "location", "type": "input_text"}],
+        },
+    ]
+    assert (_api_fields(job | {"location_questions": location}) or [])[
+        -1
+    ].id == "candidate-location"
+    assert _api_fields(job | {"demographic_questions": {"questions": [{"id": 1}]}}) is None
+    assert _api_fields(job | {"compliance": [{"type": "eeoc", "questions": []}]}) is None
     assert _api_fields(job | {"education": "education_optional"}) is None
     consent = [{"type": "gdpr", "requires_consent": True}]
     assert _api_fields(job | {"data_compliance": consent}) is None

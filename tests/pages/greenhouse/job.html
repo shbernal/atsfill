@@ -1,9 +1,10 @@
 <!doctype html>
 <meta charset="utf-8">
-<!-- A Greenhouse job board application as the adapter meets it: react-selects that open only
-     once the page is live (Country saves only on Enter and shows a flag, Location suggests as
-     you type), a checkbox group, a consent box that appears with the live page, and an attach
-     that swaps its input for the file's name. -->
+<!-- A Greenhouse job board application as the adapter meets it, one field per rendering:
+     react-selects that open only once the page is live (Location suggests as you type, one takes
+     several values), a phone whose typed dial code sets its Country select, a textarea, a number
+     input, a checkbox group, a consent box that appears with the live page, and an attach that
+     swaps its input for the file's name. -->
 <style>.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; }</style>
 <form id="application-form">
   <div class="field-wrapper">
@@ -11,7 +12,7 @@
     <input id="first_name" type="text" maxlength="255" aria-required="true">
   </div>
   <fieldset class="phone-input"><legend class="visually-hidden">Phone</legend>
-    <div class="select" data-options="France +33:fr|Canada +1:ca|United States +1:us" data-enter-only>
+    <div class="select" data-options="France +33|United States +1" data-enter-only>
       <label id="country-label" for="country">Country<span aria-hidden="true">*</span></label>
       <input id="country" role="combobox" aria-required="true">
     </div>
@@ -33,6 +34,14 @@
   <div class="select" data-options="Yes|No">
     <label id="question_1-label" for="question_1">Do you need sponsorship?<span aria-hidden="true">*</span></label>
     <input id="question_1" role="combobox" aria-required="true">
+  </div>
+  <label id="question_3-label" for="question_3">Why us?</label>
+  <textarea id="question_3" aria-required="false"></textarea>
+  <label id="start-year--0-label" for="start-year--0">Start date year</label>
+  <input id="start-year--0" type="number" aria-required="false">
+  <div class="select" data-options="Rust|Python|Go" data-multi>
+    <label id="question_4-label" for="question_4">Languages you use</label>
+    <input id="question_4" role="combobox" aria-required="false">
   </div>
   <fieldset class="checkbox" id="question_2[]" aria-required="false">
     <legend>Which languages do you speak?</legend>
@@ -60,18 +69,21 @@
   function live(select) {
     const input = select.querySelector("input");
     const id = input.id;
+    const multi = "multi" in select.dataset;
     const shown = document.createElement("div");
-    shown.className = "select__single-value";
+    shown.className = multi ? "select__value-container--is-multi" : "select__single-value";
     select.append(shown);
     const fixed = (select.dataset.options || "").split("|").filter(Boolean).map(o => o.split(":"));
     const suggest = select.dataset.suggest?.split("|");
     let focused = null, listbox = null;
     const close = () => { listbox?.remove(); listbox = null; focused = null; };
-    const pick = ([label, flag]) => {
-      shown.innerHTML = flag ? `<div class="iti__flag iti__${flag}"></div><span>${label.split(" ").pop()}</span>` : label;
+    const pick = ([label]) => {
+      if (multi) shown.insertAdjacentHTML("beforeend", `<div class="select__multi-value__label">${label}</div>`);
+      else shown.innerHTML = id === "country" ? `<div class="iti__flag"></div><span>${label.split(" ").pop()}</span>` : label;
       input.value = "";
       close();
     };
+    if (id === "country") select.pick = pick;
     const open = () => {
       close();
       const query = input.value.toLowerCase();
@@ -82,7 +94,7 @@
       for (const item of items) {
         const option = document.createElement("div");
         option.setAttribute("role", "option");
-        option.innerHTML = item[1] ? `<div class="iti__flag iti__${item[1]}"></div>${item[0]}` : item[0];
+        option.textContent = item[0];
         option.onmouseover = () => focused = item;
         option.onmousedown = e => { e.preventDefault(); if (!("enterOnly" in select.dataset)) pick(item); };
         listbox.append(option);
@@ -98,6 +110,13 @@
     });
   }
 
+  // intl-tel-input: the dial code typed sets the Country select and spaces the number.
+  document.getElementById("phone").addEventListener("input", e => {
+    const country = document.getElementById("country").closest(".select");
+    const dial = e.target.value.match(/^\+(33|1)/);
+    if (dial && country.pick) country.pick([dial[1] === "1" ? "United States +1" : "France +33"]);
+    if (dial) e.target.value = e.target.value.replace(/^\+(33|1)\s*/, `+${dial[1]} `);
+  });
   document.getElementById("resume").addEventListener("change", e => {
     const name = e.target.files[0].name;
     e.target.closest(".file-upload__wrapper").innerHTML =
