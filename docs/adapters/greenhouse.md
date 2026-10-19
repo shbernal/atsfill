@@ -1,6 +1,6 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-18; sends were made by hand through the same page on 2026-10-13. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding company page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-18. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding company page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 

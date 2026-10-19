@@ -30,12 +30,14 @@ def _login_required(url: str, adapter: Adapter) -> Result:
 
 @contextmanager
 def _opened(
-    data: Path, url: str, sessions: Sessions | None
+    data: Path, url: str, sessions: Sessions | None, detected: list[str]
 ) -> Generator[tuple[Page, Adapter] | Result]:
     """The loaded page and the adapter that claims it by its URL, else by its page; or the
     result that ends the command first. An adapter that needs an account gets its session,
-    and only that adapter's (ADR 0007)."""
+    and only that adapter's (ADR 0007). The adapter's name goes in `detected` once known."""
     adapter = _detect(url)
+    if adapter:
+        detected.append(adapter.name)
     session = None
     if isinstance(adapter, NeedsAccount):
         session = (sessions or {}).get(adapter.name) or accounts.session_file(data, adapter.name)
@@ -44,7 +46,8 @@ def _opened(
             return
     with open_page(data, session) as page:
         page.goto(url)
-        adapter = adapter or _detect(url, page)
+        if adapter is None and (adapter := _detect(url, page)):
+            detected.append(adapter.name)
         if adapter is None:
             yield _no_adapter(url)
         elif isinstance(adapter, NeedsAccount) and not (
@@ -77,16 +80,18 @@ def _stops(result: Result) -> Generator[None]:
         result.status, result.reason = Status.BLOCKED, f"covered: {e}"
 
 
-def _in_budget(url: str, command: Callable[[], Result]) -> Result:
+def _in_budget(url: str, command: Callable[[list[str]], Result]) -> Result:
     """Runs a command to a status whatever happens: past the click it reports `unknown` itself,
-    before it an error the adapter did not expect means the page is not one it handles."""
+    before it an error the adapter did not expect means the page is not one it handles. The
+    result keeps the adapter detected before the stop."""
+    detected: list[str] = []
     try:
-        return command()
+        return command(detected)
     except OutOfTime as e:
-        return Result(Status.BLOCKED, url, reason=f"time_budget: {e}")
+        return Result(Status.BLOCKED, url, (detected or [None])[-1], f"time_budget: {e}")
     except Exception as e:
         reason = f"adapter_error: {type(e).__name__}: {e}"
-        return Result(Status.UNSUPPORTED, url, reason=reason)
+        return Result(Status.UNSUPPORTED, url, (detected or [None])[-1], reason)
 
 
 def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) -> Result:
@@ -104,8 +109,8 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) ->
     return result
 
 
-def _read_page(data: Path, url: str, sessions: Sessions | None) -> Result:
-    with _opened(data, url, sessions) as opened:
+def _read_page(data: Path, url: str, sessions: Sessions | None, detected: list[str]) -> Result:
+    with _opened(data, url, sessions, detected) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
@@ -122,8 +127,9 @@ def _form_command(
     sessions: Sessions | None,
     send: bool,
     resend: bool,
+    detected: list[str],
 ) -> Result:
-    with _opened(data, url, sessions) as opened:
+    with _opened(data, url, sessions, detected) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
@@ -165,7 +171,7 @@ def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = 
             result.fields = fields
             return result
     data = paths.data_dir(data_dir)
-    return _in_budget(url, lambda: _read_page(data, url, sessions))
+    return _in_budget(url, lambda seen: _read_page(data, url, sessions, seen))
 
 
 def fill(
@@ -177,7 +183,7 @@ def fill(
 ) -> Result:
     data = paths.data_dir(data_dir)
     return _in_budget(
-        url, lambda: _form_command(data, url, answers, sessions, send=False, resend=False)
+        url, lambda seen: _form_command(data, url, answers, sessions, False, False, seen)
     )
 
 
@@ -191,13 +197,16 @@ def send(
 ) -> Result:
     data = paths.data_dir(data_dir)
     return _in_budget(
-        url, lambda: _form_command(data, url, answers, sessions, send=True, resend=resend)
+        url, lambda seen: _form_command(data, url, answers, sessions, True, resend, seen)
     )
 
 
 def _unverified(adapter: str) -> str | None:
-    """The warning a send carries when no send through the adapter was verified (ADR 0012)."""
+    """The warning a send carries when no send through the adapter was verified, or the last
+    verified one fails now (ADR 0012)."""
     system = registry.for_adapter(adapter)
+    if system and system.send_broken:
+        return f"send_broken: {_broken(system)}"
     if system and system.send_verified:
         return None
     state = system.state if system else None
@@ -223,16 +232,26 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
     )
 
 
+def _broken(system: registry.System) -> str:
+    broken, last = system.send_broken, system.send_verified
+    assert broken
+    since = f"send broken since {broken.date} ({broken.version}), {broken.reason}"
+    return since + (f"; last verified {last.date} ({last.version})" if last else "")
+
+
 def _adapter_state(adapter: Adapter, data: Path) -> AdapterState:
     system = registry.for_adapter(adapter.name)
     verified = system.state if system else None
+    v = getattr(system, verified) if system and verified else None
     return AdapterState(
         adapter.name,
         submit_enabled=paths.submit_enabled(adapter.name),
         side_effects=adapter.side_effects,
         side_effects_acknowledged=paths.acknowledged(adapter.name),
         verified=verified,
-        verified_version=getattr(system, verified).version if system and verified else None,
+        verified_version=v.version if v else None,
+        verified_release=registry.release(v.version, version("atsfill")) if v else None,
+        send_broken=_broken(system) if system and system.send_broken else None,
         session=_session_state(adapter, data),
     )
 

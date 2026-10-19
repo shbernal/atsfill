@@ -28,6 +28,10 @@ It is built for agents with a shell: every command prints one JSON document and 
 
 ## Supported hiring systems
 
+<!-- badges -->
+![ashby: send broken 2026-10-19](https://img.shields.io/badge/ashby-send%20broken%202026--10--19-f7768e) ![greenhouse: unverified](https://img.shields.io/badge/greenhouse-unverified-565f89) ![teamtailor: unverified](https://img.shields.io/badge/teamtailor-unverified-565f89) ![wttj: unverified](https://img.shields.io/badge/wttj-unverified-565f89)
+<!-- /badges -->
+
 | System | Account needed | `read` without a browser |
 | --- | --- | --- |
 | Ashby | no | yes |

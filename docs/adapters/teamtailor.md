@@ -1,6 +1,6 @@
 # Teamtailor
 
-Observed on live postings, last on 2026-10-18; sends were made by hand through the same page on 2026-10-14. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as a company's career site in `tests/test_teamtailor.py`.
+Observed on live postings, last on 2026-10-18. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as a company's career site in `tests/test_teamtailor.py`.
 
 ## Where the form is
 
