@@ -17,17 +17,18 @@ The job page is rendered for a visitor first: the apply button is a link to `/en
 
 ## Reading and filling
 
-The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with the form holding `[name=cover_letter]`, prefilled from the profile. Field ids are the input names. Every form is the same profile block, with employer questions added; the inventory, on 15 companies:
+The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with the form holding `[data-testid=apply-form-submit]`, prefilled from the profile. Field ids are the input names. Every form is the profile's fields, the ones the employer picked, and the employer's questions; the inventory, on 15 companies, then 10 at the gate:
 
 | Name | Field type | Rendering | Postings |
 |---|---|---|---|
 | `firstname`, `lastname`, `subtitle` | `text` | input, required | 15 |
-| `media.website`, `media.linkedin`, `media.twitter` | `text` | input, required by some employers | 15 |
-| `cover_letter` | `text` | textarea, required by some employers | 15 |
+| `media.<site>`: `website`, `linkedin`, `twitter`, `github`, `stackoverflow` | `text` | input, required by some employers | 25 |
+| `cover_letter` | `text` | textarea, required by some employers | 24 |
 | `questions.<hash>` | `text` | textarea, required, one to three | 5 |
 | `phone` | `phone` | text input | 15 |
 | `location` | `typeahead` | downshift combobox | 15 |
-| `resume` | `file` | PDF only, behind the profile's CV | 15 |
+| `resume` | `file` | PDF only, behind the profile's CV | 25 |
+| `portfolio` | `file` | PDF only | 1 |
 | `consent` | `choice`, `Yes`/`No` | checkbox | 15 |
 
 No question rendered as a checkbox, radio or select: those, and any other checkbox, read as unsupported when required, and are left out otherwise.

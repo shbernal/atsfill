@@ -1,11 +1,11 @@
 <!doctype html>
 <meta charset="utf-8">
-<!-- A Welcome to the Jungle job as the adapter meets it, signed in: the apply button is a
-     sign-in link until the page knows the account, the form opens in a modal prefilled from the
-     profile with its CV, the location suggests only as you type with "current position" first,
-     the location box keeps the profile's value unless emptied with Backspace, the first answer
-     typed into it loads no suggestions, and the send is a
-     POST to /api/v1/applications. -->
+<!-- A Welcome to the Jungle job as the adapter meets it, signed in: the apply button is a sign-in
+     link until the page knows the account, the form opens in a modal prefilled from the
+     profile with its CV and without a cover letter, a second PDF field (a portfolio) beside
+     the CV, the location suggests only as you type with "current position" first, the location
+     box keeps the profile's value unless emptied with Backspace, the first answer typed into
+     it loads no suggestions, and the send is a POST to /api/v1/applications. -->
 <a data-testid="job_header-button-apply" href="/en/authenticate/signin">Postuler</a>
 <div id="portal"></div>
 <template id="modal">
@@ -27,11 +27,10 @@
         <div id="cv"><div data-id="profile-resume.pdf"><div>profile-resume.pdf</div><button title="Remove" type="button">×</button></div></div>
         <input accept="application/pdf" name="resume" id="resume" required type="file">
       </div>
+      <label for="portfolio"><span>Portfolio</span></label>
+      <div><input accept="application/pdf" name="portfolio" id="portfolio" type="file"></div>
       <label for="questions.ab12" required><span>Why this role?</span></label>
       <textarea name="questions.ab12" id="questions.ab12" required></textarea>
-    </fieldset>
-    <fieldset><legend>Lettre de motivation</legend>
-      <textarea name="cover_letter" id="cover_letter"></textarea>
     </fieldset>
     <input type="checkbox" name="consent" id="consent" required>
     <label for="consent">J'accepte que mes données soient traitées.</label>
@@ -46,10 +45,11 @@
     document.getElementById("portal").append(document.getElementById("modal").content.cloneNode(true));
     const form = document.querySelector("#portal form");
     form.querySelector("[title=Remove]").onclick = () => document.getElementById("cv").innerHTML = "";
-    form.querySelector("#resume").onchange = e => {
+    form.querySelectorAll("[type=file]").forEach(input => input.onchange = e => {
       const name = e.target.files[0].name;
-      document.getElementById("cv").innerHTML = `<div data-id="${name}"><div>${name}</div></div>`;
-    };
+      input.parentElement.querySelector("#cv")?.remove();
+      input.insertAdjacentHTML("beforebegin", `<div data-id="${name}"><div>${name}</div></div>`);
+    });
     const location_ = form.querySelector("#location");
     let typings = 0;  // the first answer typed loads nothing
     let key = null;  // emptied other than by Backspace (Playwright's fill("") presses Delete), it comes back

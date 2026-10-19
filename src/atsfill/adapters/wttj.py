@@ -17,7 +17,7 @@ from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "www.welcometothejungle.com"
 JOB = re.compile(r"^/(?:[a-z]{2}/)?companies/([^/]+)/jobs/([^/?#]+)")
-FORM = "form:has([name=cover_letter])"
+FORM = "form:has([data-testid=apply-form-submit])"
 ME = "https://api.welcometothejungle.com/api/v2/users/me"
 FORM_TIMEOUT_MS = 20_000
 SIGNED_IN_TIMEOUT_S = 10
@@ -118,11 +118,12 @@ class WelcomeToTheJungle:
             target = form.locator(f'[name="{field_id}"]')
             match self._fields[field_id].type, answer:
                 case FieldType.FILE, str():
-                    remove = target.locator("xpath=..").locator("button[title=Remove]")
+                    box = target.locator("xpath=..")
+                    remove = box.locator("button[title=Remove]")
                     if remove.count():
                         remove.click()  # the profile's CV; never made the default
                     target.set_input_files(answer)
-                    form.locator(f'[data-id="{answer.rsplit("/", 1)[-1]}"]').wait_for()
+                    box.locator(f'[data-id="{answer.rsplit("/", 1)[-1]}"]').wait_for()
                 case FieldType.CHOICE, str():
                     if target.is_checked() != (answer == "Yes"):
                         browser.click(form.locator(f'label[for="{target.get_attribute("id")}"]'))
