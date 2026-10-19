@@ -7,6 +7,8 @@ the read-back, kept per form since a survey answer returns the survey alone.
 import json
 import time
 import urllib.request
+from collections.abc import Callable
+from functools import partial
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -43,6 +45,7 @@ TYPES = {
 }
 SETTLE_S = 1.5
 READ_BACK_TIMEOUT_S = 30
+SAVE_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 
 
@@ -133,6 +136,7 @@ class Ashby:
         return [self._field(e) for e in self._entries()]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        """One save at a time: saves in flight together overwrite each other at Ashby."""
         fields = {e["field"]["path"]: self._field(e) for e in self._entries()}
         for field_id, answer in answers.items():
             entry = page.locator(f'[data-field-path="{field_id}"]')
@@ -141,26 +145,41 @@ class Ashby:
                 case FieldType.TEXT | FieldType.DATE | FieldType.PHONE, str():
                     box = entry.locator("input, textarea").first
                     box.fill(answer)
-                    box.blur()
+                    self._saved(page, box.blur)
                 case FieldType.CHOICE, str() if entry.locator("input[role=combobox]").count():
                     entry.locator("input[role=combobox]").fill(answer)
-                    page.get_by_role("option", name=answer, exact=True).click()
+                    option = page.get_by_role("option", name=answer, exact=True)
+                    self._saved(page, option.click)
                 case FieldType.CHOICE, str():
-                    entry.get_by_text(answer, exact=True).click()
+                    self._saved(page, entry.get_by_text(answer, exact=True).click)
                 case FieldType.MULTI_CHOICE, list():
                     for value in answer:
-                        entry.get_by_text(value, exact=True).click()
+                        self._saved(page, entry.get_by_text(value, exact=True).click)
                 case FieldType.TYPEAHEAD, str():
-                    box = entry.locator("input[role=combobox]")
-                    box.fill(answer)
-                    page.get_by_role("option").filter(has_text=answer).first.click()
+                    entry.locator("input[role=combobox]").fill(answer)
+                    option = page.get_by_role("option").filter(has_text=answer).first
+                    self._saved(page, option.click)
                 case FieldType.FILE, str():
-                    entry.locator("input[type=file]").set_input_files(answer)
+                    upload = entry.locator("input[type=file]")
+                    self._saved(page, partial(upload.set_input_files, answer))
                 case kind, _:
                     raise Unsupported(
                         f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
         self._answered = list(answers)
+
+    def _saved(self, page: Page, change: Callable[[], None]) -> None:
+        """Makes the change, then waits for its save and any other request it set off. A
+        change Ashby does not save shows in the read-back."""
+        try:
+            with page.expect_response(
+                lambda r: _op(r).startswith("ApiSetFormValue"), timeout=SAVE_TIMEOUT_MS
+            ):
+                change()
+        except Timeout:
+            return
+        while self._pending:
+            page.wait_for_timeout(100)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Ashby's last returned form, once every answer is held and no request is in flight."""
