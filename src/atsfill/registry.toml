@@ -33,6 +33,7 @@ kind = "ats"
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "greenhouse"
+dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "c0fb0c5" }
 
 [wttj]
 kind = "board"

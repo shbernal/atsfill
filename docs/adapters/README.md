@@ -5,6 +5,6 @@ Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `
 | Source | Kind | Share | Account | Hosting | Block | State |
 |---|---|---|---|---|---|---|
 | ashby | ats |  | none | hosted, embedded |  | [send_verified](ashby.md) |
-| greenhouse | ats |  | none | hosted, embedded |  | [adapter](greenhouse.md) |
+| greenhouse | ats |  | none | hosted, embedded |  | [dry_run_verified](greenhouse.md) |
 | teamtailor | ats |  | none | hosted |  | [adapter](teamtailor.md) |
 | wttj | board |  | to_send | hosted |  | [adapter](wttj.md) |
