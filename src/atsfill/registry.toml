@@ -19,8 +19,7 @@ kind = "ats"
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "ashby"
-send_verified = { date = 2026-10-18, version = "0.0.2", by = "shbernal", commit = "ff8ea46" }
-send_broken = { date = 2026-10-19, version = "0.0.2", commit = "916319c", by = "shbernal", reason = "the résumé reads back empty after its upload", cause = "system" }
+send_verified = { date = 2026-10-19, version = "0.0.2", by = "shbernal", commit = "7622376" }
 dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "c230c5e" }
 
 [teamtailor]
