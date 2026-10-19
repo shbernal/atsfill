@@ -7,6 +7,8 @@ soon as it is picked. The read-back is the form's `FormData`.
 
 import re
 import time
+import unicodedata
+from pathlib import PurePath
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -164,6 +166,7 @@ class Teamtailor:
         self._fields: dict[str, Field] = {}
         self._qualifying: set[str] = set()
         self._follow_ups: dict[str, bool] = {}  # shown by an earlier answer: required once shown
+        self._uploads: dict[str, str] = {}  # file field id: the answer's file name
 
     def detect(self, url: str, page: Page | None) -> bool:
         """A `*.teamtailor.com` job, or a job page with Teamtailor's "powered by" link or its
@@ -225,15 +228,23 @@ class Teamtailor:
             if required and field_id not in answers and self._shown(form, field_id):
                 label = self._fields[field_id].label
                 raise Unsupported(f"missing_answer: an earlier answer asks {label!r}")
-        self._wait_for_uploads(form, answers)
+        self._uploads = {
+            i: PurePath(a).name
+            for i, a in answers.items()
+            if self._fields[i].type is FieldType.FILE and isinstance(a, str)
+        }
+        self._wait_for_uploads(form)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, QUESTION)
+        for field_id, name in self._uploads.items():
+            if values.get(field_id) == _stored_name(name):
+                values[field_id] = name
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def submit(self, page: Page) -> str | None:
         _click(page, page.locator(f"{FORM} [type=submit]"))
-        page.wait_for_url(re.compile(r"/applications/\d+/thanks"), timeout=SUBMIT_TIMEOUT_MS)
+        page.wait_for_url(re.compile(r"/applications/[^/]+/thanks"), timeout=SUBMIT_TIMEOUT_MS)
         return page.url
 
     def _fill(self, form: Locator, field_id: str, answer: Answer) -> None:
@@ -290,18 +301,20 @@ class Teamtailor:
             )
         return form.locator(f"[name='{field_id}']").first.locator("xpath=..")
 
-    def _wait_for_uploads(self, form: Locator, answers: dict[str, Answer]) -> None:
-        files = {
-            i: a.rsplit("/", 1)[-1]
-            for i, a in answers.items()
-            if self._fields[i].type is FieldType.FILE and isinstance(a, str)
-        }
+    def _wait_for_uploads(self, form: Locator) -> None:
         deadline = time.monotonic() + UPLOAD_TIMEOUT_S
-        while files and time.monotonic() < deadline:
+        while self._uploads and time.monotonic() < deadline:
             held = form.evaluate(_READ_BACK, QUESTION)
-            if all(held.get(i) == name for i, name in files.items()):
+            if all(held.get(i) == _stored_name(n) for i, n in self._uploads.items()):
                 return
             form.page.wait_for_timeout(500)
+
+
+def _stored_name(name: str) -> str:
+    """The name Teamtailor stores a file under: ASCII, lowercase, each run of other
+    characters than letters, digits, `.` and `-` one `_`."""
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9.\-]+", "_", ascii_name.lower())
 
 
 def _field(raw: dict[str, Any]) -> Field | None:

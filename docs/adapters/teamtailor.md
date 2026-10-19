@@ -49,7 +49,7 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 - Qualifying questions are answered first. While one is unanswered, or answered with what the employer does not accept, the rest of the form sits under `[data-careersite--form-target=formContentWrapper].cursor-not-allowed` and takes no clicks; atsfill then stops with `not_qualified`.
 - A follow-up question shows once its earlier question has the answer it waits for. An answer to one that stays hidden is not filled, so it reads back as a mismatch; a required one that shows without an answer stops the fill with `missing_answer`.
 - Click the consent box's label.
-- A picked file uploads at once: `POST /uploads/presigned_data`, then to Teamtailor's S3. The form then holds the file's address in `candidate[resume_remote_url]`, whose last path segment is the file name.
+- A picked file uploads at once: `POST /uploads/presigned_data`, then to Teamtailor's S3. The form then holds the file's address in `candidate[resume_remote_url]`, whose last path segment is the file name as Teamtailor stores it: ASCII, lowercase, each run of characters other than letters, digits, `.` and `-` one `_` (`CV Élodie (2026).pdf` is `cv_elodie_2026_.pdf`). The read-back gives the answer's name back when the stored one is its rewrite.
 - The phone field (intl-tel-input) takes an international number and keeps it as `+<digits>`.
 - In a dropdown choice the hidden radios still have labels: pick from the dropdown, not the hidden label. A multiple choice dropdown stays open after a pick, over the fields below it, so it is closed once its options are picked.
 - The address is typed key by key, and the first suggestion (`[role=option]`, its text in `data-description`) matching it is picked; only a pick fills `candidate[location][place_id]` and the city, country and coordinates beside it.
@@ -59,4 +59,4 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 ## Read-back and submit
 
 - Nothing reaches the company before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
-- Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, titled "Applied to <role>". An optional "Connect" step that follows is skipped.
+- Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, the id a UUID, titled "Applied to <role>". An optional "Connect" step that follows is skipped.

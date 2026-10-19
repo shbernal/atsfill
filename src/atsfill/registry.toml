@@ -27,6 +27,7 @@ kind = "ats"
 account = "none"
 hosting = ["hosted"]
 adapter = "teamtailor"
+send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "4e09f53" }
 dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "91a0bba" }
 
 [greenhouse]
@@ -41,4 +42,5 @@ kind = "board"
 account = "to_send"
 hosting = ["hosted"]
 adapter = "wttj"
+send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "65458a5" }
 dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "ad9f478" }

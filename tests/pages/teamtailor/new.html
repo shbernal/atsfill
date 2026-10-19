@@ -132,7 +132,8 @@
   cookies.showModal();
   cookies.querySelectorAll("button").forEach(b => b.onclick = () => cookies.close());
   const upload = (id, name) => document.getElementById(id).addEventListener("change", e => {
-    const file = e.target.files[0].name;
+    const file = e.target.files[0].name.normalize("NFKD").replace(/[^\x00-\x7f]/g, "")
+      .toLowerCase().replace(/[^a-z0-9.\-]+/g, "_");
     setTimeout(() => {
       const held = document.createElement("input");
       Object.assign(held, {type: "text", className: "hidden", name,
@@ -179,6 +180,6 @@
   });
   document.getElementById("job-application-form").onsubmit = e => {
     e.preventDefault();
-    location.href = location.pathname.replace("/applications/new", "/applications/456/thanks");
+    location.href = location.pathname.replace("/applications/new", "/applications/1b8f2c3e-0000-4000-8000-00000000a456/thanks");
   };
 </script>
