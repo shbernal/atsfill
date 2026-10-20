@@ -48,7 +48,9 @@ def resume(tmp_path) -> str:
 def test_detection_and_posting():
     adapter = Oracle()
     assert adapter.detect(JOB + "?utm_source=board", None)
-    assert not adapter.detect("https://acme.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/", None)
+    assert not adapter.detect(
+        "https://acme.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/", None
+    )
     other_site = JOB.replace("/en/sites/CX_1/", "/fr/sites/CX_2/") + "/apply/email"
     assert adapter.posting(other_site) == adapter.posting(JOB)
 
@@ -113,6 +115,7 @@ def test_every_answer_reads_back(opened, page, resume):
         "3004": "No",
         "3005": "50000",
         "resume": resume,
+        "block:107": resume,
         "siteLink-1": "https://example.com",
         "US-STANDARD-ORA_ETHNICITY_US_OTHERS-STANDARD": ["I do not wish to answer"],
         "job-alerts": "Yes",

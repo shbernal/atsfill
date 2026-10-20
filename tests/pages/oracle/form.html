@@ -4,8 +4,9 @@
 <style>.apply-flow-input-checkbox__button { display: inline-block; width: 16px; height: 16px; border: 1px solid; } .cx-select__list[hidden], [hidden] { display: none; } .input-row__hidden-control { position: absolute; opacity: 0; width: 1px; height: 1px; }</style>
 </head>
 <body>
-<!-- One example of each rendering atsfill reads on Oracle's single-page form, in Oracle's
-     markup: ids carry a per-load counter, dropdowns list `gridcell`s once opened. -->
+<!-- One example of each rendering atsfill reads on Oracle's form, in Oracle's markup: ids
+     carry a per-load counter, dropdowns list `gridcell`s once opened, and the form is two
+     pages, which the page numbers move between. -->
 <form class="apply-flow__content apply-flow__content-form" novalidate>
 <apply-flow-section id="section-1">
 
@@ -144,6 +145,8 @@
   <button type="button" class="button apply-flow-profile-item-tile__new-tile">Add Education</button>
 </div></apply-flow-block>
 
+</apply-flow-section>
+<apply-flow-section id="section-2" hidden>
 <apply-flow-block data-scroll-spy-id="109"><div class="apply-flow-block apply-flow-block--diversity">
   <h3 class="apply-flow-block__title"><span>Diversity Information</span></h3>
   <div class="input-row input-row--radiogroup" role="group">
@@ -171,9 +174,21 @@
 </div></apply-flow-block>
 
 </apply-flow-section>
-<apply-flow-pagination><div class="apply-flow-pagination"><button type="button" class="button apply-flow-pagination__button apply-flow-pagination__submit-button">Submit</button></div></apply-flow-pagination>
+<apply-flow-pagination><div class="apply-flow-pagination">
+  <div class="apply-flow-navigation-pages"><ul>
+    <li><a class="apply-flow-navigation-pages__link" href="#"> 1 </a></li>
+    <li><a class="apply-flow-navigation-pages__link" href="#"> 2 </a></li>
+  </ul></div><button type="button" class="button apply-flow-pagination__button apply-flow-pagination__submit-button">Submit</button></div></apply-flow-pagination>
 </form>
 <script>
+  for (const link of document.querySelectorAll(".apply-flow-navigation-pages__link")) {
+    link.addEventListener("click", e => {
+      e.preventDefault();
+      const number = link.textContent.trim();
+      document.querySelectorAll("apply-flow-section").forEach(s => s.hidden = s.id !== `section-${number}`);
+      history.pushState(null, "", location.href.replace(/\/apply\/section\/\d+/, `/apply/section/${number}`));
+    });
+  }
   document.querySelector("#email-19").value = sessionStorage.getItem("email") || "";
   const items = input => input.dataset.options ? input.dataset.options.split("|")
     : (input.value ? input.dataset.search.split("|").filter(o => o.toLowerCase().startsWith(input.value.toLowerCase())) : []);
@@ -210,7 +225,11 @@
       done.type = "button";
       done.className = "attachment-upload-button__download";
       done.textContent = input.files[0].name;
-      setTimeout(() => input.closest(".attachment-upload-button").replaceWith(done), 300);
+      const list = input.closest(".apply-flow-block--misc-attachments");
+      if (list) {  // a list of files under the upload button
+        done.className = "misc-attachment-list__item-name";
+        setTimeout(() => list.append(done), 300);
+      } else setTimeout(() => input.closest(".attachment-upload-button").replaceWith(done), 300);
     });
   }
 </script>

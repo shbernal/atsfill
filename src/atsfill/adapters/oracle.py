@@ -28,9 +28,13 @@ LEGAL_BOX = "legal-disclaimer .apply-flow-input-checkbox__button"
 NEXT = "button[type=submit].apply-flow-pagination__button"
 SUBMIT = ".apply-flow-pagination__submit-button"
 PAGINATION = ".apply-flow-pagination__button"
+PAGE_NUMBERS = ".apply-flow-navigation-pages__link"
 LOADING = ".app-loading-spinner, .cx-select--loading, .apply-flow-block .skeleton"
 CODE_PAGE = ".apply-flow-pin-code-required"
 CAPTCHA = "iframe[src*='hcaptcha.com']"
+MANUALLY = ".quick-apply-flow__manually--link:visible"  # past an offer to import a profile
+COOKIES = ".cookie-consent button:visible"
+ATTACHED = ".attachment-upload-button__download, .misc-attachment-list__item-name"
 STEP_TIMEOUT_MS = 30_000
 LIST_TIMEOUT_MS = 3_000
 SETTLE_MS = 1_500
@@ -147,7 +151,7 @@ _SETTLED = """(loading) => {
   && [...document.querySelectorAll(".apply-flow-block--personal-information-address-v2")]
     .every(block => {
     const country = block.querySelector("address-form-v2 input[role=combobox]");
-    return country && (!country.value || block.querySelector(".address-form .input-row"));
+    return country && country.value && block.querySelector(".address-form .input-row");
   });
 }"""
 
@@ -211,7 +215,8 @@ _READ_BACK = """(ids) => {
     const host = id === "resume" ? document.querySelector("resume-upload-button")
       : id === "coverLetter" ? document.querySelector("cover-letter-upload-button")
       : document.querySelector(`apply-flow-block[data-scroll-spy-id="${id.slice(6)}"]`);
-    out[id] = text(host?.querySelector(".attachment-upload-button__download")) || null;
+    const attached = ".attachment-upload-button__download, .misc-attachment-list__item-name";
+    out[id] = text(host?.querySelector(attached)) || null;
   }
   return out;
 }"""
@@ -233,6 +238,7 @@ class Oracle:
     def __init__(self) -> None:
         self._fields: dict[str, Field] = {}
         self._kinds: dict[str, str] = {}
+        self._pages: dict[str, int] = {}  # field id: the page of the form it is on
         self._months: list[str] = []
         self._job = ""
         self._uploads: dict[str, str] = {}
@@ -258,24 +264,17 @@ class Oracle:
         fields = [Field(EMAIL, "Email Address", FieldType.TEXT, True)]
         if legal:
             fields.append(Field(LEGAL, legal, FieldType.CHOICE, True, CHECKBOX))
-        self._pass_email_step(page, f"atsfill.read.{uuid.uuid4().hex[:12]}@example.com", True)
-        self._kinds = {}
-        for raw in page.evaluate(_READ):
-            if raw["kind"] == "tiles":
-                if raw["required"]:
-                    raise Unsupported(f"form_shape: {raw['label']!r} needs entries added")
-                continue
-            if raw["kind"] == "email":
-                self._kinds[EMAIL] = "email"
-                continue
-            if raw["kind"] == "select":
-                options = self._options(page, raw["id"])
-                raw["kind"] = "select" if options else "text" if raw["search"] else "typeahead"
-                raw["options"] = options or None
-            if raw["kind"] == "date":
-                self._months = self._date_options(page, raw["id"])
-            self._kinds[raw["id"]] = raw["kind"]
-            fields.append(_field(raw))
+        self._pass_email_step(
+            page, f"atsfill.read.{uuid.uuid4().hex[:12]}@example.com", bool(legal)
+        )
+        self._kinds, self._pages = {}, {}
+        # The page numbers move between pages without checking the page left.
+        for number in range(1, max(len(_page_numbers(page)), 1) + 1):
+            _go_to(page, number)
+            for raw in page.evaluate(_READ):
+                if raw["id"] not in self._kinds and (field := self._described(page, raw)):
+                    self._kinds[field.id], self._pages[field.id] = raw["kind"], number
+                    fields.append(field)
         self._fields = {f.id: f for f in fields}
         return fields
 
@@ -289,11 +288,16 @@ class Oracle:
         email = answers.get(EMAIL)
         assert isinstance(email, str)  # required, so answered
         self._pass_email_step(page, email, LEGAL in self._fields)
-        if COUNTRY in answers:  # the address below it follows the country's format
-            self._fill(page, COUNTRY, answers[COUNTRY])
-            _settle(page)
-        for field_id in [i for i in answers if i not in (EMAIL, LEGAL, COUNTRY)]:
-            self._fill(page, field_id, answers[field_id])
+        for number in sorted(set(self._pages.values())):
+            on_page = [i for i in answers if self._pages.get(i) == number]
+            if not on_page:
+                continue
+            _go_to(page, number)
+            if COUNTRY in on_page:  # the address below it follows the country's format
+                self._fill(page, COUNTRY, answers[COUNTRY])
+                _settle(page)
+            for field_id in [i for i in on_page if i != COUNTRY]:
+                self._fill(page, field_id, answers[field_id])
         self._uploads = {
             i: PurePath(a).name
             for i, a in answers.items()
@@ -311,6 +315,7 @@ class Oracle:
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def submit(self, page: Page) -> str | None:
+        _go_to(page, len(_page_numbers(page)) or 1)
         _click(page, page.locator(SUBMIT))
         page.wait_for_url(lambda url: "/apply/" not in url, timeout=STEP_TIMEOUT_MS * 3)
         return page.url
@@ -333,8 +338,12 @@ class Oracle:
             if "--checked" not in (box.get_attribute("class") or ""):
                 _click(page, box)
         _click(page, page.locator(NEXT).first)
+        opened = page.locator(f"apply-flow-block, {CODE_PAGE}, {MANUALLY}")
         try:
-            page.locator(f"apply-flow-block, {CODE_PAGE}").first.wait_for(timeout=STEP_TIMEOUT_MS)
+            opened.first.wait_for(timeout=STEP_TIMEOUT_MS)
+            if page.locator(MANUALLY).count():
+                _click(page, page.locator(MANUALLY).first)
+                page.locator("apply-flow-block").first.wait_for(timeout=STEP_TIMEOUT_MS)
         except browser.Timeout:
             if page.locator(CAPTCHA).count():
                 raise Blocked("captcha: the email step asks for an hCaptcha") from None
@@ -346,8 +355,23 @@ class Oracle:
             )
         page.locator(PAGINATION).first.wait_for(timeout=STEP_TIMEOUT_MS)
         _settle(page)
-        if not page.locator(SUBMIT).count():
-            raise Unsupported("form_shape: a form over several pages")
+
+    def _described(self, page: Page, raw: dict[str, Any]) -> Field | None:
+        """The field a raw description is, None for one atsfill leaves out."""
+        if raw["kind"] == "tiles":
+            if raw["required"]:
+                raise Unsupported(f"form_shape: {raw['label']!r} needs entries added")
+            return None
+        if raw["kind"] == "email":
+            self._kinds[EMAIL] = "email"
+            return None
+        if raw["kind"] == "select":
+            options = self._options(page, raw["id"])
+            raw["kind"] = "select" if options else "text" if raw["search"] else "typeahead"
+            raw["options"] = options or None
+        if raw["kind"] == "date":
+            self._months = self._date_options(page, raw["id"])
+        return _field(raw)
 
     def _row(self, page: Page, field_id: str) -> Locator:
         """The innermost row holding the field."""
@@ -426,14 +450,14 @@ class Oracle:
         digits = re.sub(r"\D", "", answer)
         code = row.locator("input[role=combobox]")
         codes = sorted(
-            {m[1] for o in _open_list(page, code) if (m := re.match(r"\+(\d+)", o))},
+            {m[1] for o in _open_list(page, code) if (m := re.search(r"\+(\d+)", o))},
             key=len,
             reverse=True,
         )
         prefix = next((c for c in codes if digits.startswith(c)), None)
         if prefix is None:
             raise Unsupported(f"form_shape: no country code for {answer!r}")
-        _choose(page, code, f"+{prefix}", starts=True)
+        _choose(page, code, f"+{prefix}", code=True)
         number = row.locator("input[type=tel]")
         number.fill(digits[len(prefix) :])
         number.blur()
@@ -443,7 +467,7 @@ class Oracle:
 
     def _wait_for_uploads(self, page: Page) -> None:
         for field_id, name in self._uploads.items():
-            selector = f"{_upload(field_id)} .attachment-upload-button__download"
+            selector = f"{_upload(field_id)} :is({ATTACHED})"
             done = page.locator(selector, has_text=name)
             try:
                 done.first.wait_for(timeout=UPLOAD_TIMEOUT_MS)
@@ -452,14 +476,37 @@ class Oracle:
 
 
 def _click(page: Page, target: Locator) -> None:
-    """Clicks, once more after the app's loading spinner, which can come over the page."""
+    """Clicks, once more after the app's loading spinner or once the cookie banner is
+    declined, either of which can come over the page."""
     try:
         browser.click(target)
     except browser.Covered as e:
-        if "loading" not in str(e):
+        if "cookie-consent" in str(e):
+            buttons = page.locator(COOKIES)
+            decline = buttons.filter(has_text=re.compile("decline|reject|necessary", re.I))
+            browser.click((decline if decline.count() else buttons).first)
+        elif "loading" not in str(e):
             raise
         _settle(page)
         browser.click(target)
+
+
+def _page_numbers(page: Page) -> list[str]:
+    """The page numbers of a form over several pages, none for a single page."""
+    return [_text(t) for t in page.locator(PAGE_NUMBERS).all_inner_texts() if _text(t).isdigit()]
+
+
+def _go_to(page: Page, number: int) -> None:
+    if not _page_numbers(page) or re.search(rf"/apply/section/{number}\b", page.url):
+        return
+    _click(page, page.locator(PAGE_NUMBERS).filter(has_text=_exact(str(number))).first)
+    try:
+        page.wait_for_url(
+            re.compile(rf"/apply/section/{number}\b"), timeout=STEP_TIMEOUT_MS, wait_until="commit"
+        )
+    except browser.Timeout:
+        raise Unsupported(f"form_shape: page {number} of the form did not open") from None
+    _settle(page)
 
 
 def _upload(field_id: str) -> str:
@@ -502,28 +549,33 @@ def _choose(
     answer: str,
     *,
     exact: bool = False,
-    starts: bool = False,
+    code: bool = False,
     field: Field | None = None,
 ) -> None:
     """Types into a dropdown, which filters its list, and picks the item that is the answer
-    (or starts with it, or matches it as a suggestion)."""
-    _click(page, box)
-    box.fill("")
-    box.press_sequentially(answer, delay=20)
-    cells = page.locator(f"[id='{box.get_attribute('aria-controls')}'] [role=gridcell]")
-    try:
-        cells.first.wait_for(timeout=LIST_TIMEOUT_MS * 2)
-    except browser.Timeout:
-        raise Unsupported(f"form_shape: no item for {answer!r} in a dropdown") from None
-    for i in range(cells.count()):
-        item = _text(cells.nth(i).inner_text())
-        if (
-            (exact and item == answer)
-            or (starts and item.startswith(answer + " "))
-            or (field is not None and matching.matches(field, answer, item))
-        ):
-            _click(page, cells.nth(i))
-            return
+    (or holds it as a phone code, or matches it as a suggestion). A list whose search does not match
+    its items' text as typed is looked through whole."""
+    for typed in (answer, ""):
+        _click(page, box)
+        box.fill("")
+        if typed:
+            box.press_sequentially(typed, delay=20)
+        cells = page.locator(f"[id='{box.get_attribute('aria-controls')}'] [role=gridcell]")
+        with suppress(browser.Timeout):
+            cells.first.wait_for(timeout=LIST_TIMEOUT_MS * 2)
+        for i in range(cells.count()):
+            item = _text(cells.nth(i).inner_text())
+            if (
+                (exact and item == answer)
+                or (code and re.search(rf"{re.escape(answer)}(\D|$)", item))
+                or (field is not None and matching.matches(field, answer, item))
+            ):
+                cells.nth(i).scroll_into_view_if_needed()
+                _click(page, cells.nth(i))
+                return
+        box.press("Escape")
+        if field is not None:
+            break  # a search lists nothing untyped
     raise Unsupported(f"form_shape: no item for {answer!r} in a dropdown")
 
 
