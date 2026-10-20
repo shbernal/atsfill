@@ -9,7 +9,7 @@ from importlib.resources import files
 KINDS = ("ats", "board", "aggregator", "custom")
 ACCOUNTS = ("none", "to_send", "to_read")  # also the backlog order (ADR 0013)
 HOSTING = ("hosted", "embedded")
-VENDORS = ("DataDome", "Cloudflare", "Akamai", "PerimeterX", "unknown")
+VENDORS = ("DataDome", "Cloudflare", "Akamai", "PerimeterX", "hCaptcha", "unknown")
 STEPS = ("posting", "form", "upload")
 STATES = ("mapped", "dry_run_verified", "send_verified")
 CAUSES = ("system", "code", "unknown")

@@ -9,7 +9,6 @@ The registry covers 90.1% of postings.
 | oracle | ats | 8.3% | none | hosted |  | [dry_run_verified](oracle.md) |
 | smartrecruiters | ats | 4.4% | none | hosted |  | [dry_run_verified](smartrecruiters.md) |
 | greenhouse | ats | 3.5% | none | hosted, embedded |  | [dry_run_verified](greenhouse.md) |
-| paycom | ats | 2.4% | none | hosted |  | mapped |
 | manatal | ats | 1.9% | none | hosted |  | mapped |
 | paylocity | ats | 1.7% | none | hosted |  | mapped |
 | dayforce | ats | 1.7% | none | hosted |  | mapped |
@@ -46,6 +45,7 @@ The registry covers 90.1% of postings.
 | jobstreet | board | 0.5% | to_read | hosted |  | mapped |
 | gupy | ats | 0.4% | to_read | hosted |  | mapped |
 | join | ats | 0.3% | to_read | hosted |  | mapped |
+| paycom | ats | 2.4% | none | hosted | hCaptcha at form | mapped |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | mapped |
 
 Aggregators and company-built forms, counted and not adapted:
