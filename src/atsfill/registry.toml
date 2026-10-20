@@ -243,7 +243,7 @@ mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25
 [ukgready]
 kind = "ats"
 share = 0.0085
-account = "none"
+account = "to_read"  # step 1 asks only name and email; its Continue creates the applicant and the job application, and the questions load behind that applicant's token
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
