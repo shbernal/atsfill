@@ -1,5 +1,6 @@
 from atsfill.adapters.ashby import Ashby
 from atsfill.adapters.greenhouse import Greenhouse
+from atsfill.adapters.hireology import Hireology
 from atsfill.adapters.jazzhr import JazzHR
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
@@ -22,6 +23,7 @@ ADAPTERS: list[Adapter] = [
     Manatal(),
     Paylocity(),
     Workable(),
+    Hireology(),
     Paycor(),
     JazzHR(),
     Lever(),

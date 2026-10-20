@@ -27,6 +27,10 @@ DECLINE = re.compile(
     r"decline|prefer not|not to (answer|say|disclose|self-identify)|(don.?t|do not) (wish|want)",
     re.IGNORECASE,
 )
+# A field's label that says it is asked only after another's answer.
+ASKED_WHEN = re.compile(
+    r"""\(asked when (["'])(?P<trigger>.+?)\1 is (?P<negated>not )?"?(?P<value>.+?)"?\)$"""
+)
 BY_LABEL = [
     (re.compile(r"MM/YYYY"), "01/2020"),
     (re.compile(r"zip|postal", re.IGNORECASE), "20001"),
@@ -128,12 +132,23 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
             return _text(field)
 
 
+def _asked(field: Field, given: dict[str, Answer]) -> bool:
+    """Whether the page shows the field, given the answers so far, when its label says it is
+    asked only after another field's answer."""
+    match = ASKED_WHEN.search(field.label)
+    if not match or match["trigger"] not in given:
+        return True
+    return (given[match["trigger"]] == match["value"]) != bool(match["negated"])
+
+
 def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
-    prefilled to the account, a résumé aside."""
-    return {
-        f.id: a
-        for f in fields
-        if (a := answer(f, cv, picture)) is not None
-        and not (f.prefilled and f.type is not FieldType.FILE)
-    }
+    prefilled to the account, a résumé aside, and a field its own answers keep hidden."""
+    out, by_label = {}, {}
+    for f in fields:
+        if (a := answer(f, cv, picture)) is None or not _asked(f, by_label):
+            continue
+        by_label[f.label] = a
+        if not (f.prefilled and f.type is not FieldType.FILE):
+            out[f.id] = a
+    return out
