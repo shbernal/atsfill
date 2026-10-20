@@ -55,6 +55,7 @@ class System:
     hosting: tuple[str, ...]
     adapter: str | None = None
     share: float | None = None
+    links_to: tuple[str, ...] = ()  # an aggregator's: the sources its postings link to
     block: Block | None = None
     mapped: Verification | None = None
     dry_run_verified: Verification | None = None
@@ -80,6 +81,8 @@ def _system(source: str, entry: dict) -> System:
     _one_of(source, "account", entry.get("account"), ACCOUNTS)
     for h in entry.get("hosting", []):
         _one_of(source, "hosting", h, HOSTING)
+    if entry.get("links_to") and entry["kind"] != "aggregator":
+        raise ValueError(f"{source}: links_to on a {entry['kind']}, only an aggregator links out")
     block = entry.get("block")
     if block is not None:
         _one_of(source, "block.vendor", block.get("vendor"), VENDORS)
@@ -97,6 +100,7 @@ def _system(source: str, entry: dict) -> System:
         tuple(entry.get("hosting", [])),
         entry.get("adapter"),
         entry.get("share"),
+        tuple(entry.get("links_to", [])),
         block,
         **states,
         send_broken=broken,
@@ -158,7 +162,8 @@ def _row(s: System) -> str:
     state = "send_broken" if s.send_broken else s.state or ""
     if s.adapter:
         state = f"[{state}]({s.adapter}.md)" if state else f"[adapter]({s.adapter}.md)"
-    cells = [s.source, s.kind, share, s.account, ", ".join(s.hosting), block, state]
+    kind = f"{s.kind} → {', '.join(s.links_to)}" if s.links_to else s.kind
+    cells = [s.source, kind, share, s.account, ", ".join(s.hosting), block, state]
     return "| " + " | ".join(cells) + " |"
 
 
@@ -180,6 +185,8 @@ def backlog(registry: dict[str, System] | None = None) -> str:
         " [ADR 0012](../adr/0012-systems-registry.md), the order in"
         " [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked last,"
         " then by share of postings.",
+        "",
+        f"The registry covers {sum(s.share or 0 for s in registry.values()):.1%} of postings.",
         "",
         head,
         *map(_row, adapters),

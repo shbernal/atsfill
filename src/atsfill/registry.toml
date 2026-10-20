@@ -5,6 +5,7 @@
 # share     fraction of freehire's postings, worldwide, from its `source` facet
 # account   none | to_send | to_read
 # hosting   hosted, embedded: where the form is found
+# links_to  an aggregator's: the sources its postings were followed to
 # adapter   the adapter's name, when there is one
 # block     vendor, signal, step (posting | form | upload), date, version, camoufox, browser
 # mapped, dry_run_verified, send_verified
@@ -16,6 +17,7 @@
 
 [ashby]
 kind = "ats"
+share = 0.0146
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "ashby"
@@ -24,6 +26,7 @@ dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit =
 
 [teamtailor]
 kind = "ats"
+share = 0.0122
 account = "none"
 hosting = ["hosted"]
 adapter = "teamtailor"
@@ -32,6 +35,7 @@ dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit =
 
 [greenhouse]
 kind = "ats"
+share = 0.0352
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "greenhouse"
@@ -39,8 +43,334 @@ dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit =
 
 [wttj]
 kind = "board"
+share = 0.0007
 account = "to_send"
 hosting = ["hosted"]
 adapter = "wttj"
 send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "9bc6d84" }
 dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "ad9f478" }
+
+[workday]
+kind = "ats"
+share = 0.1786
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[trudvsem]
+kind = "board"
+share = 0.1006
+account = "to_read"
+hosting = ["hosted"]
+block = { vendor = "unknown", signal = "empty response to the browser, http 460 to curl, from outside Russia", step = "posting", date = 2026-10-20, version = "0.0.2", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[oracle]
+kind = "ats"
+share = 0.0833
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[smartrecruiters]
+kind = "ats"
+share = 0.0441
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[successfactors]
+kind = "ats"
+share = 0.0350
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[ukg]
+kind = "ats"
+share = 0.0349
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[paycom]
+kind = "ats"
+share = 0.0244
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[icims]
+kind = "ats"
+share = 0.0190
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[manatal]
+kind = "ats"
+share = 0.0187
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[paylocity]
+kind = "ats"
+share = 0.0167
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[dayforce]
+kind = "ats"
+share = 0.0165
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[workable]
+kind = "ats"
+share = 0.0159
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[energyjobline]
+kind = "aggregator"
+share = 0.0157
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[mycareersfuture]
+kind = "board"
+share = 0.0157
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[adzuna]
+kind = "aggregator"
+share = 0.0134
+account = "none"
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[bamboohr]
+kind = "ats"
+share = 0.0133
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[taleo]
+kind = "ats"
+share = 0.0125
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[jazzhr]
+kind = "ats"
+share = 0.0118
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[lever]
+kind = "ats"
+share = 0.0116
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[adp]
+kind = "ats"
+share = 0.0108
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[eures]
+kind = "aggregator"
+share = 0.0102
+account = "none"
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[hireology]
+kind = "ats"
+share = 0.0101
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[paycor]
+kind = "ats"
+share = 0.0095
+account = "none"
+hosting = ["hosted", "embedded"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[zohorecruit]
+kind = "ats"
+share = 0.0089
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[ukgready]
+kind = "ats"
+share = 0.0085
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[adpmyjobs]
+kind = "ats"
+share = 0.0084
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[phenom]
+kind = "ats"
+share = 0.0071
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[breezy]
+kind = "ats"
+share = 0.0069
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[recruitee]
+kind = "ats"
+share = 0.0066
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[hrmdirect]
+kind = "ats"
+share = 0.0059
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[applicantpro]
+kind = "ats"
+share = 0.0057
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[rippling]
+kind = "ats"
+share = 0.0050
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[isolvedhire]
+kind = "ats"
+share = 0.0047
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[jobstreet]
+kind = "board"
+share = 0.0047
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[whatjobs-uk]
+kind = "aggregator"
+share = 0.0043
+account = "none"
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[personio]
+kind = "ats"
+share = 0.0041
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[gupy]
+kind = "ats"
+share = 0.0040
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[eightfold]
+kind = "ats"
+share = 0.0040
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[startupjobs]
+kind = "aggregator"
+share = 0.0036
+account = "none"
+links_to = ["smartrecruiters", "recruitee"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[pinpoint]
+kind = "ats"
+share = 0.0035
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[radancy]
+kind = "aggregator"
+share = 0.0034
+account = "none"
+links_to = ["icims", "workday"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[join]
+kind = "ats"
+share = 0.0032
+account = "to_read"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[4dayweek]
+kind = "aggregator"
+share = 0.0031
+account = "none"
+links_to = ["crelate"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[hiringthing]
+kind = "ats"
+share = 0.0028
+account = "none"
+hosting = ["hosted"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[jibe]
+kind = "aggregator"
+share = 0.0027
+account = "none"
+links_to = ["icims"]
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[telegram]
+kind = "aggregator"
+share = 0.0027
+account = "none"
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+
+[whatjobs-es]
+kind = "aggregator"
+share = 0.0024
+account = "none"
+mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
