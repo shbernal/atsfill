@@ -43,7 +43,7 @@ A number input (`min="0"`) holds no text: an answer that is not a number is left
 Nothing is saved before Apply: the app reads the inputs only when Apply is clicked, so `fill` sets inputs and `read_back` reads them as the app will.
 
 - Page globals are out of reach (Camoufox's isolated world), so select2 and flatpickr are not called: a multiple select gets its options selected and a `change` event, which select2 follows; a date is written into flatpickr's read-only input with a `change` event.
-- Radios and checkboxes are hidden behind styled marks and are checked with `force`. An answer of `Other` asks for a text box atsfill does not fill.
+- Radios and checkboxes are hidden behind styled marks, at times outside the viewport, and are clicked from the page's script when their state differs. An answer of `Other` asks for a text box atsfill does not fill.
 
 ## Read-back and submit
 

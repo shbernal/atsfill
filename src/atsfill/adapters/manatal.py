@@ -62,6 +62,9 @@ _SELECT = """(el, labels) => {
   for (const o of el.options) o.selected = labels.includes(o.text.trim());
   el.dispatchEvent(new Event('change', {bubbles: true}));
 }"""
+# Clicks a radio or a box when its state differs: the styled mark over it can sit outside the
+# viewport, out of reach of a pointer click.
+_CHECK = """(el, checked) => { if (el.checked !== checked) el.click(); }"""
 # Types a date into flatpickr's read-only input, in the `Y-m-d` format it is set up with.
 _DATE = """(el, value) => {
   el.value = value;
@@ -228,14 +231,16 @@ class Manatal:
                 case "multiple", list():
                     box.evaluate(_SELECT, answer)
                 case "radio", str():
-                    named.and_(page.locator(f"[value={json.dumps(answer)}]")).check(force=True)
+                    named.and_(page.locator(f"[value={json.dumps(answer)}]")).evaluate(_CHECK, True)
                 case "checkbox", list():
                     for value in answer:
-                        named.and_(page.locator(f"[value={json.dumps(value)}]")).check(force=True)
+                        named.and_(page.locator(f"[value={json.dumps(value)}]")).evaluate(
+                            _CHECK, True
+                        )
                 case "boolean", str():
-                    box.set_checked(answer == "Yes", force=True)
+                    box.evaluate(_CHECK, answer == "Yes")
                 case "terms", str():
-                    named.set_checked(answer == "Yes", force=True)
+                    named.evaluate(_CHECK, answer == "Yes")
                 case kind, _:
                     raise Unsupported(
                         f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
