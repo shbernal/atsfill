@@ -1,0 +1,310 @@
+<!doctype html>
+<!-- A Lever application page: one example of each rendering in docs/adapters/lever.md. The
+     script stands in for Lever's: the resume upload and parse, and the location suggestions. -->
+<html>
+<head><meta charset="utf-8"><title>Acme - Engineer</title>
+<style>.resume-upload-success, .resume-upload-working, .dropdown-container { display: none; }</style>
+</head>
+<body>
+<form enctype="multipart/form-data" id="application-form" method="POST">
+ <div class="section page-centered application-form">
+  <h4>Submit your application</h4>
+  <ul>
+   <li class="application-question resume">
+    <label>
+     <div class="application-label">Resume/CV <span class="required">✱</span></div>
+     <div class="application-field">
+      <a class="postings-btn template-btn-utility visible-resume-upload" href="#">
+       <span class="filename"></span><span class="default-label">ATTACH RESUME/CV</span>
+       <input class="application-file-input invisible-resume-upload" id="resume-upload-input" name="resume" tabindex="-1" type="file"/>
+      </a>
+      <span class="resume-upload-working"><div class="resume-upload-label">Analyzing resume...</div></span>
+      <span class="resume-upload-success"><div class="resume-upload-label">Success!</div></span>
+     </div>
+    </label>
+   </li>
+   <li class="application-question">
+    <label>
+     <div class="application-label">Full name <span class="required">✱</span></div>
+     <div class="application-field"><input name="name" required="" type="text"/></div>
+    </label>
+   </li>
+   <li class="application-question">
+    <label>
+     <div class="application-label">Email <span class="required">✱</span></div>
+     <div class="application-field"><input name="email" required="" type="email"/></div>
+    </label>
+   </li>
+   <li class="application-question">
+    <label>
+     <div class="application-label">Phone <span class="required">✱</span></div>
+     <div class="application-field"><input name="phone" required="" type="text"/></div>
+    </label>
+   </li>
+   <li class="application-question">
+    <label>
+     <div class="application-label">Current location <span class="required">✱</span></div>
+     <div class="application-field">
+      <input class="location-input" id="location-input" maxlength="100" name="location" required="" type="text"/>
+      <input id="selected-location" name="selectedLocation" type="hidden"/>
+      <div class="dropdown-container"><div class="dropdown-results"></div></div>
+     </div>
+    </label>
+   </li>
+   <li class="application-question">
+    <label>
+     <div class="application-label">Current company</div>
+     <div class="application-field"><input name="org" type="text"/></div>
+    </label>
+   </li>
+   <li class="application-question">
+    <div class="application-label multiple-select">Pronouns</div>
+    <div class="application-field">
+     <ul id="candidatePronounsCheckboxes">
+      <li><label><input name="pronouns" type="checkbox" value="He/him"/><span class="application-answer-alternative">He/him</span></label></li>
+      <li><label><input name="pronouns" type="checkbox" value="She/her"/><span class="application-answer-alternative">She/her</span></label></li>
+      <li><label><input name="pronouns" type="checkbox" value="They/them"/><span class="application-answer-alternative">They/them</span></label></li>
+      <li><label><input id="useNameOnlyPronounsOption" name="pronouns" type="checkbox" value="Use name only"/><span class="application-answer-alternative">Use name only</span></label></li>
+      <li>
+       <label><input id="customPronounsOption" type="checkbox" value="Custom"/><span class="application-answer-alternative">Custom</span></label>
+       <input id="customPronounsTextField" maxlength="40" name="pronouns" style="display:none;" type="text"/>
+      </li>
+     </ul>
+    </div>
+   </li>
+   <li class="application-question">
+    <div class="application-label">Which location are you applying for?</div>
+    <div class="application-field">
+     <div class="application-dropdown">
+      <select name="opportunityLocationId">
+       <option value="">Select...</option>
+       <option value="00000000-0000-0000-0000-00000000000a">Springfield</option>
+       <option value="00000000-0000-0000-0000-00000000000b">Shelbyville</option>
+      </select>
+     </div>
+    </div>
+   </li>
+  </ul>
+ </div>
+ <div class="section page-centered application-form">
+  <h4>Links</h4>
+  <ul>
+   <li class="application-question">
+    <label>
+     <div class="application-label">LinkedIn URL</div>
+     <div class="application-field"><input name="urls[LinkedIn]" type="text"/></div>
+    </label>
+   </li>
+  </ul>
+ </div>
+ <div class="section page-centered application-form" data-qa="additional-cards">
+  <h4 data-qa="card-name">Questions</h4>
+  <input name="cards[11111111-1111-1111-1111-111111111111][baseTemplate]" type="hidden" value="{}"/>
+  <ul>
+   <li class="application-question custom-question">
+    <div>
+     <div class="application-label full-width text"><div class="text">Salary expectations <span class="required">✱</span></div></div>
+     <div class="application-field full-width required-field">
+      <input class="card-field-input" name="cards[11111111-1111-1111-1111-111111111111][field0]" placeholder="Type your response" required="required" type="text" value=""/>
+     </div>
+    </div>
+   </li>
+   <li class="application-question custom-question">
+    <div>
+     <div class="application-label full-width textarea"><div class="text">Why Acme?</div></div>
+     <div class="application-field full-width">
+      <textarea class="card-field-input" name="cards[11111111-1111-1111-1111-111111111111][field1]"></textarea>
+     </div>
+    </div>
+   </li>
+   <li class="application-question custom-question">
+    <div>
+     <div class="application-label full-width multiple-choice"><div class="text">Are you authorized to work here? <span class="required">✱</span></div></div>
+     <div class="application-field full-width required-field">
+      <ul data-qa="multiple-choice">
+       <li><label><input name="cards[11111111-1111-1111-1111-111111111111][field2]" required="required" type="radio" value="Yes"/><span class="application-answer-alternative">Yes</span></label></li>
+       <li><label><input name="cards[11111111-1111-1111-1111-111111111111][field2]" required="required" type="radio" value="No"/><span class="application-answer-alternative">No</span></label></li>
+      </ul>
+     </div>
+    </div>
+   </li>
+   <li class="application-question custom-question">
+    <div>
+     <div class="application-label full-width multiple-select"><div class="text">Which shifts suit you? <span class="required">✱</span></div></div>
+     <div class="application-field full-width required-field">
+      <ul data-qa="checkboxes">
+       <li><label><input name="cards[11111111-1111-1111-1111-111111111111][field3]" type="checkbox" value="Days"/><span class="application-answer-alternative">Days</span></label></li>
+       <li><label><input name="cards[11111111-1111-1111-1111-111111111111][field3]" type="checkbox" value="Nights"/><span class="application-answer-alternative">Nights</span></label></li>
+       <li><label><input name="cards[11111111-1111-1111-1111-111111111111][field3]" type="checkbox" value="Weekends"/><span class="application-answer-alternative">Weekends</span></label></li>
+      </ul>
+     </div>
+    </div>
+   </li>
+   <li class="application-question custom-question">
+    <div>
+     <div class="application-label full-width dropdown"><div class="text">How did you hear about us? <span class="required">✱</span></div></div>
+     <div class="application-field full-width required-field">
+      <div class="application-dropdown">
+       <select name="cards[11111111-1111-1111-1111-111111111111][field4]" required="">
+        <option value="">Select...</option>
+        <option value="Job board">Job board</option>
+        <option value="Referral &amp; friends">Referral &amp; friends</option>
+       </select>
+      </div>
+     </div>
+    </div>
+   </li>
+   <li class="application-question custom-question">
+    <div>
+     <div class="application-label full-width file-upload"><div class="text">Cover letter <span class="required">✱</span></div></div>
+     <div class="application-field full-width required-field">
+      <a class="upload-file-overlay" href="#">
+       <span class="filename" data-qa="filename"></span><span class="default-label">Upload file</span>
+       <input class="application-file-input" name="cards[11111111-1111-1111-1111-111111111111][field5]" required="required" type="file"/>
+      </a>
+     </div>
+    </div>
+   </li>
+  </ul>
+ </div>
+ <div class="section page-centered application-form" id="countrySurvey_all">
+  <h4 data-qa="card-name">Demographic survey</h4>
+  <input name="surveysResponses[22222222-2222-2222-2222-222222222222][baseTemplate]" type="hidden" value="{}"/>
+  <ul>
+   <li class="application-question">
+    <div class="application-label full-width multiple-choice"><div class="text">What is your age range?</div></div>
+    <div class="application-field full-width">
+     <ul data-qa="multiple-choice">
+      <li><label><input name="surveysResponses[22222222-2222-2222-2222-222222222222][responses][field0]" type="radio" value="Under 30"/><span class="application-answer-alternative">Under 30</span></label></li>
+      <li><label><input name="surveysResponses[22222222-2222-2222-2222-222222222222][responses][field0]" type="radio" value="30 or over"/><span class="application-answer-alternative">30 or over</span></label></li>
+     </ul>
+    </div>
+   </li>
+  </ul>
+ </div>
+ <div class="section eeo-section page-centered application-form">
+  <h4>U.S. Equal Employment Opportunity information</h4>
+  <div class="application-question">
+   <label>
+    <div class="application-label">Gender</div>
+    <div class="application-field">
+     <div class="application-dropdown">
+      <select name="eeo[gender]">
+       <option value="">Select ...</option>
+       <option value="Female">Female</option>
+       <option value="Decline to self-identify">Decline to self-identify</option>
+      </select>
+     </div>
+    </div>
+   </label>
+  </div>
+  <div class="application-question">
+   <label>
+    <div class="application-label multiple-choice">Race <a class="eeo-more-info-button" href="javascript:void(0)">More info</a></div>
+    <div class="application-field">
+     <ul data-qa="multiple-choice">
+      <li><label><input name="eeo[race]" type="radio" value="Two or More Races"/><span class="eeo-option-text application-answer-alternative">Two or More Races</span><div class="eeo-option-description">All persons who identify with more than one race.</div></label></li>
+      <li><label><input name="eeo[race]" type="radio" value="Decline to self-identify"/><span class="eeo-option-text application-answer-alternative">Decline to self-identify</span></label></li>
+     </ul>
+    </div>
+   </label>
+  </div>
+  <div class="application-question">
+   <label>
+    <div class="application-label">Veteran status</div>
+    <div class="application-field">
+     <div class="application-dropdown">
+      <select name="eeo[veteran]">
+       <option value="">Select ...</option>
+       <option value="I am not a Protected Veteran">I am not a protected veteran</option>
+       <option value="Decline to self-identify">I decline to self-identify for protected veteran status</option>
+      </select>
+     </div>
+    </div>
+   </label>
+  </div>
+  <div id="disabilitySignatureSection">
+   <div class="application-question">
+    <label>
+     <div class="application-label">Name</div>
+     <div class="application-field"><input name="eeo[disabilitySignature]" placeholder="Enter your full name" type="text"/></div>
+    </label>
+   </div>
+   <div class="application-question">
+    <label>
+     <div class="application-label">Date</div>
+     <div class="application-field"><input name="eeo[disabilitySignatureDate]" placeholder="MM/DD/YYYY" type="text"/></div>
+    </label>
+   </div>
+  </div>
+ </div>
+ <div class="section page-centered application-form">
+  <h4>Additional information</h4>
+  <div class="application-additional">
+   <textarea id="additional-information" name="comments" placeholder="Add a cover letter or anything else you want to share."></textarea>
+  </div>
+ </div>
+ <div class="section page-centered application-form">
+  <ul>
+   <li class="application-question">
+    <div class="application-field full-width">
+     <ul><li><label>
+      <span class="consent-required"><div>I agree that Acme stores my personal data for recruiting.</div></span>
+      <input name="consent[store]" type="hidden" value="0"/>
+      <input name="consent[store]" required="" type="checkbox" value="1"/>
+     </label></li></ul>
+     <ul><li><label>
+      <input name="consent[marketing]" type="hidden" value="0"/>
+      <input name="consent[marketing]" type="checkbox" value="1"/>
+      <p class="application-answer-alternative">Yes, Acme can contact me about future job opportunities</p>
+     </label></li></ul>
+     <span><a href="https://example.com/privacy"><small>Privacy Policy</small></a></span>
+    </div>
+   </li>
+  </ul>
+ </div>
+ <input name="resumeStorageId" type="hidden" value=""/>
+ <input id="hcaptchaResponseInput" name="h-captcha-response" type="hidden" value=""/>
+ <div class="section page-centered application-form last-section-apply">
+  <button class="postings-btn template-btn-submit" id="btn-submit" type="button">Submit application</button>
+ </div>
+</form>
+<script>
+  document.querySelectorAll("input[type=file]").forEach(input => input.addEventListener("change", () => {
+    const zone = input.closest("a");
+    zone.querySelector(".filename").textContent = input.files[0].name;
+    if (input.name !== "resume") return;
+    const li = input.closest("li");
+    li.querySelector(".resume-upload-working").style.display = "inline";
+    setTimeout(() => {
+      li.querySelector(".resume-upload-working").style.display = "none";
+      li.querySelector(".resume-upload-success").style.display = "inline";
+      document.querySelector("[name=org]").value = "Parsed Co";  // the parse fills what it read
+    }, 300);
+  }));
+  const place = document.getElementById("location-input");
+  const dropdown = document.querySelector(".dropdown-container");
+  const results = document.querySelector(".dropdown-results");
+  place.addEventListener("input", () => {
+    results.innerHTML = "";
+    for (const name of [`${place.value}, Greater London, England, GBR`, `${place.value}, ON, CAN`]) {
+      const option = document.createElement("div");
+      option.className = "dropdown-location";
+      option.textContent = name;
+      option.addEventListener("click", () => {
+        place.value = name;
+        document.getElementById("selected-location").value = JSON.stringify({name});
+        dropdown.style.display = "none";
+      });
+      results.append(option);
+    }
+    dropdown.style.display = "flex";
+  });
+  document.getElementById("btn-submit").addEventListener("click", () => {
+    const form = document.getElementById("application-form");
+    form.action = window.location.pathname;
+    form.submit();
+  });
+</script>
+</body>
+</html>

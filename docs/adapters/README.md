@@ -17,7 +17,7 @@ The registry covers 90.1% of postings.
 | bamboohr | ats | 1.3% | none | hosted |  | mapped |
 | teamtailor | ats | 1.2% | none | hosted |  | [send_verified](teamtailor.md) |
 | jazzhr | ats | 1.2% | none | hosted |  | mapped |
-| lever | ats | 1.2% | none | hosted |  | mapped |
+| lever | ats | 1.2% | none | hosted |  | [dry_run_verified](lever.md) |
 | hireology | ats | 1.0% | none | hosted |  | mapped |
 | paycor | ats | 0.9% | none | hosted, embedded |  | mapped |
 | zohorecruit | ats | 0.9% | none | hosted |  | mapped |
