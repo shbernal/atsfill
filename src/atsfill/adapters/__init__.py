@@ -1,4 +1,5 @@
 from atsfill.adapters.ashby import Ashby
+from atsfill.adapters.bamboohr import BambooHR
 from atsfill.adapters.breezy import Breezy
 from atsfill.adapters.dayforce import Dayforce
 from atsfill.adapters.greenhouse import Greenhouse
@@ -33,4 +34,5 @@ ADAPTERS: list[Adapter] = [
     Dayforce(),
     Recruitee(),
     Breezy(),
+    BambooHR(),
 ]

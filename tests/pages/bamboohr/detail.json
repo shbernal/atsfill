@@ -1,0 +1,78 @@
+{
+  "meta": {},
+  "result": {
+    "jobOpening": {
+      "jobOpeningShareUrl": "https://acme.bamboohr.com/careers/1234",
+      "jobOpeningName": "Placeholder Engineer",
+      "jobOpeningStatus": "Open",
+      "atsLocation": {"country": "United States", "countryId": "1", "state": null, "city": null}
+    },
+    "formFields": {
+      "firstName": {"isRequired": true, "value": "", "label": "First Name"},
+      "lastName": {"isRequired": true, "value": "", "label": "Last Name"},
+      "email": {"isRequired": true, "value": "", "label": "Email"},
+      "phone": {"isRequired": true, "value": "", "label": "Phone"},
+      "streetAddress": {"isRequired": true, "value": "", "label": "Address"},
+      "city": {"isRequired": true, "value": "", "label": "City"},
+      "state": {
+        "isRequired": true,
+        "value": "",
+        "label": "State",
+        "options": [{"id": "7", "text": "DC"}, {"id": "19", "text": "MD"}]
+      },
+      "zip": {"isRequired": true, "value": "", "label": "ZIP"},
+      "countryId": {
+        "isRequired": true,
+        "value": "1",
+        "label": "Country",
+        "options": [
+          {"id": "1", "text": "United States"},
+          {"id": "2", "text": "Canada"},
+          {"id": "192", "text": "Spain"}
+        ]
+      },
+      "linkedinUrl": {"isRequired": false, "value": "", "label": "LinkedIn URL"},
+      "dateAvailable": {"isRequired": true, "value": "", "label": "Date Available"},
+      "desiredPay": {"isRequired": false, "value": "", "label": "Desired Pay"},
+      "coverLetterFileId": {"isRequired": false, "value": "", "label": "Cover Letter"},
+      "referredBy": {"isRequired": false, "value": "", "label": "Referred by (Name)"},
+      "websiteUrl": {"isRequired": false, "value": "", "label": "Website, Blog or Portfolio"},
+      "educationLevelId": {
+        "isRequired": true,
+        "value": "",
+        "label": "Highest Education Obtained",
+        "options": [{"id": "2", "text": "High School"}, {"id": "7", "text": "College - Bachelor of Science"}]
+      },
+      "educationInstitutionName": {"isRequired": false, "value": "", "label": "College/University"},
+      "references": {"isRequired": false, "value": "", "label": "References"},
+      "resumeFileId": {"isRequired": true, "value": "", "label": "Resume"},
+      "customQuestions": [
+        {"id": "11", "isRequired": true, "question": "How many years of experience do you have?", "type": "short", "value": "", "isValueOther": false, "hasOther": "no", "options": []},
+        {"id": "12", "isRequired": false, "question": "Why do you want this role?", "type": "long", "value": "", "isValueOther": false, "hasOther": "no", "options": []},
+        {"id": "13", "isRequired": true, "question": "Are you legally authorized to work in the United States?", "type": "yes_no", "value": "", "isValueOther": false, "hasOther": "no", "options": []},
+        {"id": "14", "isRequired": false, "question": "Which pronouns do you use?", "type": "multi", "value": "", "isValueOther": false, "hasOther": "yes", "options": [{"id": 101, "option": "She/Her"}, {"id": 102, "option": "They/Them"}]},
+        {"id": "15", "isRequired": true, "question": "Do you acknowledge the applicant privacy notice?", "type": "checkbox", "value": "", "isValueOther": false, "hasOther": "no", "options": []},
+        {"id": "16", "isRequired": false, "question": "Please attach a work sample.", "type": "file", "value": "", "isValueOther": false, "hasOther": "no", "options": []}
+      ],
+      "genderId": {
+        "isRequired": false,
+        "value": "",
+        "label": "Gender",
+        "options": [{"id": "-1", "text": "Decline to answer"}, {"id": "1", "text": "Male"}, {"id": "2", "text": "Female"}]
+      },
+      "ethnicityId": [],
+      "veteranStatusId": {
+        "isRequired": true,
+        "value": "",
+        "label": "Veteran Status",
+        "options": [
+          {"id": "-1", "text": "Decline to answer"},
+          {"id": "-2", "text": "Not a veteran"},
+          {"id": "301", "text": "Disabled Veteran"},
+          {"id": "302", "text": "Recently Separated Veteran"}
+        ]
+      },
+      "disabilityId": []
+    }
+  }
+}
