@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Job application form</title>
+<style>.apply-flow-input-checkbox__button { display: inline-block; width: 16px; height: 16px; border: 1px solid; } .cx-select__list[hidden], [hidden] { display: none; } .input-row__hidden-control { position: absolute; opacity: 0; width: 1px; height: 1px; }</style>
+</head>
+<body>
+<!-- One example of each rendering atsfill reads on Oracle's single-page form, in Oracle's
+     markup: ids carry a per-load counter, dropdowns list `gridcell`s once opened. -->
+<form class="apply-flow__content apply-flow__content-form" novalidate>
+<apply-flow-section id="section-1">
+
+<apply-flow-block data-scroll-spy-id="101"><div class="apply-flow-block apply-flow-block--profile-import">
+  <h2 class="apply-flow-block__title">Import your profile</h2>
+  <input type="file" class="apply-flow-profile-import-awli__file-upload">
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="102"><div class="apply-flow-block apply-flow-block--personal-information-basic">
+  <h3 class="apply-flow-block__title"><span>Contact Information</span></h3>
+  <div class="input-row input-row--text">
+    <label class="input-row__label input-row__label--required" for="lastName-14"><span class="input-row__linebreak" id="labelText-lastName-14">Last Name</span><span class="input-row__label--required-star"></span></label>
+    <div class="input-row__control-container"><input class="input-row__control" id="lastName-14" name="lastName" aria-required="true" maxlength="150"></div>
+  </div>
+  <div class="input-row input-row--has-picker">
+    <label class="input-row__label" for="title-16"><span class="input-row__linebreak" id="labelText-title-16">Title</span></label>
+    <div class="input-row__control-container" data-qa="title"><ul role="radiogroup" class="cx-select-pills-container">
+      <li><button type="button" role="radio" aria-checked="false" class="cx-select-pill-section"><span class="cx-select-pill-name"> Mr.</span></button></li>
+      <li><button type="button" role="radio" aria-checked="false" class="cx-select-pill-section"><span class="cx-select-pill-name"> Ms.</span></button></li>
+    </ul></div>
+  </div>
+  <div class="input-row input-row--text communication-channel__email">
+    <div class="input-row input-row--text input-row--filled">
+      <label class="input-row__label" for="email-19"><span class="input-row__linebreak" id="labelText-email-19">Email Address</span></label>
+      <div class="input-row__control-container"><input class="input-row__control" id="email-19" name="email" type="email"></div>
+    </div>
+  </div>
+  <div class="input-row input-row--checkbox email-preference-flag">
+    <input type="checkbox" class="input-row__hidden-control" disabled><label>Use for communication</label>
+  </div>
+  <div class="input-row input-row--with-placeholder input-row--has-picker">
+    <label class="input-row__label" for="country-codes-dropdownphoneNumber"><span class="input-row__linebreak" id="labelText-phoneNumber-23">Phone Number</span></label>
+    <div class="input-row__control-container"><div class="input-row-composite__inputs phone-row">
+      <div class="phone-row__prefix"><div class="cx-select-container"><input name="phoneNumber" id="country-codes-dropdownphoneNumber" role="combobox" aria-controls="country-codes-dropdownphoneNumber-listbox" class="cx-select-input" value="+48" data-code="true" data-options="+1 (American Samoa)|+1 (United States)|+44 (United Kingdom)|+48 (Poland)|+590 (Guadeloupe)"><div role="grid" id="country-codes-dropdownphoneNumber-listbox" class="cx-select__list" hidden></div></div></div>
+      <div class="phone-row__number"><input type="tel" class="input-row__control phone-row__input" maxlength="30"></div>
+    </div></div>
+  </div>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="103"><div class="apply-flow-block apply-flow-block--personal-information-address-v2">
+  <h3 class="apply-flow-block__title"><span>Address</span></h3>
+  <address-form-v2>
+    <div class="input-row input-row--has-picker geo-hierarchy-form-element">
+      <label class="input-row__label cx-select__label input-row__label--required" for="country-12"><span class="input-row__label-text"> Country/Region <span>*</span></span></label>
+      <div class="input-row__control-container"><div class="cx-select-container"><input name="country" id="country-12" role="combobox" aria-controls="country-12-listbox" class="cx-select-input" value="United Kingdom" data-options="France|Poland|United Kingdom"><div role="grid" id="country-12-listbox" class="cx-select__list" hidden></div></div></div>
+    </div>
+    <div class="address-form">
+      <div class="input-row input-row--text">
+        <label class="input-row__label input-row__label--required" for="addressLine1-28"><span class="input-row__linebreak" id="labelText-addressLine1-28">Address Line 1</span></label>
+        <div class="input-row__control-container"><input class="input-row__control" id="addressLine1-28" aria-required="true"></div>
+      </div>
+      <div class="input-row input-row--has-picker geo-hierarchy-form-element">
+        <label class="input-row__label input-row__label--required" for="city-33">Town</label>
+        <div class="input-row__control-container"><div class="cx-select-container"><input name="city" id="city-33" role="combobox" aria-controls="city-33-listbox" aria-required="true" class="cx-select-input" data-search="London, Greater London|Londonderry, County Londonderry|Leeds, West Yorkshire"><div role="grid" id="city-33-listbox" class="cx-select__list" hidden></div></div></div>
+      </div>
+    </div>
+  </address-form-v2>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="104"><div class="apply-flow-block apply-flow-block--personal-identifying-information">
+  <h3 class="apply-flow-block__title"><span>Sensitive Personal Information</span></h3>
+  <div class="datepicker-row input-row input-row--has-picker">
+    <label class="input-row__label input-row__label--required" for="dateOfBirth-15"><span class="input-row__linebreak" id="labelText-dateOfBirth-15">Date of Birth</span></label>
+    <div class="input-row__control-container"><div class="input-row-composite__inputs">
+      <div class="cx-select-container"><input name="dateOfBirth" id="month-dateOfBirth-15" role="combobox" aria-controls="month-dateOfBirth-15-listbox" class="cx-select-input" data-options="January|February|March|April|May|June|July|August|September|October|November|December"><div role="grid" id="month-dateOfBirth-15-listbox" class="cx-select__list" hidden></div></div>
+      <div class="cx-select-container"><input name="dateOfBirth" id="day-dateOfBirth-15" role="combobox" aria-controls="day-dateOfBirth-15-listbox" class="cx-select-input" data-options="1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31"><div role="grid" id="day-dateOfBirth-15-listbox" class="cx-select__list" hidden></div></div>
+      <div class="cx-select-container"><input name="dateOfBirth" id="year-dateOfBirth-15" role="combobox" aria-controls="year-dateOfBirth-15-listbox" class="cx-select-input" data-options="1990|1991|1992"><div role="grid" id="year-dateOfBirth-15-listbox" class="cx-select__list" hidden></div></div>
+    </div></div>
+  </div>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="105"><div class="apply-flow-block apply-flow-block--disqualification-questions">
+  <h3 class="apply-flow-block__title"><span>Application Questions</span></h3>
+  <div class="input-row input-row--has-picker">
+    <label class="input-row__label input-row__label--required" for="3001-8"><span class="input-row__linebreak" id="labelText-3001-8">Are you legally eligible to work in the country?</span></label>
+    <div class="input-row__control-container" data-qa="3001"><ul role="radiogroup" class="cx-select-pills-container">
+      <li><button type="button" role="radio" aria-checked="false" class="cx-select-pill-section"><span class="cx-select-pill-name"> Yes</span></button></li>
+      <li><button type="button" role="radio" aria-checked="false" class="cx-select-pill-section"><span class="cx-select-pill-name"> No</span></button></li>
+    </ul></div>
+  </div>
+  <div class="input-row input-row--has-picker">
+    <label class="input-row__label input-row__label--required" for="3002-9"><span class="input-row__linebreak" id="labelText-3002-9">Do any of the following apply to you?</span></label>
+    <div class="input-row__control-container input-row--multiselect cx-multi-select-pills" data-qa="3002"><ul role="list" class="cx-select-pills-container">
+      <li><button type="button" class="cx-select-pill-section"><span class="cx-select-pill-name"> Current student</span></button></li>
+      <li><button type="button" class="cx-select-pill-section"><span class="cx-select-pill-name"> Alumni</span></button></li>
+      <li><button type="button" class="cx-select-pill-section"><span class="cx-select-pill-name"> None of the above</span></button></li>
+    </ul></div>
+  </div>
+  <div class="input-row input-row--has-picker">
+    <label class="input-row__label input-row__label--required" for="3003-10"><span class="input-row__linebreak" id="labelText-3003-10">How did you hear about us?</span></label>
+    <div class="input-row__control-container" data-qa="3003"><div class="cx-select-container"><input name="3003" id="3003-10" role="combobox" aria-controls="3003-10-listbox" aria-required="true" class="cx-select-input" data-options="Job board|Employee referral|Social media"><div role="grid" id="3003-10-listbox" class="cx-select__list" hidden></div></div></div>
+  </div>
+  <div class="input-row input-row--has-picker">
+    <label class="input-row__label input-row__label--required" for="3004-11"><span class="input-row__linebreak" id="labelText-3004-11">Are you at least age 18?</span></label>
+    <div class="input-row__control-container">
+      <input type="radio" class="input-row__hidden-control apply-flow-input-radio-control" value="1" id="3004-11-1" name="3004-11" required>
+      <label class="apply-flow-input-radio" for="3004-11-1"><span class="apply-flow-input-radio__label">Yes</span></label>
+      <input type="radio" class="input-row__hidden-control apply-flow-input-radio-control" value="2" id="3004-11-2" name="3004-11" required>
+      <label class="apply-flow-input-radio" for="3004-11-2"><span class="apply-flow-input-radio__label">No</span></label>
+    </div>
+  </div>
+  <div class="input-row input-row--text">
+    <label class="input-row__label input-row__label--required" for="3005-12"><span class="input-row__linebreak" id="labelText-3005-12">What is your salary expectation?</span></label>
+    <div class="input-row__control-container" data-qa="3005"><textarea class="input-row__control" id="3005-12" aria-required="true" maxlength="4000"></textarea></div>
+  </div>
+  <div class="input-row"><label class="input-row__label"><span class="input-row__linebreak">Criminal convictions: the questions below concern them.</span></label></div>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="106"><div class="apply-flow-block apply-flow-block--file-upload">
+  <h3 class="apply-flow-block__title"><span>Supporting Documents and URLs</span></h3>
+  <resume-upload-button><div class="attachment-upload-button attachment-upload-button--waiting">
+    <span class="attachment-upload-button__drag-and-drop-label attachment-upload-button__drag-and-drop-label--required"><span>Drop Resume Here</span></span>
+    <input type="file" class="file-form-element__input upload-button" id="attachment-upload-2" accept=".pdf, .docx">
+    <label class="file-form-element__label attachment-upload-button__label" for="attachment-upload-2"><span>Upload Resume</span></label>
+  </div></resume-upload-button>
+  <cover-letter-upload-button><div class="attachment-upload-button attachment-upload-button--waiting">
+    <span class="attachment-upload-button__drag-and-drop-label"><span>Drop Cover Letter Here</span></span>
+    <input type="file" class="file-form-element__input upload-button" id="attachment-upload-3" accept=".pdf, .docx">
+    <label class="file-form-element__label attachment-upload-button__label" for="attachment-upload-3"><span>Upload Cover Letter</span></label>
+  </div></cover-letter-upload-button>
+  <div class="input-row input-row--text">
+    <label class="input-row__label" for="siteLink-1-6"><span class="input-row__linebreak" id="labelText-siteLink-1-6">Link 1</span></label>
+    <div class="input-row__control-container"><input class="input-row__control" id="siteLink-1-6" name="siteLink-1" type="url"></div>
+  </div>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="107"><div class="apply-flow-block apply-flow-block--misc-attachments">
+  <h3 class="apply-flow-block__title"><span>Academic Transcript</span></h3>
+  <div class="attachment-upload-button attachment-upload-button--waiting">
+    <input type="file" class="file-form-element__input upload-button" id="attachment-upload-4" accept=".pdf">
+  </div>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="108"><div class="apply-flow-block apply-flow-block--tile-profile-items">
+  <h3 class="apply-flow-block__title"><span>Education</span></h3>
+  <button type="button" class="button apply-flow-profile-item-tile__new-tile">Add Education</button>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="109"><div class="apply-flow-block apply-flow-block--diversity">
+  <h3 class="apply-flow-block__title"><span>Diversity Information</span></h3>
+  <div class="input-row input-row--radiogroup" role="group">
+    <label class="input-row__label" id="US-STANDARD-ORA_ETHNICITY_US_OTHERS-STANDARD-9-label"><span class="input-row__linebreak" id="labelText-US-STANDARD-ORA_ETHNICITY_US_OTHERS-STANDARD-9">Select the races you identify with.</span></label>
+    <div class="input-row__control-container">
+      <div class="input-row__control-item"><input type="checkbox" class="input-row__hidden-control" value="5" id="dq-option-5"><label class="apply-flow-input-checkbox" for="dq-option-5"><span class="apply-flow-input-checkbox__button"></span><span class="apply-flow-input-checkbox__label">Asian</span></label></div>
+      <div class="input-row__control-item"><input type="checkbox" class="input-row__hidden-control" value="8" id="dq-option-8"><label class="apply-flow-input-checkbox" for="dq-option-8"><span class="apply-flow-input-checkbox__button"></span><span class="apply-flow-input-checkbox__label">I do not wish to answer</span></label></div>
+    </div>
+  </div>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="110"><div class="apply-flow-block apply-flow-block--agreements">
+  <job-alerts-opt-in><div class="input-row">
+    <input type="checkbox" class="input-row__hidden-control" id="job-alerts-checkbox">
+    <label class="apply-flow-input-checkbox" for="job-alerts-checkbox"><span class="apply-flow-input-checkbox__button"></span><span class="apply-flow-input-checkbox__label">I agree to receive updates about new job opportunities.</span></label>
+  </div></job-alerts-opt-in>
+</div></apply-flow-block>
+
+<apply-flow-block data-scroll-spy-id="ORA_ESIGNATURE"><div class="apply-flow-block apply-flow-block--apply-flow-e-signature">
+  <h3 class="apply-flow-block__title"><span>E-Signature</span></h3>
+  <div class="input-row input-row--text">
+    <label class="input-row__label input-row__label--required" for="fullName-4"><span class="input-row__linebreak" id="labelText-fullName-4">Full Name</span></label>
+    <div class="input-row__control-container"><input class="input-row__control" id="fullName-4" name="fullName" aria-required="true"></div>
+  </div>
+</div></apply-flow-block>
+
+</apply-flow-section>
+<apply-flow-pagination><div class="apply-flow-pagination"><button type="button" class="button apply-flow-pagination__button apply-flow-pagination__submit-button">Submit</button></div></apply-flow-pagination>
+</form>
+<script>
+  document.querySelector("#email-19").value = sessionStorage.getItem("email") || "";
+  const items = input => input.dataset.options ? input.dataset.options.split("|")
+    : (input.value ? input.dataset.search.split("|").filter(o => o.toLowerCase().startsWith(input.value.toLowerCase())) : []);
+  const show = (input, filter) => {
+    const list = document.getElementById(input.getAttribute("aria-controls"));
+    const shown = items(input).filter(o => !filter || o.toLowerCase().includes(input.value.toLowerCase()));
+    list.innerHTML = shown.map(o => `<div role="row"><div role="gridcell" class="cx-select__list-item"><span>${o}</span></div></div>`).join("");
+    list.hidden = false;
+    list.querySelectorAll("[role=gridcell]").forEach(cell => cell.addEventListener("click", () => {
+      input.value = input.dataset.code ? cell.textContent.split(" ")[0] : cell.textContent;
+      list.hidden = true;
+    }));
+  };
+  for (const input of document.querySelectorAll("input[role=combobox]")) {
+    input.addEventListener("click", () => show(input, false));
+    input.addEventListener("input", () => show(input, true));
+    input.addEventListener("keydown", e => {
+      if (e.key === "Escape") document.getElementById(input.getAttribute("aria-controls")).hidden = true;
+    });
+  }
+  for (const pill of document.querySelectorAll(".cx-select-pill-section")) {
+    pill.addEventListener("click", () => {
+      const single = pill.getAttribute("role") === "radio";
+      if (single) pill.closest("ul").querySelectorAll(".cx-select-pill-section").forEach(p => {
+        p.classList.remove("cx-select-pill-section--selected"); p.setAttribute("aria-checked", "false");
+      });
+      pill.classList.toggle("cx-select-pill-section--selected", single || !pill.classList.contains("cx-select-pill-section--selected"));
+      if (single) pill.setAttribute("aria-checked", "true");
+    });
+  }
+  for (const input of document.querySelectorAll(".attachment-upload-button input[type=file]")) {
+    input.addEventListener("change", () => {
+      const done = document.createElement("button");
+      done.type = "button";
+      done.className = "attachment-upload-button__download";
+      done.textContent = input.files[0].name;
+      setTimeout(() => input.closest(".attachment-upload-button").replaceWith(done), 300);
+    });
+  }
+</script>
+</body>
+</html>

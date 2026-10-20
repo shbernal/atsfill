@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Apply</title>
+<style>.apply-flow-input-checkbox__button { display: inline-block; width: 16px; height: 16px; border: 1px solid; } .input-row__hidden-control { position: absolute; opacity: 0; width: 1px; height: 1px; }</style>
+</head>
+<body>
+<!-- The email step, as Oracle renders it: an address, the terms, Next. A known address gets
+     the code page instead of the form. -->
+<main id="main">
+  <div class="apply-flow-email">
+    <label class="input-row__label input-row__label--required" for="primary-email-1">Email Address</label>
+    <input type="email" id="primary-email-1" class="input-row__control" aria-required="true">
+    <legal-disclaimer>
+      <label class="input-row legal-disclaimer-container" for="legal-disclaimer-checkbox">
+        <input type="checkbox" class="input-row__hidden-control" id="legal-disclaimer-checkbox" required>
+        <span class="apply-flow-input-checkbox" id="legal-disclaimer-checkbox-label">
+          <span class="apply-flow-input-checkbox__button"></span>
+          <span class="apply-flow-input-checkbox__label apply-flow-input-checkbox__label--required">
+            I agree with the <a href="#">terms and conditions</a>
+          </span>
+        </span>
+      </label>
+    </legal-disclaimer>
+    <button type="button" class="button apply-flow-pagination__button">Cancel</button>
+    <button type="submit" class="button apply-flow-pagination__button">Next</button>
+  </div>
+  <div class="apply-flow-pin-code-required" hidden>
+    <h1>Confirm Your Identity</h1>
+    <input class="pin-code-input__input" maxlength="1"><input class="pin-code-input__input" maxlength="1">
+  </div>
+</main>
+<script>
+  const box = document.querySelector("#legal-disclaimer-checkbox");
+  const button = document.querySelector(".apply-flow-input-checkbox__button");
+  document.querySelector("legal-disclaimer label").addEventListener("click", e => {
+    e.preventDefault();
+    box.checked = !box.checked;
+    button.classList.toggle("apply-flow-input-checkbox__button--checked", box.checked);
+  });
+  document.querySelector("button[type=submit]").addEventListener("click", () => {
+    const email = document.querySelector("#primary-email-1").value;
+    if (!box.checked || !email) return;
+    if (email === "known@example.com") {
+      document.querySelector(".apply-flow-email").hidden = true;
+      document.querySelector(".apply-flow-pin-code-required").hidden = false;
+      return;
+    }
+    sessionStorage.setItem("email", email);
+    location.href = location.href.replace(/\/apply\/email.*/, "/apply/section/1");
+  });
+</script>
+</body>
+</html>
