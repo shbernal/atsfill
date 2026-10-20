@@ -79,6 +79,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "smartrecruiters"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "d7eb8e7" }
 
 [successfactors]
 kind = "ats"

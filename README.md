@@ -29,7 +29,7 @@ It is built for agents with a shell: every command prints one JSON document and 
 ## Supported hiring systems
 
 <!-- badges -->
-![smartrecruiters: mapped 2026-10-20](https://img.shields.io/badge/smartrecruiters-mapped%202026--10--20-a9b1d6) ![greenhouse: dry run verified 2026-10-19](https://img.shields.io/badge/greenhouse-dry%20run%20verified%202026--10--19-7aa2f7) ![ashby: send verified 2026-10-19](https://img.shields.io/badge/ashby-send%20verified%202026--10--19-9ece6a) ![teamtailor: send verified 2026-10-20](https://img.shields.io/badge/teamtailor-send%20verified%202026--10--20-9ece6a) ![wttj: send verified 2026-10-20](https://img.shields.io/badge/wttj-send%20verified%202026--10--20-9ece6a)
+![smartrecruiters: dry run verified 2026-10-20](https://img.shields.io/badge/smartrecruiters-dry%20run%20verified%202026--10--20-7aa2f7) ![greenhouse: dry run verified 2026-10-19](https://img.shields.io/badge/greenhouse-dry%20run%20verified%202026--10--19-7aa2f7) ![ashby: send verified 2026-10-19](https://img.shields.io/badge/ashby-send%20verified%202026--10--19-9ece6a) ![teamtailor: send verified 2026-10-20](https://img.shields.io/badge/teamtailor-send%20verified%202026--10--20-9ece6a) ![wttj: send verified 2026-10-20](https://img.shields.io/badge/wttj-send%20verified%202026--10--20-9ece6a)
 <!-- /badges -->
 
 | System | Account needed | `read` without a browser |
