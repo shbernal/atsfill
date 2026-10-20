@@ -21,8 +21,8 @@ Each rendering and on how many of 100 postings from 25 companies (2026-10-20, ov
 | file input, resume (PDF, DOC, DOCX, RTF) | `file` | 92 |
 | textarea: cover letter (`description`), `longtext` fields | `text` | 94 |
 | text input, social profile (`social_media`) | `text` | 7 |
-| number input with currency and frequency selects (`expected_salary`, `current_salary`) | `text`, the amount; currency and frequency left at their first option | 11 |
-| number input (`integer`) | `text` | 2 |
+| number input with currency and frequency selects (`expected_salary`, `current_salary`) | `text` labelled `(a number)`, the amount; currency and frequency left at their first option | 11 |
+| number input (`integer`) | `text` labelled `(a number)` | 2 |
 | select2 multiple select from a list of its own (`nationalities`, `industries`, also `languages`) | `multi_choice` | 7 |
 | select with a fixed list (`current_notice_period`, `years_of_experience`, `gender`) | `choice` | 6 |
 | select (`dropdown`) | `choice` | 4 |
@@ -34,7 +34,9 @@ Each rendering and on how many of 100 postings from 25 companies (2026-10-20, ov
 | checkbox list (`checkbox`), select2 multiple (`multiple_select_dropdown`) | `multi_choice` | 0, from the template |
 | terms and privacy box | `choice`, `Yes`/`No`, required | 100 |
 
-The options of a select, a radio or a checkbox list are read from the page, labels rather than values (`30 days`, not `30 00:00:00`). `read_api` knows the fixed lists and the entries' `client_field_answer_choices`, not the lists fetched apart (nationalities, languages, industries).
+The options of a select, a radio or a checkbox list are read from the page, labels rather than values (`30 days`, not `30 00:00:00`). `read_api` takes them from the entries' `client_field_answer_choices`, the template's fixed lists (gender, notice period, years of experience) and the lists the page fetches apart (`/api/v1.0/nationalities/`, `languages/`, `clients/<client>/industries/`), labelled as the page labels them.
+
+A number input (`min="0"`) holds no text: an answer that is not a number is left out, reads back empty and the dry run refuses it.
 
 ## Filling
 

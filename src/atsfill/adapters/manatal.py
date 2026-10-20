@@ -16,17 +16,23 @@ from atsfill.core.browser import Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "www.careers-page.com"
-API = f"https://{HOST}/api/v1.0/jobs/{{}}/application-form/"
+API = f"https://{HOST}/api/v1.0/"
+HEADERS = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
 JOB_ID = re.compile(r'const selectedJobId = "(\d+)"')
 TERMS_REQUIRED = re.compile(r'const isTCPPRequired = "True"')
+NUMBER = re.compile(r"\d+(\.\d+)?")  # what a number input with `min="0"` takes
 TERMS = "terms_and_condition"
 TERMS_LABEL = "I agree to the terms and conditions & privacy policy"
 YES_NO = ["Yes", "No"]
 GENDERS = ["Male", "Female", "Other"]
 NOTICE_PERIODS = ["Immediately", *(f"{d} days" for d in range(10, 130, 10)), "120+ days"]
 YEARS = ["No experience", *(f"{n}+ year" for n in range(1, 21))]
-# Slugs with options of their own, from `/api/v1.0/<path>/`, shown as a multiple select.
-LISTS = {"nationalities", "languages", "industries"}
+# Slugs shown as a multiple select of a list fetched apart: its path and an item's label.
+LISTS: dict[str, tuple[str, Callable[[dict[str, Any]], str]]] = {
+    "nationalities": ("nationalities/", lambda n: f"{n['demonym']} ({n['common_name']})"),
+    "languages": ("languages/", lambda n: n["name"]),
+    "industries": ("clients/{client}/industries/", lambda n: n["name"]),
+}
 ENTRIES = ("educations", "experiences")  # a sub-form of entries: left out when optional
 SHORT = {"full_name", "email", "phone_number", "city", "address", "latest_degree",
          "latest_university", "current_company", "current_department", "current_position",
@@ -92,6 +98,8 @@ def _kind(entry: dict[str, Any]) -> str:
             return "boolean"
         case "datetime":
             return "date"
+        case "integer":
+            return "number"
     return "text"
 
 
@@ -115,16 +123,22 @@ def _field(entry: dict[str, Any], options: list[str] | None) -> Field | None:
             return Field(fid, label, FieldType.CHOICE, required, options)
         case "multiple" | "checkbox":
             return Field(fid, label, FieldType.MULTI_CHOICE, required, options)
+        case "number":
+            return Field(fid, f"{label} (a number)", FieldType.TEXT, required)
     if slug == "phone_number":
         return Field(fid, label, FieldType.PHONE, required)
-    numeric = entry["response_type"] == "integer"
     short = 255 if slug in SHORT or entry["field_type"] == "other" else 1000
-    return Field(fid, label, FieldType.TEXT, required, max_length=None if numeric else short)
+    return Field(fid, label, FieldType.TEXT, required, max_length=short)
 
 
-def _options(entry: dict[str, Any]) -> list[str] | None:
-    """The options the endpoint's entry names or the page's own lists hold; None for a list
-    fetched apart."""
+def _get(path: str) -> Any:
+    request = urllib.request.Request(API + path, headers=HEADERS)
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return json.load(response)
+
+
+def _options(entry: dict[str, Any], client: str) -> list[str] | None:
+    """The options the endpoint's entry names, the page's fixed lists or a list fetched apart."""
     match entry["client_field_slug"]:
         case "gender":
             return GENDERS
@@ -133,7 +147,8 @@ def _options(entry: dict[str, Any]) -> list[str] | None:
         case "years_of_experience":
             return YEARS
         case slug if slug in LISTS:
-            return None
+            path, label = LISTS[slug]
+            return [label(n) for n in _get(path.format(client=client))]
     return entry["client_field_answer_choices"] or None
 
 
@@ -146,7 +161,6 @@ class Manatal:
 
     def __init__(self) -> None:
         self._entries: list[dict[str, Any]] = []
-        self._terms = False
 
     def detect(self, url: str, page: Page | None) -> bool:
         parts = urlsplit(url).path.strip("/").split("/")
@@ -157,18 +171,17 @@ class Manatal:
 
     def read_api(self, url: str) -> list[Field] | None:
         """The fields from the endpoint the apply page fetches, its job id from that page."""
-        headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+        client = urlsplit(url).path.strip("/").split("/")[0]
         try:
-            apply = urllib.request.Request(_posting(url) + "/apply", headers=headers)
+            apply = urllib.request.Request(_posting(url) + "/apply", headers=HEADERS)
             with urllib.request.urlopen(apply, timeout=20) as response:
                 html = response.read().decode()
             job = JOB_ID.search(html)
             if job is None:
                 return None
-            form = urllib.request.Request(API.format(job.group(1)), headers=headers)
-            with urllib.request.urlopen(form, timeout=20) as response:
-                entries = json.load(response)
-            return self._fields(entries, bool(TERMS_REQUIRED.search(html)), _options)
+            entries = _get(f"jobs/{job.group(1)}/application-form/")
+            terms = bool(TERMS_REQUIRED.search(html))
+            return self._fields(entries, terms, lambda e: _options(e, client))
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
@@ -202,6 +215,10 @@ class Manatal:
             match kinds.get(field_id), answer:
                 case "text", str():
                     box.fill(answer)
+                case "number", str() if NUMBER.fullmatch(answer.strip()):
+                    box.fill(answer.strip())
+                case "number", str():
+                    pass  # a number input holds no text: it reads back empty
                 case "date", str():
                     box.evaluate(_DATE, answer)
                 case "file", str():

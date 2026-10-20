@@ -13,6 +13,11 @@ from atsfill.core.results import FieldType
 PAGES = Path(__file__).parent / "pages/manatal"
 JOB = "https://www.careers-page.com/acme/job/ABC123?utm_source=board"
 FORM = json.loads((PAGES / "form.json").read_text())
+NATIONALITIES = [
+    {"id": 236, "common_name": "United States", "demonym": "American"},
+    {"id": 75, "common_name": "France", "demonym": "French"},
+    {"id": 196, "common_name": "Singapore", "demonym": "Singaporean"},
+]
 submitted: list[str] = []
 
 
@@ -104,11 +109,15 @@ def test_read_api_lists_the_same_fields(page, monkeypatch):
 
     def urlopen(request, timeout):
         url = request.full_url
-        return Body(json.dumps(FORM).encode() if url.endswith("/application-form/") else html)
+        if url.endswith("/application-form/"):
+            return Body(json.dumps(FORM).encode())
+        if url.endswith("/nationalities/"):
+            return Body(json.dumps(NATIONALITIES).encode())
+        return Body(html)
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
     over_http = adapter.read_api(JOB)
-    shape = lambda fs: [(f.id, f.type, f.required) for f in fs]  # noqa: E731
+    shape = lambda fs: [(f.id, f.type, f.required, f.options) for f in fs]  # noqa: E731
     assert over_http is not None and shape(over_http) == shape(fields)
 
 
@@ -142,6 +151,13 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_a_number_field_left_with_text_reads_back_empty(page):
+    adapter, fields = opened(page)
+    assert {f.id: f.label for f in fields}["11"] == "Years in sales (a number)"
+    adapter.fill(page, {"11": "three"})
+    assert "11" not in adapter.read_back(page)
 
 
 def test_submit_posts_the_form(page):
