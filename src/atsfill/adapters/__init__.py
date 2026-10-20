@@ -2,6 +2,7 @@ from atsfill.adapters.ashby import Ashby
 from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.adapters.manatal import Manatal
 from atsfill.adapters.oracle import Oracle
+from atsfill.adapters.paylocity import Paylocity
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.wttj import WelcomeToTheJungle
@@ -15,4 +16,5 @@ ADAPTERS: list[Adapter] = [
     SmartRecruiters(),
     Oracle(),
     Manatal(),
+    Paylocity(),
 ]

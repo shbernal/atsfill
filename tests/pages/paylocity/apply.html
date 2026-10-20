@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Apply</title>
+<style>[hidden] { display: none; } .rw-input { min-width: 80px; border: 1px solid; }</style>
+</head>
+<body>
+<!-- One example of each rendering atsfill reads on Paylocity's apply page, in Paylocity's
+     markup: the configuration in `window.pageData`, a wizard whose steps render one at a time,
+     react-widgets dropdowns whose list opens on a click, and a last step that repeats earlier
+     answers in elements with the same ids. -->
+<script>
+window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"text": "District of Columbia", "value": "DC"}, {"text": "Texas", "value": "TX"}], "referenceTypeOptions": [{"text": "", "value": "0"}, {"text": "Personal", "value": "1"}, {"text": "Professional", "value": "2"}], "genderOptions": [{"text": "", "value": "0"}, {"text": "Male", "value": "2"}, {"text": "Female", "value": "3"}, {"text": "I choose not to self-identify", "value": "1"}], "raceOptions": [{"text": "", "value": "0"}, {"text": "Two or More Races", "value": "7"}], "customJobApplication": {"requireResume": false, "referencesRequired": true, "referencesRequiredCount": 1, "desiredSalaryInputType": 2, "sections": [
+ {"name": "info", "isIncluded": true, "isOneRequired": false, "fields": [
+  {"name": "name", "displayName": "Name", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "cellPhone", "displayName": "Mobile Number", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "smsOptedIn", "displayName": "We may use SMS during the hiring process. Do you give us permission to text you?", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "country", "displayName": "Country", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "address", "displayName": "Address", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "state", "displayName": "State", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "workedHereBefore", "displayName": "Have you worked with us before?", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "howDidYouHear", "displayName": "How did you hear about us?", "isIncluded": true, "isRequired": false, "values": [{"value": "Online Job Board"}, {"value": "Other"}]},
+  {"name": "desiredSalary", "displayName": "Desired salary", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "skills", "displayName": "Skills", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "uploadCoverLetter", "displayName": "Upload cover letter", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "dateOfBirth", "displayName": "Date of birth", "isIncluded": true, "isRequired": false, "values": []}]},
+ {"name": "workHistory", "isIncluded": true, "isOneRequired": true, "fields": [
+  {"name": "companyName", "displayName": "Company name", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "startEndDate", "displayName": "Start & end date", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "currentlyWorkingHere", "displayName": "Currently working here?", "isIncluded": true, "isRequired": false, "values": []}]},
+ {"name": "educationHistory", "isIncluded": true, "isOneRequired": false, "fields": [
+  {"name": "schoolName", "displayName": "School name", "isIncluded": true, "isRequired": true, "values": []}]},
+ {"name": "references", "isIncluded": true, "isOneRequired": false, "fields": [
+  {"name": "referenceName", "displayName": "Reference name", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "referencePersonalOrWork", "displayName": "Personal or work reference?", "isIncluded": true, "isRequired": true, "values": []}]},
+ {"name": "acknowledgements", "isIncluded": true, "isOneRequired": false, "fields": [
+  {"name": "eVerify", "displayName": "Display E-Verify message", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "eeoGenderEthnicity", "displayName": "EEO - Gender & Ethnicity", "isIncluded": true, "isRequired": false, "values": []}]}]},
+ "screener": {"questions": [
+  {"screenerQuestionId": 501, "title": "Are you at least 18 years old?", "isRequired": true, "allowsMultipleResponses": false, "questionType": "multi", "answers": [{"title": "Yes"}, {"title": "No"}]},
+  {"screenerQuestionId": 502, "title": "Which shifts can you work?", "isRequired": false, "allowsMultipleResponses": true, "questionType": "multi", "answers": [{"title": "Days"}, {"title": "Nights"}, {"title": "Weekends"}]},
+  {"screenerQuestionId": 503, "title": "Why <b>this</b> role?", "isRequired": false, "questionType": "text"}]}};
+</script>
+<div id="app">
+<div id="appDetailDiv"><p><span class="type-bold float-right">Step 1 of 2</span></p></div>
+
+<section id="step-1">
+  <div class="rounded-box" id="resume-box">
+    <input accept=".doc,.docx,.pdf" id="btn-resume" style="display: none;" type="file">
+    <button type="button">Select Resume to Upload</button>
+    <input id="useAttachedResumeToFillOutApplication" type="checkbox" checked>
+    <label for="useAttachedResumeToFillOutApplication">Fill out application with my resume</label>
+  </div>
+  <div class="form-group"><label>First Name</label><input id="info.firstName" type="text" value=""></div>
+  <div class="form-group"><label>Last Name</label><input id="info.lastName" type="text" value=""></div>
+  <div class="form-group"><label>Middle Name</label><input id="info.middleName" type="text" value=""></div>
+  <div class="form-group"><label>Preferred First Name</label><input id="info.preferredName" type="text" value=""></div>
+  <div class="form-group"><label>Mobile Number</label><input id="info.cellPhone" type="text" value=""></div>
+  <div class="form-group"><label>SMS</label><div id="info.smsOptedIn" role="combobox" class="rw-dropdownlist" data-options="--|Yes*|No"><div class="rw-input">--</div></div></div>
+  <div data-automation-id="public-site-address">
+    <input id="public-site-address-address-1" role="combobox" maxlength="50" type="text" value="">
+    <input id="public-site-address-county" maxlength="50" type="text" value="">
+    <label for="public-site-address-us-state">State</label>
+    <div id="public-site-address-us-state-select-wrapper" class="pcty-input-select-full-container">
+      <div class="input-select-input-single-value">Select a state</div>
+      <input id="public-site-address-us-state" type="text" value="">
+    </div>
+    <div id="public-site-address-us-state-dropdown-list-container" role="list" hidden>
+      <div class="ListItemEven" role="listitem" title="DC">DC</div>
+      <div class="ListItemOdd" role="listitem" title="TX">TX</div>
+    </div>
+  </div>
+  <div class="form-group"><label>Have you worked with us before?</label><div id="info.haveYouWorkedWithUsBefore" role="combobox" class="rw-dropdownlist" data-options="--|Yes|No"><div class="rw-input">--</div></div></div>
+  <div id="prior" hidden>
+    <input id="info.priorEmploymentPositionHeld" type="text" value="">
+    <div format="MM/dd/yyyy"><input id="info.priorEmploymentStartDate" placeholder="MM/DD/YYYY" type="text" value=""></div>
+    <div format="MM/dd/yyyy"><input id="info.priorEmploymentEndDate" placeholder="MM/DD/YYYY" type="text" value=""></div>
+  </div>
+  <div role="radiogroup">
+    <label><input name="info.howDidYouHearAboutUs" type="radio" value="Online Job Board"> Online Job Board</label>
+    <label><input name="info.howDidYouHearAboutUs" type="radio" value="Other"> Other</label>
+  </div>
+  <div class="form-group"><label>Desired Salary</label><input id="info.desiredSalaryDescription" type="text" value=""></div>
+  <div class="react-tagsinput"><span></span><input type="text" class="react-tagsinput-input" id="info.skills" value=""></div>
+  <div class="rounded-box"><label>Upload Cover Letter</label>
+    <input accept=".doc,.docx,.pdf" id="btn-coverLetter" style="display: none;" type="file">
+    <table><thead><tr><th>File</th><th>Remove</th></tr></thead><tbody></tbody></table>
+  </div>
+  <div id="pcty-wr-apply-workhistory">
+    <input id="workHistory.companyName.0" type="text" value="">
+    <input id="txt-workHistory-startDate-0" placeholder="MM/YYYY" type="text" value="">
+    <input id="txt-workHistory-endDate-0" placeholder="MM/YYYY" type="text" value="">
+    <input id="workHistory.currentlyWorkingHere.0" type="checkbox">
+  </div>
+  <button type="button" data-automation-id="btnNext" id="btn-submit">Next Step</button>
+</section>
+
+<section id="step-2" hidden>
+  <div id="review"></div>
+  <input data-for="Name" id="references.name.0" type="text" value="">
+  <div id="references.referenceType.0" role="combobox" class="rw-dropdownlist" data-options="--|Personal|Professional"><div class="rw-input">--</div></div>
+  <div>
+    <input id="multiQuestionAnswer501_0" name="multiQuestionAnswer501" type="radio"><label for="multiQuestionAnswer501_0">Yes</label>
+    <input id="multiQuestionAnswer501_1" name="multiQuestionAnswer501" type="radio"><label for="multiQuestionAnswer501_1">No</label>
+  </div>
+  <div>
+    <input id="multiQuestionAnswer502_0" name="multiQuestionAnswer502" type="checkbox"><label for="multiQuestionAnswer502_0">Days</label>
+    <input id="multiQuestionAnswer502_1" name="multiQuestionAnswer502" type="checkbox"><label for="multiQuestionAnswer502_1">Nights</label>
+    <input id="multiQuestionAnswer502_2" name="multiQuestionAnswer502" type="checkbox"><label for="multiQuestionAnswer502_2">Weekends</label>
+  </div>
+  <textarea id="screener-question-2-textarea" rows="4"></textarea>
+  <div id="acknowledgements.eeoGender" role="combobox" class="rw-dropdownlist" data-options="--|Male|Female|I choose not to self-identify"><div class="rw-input">--</div></div>
+  <div id="acknowledgements.racialOrEthnicGroup" role="combobox" class="rw-dropdownlist" data-options="--|Two or More Races"><div class="rw-input">--</div></div>
+  <input id="applyAcknowledgement" type="checkbox"><label for="applyAcknowledgement">I have read and accept the above acknowledgement</label>
+  <button type="button" data-automation-id="btnSubmit" id="btn-submit-final">Submit</button>
+</section>
+</div>
+<script>
+document.addEventListener("click", e => {
+  const box = e.target.closest(".rw-dropdownlist");
+  if (box) {
+    let list = document.getElementById(box.id + "__listbox");
+    if (!list) {
+      list = document.createElement("ul");
+      list.id = box.id + "__listbox";
+      list.setAttribute("role", "listbox");
+      box.dataset.options.split("|").forEach(text => {
+        const li = document.createElement("li");
+        li.setAttribute("role", "option");
+        li.textContent = text;
+        li.addEventListener("click", ev => {
+          ev.stopPropagation();
+          box.querySelector(".rw-input").textContent = text;
+          list.remove();
+          if (box.id === "info.haveYouWorkedWithUsBefore") document.getElementById("prior").hidden = text !== "Yes";
+        });
+        list.appendChild(li);
+      });
+      box.after(list);
+    }
+  }
+  if (e.target.closest("#public-site-address-us-state-select-wrapper")) {
+    document.getElementById("public-site-address-us-state").focus();
+    document.getElementById("public-site-address-us-state-dropdown-list-container").hidden = false;
+  }
+  const item = e.target.closest("[role=listitem]");
+  if (item) {
+    document.querySelector("#public-site-address-us-state-select-wrapper .input-select-input-single-value").textContent = item.title;
+    item.parentElement.hidden = true;
+  }
+});
+document.getElementById("btn-resume").addEventListener("change", e => {
+  const box = document.getElementById("resume-box");
+  box.innerHTML = `<div class="no-wrap">${e.target.files[0].name}</div><button id="remove-resume" type="button">Remove</button>`;
+});
+document.getElementById("btn-coverLetter").addEventListener("change", e => {
+  document.querySelector(".rounded-box:has(#btn-coverLetter) tbody").innerHTML =
+    `<tr><td><span><i></i> ${e.target.files[0].name}</span></td><td><a>x</a></td></tr>`;
+});
+document.getElementById("info.skills").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  e.target.previousElementSibling.innerHTML = `<span class="react-tagsinput-tag">${e.target.value}<a></a></span>`;
+  e.target.value = "";
+});
+document.querySelector("[data-automation-id=btnNext]").addEventListener("click", () => {
+  const first = document.getElementById("info.firstName").value;
+  document.getElementById("step-1").remove();
+  document.getElementById("review").innerHTML = `<p id="info.firstName">${first}</p>`;
+  document.getElementById("step-2").hidden = false;
+  document.querySelector("#appDetailDiv .type-bold").textContent = "Step 2 of 2";
+});
+</script>
+</body>
+</html>

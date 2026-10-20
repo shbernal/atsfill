@@ -21,9 +21,12 @@ SENSITIVE = re.compile(
     re.IGNORECASE,
 )
 DECLINE = re.compile(
-    r"decline|prefer not|not to (answer|say|disclose)|don.?t wish|do not wish", re.IGNORECASE
+    r"decline|prefer not|not to (answer|say|disclose|self-identify)|(don.?t|do not) (wish|want)",
+    re.IGNORECASE,
 )
 BY_LABEL = [
+    (re.compile(r"MM/YYYY"), "01/2020"),
+    (re.compile(r"zip|postal", re.IGNORECASE), "20001"),
     (re.compile(r"e-?mail", re.IGNORECASE), EMAIL),
     (re.compile(r"first.?name|given name|pr[ée]nom", re.IGNORECASE), FIRST),
     (re.compile(r"last.?name|family name|surname", re.IGNORECASE), LAST),
