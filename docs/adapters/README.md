@@ -9,7 +9,7 @@ The registry covers 90.1% of postings.
 | oracle | ats | 8.3% | none | hosted |  | [dry_run_verified](oracle.md) |
 | smartrecruiters | ats | 4.4% | none | hosted |  | [dry_run_verified](smartrecruiters.md) |
 | greenhouse | ats | 3.5% | none | hosted, embedded |  | [dry_run_verified](greenhouse.md) |
-| manatal | ats | 1.9% | none | hosted |  | mapped |
+| manatal | ats | 1.9% | none | hosted |  | [mapped](manatal.md) |
 | paylocity | ats | 1.7% | none | hosted |  | mapped |
 | dayforce | ats | 1.7% | none | hosted |  | mapped |
 | workable | ats | 1.6% | none | hosted |  | mapped |
