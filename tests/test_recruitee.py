@@ -73,6 +73,7 @@ def test_read_form_opens_the_application(page):
         f"{Q}.109.file",
         "candidate.locations.value",
         f"{Q}.112.flag",
+        "candidate.agreements.0.consent",
     ]
     assert by_id["candidate.name"].label == "Full name" and by_id["candidate.name"].required
     assert by_id["candidate.name"].max_length == 255
@@ -94,6 +95,7 @@ def test_read_form_opens_the_application(page):
     ]
     assert by_id[f"{Q}.112.flag"].label == "I agree with the privacy statement"
     assert by_id[f"{Q}.112.flag"].options == ["Yes", "No"] and by_id[f"{Q}.112.flag"].required
+    assert by_id["candidate.agreements.0.consent"].label.startswith("By submitting my CV")
 
 
 def test_every_answer_reads_back(page, resume):
@@ -115,6 +117,7 @@ def test_every_answer_reads_back(page, resume):
         f"{Q}.109.file": resume,
         "candidate.locations.value": ["Shelbyville"],
         f"{Q}.112.flag": "Yes",
+        "candidate.agreements.0.consent": "Yes",
     }
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))

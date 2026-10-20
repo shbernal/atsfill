@@ -34,7 +34,8 @@ KINDS = {
 }
 
 # The fields in page order, one per control name: its question's label, and how it renders. A
-# question without a named control (a video recording) comes as kind `video`.
+# labelled question without a named control (a video recorder, drawn late) comes as kind
+# `video`; one without a label is text only.
 _READ = """form => {
   const text = el => {
     if (!el) return "";
@@ -44,12 +45,15 @@ _READ = """form => {
   };
   const found = new Map();
   const controls = form.querySelectorAll(
-    "input[name]:not([type=hidden]), textarea[name], [data-selector=video-recorder-container]");
+    "input[name]:not([type=hidden]), textarea[name], input[name$='.openQuestionId']");
   for (const el of controls) {
-    if (!el.name) {
-      const label = el.closest("div:has(> label)")?.querySelector(":scope > label");
-      found.set(label?.htmlFor || "video", {id: label?.htmlFor || "video", kind: "video",
-        label: text(label), required: /\*/.test(label?.textContent || ""), options: []});
+    if (el.type === "hidden") {
+      const question = el.name.replace(/\\.openQuestionId$/, "");
+      const label = el.parentElement.querySelector("label");
+      if (label && !form.querySelector(
+          `[name^="${CSS.escape(question)}."]:not([type=hidden])`))
+        found.set(question, {id: question, kind: "video", label: text(label),
+                             required: /\\*/.test(label.textContent), options: []});
       continue;
     }
     const name = el.name;
@@ -59,7 +63,7 @@ _READ = """form => {
       field = {id: name, required: false, options: [], accept: null,
                maxLength: el.maxLength > 0 ? el.maxLength : null};
       if (el.type === "radio") field.kind = "radio";
-      else if (el.type === "checkbox" && el.dataset.testid?.startsWith("legal-")) {
+      else if (el.type === "checkbox" && /\.(flag|consent)$/.test(name)) {
         field.kind = "legal";
         field.label = text(form.querySelector(`[id="${el.getAttribute("aria-labelledby")}"]`));
       } else if (el.type === "checkbox") field.kind = "checkboxes";
