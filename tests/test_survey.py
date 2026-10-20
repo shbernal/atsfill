@@ -54,6 +54,7 @@ def test_a_plain_form_has_no_label(page, server):
 
 def test_the_persona_answers_from_the_fields(tmp_path):
     cv = persona.resume(tmp_path / "resume.pdf")
+    picture = persona.photo(tmp_path / "photo.png")
     fields = [
         Field("e", "Email address", FieldType.TEXT, True),
         Field("n", "Full name", FieldType.TEXT, True, max_length=5),
@@ -66,10 +67,12 @@ def test_the_persona_answers_from_the_fields(tmp_path):
         Field("q", "Why us?", FieldType.TEXT, False),
         Field("d", "Start date", FieldType.DATE, False),
         Field("c", "Resume", FieldType.FILE, True, prefilled=True),
+        Field("a", "Photo", FieldType.FILE, True, accept=[".jpg", ".png"]),
+        Field("b", "Scan", FieldType.FILE, False, accept=[".tiff"]),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
         Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
     ]
-    answers = persona.answers(fields, cv)
+    answers = persona.answers(fields, cv, picture)
     assert answers == {
         "e": persona.EMAIL,
         "n": "Ada P",
@@ -80,6 +83,8 @@ def test_the_persona_answers_from_the_fields(tmp_path):
         "q": persona.TEXT,
         "d": answers["d"],
         "c": str(cv),
+        "a": str(picture),
     }
     assert date.fromisoformat(str(answers["d"])) > date.today()
     assert cv.read_bytes().startswith(b"%PDF-1.4")
+    assert picture.read_bytes().startswith(b"\x89PNG")

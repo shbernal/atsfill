@@ -178,11 +178,23 @@
       }
     });
   });
+  // A photo shows a crop dialog, then its preview; attaching the resume empties the photo.
   document.querySelectorAll("input[type=file]").forEach(input => {
+    const zone = input.closest("[data-role=dropzone]");
     input.onchange = () => {
-      $("[data-id=filename]", input.closest("[data-role=dropzone]"))?.remove();
-      input.closest("[data-role=dropzone]").insertAdjacentHTML("afterbegin",
-        `<section><div data-id="filename"><span>${input.files[0].name}</span></div></section>`);
+      zone.querySelector("section")?.remove();
+      if (input.dataset.ui === "resume") $("[data-ui=avatar]").closest("[data-role=dropzone]")
+        .querySelector("section")?.remove();
+      if (input.dataset.ui !== "avatar") {
+        zone.insertAdjacentHTML("afterbegin",
+          `<section><div data-id="filename"><span>${input.files[0].name}</span></div></section>`);
+        return;
+      }
+      const name = input.files[0].name;
+      zone.insertAdjacentHTML("afterbegin", `<section><div data-role="preview"><img alt="${name}"></div></section>`);
+      document.body.insertAdjacentHTML("beforeend", `<dialog role="dialog" open>
+        <button data-ui="crop-image" type="button">Upload</button></dialog>`);
+      $("[data-ui=crop-image]").onclick = () => $("dialog[role=dialog]").remove();
     };
   });
   const tel = $("#input_phone");

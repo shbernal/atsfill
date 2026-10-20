@@ -100,8 +100,8 @@ _READ = """form => {
   return found;
 }"""
 
-# What each field shows: a choice its checked option's label, a file its attached name, the
-# phone its country's dial code then its number.
+# What each field shows: a choice its checked option's label, a file its attached name (a photo
+# its preview's alt), the phone its country's dial code then its number.
 _READ_BACK = """(form, kinds) => {
   const text = el => el ? el.textContent.replace(/\\s+/g, " ").trim() : null;
   const optionLabel = el =>
@@ -111,7 +111,9 @@ _READ_BACK = """(form, kinds) => {
     const el = form.querySelector(`[data-ui="${id}"]`);
     if (!el) continue;
     if (kind === "file") {
-      out[id] = text(el.closest("[data-role=dropzone]")?.querySelector("[data-id=filename]"));
+      const zone = el.closest("[data-role=dropzone]");
+      const preview = zone?.querySelector("[data-role=preview] img");  // a photo, named by its alt
+      out[id] = preview ? preview.alt : text(zone?.querySelector("[data-id=filename]"));
     } else if (kind === "phone") {
       const dial = (el.querySelector("button[aria-label]")?.getAttribute("aria-label") || "")
         .match(/\\((\\+\\d+)\\)/);
@@ -189,16 +191,22 @@ class Workable:
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         _decline_cookies(page, wait=False)
-        for field_id, answer in answers.items():
+        # attaching the resume empties the photo, so it goes first
+        for field_id, answer in sorted(answers.items(), key=lambda a: a[0] != "resume"):
             values = [answer] if isinstance(answer, str) else answer
             field = page.locator(f"{FORM} [data-ui='{field_id}']").first
             match self._kinds[field_id]:
-                case "file":
+                case "file":  # a photo goes through a crop dialog first
                     field.set_input_files(values[0])
+                    zone = field.locator("xpath=ancestor::*[@data-role='dropzone']")
+                    crop = page.locator("button[data-ui=crop-image]")
                     with suppress(Timeout):
-                        field.locator("xpath=ancestor::*[@data-role='dropzone']").locator(
-                            "[data-id=filename]"
-                        ).wait_for(timeout=UPLOAD_TIMEOUT_MS)
+                        zone.locator("[data-id=filename]").or_(crop).first.wait_for(
+                            timeout=UPLOAD_TIMEOUT_MS
+                        )
+                        if crop.is_visible():
+                            crop.click()
+                            crop.wait_for(state="hidden", timeout=UPLOAD_TIMEOUT_MS)
                 case "phone":  # the number's dial code picks the country
                     number = field.locator("input[type=tel]")
                     number.fill("")

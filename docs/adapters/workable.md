@@ -39,6 +39,7 @@ On the page, every field sits under an element whose `data-ui` is that id, so `r
 - The date input takes typed digits in its placeholder's order and adds the slashes.
 - The phone is typed with its dial code, which sets the country button; the read-back is the button's dial code then the number.
 - Attaching a file uploads it to Workable's S3 (`workable-application-form.s3…`) at once; the dropzone then shows its name.
+- A photo opens a crop dialog, confirmed by its `[data-ui=crop-image]` button; the dropzone then shows a preview whose `alt` is the file's name. Attaching the resume afterwards empties the photo, so the resume goes first.
 
 ## Read-back and submit
 

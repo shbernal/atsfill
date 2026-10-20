@@ -8,6 +8,7 @@ from atsfill.adapters.workable import Workable, _api_fields
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
+from tests import persona
 
 PAGE = Path(__file__).parent / "pages/workable/apply.html"
 JOB = "https://apply.workable.com/acme/j/ABCDEF1234/"
@@ -41,6 +42,11 @@ def resume(tmp_path) -> str:
     path = tmp_path / "CV Ada.pdf"
     path.write_bytes(b"%PDF-1.4")
     return str(path)
+
+
+@pytest.fixture
+def photo(tmp_path) -> str:
+    return str(persona.photo(tmp_path / "photo.png"))
 
 
 def opened(page) -> tuple[Workable, list]:
@@ -86,13 +92,14 @@ def test_read_form_opens_the_application(page):
     assert not by_id["CA_5"].required
 
 
-def test_every_answer_reads_back(page, resume):
+def test_every_answer_reads_back(page, resume, photo):
     adapter, fields = opened(page)
     answers: dict[str, Answer] = {
         "firstname": "Ada",
         "email": "ada@example.com",
         "phone": "+12025550143",
         "address": "London",
+        "avatar": photo,
         "resume": resume,
         "CA_1": "1 month",
         "cover_letter": "Placeholder answer.",

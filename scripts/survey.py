@@ -142,7 +142,7 @@ def survey(
     read = core.read(url, data_dir=data, sessions=sessions)
     result = read
     if read.status is Status.READY:
-        answers = persona.answers(read.fields, cv)
+        answers = persona.answers(read.fields, cv, cv.with_name("photo.png"))
         result = core.fill(url, answers, data_dir=data, sessions=sessions)
     step = None
     if found.label == "blocked":
@@ -215,6 +215,7 @@ def run(
     """Surveys each (URL, company), appending its row to .tmp/corpus/<out or source>.jsonl."""
     CORPUS.mkdir(parents=True, exist_ok=True)
     cv = persona.resume(CORPUS / "resume.pdf")
+    persona.photo(CORPUS / "photo.png")
     data = paths.data_dir(data_dir)
     path, rows = CORPUS / f"{out or source or 'urls'}.jsonl", []
     for n, (url, company) in enumerate(postings):
