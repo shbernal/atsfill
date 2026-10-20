@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import pytest
 
 from atsfill import core
@@ -60,6 +62,26 @@ def test_read_detects_from_the_page(fake, config, url, data):
 
 def test_read_detects_from_the_url(fake, config, server, data):
     result = core.read(f"{server}/button.html?fake", data_dir=data)  # a page no adapter claims
+    assert (result.status, result.fields) == (Status.READY, FIELDS)
+
+
+def test_a_page_that_never_loads_is_left_to_the_adapter_of_its_url(
+    fake, config, server, data, monkeypatch
+):
+    opened = commands.open_page
+
+    @contextmanager
+    def stalled(*args, **kwargs):
+        with opened(*args, **kwargs) as page:
+
+            def goto(url, **_):
+                raise Timeout("Page.goto: Timeout 30000ms exceeded.")
+
+            monkeypatch.setattr(page, "goto", goto)
+            yield page
+
+    monkeypatch.setattr(commands, "open_page", stalled)
+    result = core.read(f"{server}/button.html?fake", data_dir=data)
     assert (result.status, result.fields) == (Status.READY, FIELDS)
 
 

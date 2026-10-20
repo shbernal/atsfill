@@ -1,0 +1,73 @@
+<!doctype html>
+<!-- The federal contractor's self-identification pages, before the form: `{page}` is
+     intro, gender or veteran, each posting to the next. -->
+<html>
+<head><meta charset="utf-8"><title>Careers</title></head>
+<body>
+<div id="gnewtonCareerBody">
+  <form name="gnewton-vevraa-form" id="gnewton-vevraa-form" method="POST" class="gnewtonForm"
+        action="{action}">
+    <input type="hidden" name="submitVevraaForm" value="true" />
+    {carried}
+    <div class="intro" data-page="intro">
+      <p>Because we do business with the US Government, we invite you to self-identify.</p>
+    </div>
+    <div class="gender" data-page="gender">
+      <div class="sub_section">
+        Gender:
+        <label for="male" class="radio">
+          <input type="radio" name="gender" id="male" value="1" required="true"/>
+          <span class="radio-button"></span><span class=radio-label>Male</span>
+        </label>
+        <label for="female" class="radio">
+          <input type="radio" name="gender" id="female" value="2" required="true"/>
+          <span class="radio-button"></span><span class=radio-label>Female</span>
+        </label>
+        <label for="genderUnknown" class="radio">
+          <input type="radio" name="gender" id="genderUnknown" value="3" required="true"/>
+          <span class="radio-button"></span><span class=radio-label>I decline to identify</span>
+        </label>
+      </div>
+      <div class="sub_section">
+        Ethnicity/Race:
+        <label for="race-1" class="radio">
+          <input type="radio" name="race" value="1" id="race-1" required="true">
+          <span class="radio-button"></span><span class=radio-label>Hispanic or Latino </span><br>
+          <span class="radio-description">A person of Spanish culture or origin.</span>
+        </label>
+        <label for="race-8" class="radio">
+          <input type="radio" name="race" value="8" id="race-8" required="true">
+          <span class="radio-button"></span><span class=radio-label>I decline to identify</span>
+        </label>
+      </div>
+    </div>
+    <div class="veteran" data-page="veteran">
+      <div class="sub_section">
+        <label for="protected-veteran" class="radio">
+          <input type="radio" name="veteran" id="protected-veteran" value="51" required="true"/>
+          <span class="radio-button"></span>
+          <span class=radio-label>I IDENTIFY AS ONE OR MORE OF THE CLASSIFICATIONS OF PROTECTED VETERAN</span>
+        </label>
+        <label for="not-identify-identify" class="radio">
+          <input type="radio" name="veteran" id="not-identify-identify" value="53" required="true"/>
+          <span class="radio-button"></span>
+          <span class=radio-label>I DO NOT WISH TO IDENTIFY AT THIS TIME</span>
+        </label>
+      </div>
+    </div>
+    <button id="gnewton-submit" type="submit" class="gnewtonBlueBtn" disabled="true">Continue</button>
+  </form>
+</div>
+<script>
+  for (const part of document.querySelectorAll('[data-page]'))
+    if (part.dataset.page !== '{page}') part.remove();
+  const button = document.getElementById('gnewton-submit');
+  const groups = () => [...new Set([...document.querySelectorAll('input[type=radio]')].map(e => e.name))];
+  const check = () => {
+    button.disabled = !groups().every(n => document.querySelector(`input[name="${n}"]:checked`));
+  };
+  document.addEventListener('change', check);
+  check();
+</script>
+</body>
+</html>

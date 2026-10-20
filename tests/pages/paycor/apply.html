@@ -1,0 +1,247 @@
+<!doctype html>
+<!-- The application form, one example of each rendering docs/adapters/paycor.md lists.
+     `{gender}`, `{race}`, `{veteran}`, `{q1}` and `{q2}` are the answers posted before it. -->
+<html>
+<head><meta charset="utf-8"><title>Careers</title></head>
+<body>
+<div id="gnewtonCareerBody">
+  <form id="uploadResume" name="uploadResume" class="gnewtonSectionClass">
+    <input id="uploadResumeInput" name="fileUpload" type="file" style="position:absolute;left:-1000000em;"
+           class="gnewtonRequired"/>
+    <label for="uploadResumeInput">Choose a File</label>
+    <div id="resumeDropped" style="display: none;"><span class="filename"></span></div>
+  </form>
+  <form id="gnewtonForm" name="gnewtonForm" method="post" enctype="multipart/form-data"
+        action="https://recruitingbypaycor.com/career/ApplyJob.action">
+    <input type="hidden" name="id" value="j1" />
+    <input type="hidden" name="gender" id="gender" value="{gender}" />
+    <input type="hidden" name="race" id="race" value="{race}" />
+    <input type="hidden" name="veteran" id="veteran" value="{veteran}" />
+    <input type="hidden" name="q1" id="q1" value="{q1}" />
+    <input type="hidden" name="q2" id="q2" value="{q2}" />
+    <input type="hidden" name="ajaxResumeFilename" value="" />
+    <div class="nt-aux-contact" aria-hidden="true">
+      <label for="fax_number">Fax Number</label>
+      <input type="text" id="fax_number" name="fax_number" value="" tabindex="-1" autocomplete="off">
+    </div>
+
+    <div id="gnewtonPersonalInfo" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">Personal Information</dt>
+      <dd>
+        <div><label for="firstName">First Name</label>
+          <input type="text" id="firstName" name="firstName" class="gnewtonRequired" maxlength="30"/></div>
+        <div><label for="lastName">Last Name</label>
+          <input type="text" id="lastName" name="lastName" class="gnewtonRequired" maxlength="30"/></div>
+        <div><label for="email">Email</label>
+          <input type="text" id="email" name="email" class="gnewtonRequired gnewtonEmail" maxlength="75"/></div>
+      </dd>
+    </dl></div>
+
+    <div id="gnewtonAttachmentsInfo" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">Attachments</dt>
+      <dd>
+        <div id="resumeRequiredWrapper" style="display: none;">
+          <label for="resume">Resume</label>
+          <input type="file" name="attachmentA" id="resume" class="gnewtonRequired gnewtonAttachment"/>
+        </div>
+        <div><label for="coverLetter">Cover Letter</label>
+          <input type="file" name="attachmentB" id="coverLetter" class="gnewtonAttachment"/></div>
+      </dd>
+    </dl></div>
+
+    <div id="gnewtonContactInfo" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">Contact Information</dt>
+      <dd>
+        <div><label for="mobile">Mobile Phone</label>
+          <input type="tel" name="mobile" id="mobile" class="gnewtonRequired gnewtonPhone"/></div>
+        <div><label for="address1">Address</label>
+          <input type="text" id="address1" name="address1" maxlength="75"/></div>
+        <div><label for="state">State</label>
+          <select id="state" name="state">
+            <option value="">Please Select</option><option value="DC">DC</option><option value="NY">NY</option>
+          </select></div>
+        <div><label for="zipCode">Postal Code</label>
+          <input type="text" id="zipCode" name="zipCode" class=" gnewtonZipCode" maxlength="12"/></div>
+      </dd>
+    </dl></div>
+
+    <div id="gnewton_section_50" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">General Information</dt>
+      <dd>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><span class="gnewtonStar">*</span><label>Date Available to Start:</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <input type="hidden" name="gnewton_section_50_question_10" value="Date Available to Start:">
+            <input type="date" name="gnewton_section_50_question_10_answer_date" placeholder="mm/dd/yyyy"
+                   class="gnewtonFieldInputClass gnewtonDate gnewtonRequired" required="required">
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><label>Desired Compensation</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <select id="gnewton_section_50_question_20_answer" name="gnewton_section_50_question_20_answer"
+                    title="Desired Compensation - Currency">
+              <option value="">Please Select</option><option value="USD">USD - $</option><option value="EUR">EUR - €</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"></div>
+          <div class="gnewtonQuestionInputClass">
+            <input name="gnewton_section_50_question_30_answer" placeholder="0.00" type="number" step="any"
+                   title="Amount" class="gnewtonFieldInputClass">
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><span class="gnewtonStar">*</span><label>Desired Shift (check all that apply):</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <div><input type="checkbox" value="1st" name="gnewton_section_50_question_40_answer" class="gnewtonRequired">1st</input></div>
+            <div><input type="checkbox" value="2nd" name="gnewton_section_50_question_40_answer" class="gnewtonRequired">2nd</input></div>
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><span class="gnewtonStar">*</span><label>Are you legally eligible to work in the United States?</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <div><input type="radio" value="Yes" name="gnewton_section_50_question_50_answer" class="gnewtonRequired">Yes</input></div>
+            <div><input type="radio" value="No" name="gnewton_section_50_question_50_answer" class="gnewtonRequired">No</input></div>
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><label>Why do you want this job?</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <textarea name="gnewton_section_50_question_60_answer" class="gnewtonFieldInputClass" maxlength="2000"></textarea>
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><label>Personal Email</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <input type="email" name="gnewton_section_50_question_70_answer_email" class="gnewtonFieldInputClass">
+          </div>
+        </div>
+      </dd>
+    </dl></div>
+
+    <div id="gnewton_section_60" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">Employment</dt>
+      <dd>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><span class="gnewtonStar">*</span><label>Employer Name</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <input name="gnewton_section_60_question_10_answer" type="text" class="gnewtonFieldInputClass gnewtonRequired" maxlength="200">
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><label>Country</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <select id="gnewton_section_60_question_20_answer_country" name="gnewton_section_60_question_20_answer_country"
+                    class="gnewtonCountryClass" data-state-id="gnewton_section_60_question_30_answer_state" title="Country">
+              <option value="">Please Select</option><option value="AF">Afghanistan</option><option value="US" selected>United States</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><label>State or Province</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <select id="gnewton_section_60_question_30_answer_state" name="gnewton_section_60_question_30_answer_state" title="State or Province">
+              <option value="">Please Select</option><option value="DC">DC</option><option value="NY">NY</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><label>Start Date</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <input type="text" name="gnewton_section_60_question_40_answer_date" title="Start Date"
+                   class="gnewtonFieldInputClass gnewtonDate gnewtonStartDate" value="mm/dd/yyyy">
+          </div>
+        </div>
+        <div>
+          <div class="gnewtonQuestionLabelClass"><span class="gnewtonStar">*</span><label>Phone</label></div>
+          <div class="gnewtonQuestionInputClass">
+            <input type="text" name="gnewton_section_60_question_50_answer" placeholder="(ddd) ddd-dddd" title="Phone"
+                   class="gnewtonFieldInputClass gnewtonPhone gnewtonRequired">
+          </div>
+        </div>
+      </dd>
+    </dl></div>
+
+    <div id="gnewton_section_70" class="gnewtonSectionClass"><dl><dd>
+      <div><p>I certify that my answers are true.</p></div>
+      <div>
+        <div class="gnewtonQuestionLabelClass"><span class="gnewtonStar">*</span><label>Acceptance</label></div>
+        <div class="gnewtonQuestionInputClass">
+          <div><input type="checkbox" value="I have read and agree to this statement" name="gnewton_section_70_question_20_answer" class="gnewtonRequired">I have read and agree to this statement</input></div>
+        </div>
+      </div>
+      <div>
+        <div class="gnewtonQuestionInputClass gnewtonCurrentDateInput">
+          <input type="hidden" name="gnewton_section_70_question_30_answer" value="current_date"><span>Date:</span>
+        </div>
+      </div>
+    </dd></dl></div>
+
+    <div id="gnewtonCommentsInfo" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">Comments</dt>
+      <dd><div class="gnewtonQuestionInputClass"><textarea id="originalComments" name="originalComments"></textarea></div></dd>
+    </dl></div>
+
+    <div id="gnewtonTextMessaging" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">Opt in to Text Messages</dt>
+      <dd>
+        <div class="gnewtonFieldClass gnewtonTextMessagingText">Would you like to receive SMS messages from Acme?</div>
+        <div id="gnewtonTextMessagingFieldInput" class="gnewtonFieldClass">
+          <div><input type="radio" name="candidateTextMessagingOptIn" class="disabled gnewtonRequired" value="true" disabled>Yes</div>
+          <div><input type="radio" name="candidateTextMessagingOptIn" class="disabled gnewtonRequired" value="false" disabled>No</div>
+        </div>
+      </dd>
+    </dl></div>
+
+    <div class="gnewtonForm disability"><dl><dd>
+      <div class="sub_section">
+        <label for="protected-veteran" class="radio">
+          <input type="radio" name="veteran" id="protected-veteran" value="51" required="true"/>
+          <span class="radio-button"></span><span class=radio-label>I IDENTIFY AS A PROTECTED VETERAN</span>
+        </label>
+        <label for="not-identify-identify" class="radio">
+          <input type="radio" name="veteran" id="not-identify-identify" value="53" required="true"/>
+          <span class="radio-button"></span><span class=radio-label>I DO NOT WISH TO IDENTIFY AT THIS TIME</span>
+        </label>
+      </div>
+    </dd></dl></div>
+
+    <div id="gnewtonPrivacyPolicyInfo" class="gnewtonSectionClass"><dl>
+      <dt class="gnewtonSectionTitleClass">Privacy Policy Acknowledgement</dt>
+      <dd>
+        <div class="gnewtonQuestionLabelClass"><label>Acceptance</label></div>
+        <div class="gnewtonQuestionInputClass"><div>
+          <input type="checkbox" name="ccpaDisclaimerAgree" value="I have read and agree to this statement"
+                 class="gnewtonRequired" required="required"> I have read and agree to this statement
+        </div></div>
+      </dd>
+    </dl></div>
+
+    <button type="submit" class="gnewtonBlueBtn gnewtonSubmitBtn"><span id="submitText">Submit</span></button>
+  </form>
+</div>
+<script>
+  // The resume is stored and parsed at once; its name shows once it is.
+  document.getElementById('uploadResumeInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    const body = new FormData();
+    body.append("fileUpload", file);
+    const parsed = await (await fetch("/career/api/c1/jobs/j1/resume-fields", {method: "POST", body})).json();
+    document.querySelector('[name=ajaxResumeFilename]').value = parsed.originalFileName;
+    for (const {id, value} of parsed.fields) document.getElementById(id).value = value;
+    document.querySelector('#resumeDropped .filename').textContent = parsed.originalFileName;
+    document.getElementById('resumeDropped').style.display = '';
+  });
+  // The text message opt-in opens once a mobile number is given.
+  document.getElementById('mobile').addEventListener('input', e => {
+    for (const r of document.getElementsByName('candidateTextMessagingOptIn')) r.disabled = !e.target.value;
+  });
+  // A country without states closes its state select.
+  document.querySelector('.gnewtonCountryClass').addEventListener('change', e => {
+    document.getElementById(e.target.dataset.stateId).disabled = e.target.value !== 'US';
+  });
+</script>
+</body>
+</html>

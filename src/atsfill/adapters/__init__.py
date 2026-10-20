@@ -4,6 +4,7 @@ from atsfill.adapters.jazzhr import JazzHR
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
 from atsfill.adapters.oracle import Oracle
+from atsfill.adapters.paycor import Paycor
 from atsfill.adapters.paylocity import Paylocity
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
@@ -21,6 +22,7 @@ ADAPTERS: list[Adapter] = [
     Manatal(),
     Paylocity(),
     Workable(),
+    Paycor(),
     JazzHR(),
     Lever(),
 ]
