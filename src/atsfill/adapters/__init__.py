@@ -1,4 +1,5 @@
 from atsfill.adapters.ashby import Ashby
+from atsfill.adapters.dayforce import Dayforce
 from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.adapters.oracle import Oracle
 from atsfill.adapters.smartrecruiters import SmartRecruiters
@@ -13,4 +14,5 @@ ADAPTERS: list[Adapter] = [
     WelcomeToTheJungle(),
     SmartRecruiters(),
     Oracle(),
+    Dayforce(),
 ]

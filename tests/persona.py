@@ -15,13 +15,16 @@ WEBSITE = "https://example.com"
 SALARY = "50000"
 TEXT = "Placeholder answer for a dry run."
 CITY = "London"
+COUNTRY = "United Kingdom"
+REGION = "Greater London"  # the region a state list names London by
 
 SENSITIVE = re.compile(
     r"gender|sex\b|race|ethnic|hispanic|latin|veteran|disab|pronoun|orientation|demograph",
     re.IGNORECASE,
 )
 DECLINE = re.compile(
-    r"decline|prefer not|not to (answer|say|disclose)|don.?t wish|do not wish", re.IGNORECASE
+    r"decline|prefer not|not to (answer|say|disclose)|don.?t wish|do not (wish|want)",
+    re.IGNORECASE,
 )
 BY_LABEL = [
     (re.compile(r"e-?mail", re.IGNORECASE), EMAIL),
@@ -72,6 +75,8 @@ def _option(field: Field) -> str:
     options = field.options or []
     if SENSITIVE.search(field.label):
         return next((o for o in options if DECLINE.search(o)), options[0])
+    if re.search(r"country", field.label, re.IGNORECASE) and COUNTRY in options:
+        return COUNTRY
     return options[0]
 
 
@@ -87,8 +92,13 @@ def answer(field: Field, cv: Path) -> Answer | None:
             return str(cv)
         case FieldType.PHONE:
             return PHONE
-        case FieldType.DATE:
-            return (date.today() + timedelta(days=30)).isoformat()
+        case FieldType.DATE:  # an end date after a start date; a past one in a history entry
+            end = re.search(r"\bend|finish|until", field.label, re.IGNORECASE)
+            if re.search(r"history|employment|education", field.label, re.IGNORECASE):
+                days = -365 if end else -3 * 365
+            else:
+                days = 60 if end else 30
+            return (date.today() + timedelta(days=days)).isoformat()
         case FieldType.CHOICE | FieldType.MULTI_CHOICE if not field.options:
             return None
         case FieldType.CHOICE:
@@ -96,16 +106,30 @@ def answer(field: Field, cv: Path) -> Answer | None:
         case FieldType.MULTI_CHOICE:
             return [_option(field)]
         case FieldType.TYPEAHEAD:
-            return field.options[0] if field.options else CITY
+            if field.options:
+                return field.options[0]
+            return REGION if re.search(r"state|province|region", field.label, re.I) else CITY
         case _:
             return _text(field)
 
 
+# A field the form shows only on some answers to another: "… (asked when 'Label' is A or B)".
+CONDITION = re.compile(r"\(asked when '(.+)' is (.+)\)$")
+
+
 def answers(fields: list[Field], cv: Path) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
-    prefilled to the account, a résumé aside."""
-    return {
+    prefilled to the account, a résumé aside, and a conditional field its other answers hide."""
+    given = {
         f.id: a
         for f in fields
         if (a := answer(f, cv)) is not None and not (f.prefilled and f.type is not FieldType.FILE)
     }
+    by_label = {f.label: f.id for f in fields}
+    for f in fields:
+        if (m := CONDITION.search(f.label)) and (trigger := by_label.get(m[1])) in given:
+            picked = given[trigger]
+            picks = m[2].split(" or ")
+            if not any(p in picks for p in ([picked] if isinstance(picked, str) else picked)):
+                given.pop(f.id, None)
+    return given
