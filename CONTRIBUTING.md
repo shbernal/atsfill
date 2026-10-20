@@ -41,7 +41,7 @@ uv run pytest
 
 The survey and the gate take `--session ADAPTER=PATH` for a system that needs an account: the dry runs fill under that account. The target is a dedicated test account per system, never a personal one.
 
-`uv run scripts/backlog.py` regenerates [docs/adapters/README.md](docs/adapters/README.md) and the README's adapter badges from the registry.
+`uv run python -m scripts.backlog` regenerates [docs/adapters/README.md](docs/adapters/README.md) and the README's adapter badges from the registry.
 
 ## Rules
 

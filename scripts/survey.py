@@ -30,9 +30,10 @@ from atsfill.core.browser import Page, Response
 from atsfill.core.commands import Sessions
 from atsfill.core.results import Status
 from tests import persona
+from tests.checkout import MAIN
 
 ROOT = Path(__file__).parents[1]
-CORPUS = ROOT / ".tmp/corpus"
+CORPUS = MAIN / ".tmp/corpus"
 DELAY_S = 5.0
 IDLE_MS = 15_000
 
@@ -170,7 +171,7 @@ def survey(
         "atsfill": version("atsfill"),
         "camoufox": version("camoufox"),
         "browser": browser.version(),
-        "evidence": str(evidence.relative_to(ROOT)),
+        "evidence": str(evidence.relative_to(MAIN)),
     }
 
 

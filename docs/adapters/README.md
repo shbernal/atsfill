@@ -1,6 +1,6 @@
 # Hiring systems
 
-Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `uv run scripts/backlog.py`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked last, then by share of postings.
+Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `uv run python -m scripts.backlog`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked last, then by share of postings.
 
 The registry covers 90.1% of postings.
 

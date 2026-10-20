@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.checkout import MAIN
+
 PAGES = Path(__file__).parent / "pages"
 
 
@@ -34,7 +36,7 @@ def server() -> Generator[str]:
 
 def _load_env() -> None:
     """Live tests read their postings and answers from the gitignored .env."""
-    path = Path(__file__).parent.parent / ".env"
+    path = MAIN / ".env"
     if not path.exists():
         return
     for line in path.read_text().splitlines():

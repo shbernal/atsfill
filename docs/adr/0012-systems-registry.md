@@ -13,7 +13,7 @@ One committed file in the package records every mapped system, one entry per fre
 - **Account**: `none`, `to_send` (needed to submit) or `to_read` (needed to see the form). Whether the form is hosted by the system or embedded on the company's site.
 - **Block**, where one was met: the protection, by the name its signal carries (DataDome, Cloudflare, Akamai, PerimeterX, hCaptcha or `unknown`), the signal it was recognised by, the step it stopped at (posting, form, upload), the date, the atsfill version, the camoufox package version and the browser build. The evidence stays in `.tmp/`.
 - **Adapter state**: `mapped`, `dry_run_verified`, `send_verified`, each with its date, the release (`version`, what `status` compares with the installed one), the exact `commit` and the verifier. Only the user sets `send_verified`.
-- **Send broken**: `send_broken`, next to `send_verified`, which stays as the last known good, with date, version, commit, verifier, `cause` and `reason`. Present means sending is broken; writing `send_verified` deletes it. `reason` names fields and steps, never postings. `scripts/gate.py --broken` records it; the gate suggests it when a send-verified system fails the dry-run criterion, and never records it on its own.
+- **Send broken**: `send_broken`, next to `send_verified`, which stays as the last known good, with date, version, commit, verifier, `cause` and `reason`. Present means sending is broken; writing `send_verified` deletes it. `reason` names fields and steps, never postings. `python -m scripts.gate --broken` records it; the gate suggests it when a send-verified system fails the dry-run criterion, and never records it on its own.
 
 The `cause` says what is known, and what to do:
 
