@@ -1,0 +1,94 @@
+{
+  "ccpa_text": "By submitting my application, I consent to the processing of my personal data.",
+  "form_title": "Apply for Placeholder Role",
+  "job": {"id": 1234567, "careers_pathname": "acme"},
+  "organization_name": "Acme",
+  "template": {
+    "sections": [
+      {
+        "id": "basic",
+        "max_count": 1,
+        "fieldsets": [
+          {"id": "name", "max_count": 1, "fields": [
+            {"id": "first_name", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}},
+            {"id": "last_name", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]},
+          {"id": "email", "max_count": 1, "fields": [
+            {"id": "email_address", "attributes": {"type": "email", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]},
+          {"id": "phone_number", "max_count": 1, "fields": [
+            {"id": "home_phone", "attributes": {"type": "tel", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]},
+          {"id": "sms_opt_in", "max_count": 1, "fields": [
+            {"id": "sms_opt_in", "attributes": {"type": "checkbox", "required": true, "maxlength": 255, "options": [], "checked": true, "value": true}}
+          ]},
+          {"id": "address", "max_count": 1, "fields": [
+            {"id": "street_address", "attributes": {"type": "text", "required": false, "maxlength": 255, "options": [], "value": null}},
+            {"id": "state_id", "attributes": {"type": "select", "required": false, "maxlength": 255, "options": [{"name": "DC", "value": 9}, {"name": "MD", "value": 21}], "value": "21"}},
+            {"id": "zip_code", "attributes": {"type": "text", "required": false, "maxlength": 50, "options": [], "value": null}}
+          ]},
+          {"id": "referred_by", "max_count": 1, "fields": [
+            {"id": "candidate_referred", "attributes": {"type": "radio", "required": true, "maxlength": 255, "options": [{"name": "Yes", "value": "yes"}, {"name": "No", "value": "no"}], "value": "no"}},
+            {"id": "referred_by", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]},
+          {"id": "resume", "max_count": 1, "fields": [
+            {"id": "resume", "attributes": {"type": "file", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]}
+        ]
+      },
+      {
+        "id": "career",
+        "max_count": 1,
+        "fieldsets": [
+          {"id": "compensation", "max_count": 4, "fields": [
+            {"id": "desired_compensation", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}},
+            {"id": "desired_compensation_unit", "attributes": {"type": "select", "required": true, "maxlength": 255, "options": [{"name": "Base", "value": "base"}, {"name": "Hourly", "value": "hourly"}], "value": null}}
+          ]},
+          {"id": "startdate", "max_count": 1, "fields": [
+            {"id": "earliest_availability", "attributes": {"type": "date", "required": false, "maxlength": 255, "options": [], "value": {}}}
+          ]}
+        ]
+      },
+      {
+        "id": "experience",
+        "max_count": 1,
+        "fieldsets": [
+          {"id": "company_name", "max_count": 1, "fields": [
+            {"id": "company_name", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]},
+          {"id": "dates", "max_count": 1, "fields": [
+            {"id": "start_date", "attributes": {"type": "month", "required": true, "maxlength": 255, "options": [], "value": null}},
+            {"id": "current", "attributes": {"type": "checkbox", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]}
+        ]
+      },
+      {
+        "id": "education",
+        "max_count": 1,
+        "fieldsets": [
+          {"id": "highest_grade", "max_count": 1, "fields": [
+            {"id": "highest_grade", "attributes": {"type": "select", "required": true, "maxlength": 255, "options": [{"name": "Did Not Complete High School", "value": "did not graduate"}, {"name": "High School/GED", "value": "graduated"}], "value": null}}
+          ]},
+          {"id": "institute_name", "max_count": 1, "fields": [
+            {"id": "institute_name", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]}
+        ]
+      },
+      {
+        "id": "other",
+        "max_count": 1,
+        "fieldsets": [
+          {"id": "custom", "max_count": 1, "fields": [
+            {"id": "custom_why_do_you_want_this_role", "external_id": 1, "label": "Why do you want this role?", "attributes": {"type": "textarea", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]},
+          {"id": "legal", "max_count": 1, "fields": [
+            {"id": "legal", "label": "Do you have a legal right to work in the United States?", "attributes": {"type": "select", "required": true, "maxlength": 255, "options": [{"name": "Yes", "value": "true"}, {"name": "No", "value": "false"}], "value": null}}
+          ]},
+          {"id": "signature", "max_count": 1, "label": "Full Name", "fields": [
+            {"id": "signature", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]}
+        ]
+      }
+    ]
+  }
+}

@@ -18,7 +18,7 @@ The registry covers 90.1% of postings.
 | teamtailor | ats | 1.2% | none | hosted |  | [send_verified](teamtailor.md) |
 | jazzhr | ats | 1.2% | none | hosted |  | mapped |
 | lever | ats | 1.2% | none | hosted |  | mapped |
-| hireology | ats | 1.0% | none | hosted |  | mapped |
+| hireology | ats | 1.0% | none | hosted |  | [mapped](hireology.md) |
 | paycor | ats | 0.9% | none | hosted, embedded |  | mapped |
 | zohorecruit | ats | 0.9% | none | hosted |  | mapped |
 | ukgready | ats | 0.9% | none | hosted |  | mapped |

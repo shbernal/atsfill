@@ -1,0 +1,182 @@
+<!doctype html>
+<!-- A Hireology job page with its form rendered from form.json: one example of each rendering
+     in docs/adapters/hireology.md, in the page's markup. -->
+<html>
+<head><meta charset="utf-8"><title>Placeholder Role - Acme Careers</title></head>
+<body>
+<button id="apply-now-button" class="careers-apply__now">APPLY NOW</button>
+<div id="application" class="careers-apply-form">
+<div>
+<h2 id="careers-apply-form__job-title" class="careers-apply-form__job-title">Apply for Placeholder Role</h2>
+
+<div class="careers-apply-form__row">
+  <div class="careers-text-input__outer-container"><div class="careers-text-input__inner-container">
+    <input class="careers-text-input" data-qa-id="first_name-0" id="first_name-0" maxlength="255" type="text" value="">
+    <label class="careers-text-input__label" for="first_name-0">First name (required)</label>
+  </div></div>
+  <div class="careers-text-input__outer-container"><div class="careers-text-input__inner-container">
+    <input class="careers-text-input" data-qa-id="last_name-0" id="last_name-0" maxlength="255" type="text" value="">
+    <label class="careers-text-input__label" for="last_name-0">Last name (required)</label>
+  </div></div>
+</div>
+<div class="careers-apply-form__row">
+  <input class="careers-text-input" data-qa-id="email_address-0" id="email_address-0" maxlength="255" type="email" value="">
+  <label class="careers-text-input__label" for="email_address-0">Email address (required)</label>
+</div>
+<div class="careers-apply-form__row">
+  <input class="careers-text-input" data-qa-id="home_phone-0" id="home_phone-0" maxlength="255" type="tel" value="">
+  <label class="careers-text-input__label" for="home_phone-0">Phone number (required)</label>
+</div>
+<div class="careers-apply-form__row">
+  <div class="careers-checkbox__container">
+    <div class="careers-checkbox__input-container">
+      <input class="careers-checkbox__input" data-qa-id="sms_opt_in-0" id="sms_opt_in-0" type="checkbox" checked>
+    </div>
+    <div class="careers-checkbox__label-container">
+      <label class="careers-checkbox__label" for="sms_opt_in-0">I would like to communicate with the hiring team via text message about my application and next steps.</label>
+    </div>
+  </div>
+</div>
+<div class="careers-apply-form__row">
+  <input class="careers-text-input" data-qa-id="street_address-0" id="street_address-0" maxlength="255" type="text" value="">
+  <label class="careers-text-input__label" for="street_address-0">Address (optional)</label>
+  <div class="careers-dropdown__outer-container"><div class="careers-dropdown__inner-container--filled">
+    <select class="careers-dropdown" data-qa-id="state_id-0" id="state_id-0">
+      <option disabled hidden style="display: none;" value=""></option>
+      <option value="9">DC</option>
+      <option value="21" selected>MD</option>
+    </select>
+    <label for="state_id-0" class="careers-dropdown__label">State/Province</label>
+  </div></div>
+  <input class="careers-text-input" data-qa-id="zip_code-0" id="zip_code-0" maxlength="50" type="text" value="">
+  <label class="careers-text-input__label" for="zip_code-0">Zip/Postal Code (optional)</label>
+</div>
+<div class="careers-apply-form__row">
+  <div class="careers-apply-form__full-width-input" id="candidate_referred-0">
+    <div class="careers-radiobutton__component-label">Were you referred by anyone?</div>
+    <label class="careers-radiobutton__option-label" for="candidate_referred-yes-0">
+      <input class="careers-radiobutton__input" data-qa-id="candidate_referred-yes-0" id="candidate_referred-yes-0" name="candidate_referred-0" type="radio" value="yes">
+      <div class="careers-radiobutton__custom-radio-border"></div>
+      <span class="careers-radiobutton__option-label-text">Yes</span>
+    </label>
+    <label class="careers-radiobutton__option-label" for="candidate_referred-no-0">
+      <input class="careers-radiobutton__input" data-qa-id="candidate_referred-no-0" id="candidate_referred-no-0" name="candidate_referred-0" type="radio" value="no" checked>
+      <div class="careers-radiobutton__custom-radio-border"></div>
+      <span class="careers-radiobutton__option-label-text">No</span>
+    </label>
+  </div>
+</div>
+<div class="careers-apply-form__row" id="referred-row"></div>
+<div class="careers-apply-form__row">
+  <div class="careers-apply-form__full-width-input"><div>
+    <div aria-hidden="true">
+      <div class="careers-file-input__instruction"><span class="careers-file-input__instruction-label">Please add your resume</span></div>
+      <div class="careers-file-input__instruction-helper-text">10MB limit; .pdf, .doc, and .docx file types are accepted.</div>
+    </div>
+    <div class="careers-file-input__container">
+      <label class="careers-file-input__button" for="resume-0">
+        <span aria-hidden="true" class="careers-file-input__button-text"><span class="careers-file-input__attach-file">ATTACH FILE</span></span>
+        <input accept="application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="careers-file-input__hidden-input-2" data-qa-id="resume-0" id="resume-0" type="file">
+      </label>
+    </div>
+  </div></div>
+</div>
+
+<div class="careers-apply-form__section-title">Career Needs</div>
+<div class="careers-apply-form__row">
+  <input class="careers-text-input" data-qa-id="desired_compensation-0" id="desired_compensation-0" maxlength="255" type="text" value="">
+  <label class="careers-text-input__label" for="desired_compensation-0">Desired compensation (required)</label>
+  <select class="careers-dropdown" data-qa-id="desired_compensation_unit-0" id="desired_compensation_unit-0">
+    <option disabled hidden style="display: none;" value=""></option>
+    <option value="base">Base</option>
+    <option value="hourly">Hourly</option>
+  </select>
+  <label for="desired_compensation_unit-0">Desired compensation type</label>
+  <a role="button" tabindex="0">Add another amount</a>
+</div>
+<div class="careers-apply-form__row">
+  <div>What is your earliest available start date?</div>
+  <input data-qa-id="earliest_availability-0" id="earliest_availability-0" type="date" value="">
+</div>
+
+<div class="careers-apply-form__section-title">Work History</div>
+<div class="careers-apply-form__row">
+  <input class="careers-text-input" data-qa-id="company_name-0" id="company_name-0" maxlength="255" type="text" value="">
+  <label class="careers-text-input__label" for="company_name-0">Company name (required)</label>
+</div>
+<div class="careers-apply-form__row">
+  <div aria-hidden="true">Start date</div>
+  <div id="start_date-0">
+    <input data-qa-id="start_date-0-month" id="start_date-0-month" maxlength="2" type="text" value="">
+    <label for="start_date-0-month"><span><span>Start date </span>MM</span></label>
+    <span>/</span>
+    <input data-qa-id="start_date-0-year" id="start_date-0-year" maxlength="4" type="text" value="">
+    <label for="start_date-0-year"><span><span>Start date </span>YYYY</span></label>
+  </div>
+  <input data-qa-id="current-0" id="current-0" type="checkbox">
+  <label for="current-0">Current</label>
+</div>
+
+<div class="careers-apply-form__section-title">Education</div>
+<div class="careers-apply-form__row">
+  <select data-qa-id="highest_grade-0" id="highest_grade-0">
+    <option disabled hidden style="display: none;" value=""></option>
+    <option value="did not graduate">Did Not Complete High School</option>
+    <option value="graduated">High School/GED</option>
+  </select>
+  <label for="highest_grade-0">Highest level of education completed</label>
+</div>
+<div class="careers-apply-form__row" id="school-row"></div>
+
+<div class="careers-apply-form__section-title">Other Information</div>
+<div class="careers-apply-form__row">
+  <label for="custom_why_do_you_want_this_role-0">Why do you want this role?</label>
+  <textarea data-qa-id="custom_why_do_you_want_this_role-0" id="custom_why_do_you_want_this_role-0" maxlength="255" rows="8"></textarea>
+</div>
+<div class="careers-apply-form__row">
+  <p>Do you have a legal right to work in the United States?</p>
+  <select data-qa-id="legal-0" id="legal-0">
+    <option disabled hidden style="display: none;" value=""></option>
+    <option value="true">Yes</option>
+    <option value="false">No</option>
+  </select>
+  <label for="legal-0">Select</label>
+</div>
+<div class="careers-apply-form__row">
+  <p>Signature and Verification</p>
+  <input data-qa-id="signature-0" id="signature-0" maxlength="255" type="text" value="">
+  <label for="signature-0">Signature (required)</label>
+</div>
+</div>
+<button class="careers-submit-button" data-qa-id="submit" id="submit" type="submit">SUBMIT YOUR APPLICATION</button>
+</div>
+<script>
+  // What the page renders once an answer shows it, and an attached file's name in place of
+  // the button.
+  const show = (row, html, on) => {
+    const el = document.getElementById(row);
+    if (on && !el.innerHTML) el.innerHTML = html;
+    if (!on) el.innerHTML = "";
+  };
+  document.getElementById("candidate_referred-0").addEventListener("change", e => show(
+    "referred-row",
+    '<input data-qa-id="referred_by-0" id="referred_by-0" maxlength="255" type="text" value="">' +
+    '<label for="referred_by-0">Name of person who referred you (required)</label>',
+    e.target.value === "yes"));
+  document.getElementById("highest_grade-0").addEventListener("change", e => show(
+    "school-row",
+    '<input data-qa-id="institute_name-1" id="institute_name-1" maxlength="255" type="text" value="">' +
+    '<label for="institute_name-1">School name (required)</label>',
+    e.target.value !== "did not graduate"));
+  const resume = document.getElementById("resume-0");
+  resume.addEventListener("change", () => {
+    const label = resume.closest("label");
+    label.querySelector(".careers-file-input__button-text").outerHTML =
+      `<div class="careers-file-input__remove-file-container">` +
+      `<div class="careers-file-input__filename" data-qa-id="careers-filename">${resume.files[0].name}</div></div>`;
+  });
+  document.getElementById("submit").addEventListener("click", () =>
+    fetch("https://api.hireology.com/v2/public/applications", {method: "POST", body: "{}"}));
+</script>
+</body>
+</html>
