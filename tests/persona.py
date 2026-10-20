@@ -1,13 +1,15 @@
 """A fictional applicant whose answers come from each form's own fields (ADR 0009)."""
 
 import re
+import secrets
 from datetime import date, timedelta
 from pathlib import Path
 
 from atsfill.core.results import Answer, Field, FieldType
 
 FIRST, LAST = "Ada", "Placeholder"
-EMAIL = "ada.placeholder@example.com"
+# A new address each run: Oracle emails a code, instead of showing the form, to one it has seen.
+EMAIL = f"ada.placeholder.{secrets.token_hex(4)}@example.com"
 PHONE = "+12025550143"  # 555-01xx numbers are reserved for fiction
 WEBSITE = "https://example.com"
 SALARY = "50000"
