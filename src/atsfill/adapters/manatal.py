@@ -231,12 +231,14 @@ class Manatal:
                 case "multiple", list():
                     box.evaluate(_SELECT, answer)
                 case "radio", str():
-                    named.and_(page.locator(f"[value={json.dumps(answer)}]")).evaluate(_CHECK, True)
+                    named.and_(
+                        page.locator(f"[value={json.dumps(answer, ensure_ascii=False)}]")
+                    ).evaluate(_CHECK, True)
                 case "checkbox", list():
                     for value in answer:
-                        named.and_(page.locator(f"[value={json.dumps(value)}]")).evaluate(
-                            _CHECK, True
-                        )
+                        named.and_(
+                            page.locator(f"[value={json.dumps(value, ensure_ascii=False)}]")
+                        ).evaluate(_CHECK, True)
                 case "boolean", str():
                     box.evaluate(_CHECK, answer == "Yes")
                 case "terms", str():

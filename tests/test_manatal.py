@@ -83,7 +83,11 @@ def test_read_form_lists_each_rendering(page):
     assert by_id["13"].options is not None and by_id["13"].options[:2] == ["Immediately", "10 days"]
     assert by_id["15"].options == ["Male", "Female", "Other"]
     assert by_id["16"].options == ["Citizen", "Permanent resident", "Need a permit"]
-    assert by_id["17"].type is FieldType.CHOICE and by_id["17"].options == ["Yes", "No"]
+    assert by_id["17"].type is FieldType.CHOICE and by_id["17"].options == [
+        "Yes",
+        "No",
+        "Más tarde",
+    ]
     assert by_id["18"].type is FieldType.MULTI_CHOICE and not by_id["18"].required
     assert by_id["20"].options == ["Yes", "No"]
     assert by_id["21"].type is FieldType.DATE
@@ -140,8 +144,8 @@ def test_every_answer_reads_back(page, resume):
         "14": "3+ year",
         "15": "Female",
         "16": "Permanent resident",
-        "17": "No",
-        "18": ["CRM", "Spreadsheets"],
+        "17": "Más tarde",
+        "18": ["CRM", "Hojas de cálculo"],
         "19": ["Europe"],
         "20": "Yes",
         "21": "1990-05-17",
