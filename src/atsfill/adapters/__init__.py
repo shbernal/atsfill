@@ -1,4 +1,5 @@
 from atsfill.adapters.ashby import Ashby
+from atsfill.adapters.dayforce import Dayforce
 from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.adapters.hireology import Hireology
 from atsfill.adapters.jazzhr import JazzHR
@@ -27,4 +28,5 @@ ADAPTERS: list[Adapter] = [
     Paycor(),
     JazzHR(),
     Lever(),
+    Dayforce(),
 ]

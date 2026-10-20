@@ -18,6 +18,8 @@ SALARY = "50000"
 TEXT = "Placeholder answer for a dry run."
 CITY = "London"
 COUNTRY = "United States"
+COUNTRY_NAMES = (COUNTRY, "United States of America")  # the names a country list gives it
+REGION = "District of Columbia"  # the state of the persona's phone and zip code
 
 SENSITIVE = re.compile(
     r"gender|sex\b|race|ethnic|hispanic|latin|veteran|disab|pronoun|orientation|demograph",
@@ -39,6 +41,8 @@ BY_LABEL = [
     (re.compile(r"last.?name|family name|surname", re.IGNORECASE), LAST),
     (re.compile(r"name", re.IGNORECASE), f"{FIRST} {LAST}"),
     (re.compile(r"phone|mobile", re.IGNORECASE), PHONE),
+    (re.compile(r"end time", re.IGNORECASE), "17:00"),
+    (re.compile(r"start time", re.IGNORECASE), "09:00"),
     (re.compile(r"how many|number of|years of", re.IGNORECASE), "3"),
     (re.compile(r"\byear\b", re.IGNORECASE), "2020"),
     (re.compile(r"salar|compensation|pay\b", re.IGNORECASE), SALARY),
@@ -98,8 +102,9 @@ def _option(field: Field) -> str:
     options = field.options or []
     if SENSITIVE.search(field.label):
         return next((o for o in options if DECLINE.search(o)), options[0])
-    if re.search(r"country", field.label, re.IGNORECASE) and COUNTRY in options:
-        return COUNTRY  # where the persona's phone and zip code are
+    if re.search(r"country", field.label, re.IGNORECASE):
+        # where the persona's phone and zip code are
+        return next((o for o in options if o in COUNTRY_NAMES), options[0])
     return options[0]
 
 
@@ -118,8 +123,13 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
             return str(cv)
         case FieldType.PHONE:
             return PHONE
-        case FieldType.DATE:
-            return (date.today() + timedelta(days=30)).isoformat()
+        case FieldType.DATE:  # an end date after a start date; a past one in a history entry
+            end = re.search(r"\bend|finish|until", field.label, re.IGNORECASE)
+            if re.search(r"history|employment|education", field.label, re.IGNORECASE):
+                days = -365 if end else -3 * 365
+            else:
+                days = 60 if end else 30
+            return (date.today() + timedelta(days=days)).isoformat()
         case FieldType.CHOICE | FieldType.MULTI_CHOICE if not field.options:
             return None
         case FieldType.CHOICE:
@@ -127,7 +137,9 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
         case FieldType.MULTI_CHOICE:
             return [_option(field)]
         case FieldType.TYPEAHEAD:
-            return field.options[0] if field.options else CITY
+            if field.options:
+                return field.options[0]
+            return REGION if re.search(r"state|province|region", field.label, re.I) else CITY
         case _:
             return _text(field)
 
@@ -138,7 +150,10 @@ def _asked(field: Field, given: dict[str, Answer]) -> bool:
     match = ASKED_WHEN.search(field.label)
     if not match or match["trigger"] not in given:
         return True
-    return (given[match["trigger"]] == match["value"]) != bool(match["negated"])
+    picked = given[match["trigger"]]
+    picks = match["value"].split(" or ")
+    shown = any(p in picks for p in ([picked] if isinstance(picked, str) else picked))
+    return shown != bool(match["negated"])
 
 
 def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
