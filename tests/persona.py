@@ -30,6 +30,9 @@ BY_LABEL = [
     (re.compile(r"how many|number of|years of", re.IGNORECASE), "3"),
     (re.compile(r"\byear\b", re.IGNORECASE), "2020"),
     (re.compile(r"salar|compensation|pay\b", re.IGNORECASE), SALARY),
+    (re.compile(r"linkedin", re.IGNORECASE), "https://www.linkedin.com/in/ada-placeholder"),
+    (re.compile(r"facebook", re.IGNORECASE), "https://www.facebook.com/ada.placeholder"),
+    (re.compile(r"twitter|\bX\b"), "adaplaceholder"),
     (re.compile(r"linkedin|github|website|portfolio|url|link", re.IGNORECASE), WEBSITE),
     (re.compile(r"city|location|where", re.IGNORECASE), CITY),
 ]

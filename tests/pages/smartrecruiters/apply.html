@@ -1,0 +1,167 @@
+<!doctype html>
+<!-- SmartRecruiters' One Click form, one example of each rendering in
+     docs/adapters/smartrecruiters.md: the profile page, then the questions page the Next button
+     shows, its questions in a shadow root. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acme - Apply</title>
+<script>window.__OC_CONTEXT__ = {"company": {"id": "c1", "companyIdentifier": "Acme"}, "publicationUuid": "p1",
+  "consent": {"consentScopeConfigs": [
+    {"scope": "RECRUIT", "required": true, "label": "You declare that you have read the [privacy notice](https://example.com) of Acme.", "checkboxRequired": true},
+    {"scope": "CRM", "required": false, "label": "You declare that you have read the privacy notice of Acme and agree to future offers.", "checkboxRequired": true},
+    {"scope": "TEXTING", "required": false, "label": "A notice with no box.", "checkboxRequired": false}]},
+  "screeningConfiguration": {"questions": [
+    {"id": "q-info", "type": "info", "label": "**About us**", "required": false, "fields": []},
+    {"id": "q-text", "type": "text", "label": "Middle name (*optional*)", "required": false,
+     "fields": [{"id": "value", "label": "Value", "type": "text", "required": false, "multipleChoice": false, "values": []}]},
+    {"id": "q-radio", "type": "radio", "label": "Are you authorized to work?", "required": true,
+     "fields": [{"id": "value", "label": "Value", "type": "radio", "required": true, "multipleChoice": false,
+                 "values": [{"id": "1", "label": "Yes"}, {"id": "0", "label": "No"}]}]},
+    {"id": "q-select", "type": "select", "label": "Did you work for Acme?", "required": true,
+     "fields": [{"id": "value", "label": "Value", "type": "select", "required": true, "multipleChoice": false,
+                 "values": [{"id": "o-yes", "label": "Yes"}, {"id": "o-no", "label": "No"}]}]},
+    {"id": "q-multi", "type": "select", "label": "Which [entities](https://example.com)?", "required": true,
+     "fields": [{"id": "value", "label": "Value", "type": "select", "required": true, "multipleChoice": true,
+                 "values": [{"id": "e-1", "label": "Acme Labs"}, {"id": "e-2", "label": "Acme Retail"}]}]},
+    {"id": "q-currency", "type": "currency", "label": "Expected salary?", "required": true, "metadata": {"currency": "EUR"},
+     "fields": [{"id": "amount", "label": "Value", "type": "text", "required": true, "multipleChoice": false, "values": []}]},
+    {"id": "q-box", "type": "checkbox", "label": "I agree that everything is accurate.", "required": true,
+     "fields": [{"id": "confirm", "label": "I agree", "type": "checkbox", "required": true, "multipleChoice": false,
+                 "values": [{"id": "1", "label": "Confirmed"}]}]},
+    {"id": "q-eeo", "type": "eeo", "label": "Gender, Race and Ethnicity", "required": true,
+     "fields": [{"id": "gender", "label": "Gender", "type": "select", "required": true, "multipleChoice": false,
+                 "values": [{"id": "g-1", "label": "Female"}, {"id": "g-2", "label": "Prefer not to answer"}]},
+                {"id": "ethnicity", "label": "Race/Ethnicity", "type": "select", "required": true, "multipleChoice": false,
+                 "values": [{"id": "r-1", "label": "Asian"}, {"id": "r-2", "label": "White"}]}]},
+    {"id": "q-files", "type": "files", "label": "Additional attachments", "required": false, "fields": []},
+    {"id": "q-textarea", "type": "textarea", "label": "Why Acme?", "required": false,
+     "fields": [{"id": "value", "label": "Value", "type": "textarea", "required": false, "multipleChoice": false, "values": []}]}],
+   "conditionalConfigurations": [{"questionId": "q-select", "fieldName": "value", "fieldValues": ["o-yes"], "conditionalQuestionIds": ["q-multi"]}]}};
+</script>
+<style>.hidden { display: none; } spl-select-option { display: block; }</style>
+</head>
+<body>
+<div id="onetrust-banner-sdk"><button id="onetrust-reject-all-handler" onclick="this.parentElement.remove()">Reject All</button></div>
+
+<main id="profile">
+  <oc-personal-information>
+    <spl-input id="first-name-input" label="First name" required><input id="first-name-input" type="text"></spl-input>
+    <spl-input id="last-name-input" label="Last name" required><input id="last-name-input" type="text"></spl-input>
+    <spl-input id="email-input" label="Email" required><input id="email-input" type="email"></spl-input>
+    <spl-input id="confirm-email-input" label="Confirm your email" required><input id="confirm-email-input" type="email"></spl-input>
+    <oc-location-autocomplete><spl-autocomplete label="City" required>
+      <input type="text" role="combobox"><div role="listbox" class="menu"></div>
+    </spl-autocomplete></oc-location-autocomplete>
+    <oc-phone-number><spl-phone-field label="Phone number" value='{"country":"US"}'>
+      <input type="tel" aria-label="Phone number">
+    </spl-phone-field></oc-phone-number>
+  </oc-personal-information>
+  <oc-experience><span data-test="section-title">Experience</span></oc-experience>
+  <spl-input id="linkedin-input" label="LinkedIn"><input id="linkedin-input" type="text"></spl-input>
+  <spl-input id="website-input" label="Website"><input id="website-input" type="text"></spl-input>
+  <oc-resume-upload><span data-test="section-title">Resume <span data-test="section-required-mark">*</span></span>
+    <spl-dropzone><input type="file" accept=".doc, .pdf"><ul class="c-spl-file-list"></ul></spl-dropzone>
+  </oc-resume-upload>
+  <spl-textarea id="hiring-manager-message-input" label="Message to the Hiring Team"><textarea id="hiring-manager-message-input"></textarea></spl-textarea>
+  <oc-nav-first-page><button type="button" onclick="next()">Next</button></oc-nav-first-page>
+</main>
+
+<main id="screening" class="hidden">
+  <sr-screening-questions-form><template shadowrootmode="open">
+    <style>.hidden { display: none; } spl-select-option { display: block; }</style>
+    <div data-test="question-container"><sr-question-field-info>About us</sr-question-field-info></div>
+    <div data-test="question-container"><sr-question-field-text><spl-input id="question_q-text"><input id="question_q-text" type="text"></spl-input></sr-question-field-text></div>
+    <div data-test="question-container"><sr-question-field-radio><spl-radio-group>
+      <spl-radio label="Yes" value="1" role="radio" aria-checked="false">Yes</spl-radio>
+      <spl-radio label="No" value="0" role="radio" aria-checked="false">No</spl-radio>
+    </spl-radio-group></sr-question-field-radio></div>
+    <div data-test="question-container"><sr-question-field-select><spl-autocomplete id="question_q-select">
+      <input id="question_q-select" type="text" role="combobox">
+      <div class="menu hidden"><spl-select-option value="o-yes">Yes</spl-select-option><spl-select-option value="o-no">No</spl-select-option></div>
+    </spl-autocomplete></sr-question-field-select></div>
+    <div data-test="question-container" id="conditional"><sr-question-field-select><spl-multiselect-autocomplete id="question_q-multi">
+      <input id="question_q-multi" type="text" role="combobox">
+      <div class="menu hidden"><spl-select-option value="e-1">Acme Labs</spl-select-option><spl-select-option value="e-2">Acme Retail</spl-select-option></div>
+    </spl-multiselect-autocomplete></sr-question-field-select></div>
+    <div data-test="question-container"><sr-question-field-currency><spl-number-field id="question_q-currency"><input id="question_q-currency" type="number"></spl-number-field> EUR</sr-question-field-currency></div>
+    <div data-test="question-container"><sr-question-field-checkbox><spl-checkbox name="question_q-box" id="spl-form-element_7"><input type="checkbox" id="spl-form-element_7"> I agree</spl-checkbox></sr-question-field-checkbox></div>
+    <div data-test="question-container"><sr-question-field-eeo>
+      <spl-autocomplete><input type="text" role="combobox"><div class="menu hidden"><spl-select-option value="g-1">Female</spl-select-option><spl-select-option value="g-2">Prefer not to answer</spl-select-option></div></spl-autocomplete>
+      <spl-autocomplete><input type="text" role="combobox"><div class="menu hidden"><spl-select-option value="r-1">Asian</spl-select-option><spl-select-option value="r-2">White</spl-select-option></div></spl-autocomplete>
+    </sr-question-field-eeo></div>
+    <div data-test="question-container"><sr-question-field-files><spl-dropzone><input type="file"></spl-dropzone></sr-question-field-files></div>
+    <div data-test="question-container"><sr-question-field-textarea><spl-textarea id="question_q-textarea"><textarea id="question_q-textarea"></textarea></spl-textarea></sr-question-field-textarea></div>
+  </template></sr-screening-questions-form>
+  <oc-consent>
+    <spl-checkbox><input type="checkbox"> Select all</spl-checkbox>
+    <spl-checkbox data-test="consent-box"><input type="checkbox"> You declare that you have read the privacy notice of Acme.</spl-checkbox>
+    <spl-checkbox data-test="consent-box"><input type="checkbox"> You declare that you have read the privacy notice of Acme and agree to future offers.</spl-checkbox>
+    <p>A notice with no box.</p>
+  </oc-consent>
+  <button type="button" onclick="location.href = location.href.replace('/screening', '/success')">Submit</button>
+</main>
+
+<script>
+const PLACES = ["Paris, Île-de-France, France", "Paris, TX, US"];
+const city = document.querySelector("oc-location-autocomplete input");
+city.addEventListener("input", () => {
+  const menu = document.querySelector("oc-location-autocomplete .menu");
+  menu.innerHTML = "";
+  for (const place of PLACES.filter(p => p.toLowerCase().startsWith(city.value.toLowerCase()))) {
+    const option = document.createElement("spl-select-option");
+    option.textContent = place;
+    option.onclick = () => { city.value = place; menu.innerHTML = ""; };
+    menu.append(option);
+  }
+});
+const tel = document.querySelector("oc-phone-number input");
+tel.addEventListener("input", () => {
+  const digits = tel.value.replace(/\D/g, "");
+  document.querySelector("spl-phone-field").setAttribute("value",
+    JSON.stringify({value: digits.slice(1), country: "US", internationalFormat: "+" + digits}));
+});
+document.querySelector("oc-resume-upload input").addEventListener("change", e => {
+  const item = document.createElement("li");
+  item.innerHTML = `<span class="c-spl-file-list-item-name">${e.target.files[0].name}</span>`;
+  document.querySelector("oc-resume-upload .c-spl-file-list").append(item);
+});
+
+const root = document.querySelector("sr-screening-questions-form").shadowRoot;
+const conditional = root.getElementById("conditional");
+for (const host of root.querySelectorAll("spl-autocomplete, spl-multiselect-autocomplete")) {
+  const input = host.querySelector("input"), menu = host.querySelector(".menu");
+  const multi = host.tagName === "SPL-MULTISELECT-AUTOCOMPLETE";
+  input.addEventListener("focus", () => menu.classList.remove("hidden"));
+  for (const option of host.querySelectorAll("spl-select-option")) {
+    option.addEventListener("click", () => {
+      menu.classList.add("hidden");
+      if (multi) {
+        const picked = (host.getAttribute("value") || "").split(",").filter(Boolean);
+        host.setAttribute("value", [...picked, option.getAttribute("value")].join(","));
+        input.value = "";
+      } else {
+        input.value = option.textContent;
+      }
+      if (host.id === "question_q-select") {  // a conditional question has no container until asked
+        if (option.getAttribute("value") === "o-yes") host.closest("[data-test]").after(conditional);
+        else conditional.remove();
+      }
+    });
+  }
+}
+conditional.remove();
+for (const radio of root.querySelectorAll("spl-radio")) {
+  radio.addEventListener("click", () => {
+    for (const r of radio.parentElement.children) r.setAttribute("aria-checked", String(r === radio));
+  });
+}
+
+function next() {
+  history.pushState(null, "", location.pathname + "/screening");
+  document.getElementById("profile").classList.add("hidden");
+  document.getElementById("screening").classList.remove("hidden");
+}
+</script>
+</body>
+</html>
