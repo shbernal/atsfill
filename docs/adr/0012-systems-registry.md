@@ -8,7 +8,7 @@ Which hiring system gets the next adapter depends on how many postings it carrie
 
 One committed file in the package records every mapped system, one entry per freehire `source`:
 
-- **Kind**: `ats`; `board`, a job board that takes the application itself (Welcome to the Jungle); `aggregator`, which links out, its share added to the systems it resolves to; or `custom`, a form the company built, counted and out of scope.
+- **Kind**: `ats`; `board`, a job board that takes the application itself (Welcome to the Jungle); `aggregator`, which links out, its share added to the systems it resolves to, listed in `links_to`; or `custom`, a form the company built, counted and out of scope.
 - **Share** of postings, worldwide, from the freehire `source` facet with no market filter.
 - **Account**: `none`, `to_send` (needed to submit) or `to_read` (needed to see the form). Whether the form is hosted by the system or embedded on the company's site.
 - **Block**, where one was met: the vendor (DataDome, Cloudflare, Akamai, PerimeterX or `unknown`), the signal it was recognised by, the step it stopped at (posting, form, upload), the date, the atsfill version, the camoufox package version and the browser build. The evidence stays in `.tmp/`.

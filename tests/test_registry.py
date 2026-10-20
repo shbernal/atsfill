@@ -33,6 +33,7 @@ dry_run_verified = { date = 2026-10-02, version = "0.0.1", by = "agent" }
             'kind = "ats"\naccount = "none"\nblock = { vendor = "Imperva", step = "form" }',
             "block.vendor",
         ),
+        ('kind = "ats"\naccount = "none"\nlinks_to = ["lever"]', "only an aggregator"),
     ],
 )
 def test_an_invalid_entry_is_refused(entry, error):
