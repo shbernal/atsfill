@@ -12,7 +12,7 @@ The registry covers 90.1% of postings.
 | paycom | ats | 2.4% | none | hosted |  | mapped |
 | manatal | ats | 1.9% | none | hosted |  | mapped |
 | paylocity | ats | 1.7% | none | hosted |  | mapped |
-| dayforce | ats | 1.7% | none | hosted |  | mapped |
+| dayforce | ats | 1.7% | none | hosted |  | [mapped](dayforce.md) |
 | workable | ats | 1.6% | none | hosted |  | mapped |
 | ashby | ats | 1.5% | none | hosted, embedded |  | [send_verified](ashby.md) |
 | bamboohr | ats | 1.3% | none | hosted |  | mapped |
