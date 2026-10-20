@@ -526,16 +526,21 @@ def _page_numbers(page: Page) -> list[str]:
 
 
 def _go_to(page: Page, number: int) -> None:
+    """Opens a page of the form by its number, clicked once more when the first click is lost
+    while the page settles."""
     if not _page_numbers(page) or re.search(rf"/apply/section/{number}\b", page.url):
         return
-    _click(page, page.locator(PAGE_NUMBERS).filter(has_text=_exact(str(number))).first)
-    try:
-        page.wait_for_url(
-            re.compile(rf"/apply/section/{number}\b"), timeout=STEP_TIMEOUT_MS, wait_until="commit"
-        )
-    except browser.Timeout:
-        raise Unsupported(f"form_shape: page {number} of the form did not open") from None
-    _settle(page)
+    for _ in range(2):
+        _click(page, page.locator(PAGE_NUMBERS).filter(has_text=_exact(str(number))).first)
+        with suppress(browser.Timeout):
+            page.wait_for_url(
+                re.compile(rf"/apply/section/{number}\b"),
+                timeout=STEP_TIMEOUT_MS // 2,
+                wait_until="commit",
+            )
+            _settle(page)
+            return
+    raise Unsupported(f"form_shape: page {number} of the form did not open")
 
 
 def _upload(field_id: str) -> str:

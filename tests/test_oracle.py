@@ -88,7 +88,7 @@ def test_read_form(opened):
     assert fields["phoneNumber"].type is FieldType.PHONE
     assert fields["country"].prefilled and fields["country"].label == "Country/Region"
     assert fields["country"].options == ["France", "Poland", "United Kingdom"]
-    assert fields["city"].type is FieldType.TYPEAHEAD
+    assert fields["city"].type is FieldType.TEXT  # an address search, left unpicked
     assert fields["postalCode"].required  # the state is not, the postal code is
     assert fields["postalCode"].options == ["0200, Acton, ACT", "2000, Sydney, NSW"]
     assert fields["dateOfBirth"].type is FieldType.DATE
