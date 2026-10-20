@@ -144,7 +144,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "workable"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "7388c4f" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "76fb0fd" }
 
 [energyjobline]
 kind = "aggregator"
