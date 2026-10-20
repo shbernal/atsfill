@@ -11,6 +11,7 @@ Paycor Recruiting's apply pages (the former Newton), observed on live postings, 
   2. the qualifying questions: Yes/No buttons (`#y_<id>`, `#n_<id>`) writing `true`/`false` into a hidden input; a No still leads to the form;
   3. the form, posted to `ApplyJob.action` on Submit.
 - A closed posting says "this job is no longer active".
+- The form's third-party scripts (Dropbox, Google) can hold its `load` event back for good; the page is used once its DOM is in and its script has filled the state and country lists.
 
 ## Reading the form
 

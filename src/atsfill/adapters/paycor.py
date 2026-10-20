@@ -269,10 +269,16 @@ class Paycor:
         when filling, the last option and Yes when only reading, which list the fields."""
         if self._start is None:
             raise Unsupported("form_shape: no Paycor job in the page")
-        page.goto(self._start)
+        page.goto(self._start, wait_until="domcontentloaded")
         for _ in range(STEPS):
-            page.wait_for_load_state()
+            page.wait_for_load_state("domcontentloaded")
             if page.locator(FORM).count():
+                # The page's script fills the state and country lists once its DOM is in.
+                page.wait_for_function(
+                    "() => [...document.querySelectorAll('#gnewtonForm select')]"
+                    ".every(s => s.options.length)",
+                    timeout=PAGE_TIMEOUT_MS,
+                )
                 return
             if page.locator(EEO_FORM).count():
                 self._eeo(page, answers)
@@ -284,8 +290,9 @@ class Paycor:
                 raise Unsupported("posting_gone: this job is no longer active")
             else:
                 raise Unsupported(f"form_shape: an unknown page before the form ({page.url})")
-            with page.expect_navigation(timeout=PAGE_TIMEOUT_MS):
-                button.click()
+            # The form's third-party scripts (Dropbox, Google) can hold its `load` back.
+            with page.expect_navigation(wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS):
+                button.click(no_wait_after=True)
         raise Unsupported("form_shape: no form after the pages before it")
 
     def _eeo(self, page: Page, answers: dict[str, Answer] | None) -> None:
