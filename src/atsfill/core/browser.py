@@ -14,6 +14,7 @@ from concurrent.futures import Future
 from contextlib import contextmanager
 from pathlib import Path
 
+from camoufox.addons import DefaultAddons, maybe_download_addons
 from camoufox.exceptions import CamoufoxNotInstalled
 from camoufox.fingerprints import Screen, generate_fingerprint
 from camoufox.pkgman import installed_verstr
@@ -66,8 +67,15 @@ def version() -> str:
 
 
 def install() -> int:
-    """Fetches the pinned browser build."""
-    return subprocess.call([sys.executable, "-m", "camoufox", "fetch", f"official/{BUILD}"])
+    """Fetches the pinned browser build unless it is installed, then the add-ons every launch
+    loads, so that browsers started side by side do not each download them."""
+    if version() != BUILD:
+        subprocess.call([sys.executable, "-m", "camoufox", "fetch", f"official/{BUILD}"])
+    if version() != BUILD:  # `camoufox fetch` exits 0 when it fails
+        print(f"the Camoufox build {BUILD} is not installed", file=sys.stderr)
+        return 1
+    maybe_download_addons(list(DefaultAddons))
+    return 0
 
 
 def identity(data_dir: Path) -> dict:

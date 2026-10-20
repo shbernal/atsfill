@@ -30,9 +30,10 @@ from atsfill.core.browser import Page, Response
 from atsfill.core.commands import Sessions
 from atsfill.core.results import Status
 from tests import persona
+from tests.checkout import MAIN
 
 ROOT = Path(__file__).parents[1]
-CORPUS = ROOT / ".tmp/corpus"
+CORPUS = MAIN / ".tmp/corpus"
 DELAY_S = 5.0
 IDLE_MS = 15_000
 
@@ -142,7 +143,7 @@ def survey(
     read = core.read(url, data_dir=data, sessions=sessions)
     result = read
     if read.status is Status.READY:
-        answers = persona.answers(read.fields, cv)
+        answers = persona.answers(read.fields, cv, cv.with_name("photo.png"))
         result = core.fill(url, answers, data_dir=data, sessions=sessions)
     step = None
     if found.label == "blocked":
@@ -170,7 +171,7 @@ def survey(
         "atsfill": version("atsfill"),
         "camoufox": version("camoufox"),
         "browser": browser.version(),
-        "evidence": str(evidence.relative_to(ROOT)),
+        "evidence": str(evidence.relative_to(MAIN)),
     }
 
 
@@ -215,6 +216,7 @@ def run(
     """Surveys each (URL, company), appending its row to .tmp/corpus/<out or source>.jsonl."""
     CORPUS.mkdir(parents=True, exist_ok=True)
     cv = persona.resume(CORPUS / "resume.pdf")
+    persona.photo(CORPUS / "photo.png")
     data = paths.data_dir(data_dir)
     path, rows = CORPUS / f"{out or source or 'urls'}.jsonl", []
     for n, (url, company) in enumerate(postings):

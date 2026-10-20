@@ -45,7 +45,13 @@ def _opened(
             yield _login_required(url, adapter)
             return
     with open_page(data, session) as page:
-        page.goto(url)
+        try:
+            page.goto(url)
+        except browser.Timeout:
+            if adapter is None:
+                raise
+            # A page that never finishes loading (a redirect to an employer's career page)
+            # is left to the adapter that claimed its URL.
         if adapter is None and (adapter := _detect(url, page)):
             detected.append(adapter.name)
         if adapter is None:

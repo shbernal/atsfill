@@ -102,6 +102,7 @@ kind = "ats"
 share = 0.0244
 account = "none"
 hosting = ["hosted"]
+block = { vendor = "hCaptcha", signal = "image challenge on Continue To Application, the step before the form, 3 of 3 companies headless, and again on a virtual display and headed", step = "form", date = 2026-10-20, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [icims]
@@ -116,14 +117,18 @@ kind = "ats"
 share = 0.0187
 account = "none"
 hosting = ["hosted"]
+adapter = "manatal"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "e682656" }
 
 [paylocity]
 kind = "ats"
 share = 0.0167
 account = "none"
 hosting = ["hosted"]
+adapter = "paylocity"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "d3edb25" }
 
 [dayforce]
 kind = "ats"
@@ -139,7 +144,9 @@ kind = "ats"
 share = 0.0159
 account = "none"
 hosting = ["hosted"]
+adapter = "workable"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "76fb0fd" }
 
 [energyjobline]
 kind = "aggregator"
@@ -180,14 +187,18 @@ kind = "ats"
 share = 0.0118
 account = "none"
 hosting = ["hosted"]
+adapter = "jazzhr"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "2cf848b" }
 
 [lever]
 kind = "ats"
 share = 0.0116
 account = "none"
 hosting = ["hosted"]
+adapter = "lever"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "d35da0b" }
 
 [adp]
 kind = "ats"
@@ -207,14 +218,18 @@ kind = "ats"
 share = 0.0101
 account = "none"
 hosting = ["hosted"]
+adapter = "hireology"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "87c2539" }
 
 [paycor]
 kind = "ats"
 share = 0.0095
 account = "none"
 hosting = ["hosted", "embedded"]
+adapter = "paycor"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "98b626f" }
 
 [zohorecruit]
 kind = "ats"

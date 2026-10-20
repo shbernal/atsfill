@@ -1,6 +1,6 @@
 # Hiring systems
 
-Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `uv run scripts/backlog.py`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked last, then by share of postings.
+Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `uv run python -m scripts.backlog`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked last, then by share of postings.
 
 The registry covers 90.1% of postings.
 
@@ -9,18 +9,17 @@ The registry covers 90.1% of postings.
 | oracle | ats | 8.3% | none | hosted |  | [dry_run_verified](oracle.md) |
 | smartrecruiters | ats | 4.4% | none | hosted |  | [dry_run_verified](smartrecruiters.md) |
 | greenhouse | ats | 3.5% | none | hosted, embedded |  | [dry_run_verified](greenhouse.md) |
-| paycom | ats | 2.4% | none | hosted |  | mapped |
-| manatal | ats | 1.9% | none | hosted |  | mapped |
-| paylocity | ats | 1.7% | none | hosted |  | mapped |
+| manatal | ats | 1.9% | none | hosted |  | [dry_run_verified](manatal.md) |
+| paylocity | ats | 1.7% | none | hosted |  | [dry_run_verified](paylocity.md) |
 | dayforce | ats | 1.7% | none | hosted |  | [dry_run_verified](dayforce.md) |
-| workable | ats | 1.6% | none | hosted |  | mapped |
+| workable | ats | 1.6% | none | hosted |  | [dry_run_verified](workable.md) |
 | ashby | ats | 1.5% | none | hosted, embedded |  | [send_verified](ashby.md) |
 | bamboohr | ats | 1.3% | none | hosted |  | mapped |
 | teamtailor | ats | 1.2% | none | hosted |  | [send_verified](teamtailor.md) |
-| jazzhr | ats | 1.2% | none | hosted |  | mapped |
-| lever | ats | 1.2% | none | hosted |  | mapped |
-| hireology | ats | 1.0% | none | hosted |  | mapped |
-| paycor | ats | 0.9% | none | hosted, embedded |  | mapped |
+| jazzhr | ats | 1.2% | none | hosted |  | [dry_run_verified](jazzhr.md) |
+| lever | ats | 1.2% | none | hosted |  | [dry_run_verified](lever.md) |
+| hireology | ats | 1.0% | none | hosted |  | [dry_run_verified](hireology.md) |
+| paycor | ats | 0.9% | none | hosted, embedded |  | [dry_run_verified](paycor.md) |
 | zohorecruit | ats | 0.9% | none | hosted |  | mapped |
 | ukgready | ats | 0.9% | none | hosted |  | mapped |
 | phenom | ats | 0.7% | none | hosted |  | mapped |
@@ -46,6 +45,7 @@ The registry covers 90.1% of postings.
 | jobstreet | board | 0.5% | to_read | hosted |  | mapped |
 | gupy | ats | 0.4% | to_read | hosted |  | mapped |
 | join | ats | 0.3% | to_read | hosted |  | mapped |
+| paycom | ats | 2.4% | none | hosted | hCaptcha at form | mapped |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | mapped |
 
 Aggregators and company-built forms, counted and not adapted:

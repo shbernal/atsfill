@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- The Yes/No qualifying questions, before the form: Continue posts them as true/false. -->
+<html>
+<head><meta charset="utf-8"><title>Careers</title></head>
+<body>
+<div id="gnewtonCareerBody">
+  <form name="gnewtonForm" method="POST" action="SubmitQuestionnaire.action?clientId=c1&id=j1">
+    <div class="gnewtonQuestionWrapper">
+      <div class="gnewtonQuestion">Are you 18 years of age or older?</div>
+      <div class="gnewtonQuestionYes"><div id="y_q1" class="gnewtonYes" onclick="choose(this)">Yes</div></div>
+      <div class="gnewtonQuestionNo"><div id="n_q1" class="gnewtonNo" onclick="choose(this)">No</div></div>
+    </div>
+    <div class="gnewtonQuestionWrapper">
+      <div class="gnewtonQuestion">Do you have a valid driver's license?</div>
+      <div class="gnewtonQuestionYes"><div id="y_q2" class="gnewtonYes" onclick="choose(this)">Yes</div></div>
+      <div class="gnewtonQuestionNo"><div id="n_q2" class="gnewtonNo" onclick="choose(this)">No</div></div>
+    </div>
+    <div id="saveBtn" class="gnewtonContinueBtn disabled" onclick="save()">Continue</div>
+    <input type="hidden" id="q1" name="q1" />
+    <input type="hidden" id="q2" name="q2" />
+  </form>
+</div>
+<script>
+  function choose(button) {
+    document.getElementById(button.id.slice(2)).value = button.id.startsWith('y_') ? 'true' : 'false';
+  }
+  function save() {
+    if (['q1', 'q2'].every(id => document.getElementById(id).value)) document.forms[0].submit();
+  }
+</script>
+</body>
+</html>

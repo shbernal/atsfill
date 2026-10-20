@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Application - Acme</title>
+<style>
+  body { font-family: sans-serif; margin: 0; }
+  form { max-width: 640px; margin: 0 auto; padding: 16px; }
+  [data-ui=section-fields] > div { margin: 12px 0; }
+  [role=radio], [role=checkbox] { display: inline-block; padding: 6px 10px; border: 1px solid #ccc; }
+  [role=radio][aria-checked=true], [role=checkbox][aria-checked=true] { background: #0a7; }
+  input[aria-hidden=true] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  [role=listbox] { list-style: none; margin: 0; padding: 0; border: 1px solid #ccc; }
+  [role=option] { padding: 4px; }
+  [data-ui=cookie-consent] { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); }
+</style>
+</head>
+<body>
+<form data-ui="application-form">
+  <section data-ui="section">
+    <h2 id="section-0_section_name">Personal information</h2>
+    <div data-ui="section-fields">
+      <div>
+        <label>
+          <span><strong>*</strong><span id="firstname_label"><strong>First name</strong></span></span>
+          <div data-role="illustrated-input"><input aria-required="true" id="firstname" maxlength="127" data-ui="firstname" name="firstname" aria-labelledby="firstname_label" required type="text" value=""></div>
+        </label>
+      </div>
+      <div>
+        <label>
+          <span><strong>*</strong><span id="email_label"><strong>Email</strong></span></span>
+          <div data-role="illustrated-input"><input aria-required="true" id="email" maxlength="255" data-ui="email" name="email" aria-labelledby="email_label" required type="email" value=""></div>
+        </label>
+      </div>
+      <div>
+        <span><strong>*</strong><span id="phone_label"><strong>Phone</strong></span></span>
+        <div data-ignore-focus="true" data-ui="phone">
+          <div data-role="illustrated-input">
+            <button type="button" aria-label="Change country for phone number, currently selected France (+33)">+33</button>
+            <input aria-required="true" aria-labelledby="phone_label" maxlength="255" required id="input_phone" name="phone" type="tel">
+          </div>
+        </div>
+      </div>
+      <div>
+        <label>
+          <span><span id="address_label"><strong>Address</strong></span><span> (Optional)</span></span>
+          <div data-role="illustrated-input"><input aria-required="false" id="address" data-ui="address" name="address" aria-labelledby="address_label" type="text" value="Paris, France"></div>
+        </label>
+      </div>
+      <div style="position: absolute; width: 1px; height: 1px; overflow: hidden;">
+        <label><div data-role="illustrated-input"><input id="city" aria-hidden="true" tabindex="-1" name="city" type="text" value=""></div></label>
+      </div>
+      <div>
+        <span><span id="pPhoto_label"><strong>Photo</strong></span><span> (Optional)</span></span>
+        <div data-role="dropzone">
+          <label tabindex="0" role="button" for="input_files_photo">Choose file</label>
+          <input data-ui="avatar" tabindex="-1" id="input_files_photo" type="file" aria-labelledby="pPhoto_label" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+        </div>
+      </div>
+    </div>
+  </section>
+  <section data-ui="section">
+    <h2 id="section-1_section_name">Profile</h2>
+    <div data-ui="section-fields">
+      <div data-ui="education">
+        <div>
+          <p id="education_label">Education&nbsp;<small>(Optional)</small></p>
+          <button data-ui="add-section" aria-label="Add Education" type="button">+ Add</button>
+        </div>
+      </div>
+      <div>
+        <span><strong>*</strong><span id="pResume_label"><strong>Resume</strong></span></span>
+        <div data-role="dropzone">
+          <label tabindex="0" role="button" for="input_files_resume">Choose file</label>
+          <input data-ui="resume" tabindex="-1" id="input_files_resume" type="file" aria-labelledby="pResume_label" accept=".pdf,.doc,.docx,application/pdf">
+        </div>
+      </div>
+      <div>
+        <span><strong>*</strong><span id="CA_1_label"><strong>Notice period</strong></span></span>
+        <div data-ui="CA_1" data-open="false" data-input-type="select">
+          <label><div data-role="illustrated-input"><input id="input_CA_1_input" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="input_CA_1_listbox" aria-labelledby="CA_1_label" placeholder="Select an option…" readonly></div></label>
+          <input name="CA_1" required tabindex="-1" aria-hidden="true" value="">
+        </div>
+      </div>
+    </div>
+  </section>
+  <section data-ui="section">
+    <h2 id="section-2_section_name">Details</h2>
+    <div data-ui="section-fields">
+      <div>
+        <label>
+          <span><strong>*</strong><span id="cover_letter_label"><strong>Cover letter</strong></span></span>
+          <div data-role="illustrated-input"><textarea aria-required="true" id="cover_letter" maxlength="200000" data-ui="cover_letter" name="cover_letter" aria-labelledby="cover_letter_label" required rows="5"></textarea></div>
+        </label>
+      </div>
+      <div>
+        <label>
+          <span><strong>*</strong><span id="CA_2_label"><strong>Expected salary</strong></span></span>
+          <div data-role="illustrated-input"><input aria-required="true" data-ui="CA_2" required name="CA_2" type="text" value=""></div>
+        </label>
+      </div>
+      <div>
+        <span><strong>*</strong><span id="qYes_label"><strong>Can you work in the EU?</strong></span></span>
+        <fieldset role="radiogroup" data-ui="QA_1" aria-labelledby="qYes_label">
+          <div data-ui="option" aria-labelledby="qYes_label radio_label_y1" id="wrapper_y1" role="radio" aria-checked="false" tabindex="0">
+            <label><input id="y1" tabindex="-1" aria-hidden="true" type="radio" name="QA_1" value="true"><div><span id="radio_label_y1">YES</span></div></label>
+          </div>
+          <div data-ui="option" aria-labelledby="qYes_label radio_label_y2" id="wrapper_y2" role="radio" aria-checked="false" tabindex="-1">
+            <label><input id="y2" tabindex="-1" aria-hidden="true" type="radio" name="QA_1" value="false"><div><span id="radio_label_y2">NO</span></div></label>
+          </div>
+        </fieldset>
+      </div>
+      <div>
+        <span><strong>*</strong><span id="qOne_label"><strong>Preferred office</strong></span></span>
+        <fieldset role="radiogroup" data-ui="CA_3" aria-labelledby="qOne_label">
+          <label role="presentation"><div aria-labelledby="qOne_label radio_label_o1" role="radio" aria-checked="false" tabindex="0"><input id="o1" tabindex="-1" aria-hidden="true" type="radio" name="CA_3" value="101"></div><span id="radio_label_o1">Lyon</span></label>
+          <label role="presentation"><div aria-labelledby="qOne_label radio_label_o2" role="radio" aria-checked="false" tabindex="-1"><input id="o2" tabindex="-1" aria-hidden="true" type="radio" name="CA_3" value="102"></div><span id="radio_label_o2">Nantes</span></label>
+        </fieldset>
+      </div>
+      <div>
+        <span><strong>*</strong><span id="qMany_label"><strong>Preferred shifts</strong></span></span>
+        <div role="group" data-ui="CA_4" aria-labelledby="qMany_label">
+          <label><div aria-labelledby="qMany_label checkbox_label_m1" role="checkbox" aria-checked="false" tabindex="0"><input tabindex="-1" aria-hidden="true" type="checkbox" name="201"></div><span id="checkbox_label_m1">Days</span></label>
+          <label><div aria-labelledby="qMany_label checkbox_label_m2" role="checkbox" aria-checked="false" tabindex="0"><input tabindex="-1" aria-hidden="true" type="checkbox" name="202"></div><span id="checkbox_label_m2">Evenings</span></label>
+          <label><div aria-labelledby="qMany_label checkbox_label_m3" role="checkbox" aria-checked="false" tabindex="0"><input tabindex="-1" aria-hidden="true" type="checkbox" name="203"></div><span id="checkbox_label_m3">Nights</span></label>
+        </div>
+      </div>
+      <div>
+        <label>
+          <span><span id="CA_5_label"><strong>Date of birth</strong></span><span> (Optional)</span></span>
+          <div data-role="illustrated-input"><input type="text" data-ui="CA_5" inputmode="tel" name="CA_5" placeholder="MM/DD/YYYY" value=""><span data-ui="calendar-icon"></span></div>
+        </label>
+      </div>
+      <div>
+        <span><strong>*</strong><span id="qFile_label"><strong>Driving licence</strong></span></span>
+        <div data-role="dropzone">
+          <label tabindex="0" role="button" for="input_files_licence">Choose file</label>
+          <input data-ui="QA_2" tabindex="-1" id="input_files_licence" type="file" aria-labelledby="qFile_label" accept=".pdf,.png,application/pdf">
+        </div>
+      </div>
+    </div>
+  </section>
+  <section data-ui="section">
+    <div data-ui="section-fields">
+      <div data-ui="gdpr">
+        <label>
+          <label data-ui="gdpr" data-checked="false">
+            <div aria-labelledby="checkbox_label_g1" role="checkbox" aria-checked="false" tabindex="0"><input tabindex="-1" aria-hidden="true" type="checkbox" name="gdpr"></div>
+            <span id="checkbox_label_g1"><span>I accept the <a href="#privacy">Privacy Notice</a> and consent to the processing of my data.</span></span>
+          </label>
+        </label>
+      </div>
+    </div>
+  </section>
+  <div id="turnstile-container-1" hidden></div>
+  <button data-ui="apply-button" type="submit">Submit application</button>
+</form>
+<div data-ui="cookie-consent" role="dialog" aria-modal="true">
+  <span>This website uses cookies.</span>
+  <button data-ui="cookie-consent-accept">Accept all</button>
+  <button data-ui="cookie-consent-decline">Decline all</button>
+</div>
+<script>
+  // The page as observed: an option's state is its aria-checked, its hidden input is not kept
+  // in step; a closed dropdown's list lingers a moment; number and date inputs reformat.
+  const $ = (s, root = document) => root.querySelector(s);
+  $("[data-ui=cookie-consent-decline]").onclick = () => $("[data-ui=cookie-consent]").remove();
+  document.querySelectorAll("[role=radio], [role=checkbox]").forEach(option => {
+    option.closest("label, [role=radio]").addEventListener("click", event => {
+      event.preventDefault();
+      if (option.getAttribute("role") === "radio") {
+        option.closest("[role=radiogroup]").querySelectorAll("[role=radio]")
+          .forEach(r => r.setAttribute("aria-checked", "false"));
+        option.setAttribute("aria-checked", "true");
+      } else {
+        const on = option.getAttribute("aria-checked") !== "true";
+        setTimeout(() => option.setAttribute("aria-checked", String(on)), 100);
+      }
+    });
+  });
+  // A photo shows a crop dialog, then its preview; attaching the resume empties the photo.
+  document.querySelectorAll("input[type=file]").forEach(input => {
+    const zone = input.closest("[data-role=dropzone]");
+    input.onchange = () => {
+      zone.querySelector("section")?.remove();
+      if (input.dataset.ui === "resume") $("[data-ui=avatar]").closest("[data-role=dropzone]")
+        .querySelector("section")?.remove();
+      if (input.dataset.ui !== "avatar") {
+        zone.insertAdjacentHTML("afterbegin",
+          `<section><div data-id="filename"><span>${input.files[0].name}</span></div></section>`);
+        return;
+      }
+      const name = input.files[0].name;
+      zone.insertAdjacentHTML("afterbegin", `<section><div data-role="preview"><img alt="${name}"></div></section>`);
+      document.body.insertAdjacentHTML("beforeend", `<dialog role="dialog" open>
+        <button data-ui="crop-image" type="button">Upload</button></dialog>`);
+      $("[data-ui=crop-image]").onclick = () => $("dialog[role=dialog]").remove();
+    };
+  });
+  const tel = $("#input_phone");
+  tel.oninput = () => {
+    if (!tel.value.startsWith("+1")) return;
+    $("[data-ui=phone] button").setAttribute("aria-label",
+      "Change country for phone number, currently selected United States (+1)");
+    const d = tel.value.slice(2).replace(/\D/g, "");
+    tel.value = d.length > 6 ? `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}` : d;
+  };
+  const salary = $("[name=CA_2]");
+  salary.oninput = () => {
+    const kept = salary.value.replace(/[^\d.]/g, "");
+    salary.value = /^\d+$/.test(kept) ? Number(kept).toLocaleString("en-US") : kept;
+  };
+  const born = $("[name=CA_5]");
+  born.oninput = () => {
+    const d = born.value.replace(/\D/g, "").slice(0, 8);
+    born.value = [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean).join("/");
+  };
+  const box = $("#input_CA_1_input");
+  box.onclick = () => {
+    if ($("#input_CA_1_listbox")) return;
+    box.closest("[data-ui]").insertAdjacentHTML("beforeend", `<ul role="listbox" id="input_CA_1_listbox">
+      <li role="option" value="11"><span data-role="option-label">Immediately</span></li>
+      <li role="option" value="12"><span data-role="option-label"> 1 month</span></li></ul>`);
+    document.querySelectorAll("#input_CA_1_listbox [role=option]").forEach(li => li.onclick = () => {
+      box.value = li.textContent.trim();
+      $("[name=CA_1]").value = li.getAttribute("value");
+      setTimeout(() => $("#input_CA_1_listbox").remove(), 200);
+    });
+  };
+  box.onkeydown = event => event.key === "Escape" && $("#input_CA_1_listbox")?.remove();
+  $("form").onsubmit = event => {
+    event.preventDefault();
+    fetch("/api/v1/jobs/ABCDEF1234/apply", {method: "POST", body: "{}"});
+  };
+</script>
+</body>
+</html>

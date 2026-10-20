@@ -79,7 +79,7 @@ account = "none"
 
 def test_the_committed_backlog_is_current():
     committed = (ROOT / "docs/adapters/README.md").read_text()
-    assert committed == registry.backlog(), "run `uv run scripts/backlog.py`"
+    assert committed == registry.backlog(), "run `uv run python -m scripts.backlog`"
 
 
 def test_a_state_is_written_into_its_entry_only():
@@ -120,4 +120,4 @@ def test_a_verified_release_against_the_installed_one(verified, release):
 
 def test_the_committed_badges_are_current():
     readme = (ROOT / "README.md").read_text()
-    assert readme == registry.with_badges(readme), "run `uv run scripts/backlog.py`"
+    assert readme == registry.with_badges(readme), "run `uv run python -m scripts.backlog`"

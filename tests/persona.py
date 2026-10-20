@@ -2,6 +2,8 @@
 
 import re
 import secrets
+import struct
+import zlib
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -15,18 +17,25 @@ WEBSITE = "https://example.com"
 SALARY = "50000"
 TEXT = "Placeholder answer for a dry run."
 CITY = "London"
-COUNTRY = "United Kingdom"
-REGION = "Greater London"  # the region a state list names London by
+COUNTRY = "United States"
+COUNTRY_NAMES = (COUNTRY, "United States of America")  # the names a country list gives it
+REGION = "District of Columbia"  # the state of the persona's phone and zip code
 
 SENSITIVE = re.compile(
     r"gender|sex\b|race|ethnic|hispanic|latin|veteran|disab|pronoun|orientation|demograph",
     re.IGNORECASE,
 )
 DECLINE = re.compile(
-    r"decline|prefer not|not to (answer|say|disclose)|don.?t wish|do not (wish|want)",
+    r"decline|prefer not|not to (answer|say|disclose|self-identify)|(don.?t|do not) (wish|want)",
     re.IGNORECASE,
 )
+# A field's label that says it is asked only after another's answer.
+ASKED_WHEN = re.compile(
+    r"""\(asked when (["'])(?P<trigger>.+?)\1 is (?P<negated>not )?"?(?P<value>.+?)"?\)$"""
+)
 BY_LABEL = [
+    (re.compile(r"MM/YYYY"), "01/2020"),
+    (re.compile(r"zip|postal", re.IGNORECASE), "20001"),
     (re.compile(r"e-?mail", re.IGNORECASE), EMAIL),
     (re.compile(r"first.?name|given name|pr[ée]nom", re.IGNORECASE), FIRST),
     (re.compile(r"last.?name|family name|surname", re.IGNORECASE), LAST),
@@ -37,6 +46,7 @@ BY_LABEL = [
     (re.compile(r"how many|number of|years of", re.IGNORECASE), "3"),
     (re.compile(r"\byear\b", re.IGNORECASE), "2020"),
     (re.compile(r"salar|compensation|pay\b", re.IGNORECASE), SALARY),
+    (re.compile(r"\(a number\)"), "3"),
     (re.compile(r"linkedin", re.IGNORECASE), "https://www.linkedin.com/in/ada-placeholder"),
     (re.compile(r"facebook", re.IGNORECASE), "https://www.facebook.com/ada.placeholder"),
     (re.compile(r"twitter|\bX\b"), "adaplaceholder"),
@@ -73,12 +83,28 @@ def resume(path: Path) -> Path:
     return path
 
 
+def photo(path: Path) -> Path:
+    """Writes the persona's photo to `path`: a 64x64 grey PNG."""
+    chunk = lambda kind, data: (  # noqa: E731
+        struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    )
+    rows = b"".join(b"\0" + b"\x80" * 3 * 64 for _ in range(64))
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 64, 64, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
+    return path
+
+
 def _option(field: Field) -> str:
     options = field.options or []
     if SENSITIVE.search(field.label):
         return next((o for o in options if DECLINE.search(o)), options[0])
-    if re.search(r"country", field.label, re.IGNORECASE) and COUNTRY in options:
-        return COUNTRY
+    if re.search(r"country", field.label, re.IGNORECASE):
+        # where the persona's phone and zip code are
+        return next((o for o in options if o in COUNTRY_NAMES), options[0])
     return options[0]
 
 
@@ -87,9 +113,12 @@ def _text(field: Field) -> str:
     return value[: field.max_length] if field.max_length else value
 
 
-def answer(field: Field, cv: Path) -> Answer | None:
-    """The persona's answer to one field; None for a choice with no options to pick from."""
+def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None:
+    """The persona's answer to one field; None for a choice with no options to pick from, or
+    a file that takes neither a PDF nor, given a `picture`, a PNG."""
     match field.type:
+        case FieldType.FILE if field.accept and ".pdf" not in field.accept:
+            return str(picture) if picture and ".png" in field.accept else None
         case FieldType.FILE:
             return str(cv)
         case FieldType.PHONE:
@@ -115,23 +144,26 @@ def answer(field: Field, cv: Path) -> Answer | None:
             return _text(field)
 
 
-# A field the form shows only on some answers to another: "… (asked when 'Label' is A or B)".
-CONDITION = re.compile(r"\(asked when '(.+)' is (.+)\)$")
+def _asked(field: Field, given: dict[str, Answer]) -> bool:
+    """Whether the page shows the field, given the answers so far, when its label says it is
+    asked only after another field's answer."""
+    match = ASKED_WHEN.search(field.label)
+    if not match or match["trigger"] not in given:
+        return True
+    picked = given[match["trigger"]]
+    picks = match["value"].split(" or ")
+    shown = any(p in picks for p in ([picked] if isinstance(picked, str) else picked))
+    return shown != bool(match["negated"])
 
 
-def answers(fields: list[Field], cv: Path) -> dict[str, Answer]:
+def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
-    prefilled to the account, a résumé aside, and a conditional field its other answers hide."""
-    given = {
-        f.id: a
-        for f in fields
-        if (a := answer(f, cv)) is not None and not (f.prefilled and f.type is not FieldType.FILE)
-    }
-    by_label = {f.label: f.id for f in fields}
+    prefilled to the account, a résumé aside, and a field its own answers keep hidden."""
+    out, by_label = {}, {}
     for f in fields:
-        if (m := CONDITION.search(f.label)) and (trigger := by_label.get(m[1])) in given:
-            picked = given[trigger]
-            picks = m[2].split(" or ")
-            if not any(p in picks for p in ([picked] if isinstance(picked, str) else picked)):
-                given.pop(f.id, None)
-    return given
+        if (a := answer(f, cv, picture)) is None or not _asked(f, by_label):
+            continue
+        by_label[f.label] = a
+        if not (f.prefilled and f.type is not FieldType.FILE):
+            out[f.id] = a
+    return out
