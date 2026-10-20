@@ -49,7 +49,7 @@ _READ = """form => {
     if (!el.name) {
       const label = el.closest("div:has(> label)")?.querySelector(":scope > label");
       found.set(label?.htmlFor || "video", {id: label?.htmlFor || "video", kind: "video",
-        label: text(label), required: false, options: []});
+        label: text(label), required: /\*/.test(label?.textContent || ""), options: []});
       continue;
     }
     const name = el.name;
@@ -137,8 +137,10 @@ class Recruitee:
             raise Unsupported("posting_gone: no application form on the page") from None
         fields, self._kinds = [], {}
         for raw in form.evaluate(_READ):
-            if raw["kind"] == "video":
-                continue  # recorded in the page or uploaded to a video service, never required
+            if raw["kind"] == "video":  # recorded in the page, or uploaded to a video service
+                if raw["required"]:
+                    raise Unsupported(f"form_shape: {raw['label']!r} is a video question")
+                continue
             fields.append(_field(raw))
             self._kinds[raw["id"]] = raw["kind"]
         return fields
