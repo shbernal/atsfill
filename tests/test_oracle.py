@@ -66,6 +66,7 @@ def test_read_form(opened):
         "country",
         "addressLine1",
         "city",
+        "postalCode",
         "dateOfBirth",
         "3001",
         "3002",
@@ -79,7 +80,8 @@ def test_read_form(opened):
         "US-STANDARD-ORA_ETHNICITY_US_OTHERS-STANDARD",
         "job-alerts",
         "fullName",
-    ]  # the profile import and the optional education tiles are left out
+    ]  # the profile import, the optional education tiles and the state, which the postal
+    # code fills, are left out
     assert fields["legalDisclaimer"].label == "I agree with the terms and conditions"
     assert fields["lastName"].required and fields["lastName"].max_length == 150
     assert fields["title"].options == ["Mr.", "Ms."]
@@ -87,6 +89,8 @@ def test_read_form(opened):
     assert fields["country"].prefilled and fields["country"].label == "Country/Region"
     assert fields["country"].options == ["France", "Poland", "United Kingdom"]
     assert fields["city"].type is FieldType.TYPEAHEAD
+    assert fields["postalCode"].required  # the state is not, the postal code is
+    assert fields["postalCode"].options == ["0200, Acton, ACT", "2000, Sydney, NSW"]
     assert fields["dateOfBirth"].type is FieldType.DATE
     assert fields["3002"].type is FieldType.MULTI_CHOICE
     assert fields["3003"].options == ["Job board", "Employee referral", "Social media"]
@@ -108,6 +112,7 @@ def test_every_answer_reads_back(opened, page, resume):
         "country": "France",
         "addressLine1": "1 Example Street",
         "city": "London",
+        "postalCode": "2000, Sydney, NSW",
         "dateOfBirth": "1991-02-03",
         "3001": "Yes",
         "3002": ["Alumni", "None of the above"],

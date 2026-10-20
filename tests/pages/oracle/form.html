@@ -62,6 +62,14 @@
         <label class="input-row__label input-row__label--required" for="city-33">Town</label>
         <div class="input-row__control-container"><div class="cx-select-container"><input name="city" id="city-33" role="combobox" aria-controls="city-33-listbox" aria-required="true" class="cx-select-input" data-search="London, Greater London|Londonderry, County Londonderry|Leeds, West Yorkshire"><div role="grid" id="city-33-listbox" class="cx-select__list" hidden></div></div></div>
       </div>
+      <div class="input-row input-row--has-picker geo-hierarchy-form-element">
+        <label class="input-row__label" for="region2-34">State</label>
+        <div class="input-row__control-container"><div class="cx-select-container"><input name="region2" id="region2-34" role="combobox" aria-controls="region2-34-listbox" class="cx-select-input" data-options="ACT|NSW"><div role="grid" id="region2-34-listbox" class="cx-select__list" hidden></div></div></div>
+      </div>
+      <div class="input-row input-row--has-picker geo-hierarchy-form-element">
+        <label class="input-row__label input-row__label--required" for="postalCode-35">Postal Code</label>
+        <div class="input-row__control-container"><div class="cx-select-container"><input name="postalCode" id="postalCode-35" role="combobox" aria-controls="postalCode-35-listbox" aria-required="true" class="cx-select-input" data-geo="region2-34" data-options="0200, Acton, ACT|2000, Sydney, NSW"><div role="grid" id="postalCode-35-listbox" class="cx-select__list" hidden></div></div></div>
+      </div>
     </div>
   </address-form-v2>
 </div></apply-flow-block>
@@ -199,6 +207,11 @@
     list.hidden = false;
     list.querySelectorAll("[role=gridcell]").forEach(cell => cell.addEventListener("click", () => {
       input.value = input.dataset.code ? cell.textContent.split(" ")[0] : cell.textContent;
+      if (input.dataset.geo) {  // a postal code shows its code, and fills the levels above it
+        const parts = cell.textContent.split(", ");
+        input.value = parts[0];
+        document.getElementById(input.dataset.geo).value = parts.at(-1);
+      }
       list.hidden = true;
     }));
   };

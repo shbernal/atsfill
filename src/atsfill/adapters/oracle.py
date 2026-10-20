@@ -9,6 +9,7 @@ the answer's. Oracle keeps a draft of the application from then on, autosaved as
 import re
 import uuid
 from contextlib import suppress
+from dataclasses import replace
 from datetime import date
 from pathlib import PurePath
 from typing import Any
@@ -122,8 +123,8 @@ _READ = """() => {
       } else if (row.querySelector("input[role=combobox]")) {
         field.kind = "select";
         field.value = row.querySelector("input[role=combobox]").value;
-        field.search = !!row.closest(".address-form")
-          && !row.matches(".geo-hierarchy-form-element");
+        field.geo = row.matches(".geo-hierarchy-form-element");
+        field.search = !!row.closest(".address-form") && !field.geo;
       } else if (row.querySelector("input.apply-flow-input-radio-control")) {
         field.kind = "radios";
         field.options = pills(".apply-flow-input-radio__label");
@@ -185,6 +186,7 @@ _READ_BACK = """(ids) => {
     const input = row.querySelector("input:not([type=hidden]), textarea");
     const id = stable(named?.id || label?.getAttribute("for") || label?.id || input?.name);
     const kind = ids[id];
+    if (id in out) continue;  // a field shown twice is read where it is filled, the first
     const values = sel => [...row.querySelectorAll(sel)].map(text);
     if (kind === "phone") {
       out[id] = row.querySelector("input[role=combobox]").value
@@ -239,6 +241,7 @@ class Oracle:
         self._fields: dict[str, Field] = {}
         self._kinds: dict[str, str] = {}
         self._pages: dict[str, int] = {}  # field id: the page of the form it is on
+        self._picked: dict[str, str] = {}  # a geography field's id: the item picked in it
         self._months: list[str] = []
         self._job = ""
         self._uploads: dict[str, str] = {}
@@ -271,10 +274,14 @@ class Oracle:
         # The page numbers move between pages without checking the page left.
         for number in range(1, max(len(_page_numbers(page)), 1) + 1):
             _go_to(page, number)
-            for raw in page.evaluate(_READ):
-                if raw["id"] not in self._kinds and (field := self._described(page, raw)):
-                    self._kinds[field.id], self._pages[field.id] = raw["kind"], number
-                    fields.append(field)
+            described = [
+                (raw, field)
+                for raw in page.evaluate(_READ)
+                if raw["id"] not in self._kinds and (field := self._described(page, raw))
+            ]
+            for raw, field in _geography(described):
+                self._kinds[field.id], self._pages[field.id] = raw["kind"], number
+                fields.append(field)
         self._fields = {f.id: f for f in fields}
         return fields
 
@@ -312,6 +319,9 @@ class Oracle:
             value = values.get(field_id)
             if kind == "date" and isinstance(value, list):
                 values[field_id] = self._date_value(value)
+            picked = self._picked.get(field_id)
+            if picked and value and picked != value and picked.split(",")[0].strip() == value:
+                values[field_id] = picked  # an item that shows only its first part once picked
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def submit(self, page: Page) -> str | None:
@@ -353,7 +363,7 @@ class Oracle:
                 f"emailed_code: {email} is known to this employer's Oracle, which emails it a"
                 " code before it shows the form"
             )
-        page.locator(PAGINATION).first.wait_for(timeout=STEP_TIMEOUT_MS)
+        page.locator(f"{PAGINATION}:visible").first.wait_for(timeout=STEP_TIMEOUT_MS)
         _settle(page)
 
     def _described(self, page: Page, raw: dict[str, Any]) -> Field | None:
@@ -431,6 +441,7 @@ class Oracle:
                         _click(page, label)
             case "select", str():
                 _choose(page, row.locator("input[role=combobox]"), answer, exact=True)
+                self._picked[field_id] = answer
             case "typeahead", str():
                 _choose(page, row.locator("input[role=combobox]"), answer, field=field)
             case "phone", str():
@@ -476,8 +487,8 @@ class Oracle:
 
 
 def _click(page: Page, target: Locator) -> None:
-    """Clicks, once more after the app's loading spinner or once the cookie banner is
-    declined, either of which can come over the page."""
+    """Clicks, once more after what came over the target: the app's loading spinner, the
+    cookie banner (declined), or a header fixed over the top of the page."""
     try:
         browser.click(target)
     except browser.Covered as e:
@@ -485,10 +496,28 @@ def _click(page: Page, target: Locator) -> None:
             buttons = page.locator(COOKIES)
             decline = buttons.filter(has_text=re.compile("decline|reject|necessary", re.I))
             browser.click((decline if decline.count() else buttons).first)
-        elif "loading" not in str(e):
-            raise
-        _settle(page)
+        elif "loading" in str(e):
+            _settle(page)
+        else:  # a header fixed over the top of the page
+            target.evaluate("e => e.scrollIntoView({block: 'center'})")
         browser.click(target)
+
+
+def _geography(described: list[tuple[dict, Field]]) -> list[tuple[dict, Field]]:
+    """Leaves one field of the address's geography (state, city, postal code), the most
+    specific: its items name the levels above (`0200, Acton, ACT`), and picking one fills
+    them. It is required when any level is."""
+    levels = [(r, f) for r, f in described if r.get("geo") and f.id != COUNTRY and f.options]
+    if len(levels) < 2:
+        return described
+    parts = lambda f: max(len(o.split(",")) for o in f.options or [""])  # noqa: E731
+    kept = max(levels, key=lambda rf: parts(rf[1]))
+    required = any(f.required for _, f in levels)
+    return [
+        (r, replace(f, required=required) if (r, f) == kept else f)
+        for r, f in described
+        if (r, f) == kept or (r, f) not in levels
+    ]
 
 
 def _page_numbers(page: Page) -> list[str]:

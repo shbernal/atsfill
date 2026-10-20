@@ -6,7 +6,7 @@ Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last 
 
 - Each employer has its own tenant, `<tenant>.fa.<region>.oraclecloud.com` (`fa.ocs.oraclecloud.com`, `fa.oraclecloud.com` too). A job is `/hcmUI/CandidateExperience/<lang>/sites/<site>/job/<id>`; the same requisition shows under several sites, so the double-send key is `https://<tenant host>/hcmUI/CandidateExperience/job/<id>`.
 - Applying starts at `<job>/apply/email`: an email address, on most tenants the employer's terms (`legal-disclaimer`, a checkbox styled over a hidden input), and Next (`button[type=submit].apply-flow-pagination__button`). Past it, `<job>/apply/section/1`. Some tenants first offer to import a LinkedIn profile (`/easy-apply`); its "manually" link (`.quick-apply-flow__manually--link`) goes on to the form.
-- An address the tenant has seen before, even once on the email step, gets "Confirm Your Identity" (`.apply-flow-pin-code-required`) instead: a six-digit code is emailed to it. atsfill stops with `blocked`, `emailed_code`. The user's email will hit it on any employer they applied to or dry-ran before.
+- An address the tenant has seen before, even once on the email step, gets "Confirm Your Identity" (`.apply-flow-pin-code-required`) instead: a six-digit code is emailed to it. atsfill stops with `blocked`, `emailed_code`. A user's address meets it on every employer they applied to or dry-ran before; the test persona takes a new address each run.
 - Some tenants put an hCaptcha on the email step: `blocked`, `captcha`.
 - The form's metadata (`recruitingCECandidateProfileBlocksMetadata`, `recruitingCEQuestions`) answers 401 until the email step is passed, so there is no `read_api`. Reading passes the step with a throwaway `atsfill.read.<random>@example.com`; filling clears cookies and storage and passes it again with the answer's address.
 - From the email step on, Oracle keeps a draft (`POST recruitingCEJobApplicationDrafts`, then a `PATCH` as fields change); a picked file is attached to it at once.
@@ -30,7 +30,8 @@ Each rendering, and on how many of the 12 forms reached out of 15 postings (2026
 | hidden `input.apply-flow-input-radio-control` under `label.apply-flow-input-radio` | `choice` | 5 |
 | checkbox list, `.input-row__control-item` inputs with their labels | `multi_choice` | 6 |
 | dropdown with a list (country, gender, veteran status, a question) | `choice` | 12 |
-| dropdown listing only what is typed (a geography search) | `typeahead` | 0, its kind seen on address formats |
+| address geography (`.geo-hierarchy-form-element`): state, city, postal code dropdowns, each filtering the others; an item names the levels above it (`0200, Acton, ACT`), and once picked shows only its own (`0200`) | `choice`, the most specific level only; required when any level is | 3 of 10 at the gate |
+| dropdown listing only what is typed | `typeahead` | 0 |
 | address search in the address block (`addressLine1`, US format): suggestions fill ZIP, city, state and county | `text`, typed and left unpicked | US tenants |
 | date: `.datepicker-row`, three dropdowns, month name, day, year | `date` | 2 |
 | resume, cover letter (`resume-upload-button`, `cover-letter-upload-button`) | `file`, id `resume`, `coverLetter` | 12 |
@@ -45,11 +46,13 @@ Each rendering, and on how many of the 12 forms reached out of 15 postings (2026
 ## Filling
 
 - Some tenants show a cookie banner (`.cookie-consent`) over the form; it is declined when it covers a click.
-- Every click checks what is on top: the app's loading spinner (`.app-loading-spinner`, always in the page, `visibility: hidden` when idle) comes over it while the app loads.
+- Every click checks what is on top: the app's loading spinner (`.app-loading-spinner`, always in the page, `visibility: hidden` when idle) comes over it while the app loads, and some tenants fix a header over the top of the page, so a covered target is brought to the middle of the window.
 - Text is filled, then the field blurred: Oracle's bindings take the value on change.
 - A dropdown answer is typed into it and its exact item clicked. Some lists search on part of an item only (a postal code list on its code): when typing the whole answer finds nothing, the item is looked for in the whole list. A phone number picks the longest country code its digits start with (the first country listed under that code) and types the rest; the number reads back as code and number.
 - The address search keeps what is typed when no suggestion is picked: picking one would overwrite the ZIP, city, state and county answers.
 - The country is filled first: the address below it changes with it.
+- Picking an item of the address geography fills the levels above it, so only the most specific level is asked; it reads back as the picked item when the field shows that item's first part.
+- A field can show twice (the e-signature on some tenants); it is filled and read back where it shows first.
 
 ## Read-back and submit
 
