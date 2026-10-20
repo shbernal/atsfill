@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<!-- A JazzHR job page, composed from one example of each rendering in docs/adapters/jazzhr.md:
+     the markup as JazzHR serves it, its scripts reduced to what the form needs offline. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acme - Career Page</title>
+<style>.none { display: none; } #tracking-consent-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #eee; }</style>
+</head>
+<body>
+<main>
+<h1>Software Engineer</h1>
+<form action="https://acme.applytojob.com/apply/AbCdE12345/Software-Engineer" method="POST" data-test="form_submit_new_resume" id="form_submit_new_resume" enctype="multipart/form-data">
+<input type="hidden" id="id_form_id" name="form_id" value="submit_new_resume" />
+<input type="hidden" name="resumator-job-value" data-test="resumator-job-value" id="resumator-job-value" maxlength="" class="" value="AbCdE12345" />
+<div class='job-form-fields'>
+    <div class='form-group'>
+        <label id='resumator-firstname-label' for='resumator-firstname-value' class='control-label'>First Name<i class="asterisk">*</i></label>
+        <input type='text' id='resumator-firstname-value' name='resumator-firstname-value' value='' class='form-control'/>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-email-label' for='resumator-email-value' class='control-label'>Email Address<i class="asterisk">*</i></label>
+        <input type='email' id='resumator-email-value' name='resumator-email-value' value='' class='form-control'/>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-phone-label' for='resumator-phone-value' class='control-label'>Phone<i class="asterisk">*</i></label>
+        <input type="tel" id="resumator-phone-value" name="resumator-phone-value" maxlength="50" class="form-control" value="">
+    </div>
+    <div class="form-group" id="resumator-address">
+        <label id='resumator-address-label' for='resumator-address-value' class='control-label'>Address<i class="asterisk">*</i></label>
+        <div class="resumator-input" id="resumator-address-field">
+            <input type="text" id="resumator-address-value" name="resumator-address-value" maxlength="255" class="form-control" value="" placeholder="Address">
+            <div class="row">
+                <div class="col col-xs-5"><input type="text" id='resumator-city-value' name="resumator-city-value" maxlength="255" class="form-control" value="" placeholder="City"></div>
+                <div class="col col-xs-4"><input type="text" id='resumator-state-value' name="resumator-state-value" maxlength="50" class="form-control" value="" placeholder="State/Province"></div>
+                <div class="col col-xs-3"><input type="text" id='resumator-postal-value' name="resumator-postal-value" maxlength="50" class="form-control" value="" placeholder="Postal"></div>
+            </div>
+        </div>
+    </div>
+    <div id="resumator-resume" class='form-group'>
+        <label id='resumator-resume-label' for='resumator-resume-value' class='control-label'>Resume<i class="asterisk">*</i></label>
+        <div id="resumator-resume-options" class="resumator-resume-text">
+            <a id="resumator-choose-upload" class="resumator-resume-action" href="#">Attach resume</a>
+            or
+            <a id="resumator-choose-paste" class="resumator-resume-action" href="#">Paste resume</a>
+        </div>
+        <div id="resumator-resume-upload-wrapper" class="none">
+            <div class="resumator-resume-text">Attach resume as .pdf, .doc, .docx, .odt, .txt, or .rtf (limit 5MB)</div>
+            <div class="resumator-input" id="resumator-resume-field">
+                <input type="hidden" name="MAX_FILE_SIZE" value="10585760" /><input type="file"  class="" id="resumator-resume-value" name="resumator-resume-value">
+            </div>
+        </div>
+        <div id="resumator-resume-paste-wrapper"  class="resumator-resume-text none">
+            <div class="resumator-input" id="resumator-resumetext-field">
+                <textarea name="resumator-resumetext-value" id="resumator-resumetext-value" class="form-control resumator-field" rows='5'></textarea>
+            </div>
+        </div>
+    </div>
+    <textarea  name="resumator-xml-value" id="resumator-xml-value" class="none"></textarea>
+    <div class='form-group'>
+        <label id='resumator-coverletter-label' for='resumator-coverletter-value' class='control-label'>Cover Letter</label>
+        <textarea id='resumator-coverletter-value' name='resumator-coverletter-value' class='form-control resumator-field' rows='5'></textarea>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-citizen-label' for='resumator-citizen-value' class='control-label'>What's your citizenship / employment eligibility?<i class="asterisk">*</i></label>
+        <select id="resumator-citizen-value" name="resumator-citizen-value" class="form-control"><option value='0' selected>No answer</option><optgroup label="United States"><option value='10'>I am a U.S. Citizen/Permanent Resident</option><option value='40'>Non-citizen seeking work authorization</option></optgroup><optgroup label="Canada"><option value='60'>I am a Canadian Citizen/Permanent Resident</option></optgroup><option value='99'>Other</option></select>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-salary-label' for='resumator-salary-value' class='control-label'>Desired salary</label>
+        <input type='text' id='resumator-salary-value' name='resumator-salary-value' class='form-control' value=''>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-start-label' for='resumator-start-value' class='control-label'>Earliest start date?<i class="asterisk">*</i></label>
+        <input type='text' id='resumator-start-value' name='resumator-start-value' class='form-control resumator-datepicker' value=''>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-questionnaire-q1001-label' for='resumator-questionnaire-q1001' class='control-label'>Are you located within a commutable distance to our office?<i class="asterisk">*</i></label>
+        <select id="resumator-questionnaire-q1001" name="resumator-questionnaire[1001]" class="form-control resumator-select-field"><option value='resumator_no_selection'>-- No answer --</option><option value='Yes.'>Yes.</option><option value='No, but I am willing to relocate.'>No, but I am willing to relocate.</option></select>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-questionnaire-q1002-label' for='resumator-questionnaire-q1002' class='control-label'>How many years of experience do you have?</label>
+        <input type="text" name="resumator-questionnaire[1002]" data-test="resumator-questionnaire-q1002" id="resumator-questionnaire-q1002" maxlength="255" class="form-control resumator-field" value="" />
+    </div>
+    <div class='form-group'>
+        <label id='resumator-questionnaire-q1003-label' for='resumator-questionnaire-q1003' class='control-label'>Why this role?</label>
+        <textarea name="resumator-questionnaire[1003]" id="resumator-questionnaire-q1003" class="form-control resumator-field resumator-textarea-medium"></textarea>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-questionnaire-q1004-label' for='resumator-questionnaire-q1004' class='control-label'>Please select your availability.<i class="asterisk">*</i></label>
+        <input type="hidden" name="resumator-questionnaire[1004]" data-test="resumator-questionnaire-q1004" id="resumator-questionnaire-q1004" maxlength="" class="resumator-questionnaire-checkbox-answer" value="" /><label class="checkbox" for="resumator-checkbox-1004-1"><input type="checkbox" id="resumator-checkbox-1004-1" name="resumator-checkbox-1004-1" class="resumator-questionnaire-checkbox" value="Weekdays"  />Weekdays</label><label class="checkbox" for="resumator-checkbox-1004-2"><input type="checkbox" id="resumator-checkbox-1004-2" name="resumator-checkbox-1004-2" class="resumator-questionnaire-checkbox" value="Weekends"  />Weekends</label><label class="checkbox" for="resumator-checkbox-1004-3"><input type="checkbox" id="resumator-checkbox-1004-3" name="resumator-checkbox-1004-3" class="resumator-questionnaire-checkbox" value="Evenings"  />Evenings</label>
+    </div>
+    <div class='form-group'>
+        <label id='resumator-questionnaire-q1005-label' for='resumator-questionnaire-q1005' class='control-label'>When could you start?</label>
+        <input type="text" name="resumator-questionnaire[1005]" data-test="resumator-questionnaire-q1005" id="resumator-questionnaire-q1005" maxlength="255" class="form-control resumator-field resumator-datepicker resumator-textfield-small" value="" />
+    </div>
+    <div class="form-group">
+        <label>The following questions are entirely optional.</label>
+    </div>
+    <div class='form-group'>
+        <div class="resumator-field-wrapper resumator-resume-text" id="resumator-eeo_gender">
+            <div class="resumator-label resumator-resume-text" id="resumator-eeo_gender-label"></div>
+            <div class="resumator-input" id="resumator-eeo_gender-field">
+                <label for=resumator-eeo_gender-value>Gender<select id="resumator-eeo_gender-value" name="resumator-eeo_gender-value" class="form-control"><option value='0' selected>Decline to answer</option><option value='1'>Female</option><option value='2'>Male</option></select></label>
+            </div>
+        </div>
+    </div>
+    <div class="resumator-field-wrapper resumator-resume-text" id="resumator-eeo-new-veteran">
+        <div class="resumator-label resumator-resume-text" id="resumator-eeo-new-veteran-label"><strong>Veteran status</strong></div>
+        <div class="resumator-input" id="resumator-eeo-new-veteran-field">
+            <label for="resumator-eeoc_veteran-value_1"><input type="radio" name="resumator-eeoc_veteran-value" id="resumator-eeoc_veteran-value_1" class="eeoc-veteran-radio" value="1"  /> I IDENTIFY AS ONE OR MORE OF THE CLASSIFICATIONS OF PROTECTED VETERAN LISTED ABOVE</label><br><label for="resumator-eeoc_veteran-value_2"><input type="radio" name="resumator-eeoc_veteran-value" id="resumator-eeoc_veteran-value_2" class="eeoc-veteran-radio" value="2"  /> I AM NOT A PROTECTED VETERAN</label><br><label for="resumator-eeoc_veteran-value_0"><input type="radio" name="resumator-eeoc_veteran-value" id="resumator-eeoc_veteran-value_0" class="eeoc-veteran-radio" value="0"  /> I DON’T WISH TO ANSWER</label>
+        </div>
+    </div>
+    <div id="resumator-new-disability-message">
+        <div class="text-center"><strong>Voluntary Self-Identification of Disability</strong></div>
+        <div id="disability-input-area">
+            <div class="centered-message box-message">
+                <div class="resumator-label" style="text-align:center;">Please check one of the boxes below:</div>
+            </div>
+            <div class="resumator-input">
+                <div class='form-group'>
+                    <label>
+                        <input type='radio' name='resumator-eeoc_disability-value' id='resumator-eeoc_disability-value-1' value='1'>
+                        YES, I HAVE A DISABILITY, OR HAVE HAD ONE IN THE PAST                    </label>
+                    <label>
+                        <input type='radio' name='resumator-eeoc_disability-value' id='resumator-eeoc_disability-value-0' value='0'>
+                        I DO NOT WANT TO ANSWER                    </label>
+                </div>
+                <table id="disability-signature-area" class='form-group'>
+                    <tr>
+                        <td><label for="resumator-eeoc_disability_signature-value">Name<input type="text" name="resumator-eeoc_disability_signature-value" data-test="resumator-eeoc_disability_signature-value" id="resumator-eeoc_disability_signature-value" maxlength="255" class="resumator-field w200" value="" /></label></td>
+                        <td><label for="resumator-eeoc_disability_date-value">Date<input type="text" name="resumator-eeoc_disability_date-value" data-test="resumator-eeoc_disability_date-value" id="resumator-eeoc_disability_date-value" maxlength="10" class="resumator-field resumator-datepicker w150" value="" /></label></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="sms-consent" class="form-group">
+        <label><input type="checkbox" id="resumator-sms-consent" name="resumator-sms-consent" value="1"> I consent to receive SMS/text messages regarding my job application with Acme.</label>
+        <input type="hidden" id="resumator-sms-consent-displayed" name="resumator-sms-consent-displayed">
+    </div>
+    <div id="resumator-submit" class="form-group">
+        <a href="#" id="resumator-submit-resume" class="btn">Submit Application</a>
+    </div>
+</div>
+</form>
+</main>
+<footer>
+    <div id="tracking-consent-banner" style="display:none;">
+        <span>This website uses cookies and other analytics technologies.</span>
+        <button class="tracking-consent-button allow" onclick="this.parentNode.style.display='none'">Allow</button>
+        <button class="tracking-consent-button reject" onclick="this.parentNode.style.display='none'">Reject All</button>
+    </div>
+</footer>
+<script>
+setTimeout(() => { document.getElementById("tracking-consent-banner").style.display = "block"; }, 300);
+document.getElementById("resumator-choose-upload").onclick = () => {
+  document.getElementById("resumator-resume-upload-wrapper").classList.remove("none");
+  document.getElementById("resumator-resume-options").style.display = "none";
+  return false;
+};
+document.getElementById("resumator-submit-resume").onclick = () => {
+  document.getElementById("form_submit_new_resume").submit();
+  return false;
+};
+</script>
+</body>
+</html>
