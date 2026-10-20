@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- Manatal's apply page, one example of each rendering in docs/adapters/manatal.md: the fields
+     form.json lists, drawn as the career page's Vue template draws them, select2 and flatpickr
+     reduced to what the adapter touches. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acme - Apply</title>
+<script>
+  const selectedJobId = "42";
+  const isTCPPRequired = "True";
+</script>
+<style>.select2-hidden-accessible { position: absolute; width: 1px; height: 1px; overflow: hidden; }
+.checkcontainer input, .radiocontainer input { opacity: 0; position: absolute; }</style>
+</head>
+<body>
+<div id="app">
+  <form id="form"></form>
+  <div id="done" hidden>Thank you for your application!</div>
+</div>
+<script>
+const NATIONALITIES = [[236, "American (United States)"], [75, "French (France)"], [196, "Singaporean (Singapore)"]];
+const CURRENCIES = [[1, "Singapore dollar"], [2, "Euro"]];
+const FREQUENCIES = [["month", "Monthly"], ["year", "Yearly"]];
+const NOTICE = [["0", "Immediately"], ...[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120].map(d => [`${d} 00:00:00`, `${d} days`]), ["121 00:00:00", "120+ days"]];
+const YEARS = [[0, "No experience"], ...Array.from({length: 20}, (_, i) => [i + 1, `${i + 1}+ year`])];
+
+const select = (f, options, placeholder, multiple) =>
+  `<select id="field${f.id}" name="${f.id}" class="form-control${multiple ? " multiselect" : ""}"${multiple ? " multiple" : ""}>` +
+  (placeholder ? `<option value="">${placeholder}</option>` : "") +
+  options.map(([v, t]) => `<option value="${v}">${t}</option>`).join("") + "</select>";
+const choices = (f, type) => "<ul>" + f.client_field_answer_choices.map((a, i) =>
+  `<li><label class="${type}container"> ${a}<input type="${type === "check" ? "checkbox" : type}" id="${f.id}${i}" name="${f.id}" value="${a}"></label></li>`).join("") + "</ul>";
+const pair = pairs => pairs.map(p => [p, p]);
+
+function render(f) {
+  const slug = f.client_field_slug, type = f.client_field_field_type;
+  const text = (t = "text") => `<input type="${t}" id="field${f.id}" name="${f.id}" class="form-control">`;
+  if (f.field_type === "resume") return `<input type="file" id="field${f.id}" name="${f.id}">`;
+  if (f.field_type === "attachment") return `<input type="file" multiple id="field${f.id}" name="${f.id}">`;
+  if (f.field_type === "educations") return `<button type="button">Add Education</button>`;
+  if (f.field_type === "social_media") return text();
+  if (slug === "expected_salary" || slug === "current_salary") {
+    const prefix = slug.split("_")[0];
+    return text("number") + select({id: ""}, CURRENCIES).replace('id="field"', `id="${prefix}_currency"`)
+      + select({id: ""}, FREQUENCIES).replace('id="field"', `id="${prefix}_frequency"`);
+  }
+  if (f.field_type === "candidate_field") {
+    if (slug === "gender") return select(f, [["male", "Male"], ["female", "Female"], ["other", "Other"]]);
+    if (slug === "current_notice_period") return select(f, NOTICE, "Select Notice Period");
+    if (slug === "years_of_experience") return select(f, YEARS, "Select Years of Experience");
+    if (slug === "nationalities") return select(f, [], null, true);
+    if (type === "dropdown") return select(f, pair(f.client_field_answer_choices), `Select ${f.label}`);
+    if (type === "multiple_select_dropdown") return select(f, pair(f.client_field_answer_choices), null, true);
+    if (type === "checkbox") return choices(f, "check");
+    if (type === "multiple_choice") return choices(f, "radio");
+  }
+  switch (f.response_type) {
+    case "integer": return text("number");
+    case "boolean": return `<input type="checkbox" id="field${f.id}" name="${f.id}"><label>${f.label}: *</label>`;
+    case "longtext": return `<textarea id="field${f.id}" name="${f.id}" class="form-control"></textarea>`;
+    case "datetime": return `<input type="text" readonly id="field${f.id}" name="${f.id}" class="form-control datetimefield">`;
+  }
+  return text();
+}
+
+fetch(`https://www.careers-page.com/api/v1.0/jobs/${selectedJobId}/application-form/`).then(r => r.json()).then(fields => {
+  const form = document.getElementById("form");
+  form.innerHTML = fields.map(f => `<div class="form-group">` +
+    (f.response_type === "boolean" ? "" : `<label>${f.label}: ${f.is_required ? "<span>*</span>" : ""}</label>`) +
+    render(f) + "</div>").join("") +
+    `<input type="checkbox" name="terms_and_condition" value="checked"> I agree to the terms and conditions & privacy policy
+     <button type="submit" id="submit-id-submit">Apply</button>`;
+  setTimeout(() => {  // the nationalities come in a request of their own
+    document.getElementById("field12").innerHTML = NATIONALITIES.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
+    for (const el of document.querySelectorAll(".multiselect")) el.classList.add("select2-hidden-accessible");
+  }, 300);
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    fetch(`https://www.careers-page.com/api/v1.0/jobs/${selectedJobId}/application-form/`, {method: "POST", body: "{}"})
+      .then(() => { form.hidden = true; document.getElementById("done").hidden = false; });
+  });
+});
+</script>
+</body>
+</html>
