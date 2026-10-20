@@ -6,6 +6,8 @@ Issues and pull requests are welcome, including fully AI-generated ones.
 
 Say in the issue or pull request which harness and model wrote it (for example "Claude Code, Claude Opus 5.5"), or that you wrote it yourself.
 
+Commit messages carry no AI attribution or disclosure: no `Co-authored-by:` trailers for a tool, no "Generated with" lines. CI rejects a commit that has one, so turn your harness's commit attribution off. A squash merge builds its message from the commits, never from the pull request description, which keeps the disclosure off `main`.
+
 ## Setup
 
 ```sh
