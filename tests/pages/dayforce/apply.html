@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Apply | Dayforce Jobs</title>
+<style>
+  body { font-family: sans-serif; margin: 0; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 120px; }
+  .ant-form-item { margin: 10px 0; }
+  .ant-select { position: relative; display: inline-block; min-width: 260px; }
+  .ant-select-selector { border: 1px solid #999; padding: 4px; min-height: 22px; cursor: pointer; }
+  .ant-select-dropdown { position: absolute; background: #fff; border: 1px solid #999; z-index: 10; }
+  .ant-select-dropdown-hidden { display: none; }
+  .rc-virtual-list-holder { max-height: 64px; overflow-y: auto; }
+  .ant-select-item-option { padding: 2px 6px; height: 16px; }
+  [role=dialog], .ant-modal-wrap { position: fixed; inset: 20%; background: #fff; border: 2px solid; z-index: 20; }
+  .bar { position: fixed; bottom: 0; left: 0; right: 0; height: 48px; background: #eee; z-index: 5; }
+  #cookies { position: fixed; top: 0; right: 0; z-index: 30; background: #fff; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Engineer</h1>
+  <div id="steps">Candidate Info / Questionnaire / Submit</div>
+  <div id="step0">
+    <h2>Candidate Info</h2>
+    <section>
+      <h2 test-id="personal-info-title">Personal Information</h2>
+      <div id="personal"></div>
+    </section>
+    <section>
+      <h2 test-id="resume-upload-title">Resume Upload</h2>
+      <div class="ant-form-item"><label for="jobPostingApplication_files_resume">Attachment:</label>
+        <input id="jobPostingApplication_files_resume" type="file" accept="doc,docx,pdf"><div class="name"></div></div>
+    </section>
+    <section>
+      <h2 test-id="cover-letter-upload-title">Cover Letter</h2>
+      <div class="ant-form-item"><input id="jobPostingApplication_files_coverLetter" type="file" accept="pdf"><div class="name"></div></div>
+    </section>
+    <section>
+      <h2>Availability</h2>
+      <div id="hours"></div>
+    </section>
+    <section>
+      <h2 test-id="workhistory-title">Employment History</h2>
+      <button type="button" test-id="add-workhistory-record">Add Employment History</button>
+      <div id="work"></div>
+    </section>
+  </div>
+  <div id="questionnaire" class="hidden"></div>
+  <div id="submit" class="hidden">
+    <p>Candidate Acknowledgement</p>
+    <div class="ant-form-item"><label class="ant-checkbox-wrapper"><input id="jobPostingApplication_userAcknowledged" type="checkbox"> I agree to the Candidate Acknowledgement</label></div>
+  </div>
+  <div class="bar"><button type="button" test-id="application-next-step" class="ant-btn">Next</button></div>
+</main>
+<div id="dialogs">
+  <div class="ant-modal-wrap" id="privacy"><p>Privacy Policy of Acme</p>
+    <input type="checkbox" test-id="client-privacy-policy-modal-agree-checkbox">
+    <button type="submit" test-id="client-privacy-policy-modal-save-button">Save</button></div>
+  <div role="dialog" id="sms" class="hidden"><h2>SMS Consent</h2>
+    <label class="ant-radio-wrapper"><input type="radio" name="sms" value="no" checked> I do not consent</label>
+    <label class="ant-radio-wrapper"><input type="radio" name="sms" value="yes"> I consent</label>
+    <button type="submit" test-id="sms-consent-dialog-save-button">Save</button></div>
+  <div id="cookies"><button test-id="cookie-preferences-banner-reject-button">Reject</button></div>
+</div>
+<script>
+const ID = "jobPostingApplication_";
+const COUNTRIES = ["Afghanistan", "Albania", "Australia", "France", "Germany", "Japan",
+  "United Kingdom", "United States of America", "Zambia"];
+const STATES = {"United Kingdom": ["England", "Greater London", "Scotland"],
+  "United States of America": ["Alaska", "New York"]};
+const DIALS = ["🇦🇬 +1 Antigua and Barbuda", "🇺🇸 +1 United States", "🇬🇧 +44 United Kingdom"];
+let sms = "no";
+
+function el(html) { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; }
+
+// An Ant Design select: the input, its shown value and a dropdown portaled to the body.
+function select(id, options, {readonly = false, disabled = false, onPick = () => {}, label = ""} = {}) {
+  const box = el(`<div class="ant-select"><div class="ant-select-selector"><span><input id="${id}"
+    type="search" role="combobox" ${readonly ? "readonly" : ""} ${disabled ? "disabled" : ""}
+    ${label ? `aria-label="${label}"` : ""}></span><span class="item"></span></div></div>`);
+  const input = box.querySelector("input"), item = box.querySelector(".item");
+  const drop = el(`<div class="ant-select-dropdown ant-select-dropdown-hidden"><div class="rc-virtual-list">
+    <div class="rc-virtual-list-holder"><div><div class="rc-virtual-list-holder-inner" role="listbox"
+    id="${id}_list"></div></div></div></div></div>`);
+  document.body.append(drop);
+  const list = drop.querySelector("[role=listbox]");
+  const render = filter => {
+    list.innerHTML = "";
+    for (const o of options()) {
+      if (filter && !o.toLowerCase().includes(filter.toLowerCase())) continue;
+      const opt = el(`<div role="option" class="ant-select-item ant-select-item-option"></div>`);
+      if (!o.startsWith("🇦") && !o.startsWith("🇺") && !o.startsWith("🇬")) opt.setAttribute("title", o);
+      opt.textContent = o;
+      opt.addEventListener("click", () => {
+        item.className = "item ant-select-selection-item";
+        if (opt.hasAttribute("title")) item.setAttribute("title", o);
+        item.textContent = o.startsWith("🇦") || o.startsWith("🇺") || o.startsWith("🇬") ? o.split(" ").slice(0, 2).join(" ") : o;
+        input.value = ""; drop.classList.add("ant-select-dropdown-hidden"); onPick(o);
+      });
+      list.append(opt);
+    }
+  };
+  box.querySelector(".ant-select-selector").addEventListener("click", () => {
+    if (input.disabled) return;
+    const r = box.getBoundingClientRect();
+    drop.style.top = `${r.bottom + scrollY}px`; drop.style.left = `${r.left}px`;
+    render(""); drop.classList.remove("ant-select-dropdown-hidden"); input.focus();
+  });
+  input.addEventListener("input", () => render(input.value));
+  input.addEventListener("keydown", e => { if (e.key === "Escape") drop.classList.add("ant-select-dropdown-hidden"); });
+  return box;
+}
+
+function item(label, control, key, required) {
+  const div = el(`<div class="ant-form-item"><div class="ant-form-item-label"><label
+    for="${ID}${key}" class="${required ? "ant-form-item-required" : ""}">${label}</label></div></div>`);
+  div.append(control);
+  return div;
+}
+
+function text(id, max) { return el(`<input id="${id}" type="text" ${max ? `maxlength="${max}"` : ""}>`); }
+
+function personalForm() {
+  const p = ID + "personalInfo_", form = document.getElementById("personal");
+  form.innerHTML = "";
+  form.append(item("Email Address", text(p + "email"), "personalInfo_email", true));
+  form.append(item("Confirm Email Address", text(p + "confirmEmail"), "personalInfo_confirmEmail", true));
+  form.append(item("Prefix", select(p + "prefixId", () => ["Mr", "Ms", "Dr"], {readonly: true}), "personalInfo_prefixId"));
+  form.append(item("First Name", text(p + "firstName"), "personalInfo_firstName", true));
+  form.append(item("Last Name", text(p + "lastName"), "personalInfo_lastName", true));
+  const phone = el(`<div></div>`);
+  phone.append(select("rc_select_9", () => DIALS, {label: "Country dialing code"}), text(p + "mobilePhone"));
+  form.append(item("Mobile Phone Number", phone, "personalInfo_mobilePhone", true));
+  form.append(item("Preferred Contact Method", select(p + "preferredContactMethod", () => ["Email", "Mobile Phone"]), "personalInfo_preferredContactMethod", true));
+  let country = null;
+  const state = select(p + "stateCode", () => STATES[country] || [], {disabled: true});
+  form.append(item("Country", select(p + "countryCode", () => COUNTRIES, {onPick: c => {
+    country = c; state.querySelector("input").disabled = false; }}), "personalInfo_countryCode", true));
+  form.append(item("State/Province", state, "personalInfo_stateCode", true));
+  form.append(item("City", text(p + "city"), "personalInfo_city", true));
+  form.append(item("Zip / Postal Code", text(p + "postalCode", 10), "personalInfo_postalCode", true));
+  const details = item("Additional details", text(p + "candidateSourceDescription"), "personalInfo_candidateSourceDescription", true);
+  details.classList.add("hidden");
+  form.append(item("How did you hear about this job?", select(p + "candidateSource", () => ["Job Board", "Agency"], {onPick: s => {
+    details.classList.toggle("hidden", s !== "Agency"); }}), "personalInfo_candidateSource", true));
+  form.append(details);
+  const update = el(`<button type="submit">Update</button>`);
+  update.addEventListener("click", () => {
+    const name = document.getElementById(p + "firstName").value + " " + document.getElementById(p + "lastName").value;
+    form.innerHTML = `<p>${name}</p>`;
+  });
+  form.append(update);
+}
+
+// Work hours: open from the start, saved only with a day ticked and its hours.
+function hoursForm() {
+  const h = ID + "workHoursAvailability_", form = document.getElementById("hours");
+  for (const day of ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]) {
+    const box = el(`<input id="${h}${day}_isChecked" type="checkbox">`);
+    const row = item(day[0].toUpperCase() + day.slice(1), box, `workHoursAvailability_${day}_isChecked`);
+    box.addEventListener("change", () => {
+      row.querySelectorAll("input[type=time]").forEach(x => x.remove());
+      if (box.checked) row.append(el(`<input id="${h}${day}_start" type="time">`), el(`<input id="${h}${day}_end" type="time">`));
+    });
+    form.append(row);
+  }
+  form.append(item("Comments", el(`<textarea id="${h}comment"></textarea>`), "workHoursAvailability_comment"));
+  const update = el(`<button type="submit" test-id="work-hours-update-button">Update</button>`);
+  update.addEventListener("click", () => {
+    const times = [...form.querySelectorAll("input[type=time]")];
+    if (!times.length || times.some(x => !x.value)) return;
+    form.innerHTML = `<p>${times.length / 2} days</p>`;
+  });
+  form.append(update);
+}
+
+function workForm() {
+  const w = ID + "workHistory_0_", form = document.getElementById("work");
+  form.append(item("Employer Name", text(w + "companyName"), "workHistory_0_companyName", true));
+  form.append(item("Start Date", el(`<input id="${w}effectiveStart" type="date">`), "workHistory_0_effectiveStart", true));
+  form.append(item("Current Job", el(`<input id="${w}isCurrent" type="checkbox">`), "workHistory_0_isCurrent"));
+  form.append(item("State/Province", select(w + "stateCode", () => Object.values(STATES).flat()), "workHistory_0_stateCode"));
+  const update = el(`<button type="submit">Update</button>`);
+  update.addEventListener("click", () => {
+    const start = document.getElementById(w + "effectiveStart").value;
+    if (start > new Date().toISOString().slice(0, 10)) return;  // a future date is refused silently
+    form.innerHTML = `<p>${document.getElementById(w + "companyName").value}</p>`;
+  });
+  form.append(update);
+}
+
+// Questionnaire pages: each question's controls under ids that count the page's statements.
+const PAGES = [
+  {title: "Screening", questions: [
+    {type: "radio", label: "Do you hold a licence?", options: ["Yes", "No"], followUp: "Yes"},
+    {type: "statement", label: "Please read the following."},
+    {type: "dropdown", label: "Which shift suits you?", options: ["Days", "Nights"]},
+    {type: "text", label: "Your notice period"},
+    {type: "checkbox", label: "I agree to a background check"},
+    {type: "multi", label: "Which locations?", options: ["North", "South", "East"]},
+  ]},
+  {title: "Disability Form Questionnaire", disability: true, questions: [
+    {type: "prefilled", label: "Name"},
+    {type: "multi", label: "Disability", options: ["Yes, I have a disability", "No, I do not", "I do not want to answer"]},
+  ]},
+];
+
+function questionnaire(n) {
+  const page = PAGES[n], box = document.getElementById("questionnaire");
+  box.innerHTML = `<p>Questionnaire ${n + 1} of ${PAGES.length}</p><h2>${page.title}</h2>`;
+  page.questions.forEach((q, j) => {
+    const base = `${ID}sections_${n}_questionnaire_questions_${j}_`;
+    let control;
+    if (q.type === "statement") { box.append(el(`<p>${q.label}</p>`)); return; }
+    if (q.type === "radio") {
+      control = el(`<div id="${base}selectedOption" class="ant-radio-group"></div>`);
+      for (const o of q.options) {
+        const w = el(`<label class="ant-radio-wrapper"><input type="radio" name="${base}"> <span>${o}</span></label>`);
+        w.addEventListener("click", () => {
+          control.querySelectorAll(".ant-radio-wrapper").forEach(x => x.classList.remove("ant-radio-wrapper-checked"));
+          w.classList.add("ant-radio-wrapper-checked");
+          follow.classList.toggle("hidden", o !== q.followUp);
+        });
+        control.append(w);
+      }
+      var follow = item("Enter additional comments here", text(base + "answerFollowup"), `sections_${n}_f`, true);
+      follow.classList.add("hidden");
+      box.append(item(q.label, control, base));
+      box.append(follow);
+      return;
+    }
+    if (q.type === "dropdown") control = select(base + "selectedOption", () => q.options);
+    if (q.type === "text") control = text(base + "answerText");
+    if (q.type === "prefilled") control = el(`<input id="${base}answerText" type="text" disabled value="Ada Placeholder">`);
+    if (q.type === "checkbox") control = el(`<input id="${base}isChecked" type="checkbox">`);
+    if (q.type === "multi") {
+      control = el(`<div id="${base}selectedOptionIds" class="ant-checkbox-group"></div>`);
+      for (const o of q.options) control.append(el(`<label class="ant-checkbox-wrapper"><input type="checkbox"> ${o}</label>`));
+    }
+    box.append(item(q.label, control, base));
+  });
+}
+
+let step = 0;
+document.querySelector("[test-id=application-next-step]").addEventListener("click", e => {
+  const button = e.target;
+  if (step === 0 && document.getElementById(ID + "personalInfo_email")) return;  // an open section
+  if (step === 0 && document.getElementById(ID + "workHistory_0_companyName")) return;
+  if (step === 0 && document.getElementById(ID + "workHoursAvailability_sunday_isChecked")) return;
+  step += 1;
+  document.getElementById("step0").classList.add("hidden");
+  if (step <= PAGES.length) {
+    document.getElementById("questionnaire").classList.remove("hidden");
+    questionnaire(step - 1);
+  } else {
+    document.getElementById("questionnaire").classList.add("hidden");
+    document.getElementById("submit").classList.remove("hidden");
+    button.textContent = "Submit";
+  }
+});
+
+document.querySelector("[test-id=add-workhistory-record]").addEventListener("click", workForm);
+document.querySelector("[test-id=client-privacy-policy-modal-save-button]").addEventListener("click", () => {
+  if (document.querySelector("[test-id=client-privacy-policy-modal-agree-checkbox]").checked) {
+    document.getElementById("privacy").remove();
+    document.getElementById("sms").classList.remove("hidden");
+  }
+});
+document.querySelector("[test-id=sms-consent-dialog-save-button]").addEventListener("click", () => {
+  sms = document.querySelector("#sms input:checked").value;
+  document.getElementById("sms").classList.add("hidden");
+});
+document.querySelector("[test-id=cookie-preferences-banner-reject-button]").addEventListener("click", () => {
+  document.getElementById("cookies").remove();
+});
+for (const id of ["resume", "coverLetter"]) {
+  const input = document.getElementById(ID + "files_" + id);
+  input.addEventListener("change", async () => {
+    await fetch("/api/geo/acme/FileService/uploadresume/acme", {method: "POST", body: input.files[0]});
+    input.parentElement.querySelector(".name").textContent = input.files[0].name;
+    if (id === "resume") personalForm();  // the resume is imported over the personal information
+  });
+}
+personalForm();
+hoursForm();
+</script>
+</body>
+</html>

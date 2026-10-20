@@ -34,6 +34,7 @@ UPLOAD_TIMEOUT_MS = 30_000
 STEP_TIMEOUT_MS = 20_000
 SUBMIT_TIMEOUT_MS = 90_000
 UPDATE_TRIES = 3
+FOLLOWUP_TIMEOUT_MS = 3_000
 NEXT_TRIES = 3
 STEP_POLLS = 16  # of POLL_MS, before Next is clicked again
 POLL_MS = 500
@@ -62,8 +63,8 @@ PERSONAL_FIELDS = {
     "PreferredContactMethod": ("preferredContactMethod", FieldType.CHOICE),
     "MobilePhone": ("mobilePhone", FieldType.PHONE),
     "HomePhone": ("homePhone", FieldType.PHONE),
-    "Fax": ("fax", FieldType.TEXT),
-    "Pager": ("pager", FieldType.TEXT),
+    "Fax": ("fax", FieldType.PHONE),
+    "Pager": ("pager", FieldType.PHONE),
     "CandidateSource": ("candidateSource", FieldType.CHOICE),
 }
 # History entries, as the page's own bundle maps them: the field name upper-cased, without
@@ -101,7 +102,10 @@ ENTRIES = {
         "CITY": ("city", "text"), "GPA": ("gpa", "gpa"),
     }),
 }  # fmt: skip
-CANDIDATE_INFO = {"PERSONALINFORMATION", "RESUMEUPLOAD", "SUBMIT", *ENTRIES}
+CANDIDATE_INFO = {"PERSONALINFORMATION", "RESUMEUPLOAD", "AVAILABILITY", "SUBMIT", *ENTRIES}
+# Work hours: a box per day, and a start and an end time for each day ticked.
+DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+HOURS = f"#{FORM_ID}workHoursAvailability_"
 # Questionnaire answer types (the bundle's enum): 1 is a statement with nothing to answer.
 STATEMENT, RADIO, TEXT, DROPDOWN, YES_NO_TYPE, CHECKBOX, MULTI = range(1, 8)
 QUESTION_TYPES = {
@@ -192,7 +196,7 @@ class Dayforce:
         if found is None:
             raise Unsupported("posting_gone: not a Dayforce job page")
         _open_form(page, found)
-        fields = self._read(found, lambda u: page.request.get(u).json())
+        fields = self._read(found, lambda u: page.evaluate("u => fetch(u).then(r => r.json())", u))
         _close_dialogs(page, sms=None)
         for i, field in enumerate(fields):
             key = _personal_key(field.id)
@@ -291,6 +295,15 @@ class Dayforce:
         for ref, (prefix, keys) in ENTRIES.items():
             if section := by_ref.get(ref):
                 fields += _entry_fields(section, prefix, keys)
+        hours = by_ref.get("AVAILABILITY") or {}
+        if any(f["fieldName"] == "WorkHoursAvailability" for f in _visible(hours)):
+            name, required = hours["displayName"], bool(hours["isRequired"])
+            fields += [
+                Field("workHours.days", f"{name}: days", FieldType.MULTI_CHOICE, required, DAYS),
+                Field("workHours.start", f"{name}: start time (HH:MM)", FieldType.TEXT, required),
+                Field("workHours.end", f"{name}: end time (HH:MM)", FieldType.TEXT, required),
+                Field("workHours.comment", f"{name}: comments", FieldType.TEXT, False),
+            ]
         for section in sections:
             ref = section.get("xRefCode")
             if (
@@ -331,14 +344,21 @@ class Dayforce:
                 _fill_control(page, _id(field.id), field, answers[field.id])
             if field.id == "candidateSource" and "candidateSourceDescription" in answers:
                 description = page.locator(_id("candidateSourceDescription"))
-                if description.count():
+                with suppress(Timeout):  # it shows once a source asking for details is picked
+                    description.wait_for(timeout=FOLLOWUP_TIMEOUT_MS)
+                for _ in range(UPDATE_TRIES if description.count() else 0):
                     description.fill(_one(answers["candidateSourceDescription"]))
+                    page.wait_for_timeout(POLL_MS)  # the box can render again once, empty
+                    if description.input_value() == answers["candidateSourceDescription"]:
+                        break
         for field in order:
             self._values[field.id] = _read_control(page, _id(field.id), field)
         description = page.locator(_id("candidateSourceDescription"))
         if description.count():
             self._values["candidateSourceDescription"] = description.input_value()
         _update(page, f"{PERSONAL}email")
+        if page.locator(f"{HOURS}sunday_isChecked").count():
+            self._fill_hours(page, answers)
         for prefix, _ in ENTRIES.values():
             entry = {k: v for k, v in answers.items() if k.startswith(f"{prefix}.")}
             if entry:
@@ -347,6 +367,30 @@ class Dayforce:
     def _dialogs(self, page: Page, answers: dict[str, Answer]) -> None:
         if (sms := _close_dialogs(page, answers.get("smsConsent"))) is not None:
             self._values["smsConsent"] = sms
+
+    def _fill_hours(self, page: Page, answers: dict[str, Answer]) -> None:
+        """Ticks the days answered and gives each the same hours; an open section keeps Next
+        from going on, and one with no day ticked does not save."""
+        days = answers.get("workHours.days") or []
+        for day in DAYS:
+            box = page.locator(f"{HOURS}{day.lower()}_isChecked")
+            if box.is_checked() != (day in days):
+                box.click()
+            if day in days:
+                for end in ("start", "end"):
+                    if f"workHours.{end}" in answers:
+                        page.locator(f"{HOURS}{day.lower()}_{end}").fill(
+                            _one(answers[f"workHours.{end}"])
+                        )
+        if "workHours.comment" in answers:
+            page.locator(f"{HOURS}comment").fill(_one(answers["workHours.comment"]))
+        ticked = [d for d in DAYS if page.locator(f"{HOURS}{d.lower()}_isChecked").is_checked()]
+        self._values["workHours.days"] = ticked
+        for end in ("start", "end"):
+            shown = [page.locator(f"{HOURS}{d.lower()}_{end}").input_value() for d in ticked]
+            self._values[f"workHours.{end}"] = shown[0] if len(set(shown)) == 1 else None
+        self._values["workHours.comment"] = page.locator(f"{HOURS}comment").input_value()
+        _update(page, f"{HOURS}sunday_isChecked")
 
     def _fill_entry(self, page: Page, prefix: str, answers: dict[str, Answer]) -> None:
         """Adds one entry to a history section and fills it."""
@@ -360,7 +404,7 @@ class Dayforce:
                 _fill_control(page, _id(base + field.id.split(".")[1]), field, answers[field.id])
         for field in fields:
             self._values[field.id] = _read_control(page, _id(base + field.id.split(".")[1]), field)
-        _update(page, f"[id^='{base}']")
+        _update(page, f"main [id^='{base}']")  # not its dropdowns' lists, kept after main
 
     def _fill_questionnaires(self, page: Page, answers: dict[str, Answer]) -> None:
         left = list(self._sections)
@@ -393,6 +437,9 @@ class Dayforce:
                 f"[id='{base}answerFollowup'],"
                 f" [id*='questionnaireFollowUp-{question['questionId']}-']"
             )
+            if followup in answers:
+                with suppress(Timeout):  # it shows once an option asking for comments is picked
+                    boxes.first.wait_for(timeout=FOLLOWUP_TIMEOUT_MS)
             for box in boxes.all():
                 if followup in answers and box.is_visible():
                     box.fill(_one(answers[followup]))
@@ -707,7 +754,7 @@ def _fill_phone(page: Page, selector: str, value: str) -> None:
     item = page.locator(f".ant-form-item:has(label[for='{FORM_ID}personalInfo_{key}'])").first
     dial = item.locator("input[role=combobox]").first
     digits = re.sub(r"\D", "", value)
-    if value.startswith("+"):
+    if value.startswith("+") and dial.count():  # fax and pager have no dial code
         for size in (3, 2, 1):
             code = digits[:size]
             _open(dial)
