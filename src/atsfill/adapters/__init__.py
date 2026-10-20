@@ -1,5 +1,6 @@
 from atsfill.adapters.ashby import Ashby
 from atsfill.adapters.greenhouse import Greenhouse
+from atsfill.adapters.jazzhr import JazzHR
 from atsfill.adapters.manatal import Manatal
 from atsfill.adapters.oracle import Oracle
 from atsfill.adapters.paylocity import Paylocity
@@ -19,4 +20,5 @@ ADAPTERS: list[Adapter] = [
     Manatal(),
     Paylocity(),
     Workable(),
+    JazzHR(),
 ]
