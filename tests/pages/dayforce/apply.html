@@ -179,7 +179,7 @@ function hoursForm() {
 
 function workForm() {
   const w = ID + "workHistory_0_", form = document.getElementById("work");
-  form.append(item("Employer Name", text(w + "companyName"), "workHistory_0_companyName", true));
+  form.append(item("Employer Name", text(w + "companyName", 50), "workHistory_0_companyName", true));
   form.append(item("Start Date", el(`<input id="${w}effectiveStart" type="date">`), "workHistory_0_effectiveStart", true));
   form.append(item("Current Job", el(`<input id="${w}isCurrent" type="checkbox">`), "workHistory_0_isCurrent"));
   form.append(item("State/Province", select(w + "stateCode", () => Object.values(STATES).flat()), "workHistory_0_stateCode"));
@@ -200,7 +200,7 @@ const PAGES = [
     {type: "dropdown", label: "Which shift suits you?", options: ["Days", "Nights"]},
     {type: "text", label: "Your notice period"},
     {type: "checkbox", label: "I agree to a background check"},
-    {type: "multi", label: "Which locations?", options: ["North", "South", "East"]},
+    {type: "multi", label: "Which locations?", options: ["North", "South", "East"], followUp: "East", followUpId: 7},
   ]},
   {title: "Disability Form Questionnaire", disability: true, questions: [
     {type: "prefilled", label: "Name"},
@@ -238,7 +238,15 @@ function questionnaire(n) {
     if (q.type === "checkbox") control = el(`<input id="${base}isChecked" type="checkbox">`);
     if (q.type === "multi") {
       control = el(`<div id="${base}selectedOptionIds" class="ant-checkbox-group"></div>`);
-      for (const o of q.options) control.append(el(`<label class="ant-checkbox-wrapper"><input type="checkbox"> ${o}</label>`));
+      for (const o of q.options) {
+        const w = el(`<label class="ant-checkbox-wrapper"><input type="checkbox"> ${o}</label>`);
+        if (o === q.followUp) w.querySelector("input").addEventListener("change", e => {
+          box.querySelector(`[id="${base}answerFollowups_${q.followUpId}"]`)?.parentElement.remove();
+          if (e.target.checked) control.after(item("Enter additional comments here",
+            text(`${base}answerFollowups_${q.followUpId}`), `${base}f`, true));
+        });
+        control.append(w);
+      }
     }
     box.append(item(q.label, control, base));
   });
@@ -250,6 +258,12 @@ document.querySelector("[test-id=application-next-step]").addEventListener("clic
   if (step === 0 && document.getElementById(ID + "personalInfo_email")) return;  // an open section
   if (step === 0 && document.getElementById(ID + "workHistory_0_companyName")) return;
   if (step === 0 && document.getElementById(ID + "workHoursAvailability_sunday_isChecked")) return;
+  // a follow-up left empty is required: its error shows under it, the step stays
+  const empty = [...document.querySelectorAll("#questionnaire [id*=answerFollowup]")]
+    .filter(x => x.offsetParent && !x.value);
+  for (const x of empty) if (!document.getElementById(x.id + "_help"))
+    x.after(el(`<div id="${x.id}_help" class="ant-form-item-explain-error">Required</div>`));
+  if (empty.length) return;
   step += 1;
   document.getElementById("step0").classList.add("hidden");
   if (step <= PAGES.length) {

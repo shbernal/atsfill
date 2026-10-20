@@ -56,7 +56,7 @@ TEMPLATE = {
             question(14, 3, "Your notice period"),
             question(15, 6, "I agree to a background check", required=True),
             question(16, 7, "Which locations?",
-                     [option(5, "North"), option(6, "South"), option(7, "East")]),
+                     [option(5, "North"), option(6, "South"), option(7, "East", True)]),
          ]}},
         {"xRefCode": "DISABILITYQUESTIONNAIRE", "displayName": "Disability Form Questionnaire",
          "sequence": 6, "isRequired": False, "questionnaire": {"questions": [
@@ -135,7 +135,7 @@ def test_read_form_lists_every_page(page):
         "additionalDocument", "workHistory.companyName", "workHistory.effectiveStart",
         "workHistory.isCurrent", "workHistory.stateCode", "workHours.days", "workHours.start",
         "workHours.end", "workHours.comment", "q11", "q11.followup", "q13", "q14",
-        "q15", "q16", "q22", "q23", "userAcknowledged",
+        "q15", "q16", "q16.followup", "q22", "q23", "userAcknowledged",
     ]  # fmt: skip
     assert by_id["prefixId"].options == ["Mr", "Ms", "Dr"]  # a readonly dropdown, scrolled
     assert by_id["countryCode"].options and "United Kingdom" in by_id["countryCode"].options
@@ -144,6 +144,7 @@ def test_read_form_lists_every_page(page):
     assert by_id["postalCode"].max_length == 10
     assert by_id["resume"].accept == [".doc", ".docx", ".pdf"]
     assert not by_id["workHistory.companyName"].required  # the section is optional
+    assert by_id["workHistory.companyName"].max_length == 50  # read from an entry it opens
     assert by_id["workHistory.isCurrent"].options == ["No", "Yes"]
     assert by_id["candidateSourceDescription"].label.endswith(
         "(asked when 'CandidateSource' is Agency)"
@@ -191,6 +192,7 @@ def test_every_answer_reads_back(page, resume):
         "q14": "One month",
         "q15": "Yes",
         "q16": ["North", "East"],
+        "q16.followup": "Remote",
         "q23": ["I do not want to answer"],
         "userAcknowledged": "Yes",
     }
@@ -228,6 +230,34 @@ def test_a_future_start_date_keeps_the_wizard_on_candidate_info(page, resume):
     mismatched = {c.field_id for c in matching.check(fields, answers, adapter.read_back(page))
                   if not c.match}  # fmt: skip
     assert mismatched == {"q15", "userAcknowledged"}
+
+
+def test_an_empty_follow_up_keeps_the_wizard_on_its_questionnaire(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {
+        "email": "ada@example.com",
+        "confirmEmail": "ada@example.com",
+        "firstName": "Ada",
+        "lastName": "Placeholder",
+        "mobilePhone": "+12025550143",
+        "preferredContactMethod": "Email",
+        "countryCode": "United Kingdom",
+        "stateCode": "Greater London",
+        "city": "London",
+        "postalCode": "SW1A 1AA",
+        "candidateSource": "Job Board",
+        "workHours.days": ["Monday"],
+        "workHours.start": "09:00",
+        "workHours.end": "17:00",
+        "q15": "Yes",
+        "q16": ["East"],
+        "q23": ["I do not want to answer"],
+        "userAcknowledged": "Yes",
+    }
+    adapter.fill(page, answers)
+    mismatched = {c.field_id for c in matching.check(fields, answers, adapter.read_back(page))
+                  if not c.match}  # fmt: skip
+    assert mismatched == {"q23", "userAcknowledged"}
 
 
 def test_a_closed_posting_is_gone(page):

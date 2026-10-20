@@ -210,6 +210,15 @@ class Dayforce:
                 accept = page.locator(_file(field.id)).first.get_attribute("accept") or ""
                 accepted = [f".{a.strip()}" for a in accept.split(",") if a.strip()] or None
                 fields[i] = _with(field, accept=accepted)
+        for prefix, _ in ENTRIES.values():  # an entry's controls show once it is added
+            texts = [i for i, f in enumerate(fields)
+                     if f.id.startswith(f"{prefix}.") and f.type is FieldType.TEXT]  # fmt: skip
+            if texts and page.locator(f"[test-id=add-{prefix.lower()}-record]").count():
+                base = _open_entry(page, prefix)
+                for i in texts:
+                    control = page.locator(_id(base + fields[i].id.split(".")[1]))
+                    limit = control.first.get_attribute("maxlength") if control.count() else None
+                    fields[i] = _with(fields[i], max_length=int(limit) if limit else None)
         countries = next((f.options for f in fields if f.id == "countryCode"), None)
         fields = [
             _with(f, options=countries) if f.id.endswith(".countryCode") else f for f in fields
@@ -233,7 +242,7 @@ class Dayforce:
             raise Unsupported("external_step: an assessment on another site comes before submit")
         box = page.locator(f"#{FORM_ID}userAcknowledged")
         wanted = answers.get("userAcknowledged")
-        if wanted and box.count() and box.is_checked() != (wanted == "Yes"):
+        if wanted and box.count() and box.is_visible() and box.is_checked() != (wanted == "Yes"):
             box.click()
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -394,10 +403,7 @@ class Dayforce:
 
     def _fill_entry(self, page: Page, prefix: str, answers: dict[str, Answer]) -> None:
         """Adds one entry to a history section and fills it."""
-        base = f"{FORM_ID}{prefix}_0_"
-        if not page.locator(f"[id^='{base}']").count():
-            page.locator(f"[test-id=add-{prefix.lower()}-record]").first.click()
-            page.locator(f"[id^='{base}']").first.wait_for(timeout=FORM_TIMEOUT_MS)
+        base = _open_entry(page, prefix)
         fields = [f for f in self._fields.values() if f.id.startswith(f"{prefix}.")]
         for field in fields:
             if field.id in answers:
@@ -433,8 +439,9 @@ class Dayforce:
         self._values[field_id] = self._get_question(page, target, field, question)
         followup = f"{field_id}.followup"
         if followup in self._fields:
-            boxes = page.locator(
+            boxes = page.locator(  # a box group's is one per option asking for comments
                 f"[id='{base}answerFollowup'],"
+                f" :is(input, textarea)[id^='{base}answerFollowups_'],"
                 f" [id*='questionnaireFollowUp-{question['questionId']}-']"
             )
             if followup in answers:
@@ -814,6 +821,15 @@ def _attach(page: Page, selector: str, path: str) -> None:
     page.wait_for_timeout(SETTLE_MS)
 
 
+def _open_entry(page: Page, prefix: str) -> str:
+    """Adds the first entry of a history section, unless it is open; its controls' id prefix."""
+    base = f"{FORM_ID}{prefix}_0_"
+    if not page.locator(f"[id^='{base}']").count():
+        page.locator(f"[test-id=add-{prefix.lower()}-record]").first.click()
+        page.locator(f"[id^='{base}']").first.wait_for(timeout=FORM_TIMEOUT_MS)
+    return base
+
+
 def _update(page: Page, field: str) -> None:
     """Saves an open section with its Update button, the first after the section's `field`,
     until the section closes: a click while a dropdown is still closing is lost."""
@@ -854,8 +870,11 @@ def _next(page: Page) -> bool:
 
 
 def _controls(page: Page) -> list[str]:
-    """The ids of the step's controls: what changes when the wizard moves on."""
-    return page.locator(f"main [id^='{FORM_ID}']").evaluate_all("es => es.map(e => e.id)")
+    """The ids of the step's controls: what changes when the wizard moves on, not a control's
+    error (`<id>_help`) showing."""
+    return page.locator(f"main [id^='{FORM_ID}']:not([id$='_help'])").evaluate_all(
+        "es => es.map(e => e.id)"
+    )
 
 
 def _questionnaire_title(page: Page) -> str | None:

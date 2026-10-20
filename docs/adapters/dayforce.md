@@ -33,7 +33,7 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | "how did you hear" source asking for details (`requiresAdditionalExplanation`): `candidateSourceDescription` shows | `text`, conditional | 27 |
 | SMS consent dialog | `choice`, `No`/`Yes` | where enabled |
 | resume, cover letter, additional documents, `input[type=file]` | `file` | 25 |
-| history entry (employment, education): "Add …" (`[test-id=add-<section>-record]`), fields, Update | one entry, the fields' types; required only with the section | 16 each, required on 1 |
+| history entry (employment, education): "Add …" (`[test-id=add-<section>-record]`), fields, Update | one entry, the fields' types, `max_length` read from an entry `read` adds; required only with the section | 16 each, required on 1 |
 | work hours: a box per day, each ticked day a start and end `input[type=time]`, comments; open from the start, saved only with a day ticked | `workHours.days` `multi_choice`, `.start`, `.end` (`HH:MM`, every day alike), `.comment` | 5, required on 2 |
 | references | not handled; `unsupported` when required | 3, required on 1 |
 | question type 1, a statement | not a field | 7 |
@@ -42,7 +42,7 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | type 3 text | `text` | 24 |
 | type 6 box (`…_isChecked`) | `choice`, `Yes`/`No` | 2 |
 | type 7 boxes (`…_selectedOptionIds`, `.ant-checkbox-group`) | `multi_choice` | 11 |
-| an option with `hasFollowUp`: "Enter additional comments here" shows, required | `q<id>.followup`, `text`, conditional | 19 |
+| an option with `hasFollowUp`: "Enter additional comments here" shows, required (`…_answerFollowup`; one per ticked option on a box group, `…_answerFollowups_<option id>`) | `q<id>.followup`, `text`, conditional | 19 |
 | EEO, veteran (radios), disability form: name and date prefilled and disabled, employee id disabled for a guest, boxes | `choice`, `multi_choice`; its text questions prefilled | 5 |
 | candidate acknowledgement box on Submit (`#jobPostingApplication_userAcknowledged`) | `choice`, `Yes`/`No` | 26 |
 
@@ -55,7 +55,7 @@ A conditional field is labelled `(asked when '<field>' is <option> or <option>)`
 - A phone number picks the longest dial code its digits start with, the main country of a shared one (`+1` is the United States), and types the rest.
 - A section saves with its Update, the first submit button after its first field; a click while a dropdown is still closing is lost, so Update is clicked until the section closes. An open section keeps Next from going on.
 - Some sites refuse a history entry dated in the future without an error; the entry stays open and the wizard on Candidate Info.
-- Next can go unheeded right after a save; atsfill clicks it again, up to three times, until the step's controls change or an error shows. Submit is never pressed by `fill`.
+- Next can go unheeded right after a save; atsfill clicks it again, up to three times, until the step's controls change or an error shows; an error adds its own `<id>_help` element, not a control. Submit is never pressed by `fill`.
 
 ## Read-back and submit
 
