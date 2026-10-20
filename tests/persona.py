@@ -17,6 +17,7 @@ WEBSITE = "https://example.com"
 SALARY = "50000"
 TEXT = "Placeholder answer for a dry run."
 CITY = "London"
+COUNTRY = "United States"
 
 SENSITIVE = re.compile(
     r"gender|sex\b|race|ethnic|hispanic|latin|veteran|disab|pronoun|orientation|demograph",
@@ -93,6 +94,8 @@ def _option(field: Field) -> str:
     options = field.options or []
     if SENSITIVE.search(field.label):
         return next((o for o in options if DECLINE.search(o)), options[0])
+    if re.search(r"country", field.label, re.IGNORECASE) and COUNTRY in options:
+        return COUNTRY  # where the persona's phone and zip code are
     return options[0]
 
 
