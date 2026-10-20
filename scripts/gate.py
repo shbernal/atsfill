@@ -83,7 +83,7 @@ def record(source: str, key: str, value: registry.Verification | registry.Broken
     """Writes `key` into the registry and the files generated from it, as its own commit."""
     REGISTRY.write_text(registry.with_state(REGISTRY.read_text(), source, key, value))
     registry.systems.cache_clear()
-    subprocess.run(["uv", "run", "scripts/backlog.py"], check=True, cwd=ROOT)
+    subprocess.run(["uv", "run", "python", "-m", "scripts.backlog"], check=True, cwd=ROOT)
     message = f"Record {source} as {key.replace('_', ' ')}"
     subprocess.run(["git", "commit", "-qm", message, "--", *GENERATED], check=True, cwd=ROOT)
     print(f"recorded {key} {value.date} {value.version} ({value.commit}) by {value.by}")

@@ -12,7 +12,7 @@ The registry (ADR 0012) is filled by trying real postings, and adapters are adde
 
 **Backlog order.** Account `none` first, then `to_send`, then `to_read`. Blocked systems go last; there is no evasion work beyond what Camoufox does.
 
-**Done.** An adapter is done when `scripts/gate.py <system>` prints PASS: a fixture page, an adapter doc, the committed tests green, a dry run `ready` on at least five companies outside the round's inventory, and `read_api` parity (ADR 0011) where the adapter has one. Only rows surveyed at the current commit count; on a tree with uncommitted changes the dry-run criterion fails. `--fresh` samples about twice the threshold from the system's own hosts first. The gate lists the rows on the system that were not `ready`, by status and label, without a threshold: the pull request's reviewer judges them. An adapter may ship send unverified.
+**Done.** An adapter is done when `python -m scripts.gate <system>` prints PASS: a fixture page, an adapter doc, the committed tests green, a dry run `ready` on at least five companies outside the round's inventory, and `read_api` parity (ADR 0011) where the adapter has one. Only rows surveyed at the current commit count; on a tree with uncommitted changes the dry-run criterion fails. `--fresh` samples about twice the threshold from the system's own hosts first. The gate lists the rows on the system that were not `ready`, by status and label, without a threshold: the pull request's reviewer judges them. An adapter may ship send unverified.
 
 **Skipped samples.** The system's field vocabulary and every way a field type renders are the adapter's job. Only a closed posting, an apply step on another system, or a page the employer built counts as a skipped sample.
 
