@@ -23,7 +23,7 @@ The registry covers 90.1% of postings.
 | zohorecruit | ats | 0.9% | none | hosted |  | mapped |
 | ukgready | ats | 0.9% | none | hosted |  | mapped |
 | phenom | ats | 0.7% | none | hosted |  | mapped |
-| breezy | ats | 0.7% | none | hosted |  | mapped |
+| breezy | ats | 0.7% | none | hosted |  | [mapped](breezy.md) |
 | recruitee | ats | 0.7% | none | hosted |  | [dry_run_verified](recruitee.md) |
 | applicantpro | ats | 0.6% | none | hosted |  | mapped |
 | rippling | ats | 0.5% | none | hosted |  | mapped |

@@ -1,4 +1,5 @@
 from atsfill.adapters.ashby import Ashby
+from atsfill.adapters.breezy import Breezy
 from atsfill.adapters.dayforce import Dayforce
 from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.adapters.hireology import Hireology
@@ -31,4 +32,5 @@ ADAPTERS: list[Adapter] = [
     Lever(),
     Dayforce(),
     Recruitee(),
+    Breezy(),
 ]
