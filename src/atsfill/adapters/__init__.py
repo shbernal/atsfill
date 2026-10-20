@@ -5,6 +5,7 @@ from atsfill.adapters.oracle import Oracle
 from atsfill.adapters.paylocity import Paylocity
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
+from atsfill.adapters.workable import Workable
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.core.adapter import Adapter
 
@@ -17,4 +18,5 @@ ADAPTERS: list[Adapter] = [
     Oracle(),
     Manatal(),
     Paylocity(),
+    Workable(),
 ]

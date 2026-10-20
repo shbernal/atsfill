@@ -85,8 +85,11 @@ def _text(field: Field) -> str:
 
 
 def answer(field: Field, cv: Path) -> Answer | None:
-    """The persona's answer to one field; None for a choice with no options to pick from."""
+    """The persona's answer to one field; None for a choice with no options to pick from, or
+    a file that takes no PDF."""
     match field.type:
+        case FieldType.FILE if field.accept and ".pdf" not in field.accept:
+            return None  # a photo
         case FieldType.FILE:
             return str(cv)
         case FieldType.PHONE:

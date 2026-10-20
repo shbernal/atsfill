@@ -142,6 +142,7 @@ kind = "ats"
 share = 0.0159
 account = "none"
 hosting = ["hosted"]
+adapter = "workable"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [energyjobline]
