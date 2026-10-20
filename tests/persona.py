@@ -2,6 +2,8 @@
 
 import re
 import secrets
+import struct
+import zlib
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -72,6 +74,21 @@ def resume(path: Path) -> Path:
     return path
 
 
+def photo(path: Path) -> Path:
+    """Writes the persona's photo to `path`: a 64x64 grey PNG."""
+    chunk = lambda kind, data: (  # noqa: E731
+        struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    )
+    rows = b"".join(b"\0" + b"\x80" * 3 * 64 for _ in range(64))
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 64, 64, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
+    )
+    return path
+
+
 def _option(field: Field) -> str:
     options = field.options or []
     if SENSITIVE.search(field.label):
@@ -84,9 +101,12 @@ def _text(field: Field) -> str:
     return value[: field.max_length] if field.max_length else value
 
 
-def answer(field: Field, cv: Path) -> Answer | None:
-    """The persona's answer to one field; None for a choice with no options to pick from."""
+def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None:
+    """The persona's answer to one field; None for a choice with no options to pick from, or
+    a file that takes neither a PDF nor, given a `picture`, a PNG."""
     match field.type:
+        case FieldType.FILE if field.accept and ".pdf" not in field.accept:
+            return str(picture) if picture and ".png" in field.accept else None
         case FieldType.FILE:
             return str(cv)
         case FieldType.PHONE:
@@ -105,11 +125,12 @@ def answer(field: Field, cv: Path) -> Answer | None:
             return _text(field)
 
 
-def answers(fields: list[Field], cv: Path) -> dict[str, Answer]:
+def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
     prefilled to the account, a résumé aside."""
     return {
         f.id: a
         for f in fields
-        if (a := answer(f, cv)) is not None and not (f.prefilled and f.type is not FieldType.FILE)
+        if (a := answer(f, cv, picture)) is not None
+        and not (f.prefilled and f.type is not FieldType.FILE)
     }
