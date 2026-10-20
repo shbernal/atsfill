@@ -29,7 +29,7 @@ LEGAL_BOX = "legal-disclaimer .apply-flow-input-checkbox__button"
 NEXT = "button[type=submit].apply-flow-pagination__button"
 SUBMIT = ".apply-flow-pagination__submit-button"
 PAGINATION = ".apply-flow-pagination__button"
-PAGE_NUMBERS = ".apply-flow-navigation-pages__link"
+PAGE_NUMBERS = ".apply-flow-navigation-pages__link:visible"
 LOADING = ".app-loading-spinner, .cx-select--loading, .apply-flow-block .skeleton"
 CODE_PAGE = ".apply-flow-pin-code-required"
 CAPTCHA = "iframe[src*='hcaptcha.com']"
@@ -507,8 +507,8 @@ def _geography(described: list[tuple[dict, Field]]) -> list[tuple[dict, Field]]:
     """Leaves one field of the address's geography (state, city, postal code), the most
     specific: its items name the levels above (`0200, Acton, ACT`), and picking one fills
     them. It is required when any level is."""
-    levels = [(r, f) for r, f in described if r.get("geo") and f.id != COUNTRY and f.options]
-    if len(levels) < 2:
+    levels = [(r, f) for r, f in described if r.get("geo") and f.id != COUNTRY]
+    if len(levels) < 2 or not any(f.options for _, f in levels):
         return described
     parts = lambda f: max(len(o.split(",")) for o in f.options or [""])  # noqa: E731
     kept = max(levels, key=lambda rf: parts(rf[1]))

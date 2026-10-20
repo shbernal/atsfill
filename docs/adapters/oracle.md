@@ -10,7 +10,7 @@ Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last 
 - Some tenants put an hCaptcha on the email step: `blocked`, `captcha`.
 - The form's metadata (`recruitingCECandidateProfileBlocksMetadata`, `recruitingCEQuestions`) answers 401 until the email step is passed, so there is no `read_api`. Reading passes the step with a throwaway `atsfill.read.<random>@example.com`; filling clears cookies and storage and passes it again with the answer's address.
 - From the email step on, Oracle keeps a draft (`POST recruitingCEJobApplicationDrafts`, then a `PATCH` as fields change); a picked file is attached to it at once.
-- A flow is one page with Submit (`.apply-flow-pagination__submit-button`), or several pages with Next and page numbers (`.apply-flow-navigation-pages__link`). Every page stays in the document, the others hidden. The page numbers move to any page without checking the page left, unlike Next, so atsfill reads and fills page by page through them; Submit is on the last page.
+- A flow is one page with Submit (`.apply-flow-pagination__submit-button`), or several pages with Next and page numbers (`.apply-flow-navigation-pages__link`, the visible ones: a hidden copy sits in the page too). Every page stays in the document, the others hidden. The page numbers move to any page without checking the page left, unlike Next, so atsfill reads and fills page by page through them; Submit is on the last page.
 
 ## Reading the form
 
