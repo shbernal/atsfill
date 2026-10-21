@@ -3,6 +3,7 @@
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
+from atsfill.core.adapter import Gap
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -16,6 +17,7 @@ FIELDS = [
 
 class Fake:
     name = "fake"
+    known_gaps = {"ranking": Gap.RENDERING}
     side_effects = [SideEffect("fill", "hiring_system", "answers are saved as typed")]
 
     def __init__(self) -> None:
@@ -23,6 +25,7 @@ class Fake:
         self.typo = False  # types something other than the answer
         self.submit_raises: Exception | None = None  # after the click
         self.evidence = True
+        self.fields = FIELDS
 
     def detect(self, url: str, page: Page | None) -> bool:
         if page is None:
@@ -33,10 +36,10 @@ class Fake:
         return url.split("?")[0]
 
     def read_api(self, url: str) -> list[Field] | None:
-        return FIELDS if urlsplit(url).query == "api" else None
+        return self.fields if urlsplit(url).query == "api" else None
 
     def read_form(self, page: Page) -> list[Field]:
-        return FIELDS
+        return self.fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         if self.fill_raises:

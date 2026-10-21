@@ -12,7 +12,7 @@ from functools import partial
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -67,6 +67,7 @@ def _op(response: Response) -> str:
 
 class Ashby:
     name = "ashby"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect(
             "fill", "hiring_system", "each answer and the resume are saved to Ashby as typed"

@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import NotTaken, Unsupported
+from atsfill.core.adapter import Gap, NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -159,6 +159,7 @@ _READ_BACK = """(form, QUESTION) => {
 
 class Teamtailor:
     name = "teamtailor"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("upload", "hiring_system", "a picked file is stored by Teamtailor at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),

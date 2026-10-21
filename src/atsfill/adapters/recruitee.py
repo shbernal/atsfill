@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -110,6 +110,7 @@ _READ_BACK = """(form, kinds) => {
 
 class Recruitee:
     name = "recruitee"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
 
     def __init__(self) -> None:

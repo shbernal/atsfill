@@ -22,7 +22,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import NotTaken, Unsupported
+from atsfill.core.adapter import Gap, NotTaken, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Covered, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -240,6 +240,7 @@ _FETCH = """async ([url, body, token]) => {
 
 class Phenom:
     name = "phenom"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect(
             "upload", "hiring_system", "the resume is uploaded to Phenom and parsed at once"

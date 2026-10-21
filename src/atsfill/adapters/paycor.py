@@ -11,7 +11,7 @@ import re
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from atsfill.core.adapter import Blocked, NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
 from atsfill.core.browser import Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -129,6 +129,7 @@ def _ids(url: str) -> tuple[str, str] | None:
 
 class Paycor:
     name = "paycor"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("upload", "hiring_system", "the resume is stored and parsed by Paycor at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),

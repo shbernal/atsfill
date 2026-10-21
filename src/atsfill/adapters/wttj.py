@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -58,6 +58,7 @@ _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
 class WelcomeToTheJungle:
     name = "wttj"
     login_url = f"https://{HOST}/en/signin"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
 
     def __init__(self) -> None:

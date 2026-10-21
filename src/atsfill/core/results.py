@@ -35,6 +35,7 @@ class Field:
     max_length: int | None = None
     accept: list[str] | None = None
     prefilled: bool = False  # holds a value before any answer, from the account's profile
+    unfillable: str | None = None  # why atsfill cannot fill it, a reason (ADR 0014)
 
 
 @dataclass(frozen=True)

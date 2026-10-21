@@ -11,7 +11,7 @@ from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -157,6 +157,7 @@ def _options(entry: dict[str, Any], client: str) -> list[str] | None:
 
 class Manatal:
     name = "manatal"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("submit", "hiring_system", "the resume and attachments are uploaded"),
         SideEffect("submit", "employer", "the application reaches the employer"),

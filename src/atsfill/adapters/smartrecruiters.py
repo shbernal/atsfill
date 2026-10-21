@@ -13,7 +13,7 @@ from contextlib import suppress
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import Gap, Unsupported
 from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -101,6 +101,7 @@ _CONTAINERS = """(form, questions) => {
 
 class SmartRecruiters:
     name = "smartrecruiters"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect(
             "upload", "hiring_system", "an attached resume is stored by SmartRecruiters at once"

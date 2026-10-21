@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -230,6 +230,7 @@ _READ_BACK = """(ids) => {
 
 class Oracle:
     name = "oracle"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect(
             "load",

@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -142,6 +142,7 @@ _READ_BACK = """(form, kinds) => {
 
 class Workable:
     name = "workable"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("upload", "hiring_system", "an attached file is stored by Workable at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),
