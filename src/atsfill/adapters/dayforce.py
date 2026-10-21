@@ -35,6 +35,7 @@ STEP_TIMEOUT_MS = 20_000
 SUBMIT_TIMEOUT_MS = 90_000
 UPDATE_TRIES = 3
 FOLLOWUP_TIMEOUT_MS = 3_000
+DIAL_TIMEOUT_MS = 2_000  # per dial code tried, longest first
 NEXT_TRIES = 3
 STEP_POLLS = 16  # of POLL_MS, before Next is clicked again
 POLL_MS = 500
@@ -769,7 +770,7 @@ def _fill_phone(page: Page, selector: str, value: str) -> None:
             dial.press_sequentially(f"+{code}", delay=10)
             options = page.locator(_option(dial)).filter(has_text=re.compile(rf"\+{code}(\s|$)"))
             with suppress(Timeout):
-                options.first.wait_for(timeout=2_000)
+                options.first.wait_for(timeout=DIAL_TIMEOUT_MS)
             if options.count():
                 main = options.filter(has_text=MAIN_COUNTRY.get(code, "\0"))
                 (main if main.count() else options).first.click()
