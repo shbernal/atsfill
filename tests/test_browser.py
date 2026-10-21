@@ -27,6 +27,10 @@ def test_click_reaches_a_target_in_a_shadow_root(page):
     browser.click(page.locator("#shadowed"))
 
 
+def test_click_reaches_a_label_whose_box_centre_is_beside_its_text(page):
+    browser.click(page.locator("#wrapped"))
+
+
 def test_click_reaches_a_target_in_a_cross_origin_frame(page):
     browser.click(page.frame_locator("#open-frame").locator("#inner"))
 

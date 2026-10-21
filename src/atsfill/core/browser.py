@@ -195,10 +195,12 @@ def session_request(path: Path) -> Generator[Request]:
             request.dispose()
 
 
-# What sits on top of a point (the element's centre by default), null when the element
-# (or the shadow host holding it) is what a click there would reach.
+# What sits on top of a point, null when the element (or the shadow host holding it) is what
+# a click there would reach. The point defaults to where Playwright clicks: the centre of the
+# first box, which for wrapped inline text is its first line, not the bounding box's centre.
 _COVER = """(el, point) => {
-    const r = el.getBoundingClientRect();
+    const r = [...el.getClientRects()].find(b => b.width && b.height)
+        ?? el.getBoundingClientRect();
     const [x, y] = point ?? [r.left + r.width / 2, r.top + r.height / 2];
     const root = el.getRootNode();
     const hit = (root.elementFromPoint ? root : document).elementFromPoint(x, y);
