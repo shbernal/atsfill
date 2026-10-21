@@ -22,7 +22,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Gap, NotTaken, Unsupported
+from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Covered, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -240,7 +240,11 @@ _FETCH = """async ([url, body, token]) => {
 
 class Phenom:
     name = "phenom"
-    known_gaps: dict[str, Gap] = {}
+    known_gaps = {
+        "first_step": Gap.FLOW,
+        "long_wizard": Gap.FLOW,
+        "calendar_without_month": Gap.RENDERING,
+    }
     side_effects = [
         SideEffect(
             "upload", "hiring_system", "the resume is uploaded to Phenom and parsed at once"
@@ -303,7 +307,7 @@ class Phenom:
                 lambda body: json.loads(load(f"{origin}/applySubmit", body, token)),
             )
             return fields
-        except OSError, ValueError, KeyError, TypeError, Unsupported:
+        except OSError, ValueError, KeyError, TypeError, RuntimeError, Unsupported:
             return None
 
     def read_form(self, page: Page) -> list[Field]:
@@ -312,7 +316,7 @@ class Phenom:
         try:
             ph = _phapp_of(page.content())  # the page's scripts' own world is out of reach
         except ValueError as e:
-            raise Unsupported(f"unsupported_flow: {e}") from None
+            raise RuntimeError(str(e)) from None
         token = get(ph, "sessionParams.csrfToken") or ""
         try:
             fields, raws = _read(
@@ -321,7 +325,7 @@ class Phenom:
                 lambda body: page.evaluate(_FETCH, ["/applySubmit", body, token]),
             )
         except (BrowserError, ValueError, KeyError) as e:
-            raise Unsupported(f"unsupported_flow: no configuration for the wizard ({e})") from None
+            raise RuntimeError(f"no configuration for the wizard ({e})") from None
         self._raws = {raw["id"]: raw for raw in raws}
         return fields
 
@@ -349,7 +353,7 @@ class Phenom:
             if not _has_next(page):
                 return
             _next(page, number)
-        raise Unsupported(f"unsupported_flow: the wizard has more than {MAX_STEPS} steps")
+        raise Unsupported(known_gap(self, "long_wizard", f"more than {MAX_STEPS} steps"))
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         return self._kept
@@ -380,10 +384,11 @@ class Phenom:
                 state="attached", timeout=FORM_TIMEOUT_MS
             )
         except Timeout:
-            step = parse_qs(urlsplit(page.url).query).get("stepname", ["none"])[0]
-            raise Unsupported(
-                f"unsupported_flow: no application step on the page (step {step})"
-            ) from None
+            query = parse_qs(urlsplit(page.url).query)
+            if step := (query.get("stepname") or query.get("page") or [None])[0]:
+                gap = known_gap(self, "first_step", f"the wizard opens on {step!r}")
+                raise Unsupported(gap) from None
+            raise RuntimeError("no application step on the page") from None
 
     def _step(self, page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
         """The answered fields the current step shows, in the configuration's order."""
@@ -443,7 +448,7 @@ def _read(
     reader = _Config(ph, config, texts, post)
     raws = [raw for step in reader.steps() for raw in step]
     if not raws:
-        raise Unsupported("unsupported_flow: the wizard shows no fields")
+        raise RuntimeError("the wizard shows no fields")
     resume = reader.resume()
     return ([resume] if resume else []) + [_field(raw) for raw in raws], raws
 
@@ -817,7 +822,7 @@ class _Config:
             }
         response = get(self.call(payload, **extra), "applyGetReferences")
         if not isinstance(response, dict):
-            raise Unsupported("unsupported_flow: the job's questionnaire did not load")
+            raise RuntimeError("the job's questionnaire did not load")
         part = response.get("data") if isinstance(get(response, "data.schema"), dict) else response
         if not isinstance(get(part, "schema"), dict):
             return []
@@ -1066,7 +1071,7 @@ def _apply_url(page: Page) -> str:
     if target.hostname and target.hostname != parts.hostname:
         raise Unsupported(f"external_step: the application is on {target.hostname}")
     if href and not APPLY.match(target.path):
-        raise Unsupported(f"unsupported_flow: the Apply link leads to {target.path}")
+        raise RuntimeError(f"the Apply link leads to {target.path}")
     if href:
         return f"{parts.scheme}://{parts.netloc}{target.path}?jobSeqNo={seq}"
     return f"{parts.scheme}://{parts.netloc}{prefix[1]}/apply?jobSeqNo={_seq(page.url)}"
@@ -1108,8 +1113,8 @@ def _next(page: Page, number: int) -> None:
                 return
         if errors := page.locator(FORM).evaluate(_ERRORS) if page.locator(FORM).count() else []:
             shown = "; ".join(f"{dom}: {message}" for dom, message in errors)
-            raise Unsupported(f"unsupported_flow: step {number} did not pass: {shown}")
-    raise Unsupported(f"unsupported_flow: step {number} did not pass in time")
+            raise RuntimeError(f"step {number} did not pass: {shown}")
+    raise RuntimeError(f"step {number} did not pass in time")
 
 
 def _click(page: Page, target: Locator) -> None:
@@ -1164,7 +1169,8 @@ def _pick_day(page: Page, dom: str, iso: str) -> None:
         names = by_month[0].evaluate(OPTIONS)
         by_month[0].evaluate(_SELECT, names[month - 1 + len(names) - 12])
     elif not picker.locator(".react-datepicker__current-month").count():
-        raise Unsupported(f"unsupported_rendering: {dom} has a calendar without its month")
+        gap = known_gap(Phenom(), "calendar_without_month", f"{dom}'s calendar shows no month")
+        raise Unsupported(gap)
     else:
         for _ in range(MAX_MONTH_STEPS):
             shown = picker.locator(".react-datepicker__current-month").inner_text().split()
@@ -1237,7 +1243,7 @@ def _upload(page: Page, path: str) -> None:
         deadline = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000
         while not uploaded and not page.evaluate(_SHOWS, name):
             if time.monotonic() > deadline:
-                raise Unsupported("unsupported_rendering: the resume upload did not show the file")
+                raise RuntimeError("the resume upload did not show the file")
             time.sleep(UPLOAD_POLL_S)
         deadline, quiet_since = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000, time.monotonic()
         while time.monotonic() < deadline and time.monotonic() - quiet_since < QUIET_S:

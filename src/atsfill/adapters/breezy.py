@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Gap, Unsupported
+from atsfill.core.adapter import Gap, Unsupported, out_of_scope
 from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -95,7 +95,7 @@ ENTRIES = {
 }
 
 # The fields in page order, one per control name, with its heading's text and how it renders;
-# a question the adapter cannot fill is kept as its kind, to be refused when required.
+# a live video question is kept as the kind `video`.
 _READ = """form => {
   const text = el => {
     if (!el) return "";
@@ -243,8 +243,9 @@ class Breezy:
             raise Unsupported("posting_gone: no application form on the page") from None
         fields, self._kinds = [], {}
         for raw in form.evaluate(_READ):
-            if (field := _field(raw)) is not None:
-                fields.append(field)
+            field = _field(raw)
+            fields.append(field)
+            if not field.unfillable:
                 self._kinds[field.id] = raw["kind"]
         return fields + self._entries(form)
 
@@ -342,13 +343,11 @@ class Breezy:
         return f"{response.url} {response.status}"
 
 
-def _field(raw: dict[str, Any]) -> Field | None:
-    """The field, or None for one the page asks optionally and atsfill cannot fill."""
+def _field(raw: dict[str, Any]) -> Field:
     kind = raw["kind"]
     if kind == "video":
-        if raw["required"]:
-            raise Unsupported(f"unsupported_rendering: {raw['label']!r} asks for a recorded video")
-        return None
+        reason = out_of_scope(raw["id"], "a video recorded live")
+        return Field(raw["id"], raw["label"], FieldType.FILE, raw["required"], unfillable=reason)
     label = LABELS.get(raw["id"]) or raw.get("label", "")
     if "part" in raw:
         label = (

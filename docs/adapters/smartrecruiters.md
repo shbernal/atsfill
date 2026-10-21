@@ -27,7 +27,6 @@ Each rendering and on how many of 14 postings (2026-10-20):
 | profile | `spl-autocomplete` city search, required on 6 | `typeahead` | 14 |
 | profile | `spl-phone-field`: a country `spl-select` and a national number, required on 6 | `phone` | 14 |
 | profile | `spl-dropzone`, resume, required on 6 | `file` | 14 |
-| profile | Experience, Education: "Add" opens an entry sub-form (title, company, dates) | not supported when required | 4 |
 | profile | avatar photo | not listed | 5 |
 | profile | Easy Apply: a parsing dropzone, LinkedIn, Indeed, SEEK | not used | 14 |
 | questions | `info`, text only | not listed | 5 |
@@ -39,8 +38,6 @@ Each rendering and on how many of 14 postings (2026-10-20):
 | questions | `select` with `multipleChoice`, `spl-multiselect-autocomplete` | `multi_choice` | 4 |
 | questions | `checkbox`, one "Confirmed" box | `choice`, `Yes`/`No` | 4 |
 | questions | `eeo`, gender and ethnicity selects in one question | one `choice` per select | 1 |
-| questions | `files`, additional attachments | not listed when optional (2), unsupported when required | 2 |
-| questions | `languages`, repeatable language and level | not listed when optional (2), unsupported when required | 2 |
 | questions | consent boxes (`SINGLE`, or `RECRUIT`, `CRM`, `TEXTING`, `WHATSAPP` under a "Select all") | `choice`, `Yes`/`No` | 12 |
 | questions | a consent notice with no box | not listed | 3 |
 
@@ -65,3 +62,11 @@ Each question renders as a `[data-test=question-container]` in `sr-screening-que
 
 - Nothing but the resume reaches SmartRecruiters before submit. The profile's read-back is taken from the page just before Next: input values, the city's picked suggestion, the phone field's `value` JSON (`internationalFormat`), the attached file's name. The questions page is read after filling: input values, the checked radio's `label`, the multi-select's `value` (option ids, comma separated, mapped back to labels), each box's state.
 - Submit has not been observed. The evidence is the URL the page moves to after Submit; DataDome and SEON integrations show in the context's features and may stop it.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `entries` | profile Experience, Education: "Add" opens an entry sub-form (title, company, dates) | `unsupported_rendering` | 4 |
+| `attachments` | `files` question, additional attachments | `unsupported_rendering` | 2 |
+| `languages` | `languages` question, repeatable language and level | `unsupported_rendering` | 2 |

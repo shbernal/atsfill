@@ -11,6 +11,7 @@ import json
 import re
 import urllib.request
 from contextlib import suppress
+from dataclasses import replace
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -219,13 +220,15 @@ class Hireology:
         api = page.evaluate(_FETCH, API.format(job=job))
         if "status" in api:
             raise Unsupported(f"posting_gone: the form API answered {api['status']}")
-        form = _form(api["json"])
-        self._kinds = {field.id: kind for field, kind in form}
-        form_el = page.locator(FORM)
-        for field, _ in form:
-            if field.id not in SHOWN_BY and form_el.evaluate(_CONTROL, field.id) is None:
-                raise Unsupported(f"unsupported_flow: {field.id} is not on the page")
-        return [f for f, _ in form]
+        form_el, out = page.locator(FORM), []
+        for field, kind in _form(api["json"]):
+            skip = field.unfillable or field.id in SHOWN_BY
+            if not skip and form_el.evaluate(_CONTROL, field.id) is None:
+                reason = f"unhandled_rendering: {field.id} is not on the page"
+                field = replace(field, unfillable=reason)
+            out.append((field, kind))
+        self._kinds = {field.id: kind for field, kind in out if not field.unfillable}
+        return [f for f, _ in out]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
@@ -304,14 +307,17 @@ def _form(api: dict[str, Any]) -> list[tuple[Field, str]]:
 def _field(entry: dict[str, Any], section: str) -> Field:
     field_id, attributes = entry["id"], entry["attributes"]
     kind = attributes["type"]
-    if kind not in TYPES:
-        raise Unsupported(f"unsupported_rendering: {field_id} is a {kind}")
     label = (
         section
         + (
             LABELS.get(field_id) or attributes.get("label") or entry.get("label") or field_id
         ).strip()
     )
+    if kind not in TYPES:
+        reason = f"unhandled_rendering: {field_id} is a {kind}"
+        return Field(
+            field_id, label, FieldType.TEXT, bool(attributes.get("required")), unfillable=reason
+        )
     required = attributes["required"] and kind != "checkbox"  # a box left clear is an answer
     options = [o["name"] for o in attributes["options"]] or None
     if kind == "checkbox":

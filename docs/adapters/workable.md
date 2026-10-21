@@ -11,7 +11,7 @@ Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/
 
 ## Reading the form
 
-The form API answers without a key: `apply.workable.com/api/v1/jobs/<shortcode>/form` lists the sections (Personal information, Profile, Details) and their fields, each with its id, type and `required`. `read_api` maps it; it declines a posting with a required `group` or a type it does not know.
+The form API answers without a key: `apply.workable.com/api/v1/jobs/<shortcode>/form` lists the sections (Personal information, Profile, Details) and their fields, each with its id, type and `required`. `read_api` maps it; it declines a posting with a type it does not know.
 
 On the page, every field sits under an element whose `data-ui` is that id, so `read_form` reads the page: each outermost `data-ui` element of a `[data-ui=section-fields]`, by what it holds. Required fields carry a `<strong>*</strong>`, optional ones "(Optional)". Each rendering and on how many of 15 postings (2026-10-20):
 
@@ -28,7 +28,6 @@ On the page, every field sits under an element whose `data-ui` is that id, so `r
 | `multiple`, several | `div[role=group]` of `[role=checkbox]` | `multi_choice` | 2 |
 | `dropdown` | `[data-input-type=select]`: a read-only combobox opening `#input_<id>_listbox` | `choice` | 4 |
 | `date` | `input` with a `MM/DD/YYYY` placeholder and a calendar icon | `date` | 1 |
-| `group` (education, experience) | "+ Add" opens an entry (school or title, dates, …) | left out; not supported when required | 11, required on none |
 
 `address` comes prefilled from the visitor's location ("Paris, France"); hidden `city`, `postcode` and `country` inputs beside it have no `data-ui` and are not fields. "Autofill application" from a resume is never used.
 
@@ -45,3 +44,9 @@ On the page, every field sits under an element whose `data-ui` is that id, so `r
 
 - Nothing but the files reaches Workable before submit, so the read-back is the page.
 - Submit runs a Cloudflare Turnstile check (`#turnstile-container-…`), then the page posts `{candidate: …}` to `/api/v1/jobs/<shortcode>/apply`; the evidence is that call's answer. The page then shows "Thank you! Your application has been submitted successfully." Not observed on a send yet.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `entries` | `group` (education, experience): "+ Add" opens an entry (school or title, dates, …) | `unsupported_rendering` | 11, required on none |

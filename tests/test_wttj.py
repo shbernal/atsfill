@@ -89,3 +89,10 @@ def test_detection_and_posting():
     assert not adapter.detect("https://www.welcometothejungle.com/en/companies/acme", None)
     expected = "https://www.welcometothejungle.com/companies/acme/jobs/ai-engineer_paris"
     assert adapter.posting(JOB + "?igbTracker=1") == expected
+
+
+def test_an_unknown_input_is_listed_unhandled():
+    raw = {"id": "questions.cd34", "type": "radio", "label": "Remote?", "required": True}
+    field = wttj._field(raw)
+    assert field and field.unfillable == "unhandled_rendering: 'Remote?' is a radio input"
+    assert wttj._field({**raw, "type": "hidden"}) is None

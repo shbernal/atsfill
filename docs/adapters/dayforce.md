@@ -35,7 +35,6 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | resume, cover letter, additional documents, `input[type=file]` | `file` | 25 |
 | history entry (employment, education): "Add …" (`[test-id=add-<section>-record]`), fields, Update | one entry, the fields' types, `max_length` read from an entry `read` adds; required only with the section | 16 each, required on 1 |
 | work hours: a box per day, each ticked day a start and end `input[type=time]`, comments; open from the start, saved only with a day ticked | `workHours.days` `multi_choice`, `.start`, `.end` (`HH:MM`, every day alike), `.comment` | 5, required on 2 |
-| references | not handled; `unsupported` when required | 3, required on 1 |
 | question type 1, a statement | not a field | 7 |
 | type 2 radio, type 5 yes/no: `.ant-radio-group` | `choice` | 13, 23 |
 | type 4 dropdown | `choice` | 17 |
@@ -47,6 +46,8 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | candidate acknowledgement box on Submit (`#jobPostingApplication_userAcknowledged`) | `choice`, `Yes`/`No` | 26 |
 
 A conditional field is labelled `(asked when '<field>' is <option> or <option>)`.
+
+A template field, section or answer type outside this table is listed as `unhandled_rendering`.
 
 ## Filling
 
@@ -61,3 +62,9 @@ A conditional field is labelled `(asked when '<field>' is <option> or <option>)`
 
 - Nothing but the files reaches Dayforce before submit. The read-back is the page, taken from each step before leaving it: inputs' values, the dropdowns' shown item, the dial code and number, the checked radio's and boxes' labels, the file name shown under its input, the SMS radio as the dialog held it, and the acknowledgement box on Submit.
 - Submit has not been observed. The page loads an invisible reCAPTCHA (`recaptcha/api2`), which may judge the send.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `references` | the references section, entries added like a history | `unsupported_rendering` | 3, required on 1 |

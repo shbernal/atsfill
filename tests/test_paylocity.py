@@ -8,7 +8,6 @@ import pytest
 from atsfill.adapters import paylocity
 from atsfill.adapters.paylocity import Paylocity
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
 from atsfill.core.results import FieldType
 
 PAGE = Path(__file__).parent / "pages/paylocity/apply.html"
@@ -66,6 +65,7 @@ def test_read_form(opened):
         "info.preferredName",
         "info.cellPhone",
         "info.smsOptedIn",
+        "info.country",
         "public-site-address-address-1",
         "public-site-address-county",
         "public-site-address-us-state",
@@ -77,6 +77,7 @@ def test_read_form(opened):
         "info.desiredSalaryDescription",
         "info.skills",
         "coverLetter",
+        "info.dateOfBirth",
         "workHistory.companyName.0",
         "txt-workHistory-startDate-0",
         "txt-workHistory-endDate-0",
@@ -89,7 +90,7 @@ def test_read_form(opened):
         "screener.502",
         "screener.503",
         "applyAcknowledgement",
-    ]  # the country, an optional date of birth and the optional education entry are left out
+    ]  # the optional education entry is left out
     assert fields["info.firstName"].required and not fields["info.middleName"].required
     assert fields["info.cellPhone"].type is FieldType.PHONE
     assert fields["info.smsOptedIn"].options == ["Yes", "No"]
@@ -157,9 +158,19 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
     assert [c for c in checks if not c.match] == []
 
 
-def test_a_required_unknown_field_is_unsupported():
+def test_a_known_gap_and_an_unknown_field_are_listed_unfillable():
     data = paylocity._page_data(PAGE.read_text())
     info = data["customJobApplication"]["sections"][0]["fields"]
-    next(f for f in info if f["name"] == "dateOfBirth")["isRequired"] = True
-    with pytest.raises(Unsupported, match="dateOfBirth"):
-        paylocity._form(data)
+    info.append({**info[-1], "name": "companyWebsite", "displayName": "Website"})
+    data["screener"]["questions"][0]["questionType"] = "rating"
+    unfillable = {f.id: f.unfillable for f, _ in paylocity._form(data) if f.unfillable}
+    assert unfillable == {
+        "info.country": "unsupported_rendering: country: info.country is 'Country'",
+        "info.dateOfBirth": (
+            "unsupported_rendering: date_of_birth: info.dateOfBirth is 'Date of birth'"
+        ),
+        "info.companyWebsite": (
+            "unhandled_rendering: info.companyWebsite is a field it does not know"
+        ),
+        "screener.501": "unhandled_rendering: screener.501 is a rating screener question",
+    }

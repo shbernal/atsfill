@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Gap, NotTaken, Unsupported
+from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -159,7 +159,7 @@ _READ_BACK = """(form, QUESTION) => {
 
 class Teamtailor:
     name = "teamtailor"
-    known_gaps: dict[str, Gap] = {}
+    known_gaps = {"video_upload": Gap.RENDERING, "file_question": Gap.RENDERING}
     side_effects = [
         SideEffect("upload", "hiring_system", "a picked file is stored by Teamtailor at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -205,13 +205,7 @@ class Teamtailor:
                 self._qualifying.add(raw["id"])
             if raw.get("conditional"):
                 self._follow_ups[raw["id"]] = raw["asked"]
-            field = _field(raw)
-            if field is None and raw["required"]:
-                raise Unsupported(
-                    f"unsupported_rendering: {raw['label']!r} is a {raw['kind']} question"
-                )
-            if field is not None:
-                fields.append(field)
+            fields.append(self._field(raw))
         self._fields = {f.id: f for f in fields}
         return fields
 
@@ -276,8 +270,28 @@ class Teamtailor:
                 box.first.fill(answer)
             case kind, _:
                 raise Unsupported(
-                    f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
+                    f"unhandled_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                 )
+
+    def _field(self, raw: dict[str, Any]) -> Field:
+        field_id, label, required = raw["id"], raw["label"], raw["required"]
+        match raw["kind"]:
+            case "video" if raw.get("question"):
+                gap = known_gap(
+                    self, "video_upload", f"{field_id} is a video, recorded or uploaded"
+                )
+                return Field(field_id, label, FieldType.FILE, required, unfillable=gap)
+            case "file" if raw.get("question"):
+                gap = known_gap(self, "file_question", f"{field_id} is a question's file drop zone")
+                return Field(field_id, label, FieldType.FILE, required, unfillable=gap)
+        kind = (QUESTION_TYPES if raw.get("question") else STANDARD_TYPES).get(raw["kind"])
+        if kind is None:
+            reason = f"unhandled_rendering: {field_id} is a Teamtailor {raw['kind']} question"
+            return Field(field_id, label, FieldType.TEXT, required, unfillable=reason)
+        options = CHECKBOX if raw["kind"] == "checkbox" else raw.get("options")
+        return Field(
+            field_id, label, kind, required, options, raw.get("maxLength"), raw.get("accept")
+        )
 
     def _shown(self, form: Locator, field_id: str) -> bool:
         """Whether a follow-up question shows, once the answer before it has opened it."""
@@ -319,26 +333,6 @@ def _stored_name(name: str) -> str:
     characters than letters, digits, `.` and `-` one `_`."""
     ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9.\-]+", "_", ascii_name.lower())
-
-
-def _field(raw: dict[str, Any]) -> Field | None:
-    """The field a raw description is, None for a kind atsfill cannot fill."""
-    kinds = QUESTION_TYPES if raw.get("question") else STANDARD_TYPES
-    kind = kinds.get(raw["kind"])
-    if kind is None:
-        return None
-    options = raw.get("options")
-    if raw["kind"] == "checkbox":
-        options = CHECKBOX
-    return Field(
-        raw["id"],
-        raw["label"],
-        kind,
-        raw["required"],
-        options,
-        raw.get("maxLength"),
-        raw.get("accept"),
-    )
 
 
 def _decline_cookies(page: Page) -> None:

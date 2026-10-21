@@ -29,6 +29,8 @@ Each rendering, and in how many of 166 postings' configurations it shows (2026-1
 | a field shown once another is answered: the referrer's name (referred Yes), the school fields (any education but Did Not Complete High School), military details (served Yes), non-compete, relocation, school work, activities and honours explanations | optional, the label says `(asked when '<label>' is …)` | 139, 20, 7, ≤5 each |
 | a repeatable fieldset (compensation, "Add another amount"), a work history section shown three times | the first entry only | 20, 1 |
 
+A type outside this table, or a field the API lists and the page does not show, is listed as `unhandled_rendering`.
+
 The `select`'s value holds only when React sees a native `change`: Playwright's `select_option` leaves the value empty, so the option is set through the element's value setter and a `change` event.
 
 ## Filling

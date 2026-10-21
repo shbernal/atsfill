@@ -30,7 +30,6 @@ Each rendering and on how many of 100 postings from 25 employers (2026-10-20, ov
 | single checkbox (`boolean`) | `choice`, `Yes`/`No` | 1 |
 | flatpickr date, `Y-m-d` (`datetime`) | `date` | 1 |
 | multiple file input (`attachment`) | `file`, one file | 1 |
-| "Add Education" / "Add Experience" entry sub-form (`educations`, `experiences`) | not listed when optional, unsupported when required | 1 |
 | checkbox list (`checkbox`), select2 multiple (`multiple_select_dropdown`) | `multi_choice` | 0, from the template |
 | terms and privacy box | `choice`, `Yes`/`No`, required | 100 |
 
@@ -49,3 +48,9 @@ Nothing is saved before Apply: the app reads the inputs only when Apply is click
 
 - Read-back: input values, selected options' labels, checked values, the file input's file name, the boxes' state.
 - Submit has not been observed. Apply uploads each file to S3 over a presigned POST (`…/apply-by-career-page-resume-get-presigned-url/`), then posts the answers to the same `application-form/` endpoint with the page's CSRF token; the evidence is that response.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `entries` | "Add Education" / "Add Experience" entry sub-form (`educations`, `experiences`) | `unsupported_rendering` | 1 |

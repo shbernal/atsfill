@@ -31,7 +31,7 @@ The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with 
 | `portfolio` | `file` | PDF only | 1 |
 | `consent` | `choice`, `Yes`/`No` | checkbox | 15 |
 
-No question rendered as a checkbox, radio or select: those, and any other checkbox, read as unsupported when required, and are left out otherwise.
+No question rendered as a checkbox, a radio or a select: those, and any other checkbox, are listed as `unhandled_rendering`. A page that is not a job, or an apply button that opens no form, is an `adapter_error`.
 
 - The email comes from the account and is disabled; the avatar is not read.
 - A field holding a value when the form opens is `prefilled`; one not answered keeps what the profile put there, required or not. The profile's location arrives up to a second after the rest, so the form is read once it has, or after 3 seconds.

@@ -286,3 +286,26 @@ def test_a_closed_posting_is_gone(page):
     finally:
         page.context.unroute("https://jobs.dayforcehcm.com/**")
         page.context.route("https://jobs.dayforcehcm.com/**", serve)
+
+
+def test_a_known_gap_and_unknown_renderings_are_listed_unfillable():
+    template = json.loads(json.dumps(TEMPLATE))
+    sections = template["sections"]
+    sections[0]["fields"].append(field("Nickname", True))
+    sections[2]["fields"].append(field("Hobby"))
+    sections[4]["questionnaire"]["questions"].append(question(17, 9, "Rate us"))
+    sections.insert(5, {"xRefCode": "REFERENCES", "displayName": "References", "sequence": 4,
+                        "isRequired": True, "questionnaire": None, "fields": []})  # fmt: skip
+    api = {**API, "jobapplication": template}
+    get = lambda u: api[next(k for k in api if f"/{k}/" in u)]  # noqa: E731
+    fields = Dayforce()._read(("en-US", "acme", "careers", "123"), get)
+    unfillable = {f.id: (f.unfillable, f.required) for f in fields if f.unfillable}
+    assert unfillable == {
+        "Nickname": ("unhandled_rendering: personal field 'Nickname'", True),
+        "workHistory.Hobby": ("unhandled_rendering: workHistory field 'Hobby'", False),
+        "references": (
+            "unsupported_rendering: references: 'References' needs references added",
+            True,
+        ),
+        "q17": ("unhandled_rendering: q17 has answer type 9", False),
+    }

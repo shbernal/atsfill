@@ -16,7 +16,7 @@ from contextlib import suppress
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Gap, Unsupported
+from atsfill.core.adapter import Gap, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -167,7 +167,7 @@ _CLICK = """([selector, n, text]) => {
 
 class Dayforce:
     name = "dayforce"
-    known_gaps: dict[str, Gap] = {}
+    known_gaps = {"references": Gap.RENDERING}
     side_effects = [
         SideEffect(
             "load",
@@ -213,8 +213,8 @@ class Dayforce:
                 accepted = [f".{a.strip()}" for a in accept.split(",") if a.strip()] or None
                 fields[i] = _with(field, accept=accepted)
         for prefix, _ in ENTRIES.values():  # an entry's controls show once it is added
-            texts = [i for i, f in enumerate(fields)
-                     if f.id.startswith(f"{prefix}.") and f.type is FieldType.TEXT]  # fmt: skip
+            texts = [i for i, f in enumerate(fields) if f.id.startswith(f"{prefix}.")
+                     and f.type is FieldType.TEXT and not f.unfillable]  # fmt: skip
             if texts and page.locator(f"[test-id=add-{prefix.lower()}-record]").count():
                 base = _open_entry(page, prefix)
                 for i in texts:
@@ -281,8 +281,9 @@ class Dayforce:
         for f in _visible(personal):
             key, kind = PERSONAL_FIELDS.get(f["fieldName"], (None, None))
             if key is None or kind is None:
-                if f["isRequired"]:
-                    raise Unsupported(f"unsupported_rendering: personal field {f['fieldName']!r}")
+                reason = f"unhandled_rendering: personal field {f['fieldName']!r}"
+                fields.append(Field(f["fieldName"], f["displayName"], FieldType.TEXT,
+                                    bool(f["isRequired"]), unfillable=reason))  # fmt: skip
                 continue
             options = {
                 "candidateSource": sources,
@@ -317,14 +318,17 @@ class Dayforce:
             ]
         for section in sections:
             ref = section.get("xRefCode")
-            if (
-                not section.get("questionnaire")
-                and ref not in CANDIDATE_INFO
-                and section.get("isRequired")
-            ):
-                raise Unsupported(
-                    f"unsupported_rendering: {section['displayName']!r} section is required"
-                )
+            if section.get("questionnaire") or ref in CANDIDATE_INFO:
+                continue
+            name = section["displayName"]
+            if ref == "REFERENCES":
+                field_id = "references"
+                reason = known_gap(self, "references", f"{name!r} needs references added")
+            else:
+                field_id = f"section.{ref}"
+                reason = f"unhandled_rendering: {name!r} section {ref}"
+            fields.append(Field(field_id, name, FieldType.TEXT, bool(section.get("isRequired")),
+                                unfillable=reason))  # fmt: skip
         self._sections = [
             s for s in sections if s.get("questionnaire") and s.get("xRefCode") != "SUBMIT"
         ]
@@ -408,7 +412,9 @@ class Dayforce:
     def _fill_entry(self, page: Page, prefix: str, answers: dict[str, Answer]) -> None:
         """Adds one entry to a history section and fills it."""
         base = _open_entry(page, prefix)
-        fields = [f for f in self._fields.values() if f.id.startswith(f"{prefix}.")]
+        fields = [
+            f for f in self._fields.values() if f.id.startswith(f"{prefix}.") and not f.unfillable
+        ]
         for field in fields:
             if field.id in answers:
                 _fill_control(page, _id(base + field.id.split(".")[1]), field, answers[field.id])
@@ -433,7 +439,7 @@ class Dayforce:
     ) -> None:
         field_id = f"q{question['questionId']}"
         field = self._fields.get(field_id)
-        if field is None:
+        if field is None or field.unfillable:
             return
         target = _question_target(page, base, question)
         if target is None:
@@ -550,13 +556,14 @@ def _entry_fields(
     fields = []
     for f in _visible(section):
         key, kind = keys.get(re.sub(r"\s", "", f["fieldName"]).upper(), (None, None))
-        if key is None or kind is None:
-            if f["isRequired"] and section["isRequired"]:
-                raise Unsupported(f"unsupported_rendering: {prefix} field {f['fieldName']!r}")
-            continue
         required = bool(f["isRequired"] and section["isRequired"])
-        options = NO_YES if kind == "boolean" else None
         label = f"{section['displayName']}: {f['displayName']}"
+        if key is None or kind is None:
+            reason = f"unhandled_rendering: {prefix} field {f['fieldName']!r}"
+            field_id = f"{prefix}.{f['fieldName']}"
+            fields.append(Field(field_id, label, FieldType.TEXT, required, unfillable=reason))
+            continue
+        options = NO_YES if kind == "boolean" else None
         fields.append(Field(f"{prefix}.{key}", label, ENTRY_KINDS[kind], required, options))
     return fields
 
@@ -595,13 +602,11 @@ def _question_fields(section: dict[str, Any], question: dict[str, Any]) -> list[
     label = _plain(question.get("description") or "")
     if not label or len(label) > LONG_LABEL:
         label = _plain(question["displayName"])
-    if kind is None:
-        if question["isRequired"]:
-            raise Unsupported(
-                f"unsupported_rendering: {label!r} has answer type {question['answerType']}"
-            )
-        return []
     field_id = f"q{question['questionId']}"
+    if kind is None:
+        reason = f"unhandled_rendering: {field_id} has answer type {question['answerType']}"
+        required = bool(question["isRequired"])
+        return [Field(field_id, label, FieldType.TEXT, required, unfillable=reason)]
     options = None
     if question["answerType"] == CHECKBOX:
         options = YES_NO

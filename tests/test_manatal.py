@@ -7,7 +7,6 @@ import pytest
 
 from atsfill.adapters.manatal import Manatal
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
 from atsfill.core.results import FieldType
 
 PAGES = Path(__file__).parent / "pages/manatal"
@@ -66,7 +65,9 @@ def test_detect_and_posting():
 def test_read_form_lists_each_rendering(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
-    assert list(by_id) == [*(str(i) for i in range(1, 22)), "terms_and_condition"]
+    assert list(by_id) == [*(str(i) for i in range(1, 23)), "terms_and_condition"]
+    gap = "unsupported_rendering: entries: 22 is a list of educations"
+    assert (by_id["22"].unfillable, by_id["22"].required) == (gap, False)
     assert by_id["3"].type is FieldType.PHONE
     assert by_id["5"].type is FieldType.FILE and by_id["5"].accept == [
         ".pdf",
@@ -171,7 +172,7 @@ def test_submit_posts_the_form(page):
     assert submitted
 
 
-def test_required_entries_are_not_supported(page):
+def test_required_entries_are_listed_required(page):
     form = [*FORM[:-1], {**FORM[-1], "is_required": True}]
-    with pytest.raises(Unsupported, match="unsupported_rendering: educations entries are required"):
-        opened(page, form)
+    _, fields = opened(page, form)
+    assert fields[-2].id == "22" and fields[-2].required and fields[-2].unfillable

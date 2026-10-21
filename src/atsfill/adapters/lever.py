@@ -206,7 +206,8 @@ def _job(url: str) -> tuple[str, str] | None:
 def _field(raw: dict[str, Any]) -> Field:
     kind = raw["kind"]
     if kind not in KINDS:
-        raise Unsupported(f"unsupported_rendering: {raw['id']} is a {kind}")
+        reason = f"unhandled_rendering: {raw['id']} is a {kind}"
+        return Field(raw["id"], raw["label"], FieldType.TEXT, raw["required"], unfillable=reason)
     options = {"consent": YES_NO, "select": raw["options"]}.get(kind)
     if kind in ("radio", "checkboxes"):
         options = raw["options"]

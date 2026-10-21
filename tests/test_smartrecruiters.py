@@ -6,7 +6,6 @@ import pytest
 
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
 from atsfill.core.results import FieldType
 
 PAGE = Path(__file__).parent / "pages/smartrecruiters/apply.html"
@@ -62,6 +61,7 @@ def test_read_form_lists_both_pages(page):
         "website",
         "resume",
         "message",
+        "experience",
         "q-text",
         "q-radio",
         "q-select",
@@ -70,6 +70,7 @@ def test_read_form_lists_both_pages(page):
         "q-box",
         "q-eeo.gender",
         "q-eeo.ethnicity",
+        "q-files",
         "q-textarea",
         "consent.RECRUIT",
         "consent.CRM",
@@ -90,6 +91,10 @@ def test_read_form_lists_both_pages(page):
         == "You declare that you have read the privacy notice of Acme."
     )
     assert by_id["consent.RECRUIT"].required and not by_id["consent.CRM"].required
+    assert {i: (f.unfillable, f.required) for i, f in by_id.items() if f.unfillable} == {
+        "experience": ("unsupported_rendering: entries: experience is a list of entries", False),
+        "q-files": ("unsupported_rendering: attachments: q-files is a list of attachments", False),
+    }
 
 
 def test_every_answer_reads_back(page, resume):
@@ -140,14 +145,29 @@ def test_submit_returns_the_page_it_lands_on(page):
     )
 
 
-def test_required_experience_is_not_supported(page):
+def test_required_experience_is_listed_required(page):
     page.goto(FORM)
     page.evaluate(
         """() => document.querySelector("oc-experience").insertAdjacentHTML("beforeend",
         '<span data-test="section-required-mark">*</span>')"""
     )
-    with pytest.raises(Unsupported, match="unsupported_rendering: experience entries are required"):
-        SmartRecruiters().read_form(page)
+    experience = next(f for f in SmartRecruiters().read_form(page) if f.id == "experience")
+    assert experience.required and experience.unfillable
+
+
+def test_an_unknown_question_type_is_listed_unhandled():
+    adapter = SmartRecruiters()
+    entry = {"id": "value", "label": "Value", "type": "range", "values": []}
+    question = {
+        "id": "q",
+        "type": "slider",
+        "label": "How much?",
+        "required": True,
+        "fields": [entry],
+    }
+    adapter._questions = {"q": question}
+    [field] = adapter._question_fields(question)
+    assert field.unfillable == "unhandled_rendering: 'How much?' is a slider question"
 
 
 def test_posting_urls():

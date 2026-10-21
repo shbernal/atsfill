@@ -9,7 +9,7 @@ from urllib.parse import parse_qsl
 
 import pytest
 
-from atsfill.adapters.paycor import Paycor
+from atsfill.adapters.paycor import Paycor, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import FieldType
@@ -225,3 +225,8 @@ def test_a_closed_posting_is_gone(page):
 
 def test_side_effects_are_declared():
     assert json.dumps([e.step for e in Paycor().side_effects]) == '["upload", "submit"]'
+
+
+def test_an_unknown_control_is_listed_unhandled():
+    control = {"id": "mood", "label": "Mood", "kind": "range", "required": False}
+    assert _field(control).unfillable == "unhandled_rendering: mood is a range input"

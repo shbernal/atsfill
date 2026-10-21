@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Gap, Unsupported
+from atsfill.core.adapter import Gap, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -105,9 +105,20 @@ SALARY = {  # by desiredSalaryInputType
     ],
     2: [Spec("info.desiredSalaryDescription", "Desired Salary", "text")],
 }
-# Shown on their own: the country (United States until changed), the EEO identity questions.
-OPTIONAL_ONLY = {"country", "dni", "ethnicity", "genderIdentity", "personalPronoun",
-                 "sexualOrientation", "eVerify", "priorConviction"}  # fmt: skip
+# Fields that are no answer of their own: the acknowledgement (ACKNOWLEDGE, always added), the
+# E-Verify message, the switch that shows the conviction questions.
+NOT_ANSWERS = {"acknowledgement", "eVerify", "priorConviction"}
+GAPS = {  # pageData field name: the known gap it is
+    "country": "country",
+    **dict.fromkeys(
+        ("dni", "ethnicity", "genderIdentity", "personalPronoun", "sexualOrientation"),
+        "expanded_identity",
+    ),
+    "dateOfBirth": "date_of_birth",
+    "startEndSalary": "salary_history",
+    "referenceAddress": "reference_address",
+    "gpa": "gpa",
+}
 CONTACT = ("workHistory.mayWeContactSupervisor.0", "Yes")
 GRADUATED = ("educationHistory.didYouGraduate.0", "Yes")
 WORK: dict[str, list[Spec]] = {
@@ -281,7 +292,7 @@ class Control:
 
 class Paylocity:
     name = "paylocity"
-    known_gaps: dict[str, Gap] = {}
+    known_gaps = dict.fromkeys(GAPS.values(), Gap.RENDERING)
     side_effects = [
         SideEffect("upload", "hiring_system", "an attached file is stored by Paylocity at once"),
         SideEffect("fill", "hiring_system", "each step's answers go to Paylocity for validation"),
@@ -318,10 +329,11 @@ class Paylocity:
             page.locator(f"{NEXT}, {SUBMIT}").first.wait_for(
                 state="attached", timeout=FORM_TIMEOUT_MS
             )
-            self._form = _form(_page_data(page.content()))
+            form = _form(_page_data(page.content()))
         except Timeout, ValueError, KeyError:
             raise Unsupported("posting_gone: no application form on the page") from None
-        return [f for f, _ in self._form]
+        self._form = [(f, c) for f, c in form if not f.unfillable]
+        return [f for f, _ in form]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         self._values = {}
@@ -405,23 +417,18 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
                 continue
             count = custom.get("referencesRequiredCount") or 1
         vocabulary = SECTIONS.get(name)
-        if vocabulary is None:
-            raise Unsupported(f"unsupported_rendering: unknown section {name!r}")
         included = {f["name"] for f in section["fields"] if f["isIncluded"]}
         for n in range(count):
             prefix = f"Reference {n + 1}: " if name == "references" else ""
             for field in section["fields"]:
                 if not field["isIncluded"]:
                     continue
-                specs = vocabulary.get(field["name"])
+                specs = (vocabulary or {}).get(field["name"])
                 if field["name"] == "desiredSalary":
                     specs = SALARY.get(custom.get("desiredSalaryInputType"))
                 if specs is None:
-                    if entries and field["isRequired"] and field["name"] not in OPTIONAL_ONLY:
-                        raise Unsupported(
-                            "unsupported_rendering: "
-                            f"{_plain(field['displayName'])!r} ({field['name']}) is not handled"
-                        )
+                    if entries and field["name"] not in NOT_ANSWERS:
+                        out.append(_unfillable(name, field, prefix, n, vocabulary is None))
                     continue
                 if SHOWN_WITH.get(field["name"], field["name"]) not in included:
                     continue
@@ -438,13 +445,36 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
         elif kind == "text":
             kind, answers, dom = "screener_text", None, f"screener-question-{i}-textarea"
         else:
-            raise Unsupported(f"unsupported_rendering: a {kind} screener question")
+            field_id = f"screener.{question['screenerQuestionId']}"
+            reason = f"unhandled_rendering: {field_id} is a {kind} screener question"
+            field = Field(field_id, _plain(question["title"]), FieldType.TEXT,
+                          bool(question.get("isRequired")), unfillable=reason)  # fmt: skip
+            out.append((field, Control("unfillable", field_id)))
+            continue
         field_id = f"screener.{question['screenerQuestionId']}"
         out.append((Field(field_id, _plain(question["title"]), TYPES[kind],
                           bool(question.get("isRequired")), answers),
                     Control(kind, dom, answers)))  # fmt: skip
     add(ACKNOWLEDGE, {"isRequired": True})
     return out
+
+
+def _unfillable(
+    section: str, field: dict[str, Any], prefix: str, n: int, unknown_section: bool
+) -> tuple[Field, Control]:
+    """A field of a shown section the adapter does not fill: a known gap, else unhandled."""
+    name = field["name"]
+    field_id = f"{section}.{name}" + (f".{n}" if section == "references" else "")
+    label = prefix + _plain(field["displayName"])
+    if (gap := GAPS.get(name)) and not unknown_section:
+        reason = known_gap(Paylocity(), gap, f"{field_id} is {label!r}")
+    else:
+        where = (
+            f"in an unknown section {section!r}" if unknown_section else "a field it does not know"
+        )
+        reason = f"unhandled_rendering: {field_id} is {where}"
+    field_ = Field(field_id, label, FieldType.TEXT, bool(field["isRequired"]), unfillable=reason)
+    return field_, Control("unfillable", field_id)
 
 
 def _plain(text: str) -> str:

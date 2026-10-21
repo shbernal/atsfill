@@ -127,6 +127,17 @@ def _ids(url: str) -> tuple[str, str] | None:
     return (client, job) if client and job else None
 
 
+def _field(control: dict[str, Any]) -> Field:
+    """A form control as a field; a control of a type it does not know is listed unfillable."""
+    fid, kind = control["id"], control["kind"]
+    label = LABELS.get(fid, EEO.get(fid, control["label"]))
+    if kind not in KINDS:
+        reason = f"unhandled_rendering: {fid} is a {kind} input"
+        return Field(fid, label, FieldType.TEXT, control["required"], unfillable=reason)
+    label += " (a number)" if kind == "number" else ""
+    return Field(fid, label, KINDS[kind], control["required"], control["options"], control["max"])
+
+
 class Paycor:
     name = "paycor"
     known_gaps: dict[str, Gap] = {}
@@ -164,23 +175,9 @@ class Paycor:
     def read_form(self, page: Page) -> list[Field]:
         self._before, self._codes = [], {}
         self._walk(page, None)
-        self._controls = [
-            (
-                Field(
-                    c["id"],
-                    LABELS.get(c["id"], EEO.get(c["id"], c["label"]))
-                    + (" (a number)" if c["kind"] == "number" else ""),
-                    KINDS[c["kind"]],
-                    c["required"],
-                    c["options"],
-                    c["max"],
-                ),
-                c["kind"],
-            )
-            for c in page.evaluate(_CONTROLS)
-            if c["kind"] in KINDS
-        ]
-        return [f for f, _ in self._before] + [f for f, _ in self._controls]
+        controls = [(_field(c), c["kind"]) for c in page.evaluate(_CONTROLS)]
+        self._controls = [(f, kind) for f, kind in controls if not f.unfillable]
+        return [f for f, _ in self._before] + [f for f, _ in controls]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         if self._before:
@@ -222,7 +219,7 @@ class Paycor:
                     self._pick(named, field, answer)
                 case _:
                     raise Unsupported(
-                        f"unsupported_rendering: cannot fill {field.id}, a {kind}, with {answer!r}"
+                        f"unhandled_rendering: cannot fill {field.id}, a {kind}, with {answer!r}"
                     )
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -266,7 +263,7 @@ class Paycor:
         """Opens the apply page and answers the pages before the form: the persona's picks
         when filling, the last option and Yes when only reading, which list the fields."""
         if self._start is None:
-            raise Unsupported("unsupported_flow: no Paycor job in the page")
+            raise RuntimeError("no Paycor job in the page")
         page.goto(self._start, wait_until="domcontentloaded")
         for _ in range(STEPS):
             page.wait_for_load_state("domcontentloaded")
@@ -287,11 +284,11 @@ class Paycor:
             elif "no longer active" in (page.text_content("body") or ""):
                 raise Unsupported("posting_gone: this job is no longer active")
             else:
-                raise Unsupported(f"unsupported_flow: an unknown page before the form ({page.url})")
+                raise RuntimeError(f"an unknown page before the form ({page.url})")
             # The form's third-party scripts (Dropbox, Google) can hold its `load` back.
             with page.expect_navigation(wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS):
                 button.click(no_wait_after=True)
-        raise Unsupported("unsupported_flow: no form after the pages before it")
+        raise RuntimeError("no form after the pages before it")
 
     def _eeo(self, page: Page, answers: dict[str, Answer] | None) -> None:
         for name in page.locator(f"{EEO_FORM} input[type=radio]").evaluate_all(

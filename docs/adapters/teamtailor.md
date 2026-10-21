@@ -38,10 +38,6 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 | question `[date]` (`input[type=date]`) | `date` | 0, seen before |
 | qualifying question | `choice` | 1 |
 | follow-up question | as its kind, optional | 2 |
-| video question (`[picked_video_attributes]`: record, or upload a clip) | not handled | 3, required on 2 |
-| file question | not handled | 0 |
-
-  A required question atsfill does not handle makes the form `unsupported`; an optional one is left out.
 
 ## Filling
 
@@ -60,3 +56,10 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
 - Nothing reaches the employer before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
 - Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, the id a UUID, titled "Applied to <role>". An optional "Connect" step that follows is skipped.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `video_upload` | video question (`[picked_video_attributes]`): record, or upload a clip; the upload path is wanted | `unsupported_rendering` | 3, required on 2 |
+| `file_question` | file question: a drop zone inside a `.question` | `unsupported_rendering` | 0 |

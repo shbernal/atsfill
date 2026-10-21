@@ -76,6 +76,7 @@ def test_read_form_opens_the_application(page):
         *(f"section_222_question_{n}" for n in range(3)),
         *(REFERENCE.format(n, part) for n in (1, 2)
           for part in ("name", "email_address", "phone_number", "type")),
+        "video_27",
         "race_ethnicity",
         "eeoc.veteran_status",
         "gdprAgreement",
@@ -159,11 +160,12 @@ def test_a_step_breezy_keeps_stops_the_fill(page):
     assert page.locator("[data-section=application]").is_visible()
 
 
-def test_a_required_video_is_unsupported(page):
+def test_a_video_question_is_out_of_scope(page):
     page.goto(APPLY)
     page.locator(".video .required").evaluate("e => e.classList.remove('ng-hide')")
-    with pytest.raises(Unsupported, match="unsupported_rendering: 'Introduce yourself on video'"):
-        Breezy().read_form(page)
+    video = next(f for f in Breezy().read_form(page) if f.unfillable)
+    assert (video.label, video.required) == ("Introduce yourself on video", True)
+    assert video.unfillable == f"out_of_scope: {video.id} is a video recorded live"
 
 
 def test_a_posting_gone(page):

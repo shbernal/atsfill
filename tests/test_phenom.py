@@ -206,3 +206,15 @@ def test_an_apply_link_to_another_system_is_unsupported(page):
             Phenom().read_form(page)
     finally:
         page.unroute(JOB)
+
+
+def test_a_first_step_other_than_the_form_is_a_known_gap(page, monkeypatch):
+    monkeypatch.setattr(phenom, "FORM_TIMEOUT_MS", 500)
+    body = "<script>history.replaceState({}, '', location.href + '&stepname=login')</script>"
+    page.route(APPLY, lambda route: route.fulfill(content_type="text/html", body=body))
+    try:
+        page.goto(APPLY)
+        with pytest.raises(Unsupported, match="unsupported_flow: first_step: .*'login'"):
+            Phenom().read_form(page)
+    finally:
+        page.unroute(APPLY)
