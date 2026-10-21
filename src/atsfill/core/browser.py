@@ -47,6 +47,8 @@ __all__ = [
 MIN_SCREEN_HEIGHT = 1050  # leaves the window the 900px Greenhouse and Teamtailor need
 HOST_OS = {"Linux": "linux", "Darwin": "macos", "Windows": "windows"}[platform.system()]
 BUDGET = 180.0  # seconds per command, lock wait included
+LOCK_POLL_S = 0.1
+HTTP_TIMEOUT_S = 20  # per request to a hiring system's API
 BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compare across machines
 
 
@@ -106,7 +108,7 @@ def lock(data_dir: Path, deadline: float) -> Generator[None]:
             except BlockingIOError:
                 if time.monotonic() > deadline:
                     raise OutOfTime("time budget ran out waiting for another command") from None
-                time.sleep(0.1)
+                time.sleep(LOCK_POLL_S)
         try:
             yield
         finally:

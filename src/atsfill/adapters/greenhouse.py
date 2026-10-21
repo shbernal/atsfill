@@ -15,7 +15,7 @@ from urllib.parse import parse_qs, urlencode, urlsplit
 
 from atsfill.core import browser
 from atsfill.core.adapter import Unsupported
-from atsfill.core.browser import Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOSTS = re.compile(r"^(job-boards|boards)(\.eu)?\.greenhouse\.io$")
@@ -28,6 +28,8 @@ HYDRATE_TIMEOUT_MS = 15_000
 FORM_TIMEOUT_MS = 20_000
 ANSWER_TIMEOUT_MS = 15_000  # an upload's file name, a suggestion: past it, a mismatch
 SUBMIT_TIMEOUT_MS = 90_000
+HYDRATE_POLL_MS = 500  # for a select's list to open, per click
+KEY_DELAY_MS = 20
 API_TYPES = {
     "input_text": FieldType.TEXT,
     "textarea": FieldType.TEXT,
@@ -163,7 +165,7 @@ class Greenhouse:
             request = urllib.request.Request(
                 API.format(board=found[0], job=found[1]), headers={"User-Agent": "atsfill"}
             )
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
                 return _api_fields(json.load(response))
         except OSError, ValueError, KeyError, TypeError:
             return None
@@ -205,7 +207,7 @@ class Greenhouse:
                     for value in values:
                         _select(page, field_id, value, suggested)
                 case "tel":  # the number's dial code picks the country
-                    page.locator(_by_id(field_id)).press_sequentially(values[0], delay=20)
+                    page.locator(_by_id(field_id)).press_sequentially(values[0], delay=KEY_DELAY_MS)
                 case "number" if not re.fullmatch(r"-?\d+(\.\d+)?", values[0]):
                     pass  # the input takes no text: left empty, it reads back as a mismatch
                 case _:
@@ -277,7 +279,7 @@ def _wait_until_live(page: Page) -> None:
     while time.monotonic() < deadline:
         select.click()
         try:
-            listbox.first.wait_for(timeout=500)
+            listbox.first.wait_for(timeout=HYDRATE_POLL_MS)
         except Timeout:
             continue
         select.press("Escape")
@@ -335,7 +337,7 @@ def _select(page: Page, field_id: str, value: str, suggested: bool) -> None:
     takes. A suggestion list takes its first suggestion. No option leaves the select empty."""
     box = page.locator(_by_id(field_id))
     box.click()
-    box.press_sequentially(value, delay=20)
+    box.press_sequentially(value, delay=KEY_DELAY_MS)
     menu = page.locator(f"{_by_id(f'react-select-{field_id}-listbox')} [role=option]")
     option = menu.first if suggested else menu.filter(has_text=_exact(value)).first
     try:

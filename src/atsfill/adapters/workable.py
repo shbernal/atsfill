@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core import browser
 from atsfill.core.adapter import Unsupported
-from atsfill.core.browser import Locator, Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOSTS = re.compile(r"^(apply|[\w-]+)\.workable\.com$")
@@ -31,6 +31,7 @@ OPTIONS_TIMEOUT_MS = 5_000
 CHECK_TIMEOUT_MS = 3_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
+KEY_DELAY_MS = 20
 YES_NO = ["Yes", "No"]
 API_TYPES = {
     "text": FieldType.TEXT,
@@ -165,7 +166,7 @@ class Workable:
             request = urllib.request.Request(
                 API.format(code=code), headers={"User-Agent": "atsfill"}
             )
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
                 return _api_fields(json.load(response))
         except OSError, ValueError, KeyError, TypeError:
             return None
@@ -210,11 +211,11 @@ class Workable:
                 case "phone":  # the number's dial code picks the country
                     number = field.locator("input[type=tel]")
                     number.fill("")
-                    number.press_sequentially(values[0], delay=20)
+                    number.press_sequentially(values[0], delay=KEY_DELAY_MS)
                 case "date":
                     if typed := _typed_date(values[0], self._formats[field_id]):
                         field.click()
-                        field.press_sequentially(typed, delay=20)
+                        field.press_sequentially(typed, delay=KEY_DELAY_MS)
                         field.press("Tab")
                 case "yes_no":
                     value = {"Yes": "true", "No": "false"}.get(values[0])

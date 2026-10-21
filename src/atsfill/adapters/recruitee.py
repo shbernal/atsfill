@@ -20,6 +20,7 @@ CAREER_SITE = "script[src*='/js/PublicApp/'], script[src*='recruiteecdn.com']"
 FORM = "form#offer-application-form"
 FORM_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
+KEY_DELAY_MS = 20
 YES_NO = ["Yes", "No"]
 EXTENSIONS = {"image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"], "application/pdf": [".pdf"]}
 KINDS = {
@@ -164,7 +165,7 @@ class Recruitee:
                     _set(controls.first, answer == "Yes")
                 case "phone":  # the country picker follows the number's own prefix
                     controls.first.fill("")
-                    controls.first.press_sequentially(values[0], delay=20)
+                    controls.first.press_sequentially(values[0], delay=KEY_DELAY_MS)
                 case _:
                     controls.first.fill(values[0])
 

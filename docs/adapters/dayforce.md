@@ -55,7 +55,7 @@ A conditional field is labelled `(asked when '<field>' is <option> or <option>)`
 - A phone number picks the longest dial code its digits start with, the main country of a shared one (`+1` is the United States), and types the rest.
 - A section saves with its Update, the first submit button after its first field; a click while a dropdown is still closing is lost, so Update is clicked until the section closes. An open section keeps Next from going on.
 - Some sites refuse a history entry dated in the future without an error; the entry stays open and the wizard on Candidate Info.
-- Next can go unheeded right after a save; atsfill clicks it again, up to three times, until the step's controls change or an error shows; an error adds its own `<id>_help` element, not a control. Submit is never pressed by `fill`.
+- Next can go unheeded right after a save; atsfill clicks it again, up to three times, until the step's controls change, the button reads Submit, or an error shows; an error adds its own `<id>_help` element, not a control. Submit is never pressed by `fill`.
 
 ## Read-back and submit
 

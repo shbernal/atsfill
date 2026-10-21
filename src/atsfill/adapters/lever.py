@@ -23,6 +23,7 @@ FORM_TIMEOUT_MS = 30_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUGGEST_TIMEOUT_MS = 10_000
 SUBMIT_TIMEOUT_MS = 90_000
+KEY_DELAY_MS = 40
 YES_NO = ["Yes", "No"]
 KINDS = {
     "text": FieldType.TEXT,
@@ -245,7 +246,7 @@ def _attach(control: Locator, path: str, resume: bool) -> None:
 def _locate(page: Page, control: Locator, value: str) -> None:
     """Types the location and picks Lever's first suggestion: the field takes only a pick."""
     control.fill("")
-    control.press_sequentially(value, delay=40)
+    control.press_sequentially(value, delay=KEY_DELAY_MS)
     suggestion = page.locator(".dropdown-results .dropdown-location").first
     with suppress(Timeout):
         suggestion.wait_for(timeout=SUGGEST_TIMEOUT_MS)

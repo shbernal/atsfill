@@ -25,6 +25,10 @@ SUBMIT_TIMEOUT_MS = 90_000
 SUGGEST_TRIES = 3
 LOCATION_TIMEOUT_S = 3
 SUGGEST_TIMEOUT_S = 5
+SIGNED_IN_POLL_MS = 250
+LOCATION_POLL_MS = 200
+SUGGEST_POLL_MS = 250
+KEY_DELAY_MS = 30
 YES_NO = ["Yes", "No"]
 
 # The fillable fields: an input's name is its id. Email comes from the account, disabled.
@@ -86,7 +90,9 @@ class WelcomeToTheJungle:
         href = apply.get_attribute("href")
         deadline = time.monotonic() + SIGNED_IN_TIMEOUT_S
         while href and "/signin" in href and time.monotonic() < deadline:
-            page.wait_for_timeout(250)  # rendered for a visitor until the page knows the account
+            page.wait_for_timeout(
+                SIGNED_IN_POLL_MS
+            )  # rendered for a visitor until the page knows the account
             href = apply.get_attribute("href")
         if href and "/signin" in href:
             raise Blocked("login_required: run `atsfill login wttj`")
@@ -106,7 +112,9 @@ class WelcomeToTheJungle:
         location = form.locator("[name=location]")
         deadline = time.monotonic() + LOCATION_TIMEOUT_S
         while location.count() and not location.input_value() and time.monotonic() < deadline:
-            page.wait_for_timeout(200)  # the profile's location comes last, a second later
+            page.wait_for_timeout(
+                LOCATION_POLL_MS
+            )  # the profile's location comes last, a second later
         fields = []
         for raw in form.evaluate(_READ):
             field = _field(raw)
@@ -166,14 +174,14 @@ def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
         box.click()
         box.press("Control+a")  # `fill("")`, select-all and Delete, leaves the profile's value
         box.press("Backspace")
-        box.press_sequentially(answer, delay=30)
+        box.press_sequentially(answer, delay=KEY_DELAY_MS)
         deadline = time.monotonic() + SUGGEST_TIMEOUT_S
         while time.monotonic() < deadline:
             for option in options.all():
                 if matching.matches(field, answer, option.inner_text().strip()):
                     option.click()
                     return
-            page.wait_for_timeout(250)
+            page.wait_for_timeout(SUGGEST_POLL_MS)
     raise Unsupported(f"form_shape: no suggestion for {answer!r} in {field.id}")
 
 

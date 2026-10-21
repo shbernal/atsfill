@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Unsupported
-from atsfill.core.browser import Locator, Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = re.compile(r"^[\w-]+\.bamboohr\.com$")
@@ -307,7 +307,7 @@ def _job(url: str) -> tuple[str, str] | None:
 
 def _get(url: str) -> Any:
     request = urllib.request.Request(url, headers={"User-Agent": "atsfill"})
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
         return json.load(response)
 
 

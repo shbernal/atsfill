@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core.adapter import Blocked, Unsupported
-from atsfill.core.browser import Page, Response, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "jobs.ashbyhq.com"
@@ -47,6 +47,8 @@ SETTLE_S = 1.5
 READ_BACK_TIMEOUT_S = 30
 SAVE_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
+SAVE_POLL_MS = 100
+READ_BACK_POLL_MS = 250
 
 
 def _hosted(url: str) -> str:
@@ -112,7 +114,7 @@ class Ashby:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
                 job_posting = json.load(response)["data"]["jobPosting"]
             if not job_posting:
                 return None
@@ -180,7 +182,7 @@ class Ashby:
             return
         deadline = time.monotonic() + SAVE_TIMEOUT_MS / 1000
         while self._pending and time.monotonic() < deadline:
-            page.wait_for_timeout(100)
+            page.wait_for_timeout(SAVE_POLL_MS)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Ashby's last returned form, once every answer is held and no request is in flight."""
@@ -190,7 +192,7 @@ class Ashby:
             quiet = not self._pending and time.monotonic() - self._last_change > SETTLE_S
             if quiet and all(values.get(i) is not None for i in self._answered):
                 break
-            page.wait_for_timeout(250)
+            page.wait_for_timeout(READ_BACK_POLL_MS)
         return {k: v for k, v in self._values().items() if v is not None}
 
     def submit(self, page: Page) -> str | None:

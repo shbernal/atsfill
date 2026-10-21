@@ -32,6 +32,7 @@ FORM_TIMEOUT_MS = 30_000
 SETTLE_MS = 2_500
 UPLOAD_TIMEOUT_MS = 30_000
 STEP_TIMEOUT_MS = 20_000
+UPDATE_TIMEOUT_MS = 5_000  # for a section to close, per Update click
 SUBMIT_TIMEOUT_MS = 90_000
 UPDATE_TRIES = 3
 FOLLOWUP_TIMEOUT_MS = 3_000
@@ -40,6 +41,7 @@ OPTIONS_TIMEOUT_MS = 5_000  # for a dropdown's options to render
 NEXT_TRIES = 3
 STEP_POLLS = 16  # of POLL_MS, before Next is clicked again
 POLL_MS = 500
+KEY_DELAY_MS = 10
 YES_NO = ["Yes", "No"]
 NO_YES = ["No", "Yes"]  # a box left as it is first
 LONG_LABEL = 300  # a question whose description is a whole form is named by its display name
@@ -700,7 +702,7 @@ def _pick(page: Page, target: Locator, texts: list[str]) -> bool:
         options = page.locator(_option(target))
         if target.get_attribute("readonly") is None:
             target.fill("")
-            target.press_sequentially(text[:40], delay=10)
+            target.press_sequentially(text[:40], delay=KEY_DELAY_MS)
         with suppress(Timeout):
             options.first.wait_for(timeout=OPTIONS_TIMEOUT_MS)
         page.evaluate(_REVEAL, [target.get_attribute("id"), [text]])
@@ -750,7 +752,7 @@ def _fill_control(page: Page, selector: str, field: Field, answer: Answer) -> No
 def _pick_suggestion(page: Page, target: Locator, value: str) -> None:
     """Types the answer and clicks the first option that starts with it."""
     _open(target)
-    target.press_sequentially(value[:40], delay=10)
+    target.press_sequentially(value[:40], delay=KEY_DELAY_MS)
     with suppress(Timeout):
         page.locator(_option(target)).first.wait_for(timeout=OPTIONS_TIMEOUT_MS)
     if not _click_option(page, target, lambda shown: shown.startswith(_plain(value).casefold())):
@@ -768,7 +770,7 @@ def _fill_phone(page: Page, selector: str, value: str) -> None:
             code = digits[:size]
             _open(dial)
             dial.fill("")
-            dial.press_sequentially(f"+{code}", delay=10)
+            dial.press_sequentially(f"+{code}", delay=KEY_DELAY_MS)
             options = page.locator(_option(dial)).filter(has_text=re.compile(rf"\+{code}(\s|$)"))
             with suppress(Timeout):
                 options.first.wait_for(timeout=DIAL_TIMEOUT_MS)
@@ -844,7 +846,7 @@ def _update(page: Page, field: str) -> None:
         button.evaluate("e => e.scrollIntoView({block: 'center'})")
         button.click()
         with suppress(Timeout):
-            first.wait_for(state="detached", timeout=STEP_TIMEOUT_MS // 4)
+            first.wait_for(state="detached", timeout=UPDATE_TIMEOUT_MS)
             return
         if page.locator(".ant-form-item-explain-error:visible").count():
             return  # the section refuses its answers: Next reports the stop
@@ -854,7 +856,7 @@ def _next(page: Page) -> bool:
     """Goes to the next step; False when the page stays (a validation error), or when the
     next button is Submit, which `fill` never presses."""
     button = page.locator(NEXT)
-    if not button.count() or not re.search(r"next", button.first.inner_text(), re.IGNORECASE):
+    if not _says_next(button):
         return False
     before = _controls(page)
     for _ in range(NEXT_TRIES):  # a click right after a section's save can go unheeded
@@ -863,12 +865,18 @@ def _next(page: Page) -> bool:
         button.first.click()
         for _ in range(STEP_POLLS):
             page.wait_for_timeout(POLL_MS)
-            if _controls(page) != before:
+            if _controls(page) != before or not _says_next(button):  # Submit: the last step
                 page.wait_for_timeout(POLL_MS)  # the step renders its controls in turn
                 return True
             if page.locator(".ant-form-item-explain-error:visible").count():
                 return False
     return False
+
+
+def _says_next(button: Locator) -> bool:
+    return bool(button.count()) and bool(
+        re.search(r"next", button.first.inner_text(), re.IGNORECASE)
+    )
 
 
 def _controls(page: Page) -> list[str]:

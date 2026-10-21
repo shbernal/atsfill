@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Blocked, Unsupported
-from atsfill.core.browser import Page
+from atsfill.core.browser import HTTP_TIMEOUT_S, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "www.careers-page.com"
@@ -136,7 +136,7 @@ def _field(entry: dict[str, Any], options: list[str] | None) -> Field | None:
 
 def _get(path: str) -> Any:
     request = urllib.request.Request(API + path, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
         return json.load(response)
 
 
@@ -177,7 +177,7 @@ class Manatal:
         client = urlsplit(url).path.strip("/").split("/")[0]
         try:
             apply = urllib.request.Request(_posting(url) + "/apply", headers=HEADERS)
-            with urllib.request.urlopen(apply, timeout=20) as response:
+            with urllib.request.urlopen(apply, timeout=HTTP_TIMEOUT_S) as response:
                 html = response.read().decode()
             job = JOB_ID.search(html)
             if job is None:
