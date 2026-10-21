@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core import browser
 from atsfill.core.adapter import Unsupported
-from atsfill.core.browser import Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "careers.hireology.com"
@@ -204,7 +204,7 @@ class Hireology:
             return None
         request = urllib.request.Request(API.format(job=job), headers={"User-Agent": "atsfill"})
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
                 return [f for f, _ in _form(json.load(response))]
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None

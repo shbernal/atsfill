@@ -28,6 +28,8 @@ JOB = re.compile(r"/jobs/(\d+)[^/]*")
 SUBMIT_TIMEOUT_MS = 90_000
 FOLLOW_UP_TIMEOUT_MS = 1_000
 UPLOAD_TIMEOUT_S = 60
+UPLOAD_POLL_MS = 500
+KEY_DELAY_MS = 30
 QUESTION_TYPES = {
     "text": FieldType.TEXT,
     "number": FieldType.TEXT,
@@ -307,7 +309,7 @@ class Teamtailor:
             held = form.evaluate(_READ_BACK, QUESTION)
             if all(held.get(i) == _stored_name(n) for i, n in self._uploads.items()):
                 return
-            form.page.wait_for_timeout(500)
+            form.page.wait_for_timeout(UPLOAD_POLL_MS)
 
 
 def _stored_name(name: str) -> str:
@@ -358,7 +360,7 @@ def _suggest(page: Page, field: Field, host: Locator, answer: str) -> None:
     matches it: the form keeps an address only once a suggestion is picked."""
     box = host.locator("input[role=combobox]")
     box.fill("")
-    box.press_sequentially(answer, delay=30)
+    box.press_sequentially(answer, delay=KEY_DELAY_MS)
     options = host.locator("[role=option]")
     options.first.wait_for()
     for i in range(options.count()):

@@ -106,9 +106,12 @@ def page(tmp_path_factory):
         mp.setattr("atsfill.adapters.dayforce.SETTLE_MS", 100)
         mp.setattr("atsfill.adapters.dayforce.POLL_MS", 50)
         mp.setattr("atsfill.adapters.dayforce.FOLLOWUP_TIMEOUT_MS", 500)
-        mp.setattr("atsfill.adapters.dayforce.DIAL_TIMEOUT_MS", 500)
+        mp.setattr("atsfill.adapters.dayforce.DIAL_TIMEOUT_MS", 250)
         mp.setattr("atsfill.adapters.dayforce.OPTIONS_TIMEOUT_MS", 1_000)
         mp.setattr("atsfill.adapters.dayforce.STEP_TIMEOUT_MS", 4_000)
+        mp.setattr("atsfill.adapters.dayforce.UPDATE_TIMEOUT_MS", 500)
+        mp.setattr("atsfill.adapters.dayforce.STEP_POLLS", 8)
+        mp.setattr("atsfill.adapters.dayforce.KEY_DELAY_MS", 0)
         page.context.route("https://jobs.dayforcehcm.com/**", serve)
         yield page
 

@@ -38,6 +38,10 @@ COOKIES = ".cookie-consent button:visible"
 ATTACHED = ".attachment-upload-button__download, .misc-attachment-list__item-name"
 STEP_TIMEOUT_MS = 30_000
 LIST_TIMEOUT_MS = 3_000
+SEARCH_TIMEOUT_MS = 6_000  # for a typed search's results
+PAGE_TIMEOUT_MS = 15_000  # per click on a page number
+SUBMIT_TIMEOUT_MS = 90_000
+KEY_DELAY_MS = 20
 SETTLE_MS = 1_500
 UPLOAD_TIMEOUT_MS = 30_000
 CHECKBOX = ["Yes", "No"]
@@ -327,7 +331,7 @@ class Oracle:
     def submit(self, page: Page) -> str | None:
         _go_to(page, len(_page_numbers(page)) or 1)
         _click(page, page.locator(SUBMIT))
-        page.wait_for_url(lambda url: "/apply/" not in url, timeout=STEP_TIMEOUT_MS * 3)
+        page.wait_for_url(lambda url: "/apply/" not in url, timeout=SUBMIT_TIMEOUT_MS)
         return page.url
 
     def _email_step(self, page: Page) -> str | None:
@@ -535,7 +539,7 @@ def _go_to(page: Page, number: int) -> None:
         with suppress(browser.Timeout):
             page.wait_for_url(
                 re.compile(rf"/apply/section/{number}\b"),
-                timeout=STEP_TIMEOUT_MS // 2,
+                timeout=PAGE_TIMEOUT_MS,
                 wait_until="commit",
             )
             _settle(page)
@@ -593,10 +597,10 @@ def _choose(
         _click(page, box)
         box.fill("")
         if typed:
-            box.press_sequentially(typed, delay=20)
+            box.press_sequentially(typed, delay=KEY_DELAY_MS)
         cells = page.locator(f"[id='{box.get_attribute('aria-controls')}'] [role=gridcell]")
         with suppress(browser.Timeout):
-            cells.first.wait_for(timeout=LIST_TIMEOUT_MS * 2)
+            cells.first.wait_for(timeout=SEARCH_TIMEOUT_MS)
         for i in range(cells.count()):
             item = _text(cells.nth(i).inner_text())
             if (

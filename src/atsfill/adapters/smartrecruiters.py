@@ -29,6 +29,8 @@ OPTION_TIMEOUT_MS = 10_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 NEXT_TIMEOUT_MS = 8_000
+KEY_DELAY_MS = 20
+LOCATION_KEY_DELAY_MS = 30
 NEXT_TRIES = 3
 YES_NO = ["Yes", "No"]
 
@@ -307,7 +309,7 @@ def _fill_profile(page: Page, field_id: str, selector: str, answer: Answer) -> N
                 )
         case "location":  # takes one of its suggestions: the first for the typed text
             target.click()
-            target.press_sequentially(value, delay=30)
+            target.press_sequentially(value, delay=LOCATION_KEY_DELAY_MS)
             options = page.locator("oc-location-autocomplete spl-select-option")
             option = options.filter(has_text=re.compile(rf"^\s*{re.escape(value)}", re.I)).first
             try:
@@ -317,7 +319,7 @@ def _fill_profile(page: Page, field_id: str, selector: str, answer: Answer) -> N
                 return
             option.click()
         case "phone":  # the number's dial code picks the country
-            target.press_sequentially(value, delay=20)
+            target.press_sequentially(value, delay=KEY_DELAY_MS)
         case _:
             target.fill(value)
 
@@ -381,7 +383,7 @@ def _fill_question(
                 if option_id is None:
                     continue
                 target.click()
-                target.press_sequentially(value[:20], delay=20)
+                target.press_sequentially(value[:20], delay=KEY_DELAY_MS)
                 option = box.locator(f"spl-select-option[value='{option_id}']").first
                 try:
                     option.wait_for(timeout=OPTION_TIMEOUT_MS)

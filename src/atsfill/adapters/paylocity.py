@@ -19,7 +19,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Unsupported
-from atsfill.core.browser import Locator, Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "recruiting.paylocity.com"
@@ -35,6 +35,12 @@ COOKIE_TIMEOUT_MS = 5_000
 STEP_TIMEOUT_MS = 20_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
+STATE_TIMEOUT_MS = 5_000
+RENDER_MS = 500  # for a new step to render its controls
+KEY_DELAY_MS = 30
+ADDRESS_KEY_DELAY_MS = 80  # its suggestion list drops keys typed while it loads
+STATE_KEY_DELAY_MS = 40
+TAG_KEY_DELAY_MS = 20
 YES_NO = ["Yes", "No"]
 ADDRESS = "public-site-address"  # an address block: its inputs' ids start with this
 COMPANY = "public-candidate-work-history-address-0"
@@ -297,7 +303,7 @@ class Paylocity:
             return None
         request = urllib.request.Request(APPLY + job, headers={"User-Agent": "atsfill"})
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
                 html = response.read().decode()
             return [f for f, _ in _form(_page_data(html))]
         except OSError, ValueError, KeyError, TypeError, Unsupported:
@@ -511,7 +517,7 @@ def _next(page: Page) -> bool:
         )
     except Timeout:
         return False
-    page.wait_for_timeout(500)
+    page.wait_for_timeout(RENDER_MS)
     return True
 
 
@@ -536,7 +542,7 @@ def _fill(page: Page, control: Control, answer: Answer) -> None:
         case "address":  # a suggestion list that drops keys typed while it loads
             target.click()
             target.fill("")
-            target.press_sequentially(value, delay=80)
+            target.press_sequentially(value, delay=ADDRESS_KEY_DELAY_MS)
             page.keyboard.press("Escape")
             if target.input_value() != value:
                 target.fill(value)
@@ -545,22 +551,22 @@ def _fill(page: Page, control: Control, answer: Answer) -> None:
             if re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
                 y, m, d = value.split("-")
                 target.click()
-                target.press_sequentially(f"{m}/{d}/{y}", delay=30)
+                target.press_sequentially(f"{m}/{d}/{y}", delay=KEY_DELAY_MS)
                 target.blur()
         case "month":
             target.click()
-            target.press_sequentially(value, delay=30)
+            target.press_sequentially(value, delay=KEY_DELAY_MS)
             target.blur()
         case "dropdown":
             _pick(page, control.dom, value)
         case "state":
             page.locator(f"#{control.dom}-select-wrapper").click()
-            page.keyboard.type(value, delay=40)
+            page.keyboard.type(value, delay=STATE_KEY_DELAY_MS)
             item = page.locator(
                 f"#{control.dom}-dropdown-list-container [role=listitem][title='{value}']"
             )
             try:
-                item.first.click(timeout=5_000)
+                item.first.click(timeout=STATE_TIMEOUT_MS)
             except Timeout:
                 page.keyboard.press("Escape")
         case "radio":
@@ -570,7 +576,7 @@ def _fill(page: Page, control: Control, answer: Answer) -> None:
                 target.check(force=True) if value == "Yes" else target.uncheck(force=True)
         case "tags":  # takes typed keys only
             target.click()
-            target.press_sequentially(value, delay=20)
+            target.press_sequentially(value, delay=TAG_KEY_DELAY_MS)
             target.press("Enter")
         case "file":
             target.set_input_files(answer if isinstance(answer, list) else value)
