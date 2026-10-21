@@ -24,7 +24,11 @@ def serve(route) -> None:
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    with browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page:
+    with (
+        pytest.MonkeyPatch.context() as mp,
+        browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
+    ):
+        mp.setattr("atsfill.adapters.smartrecruiters.COOKIE_TIMEOUT_MS", 500)
         page.context.route("https://jobs.smartrecruiters.com/**", serve)
         yield page
 

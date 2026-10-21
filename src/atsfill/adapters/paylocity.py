@@ -31,6 +31,7 @@ SUBMIT = "[data-automation-id=btnSubmit]"
 STEP = "#appDetailDiv .type-bold.float-right"  # "Step 2 of 5"
 FORCED_RESUME = ".modal.in #btn-forceResume"
 FORM_TIMEOUT_MS = 30_000
+COOKIE_TIMEOUT_MS = 5_000
 STEP_TIMEOUT_MS = 20_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
@@ -473,7 +474,7 @@ def _present(page: Page, control: Control) -> bool:
 def _dismiss_cookies(page: Page) -> None:
     close = page.locator("#onetrust-banner-sdk .onetrust-close-btn-handler")
     with suppress(Timeout):
-        close.first.wait_for(state="visible", timeout=5_000)
+        close.first.wait_for(state="visible", timeout=COOKIE_TIMEOUT_MS)
         close.first.click()
 
 

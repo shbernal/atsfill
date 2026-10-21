@@ -63,7 +63,7 @@ _READ = """form => {
       field = {id: name, required: false, options: [], accept: null,
                maxLength: el.maxLength > 0 ? el.maxLength : null};
       if (el.type === "radio") field.kind = "radio";
-      else if (el.type === "checkbox" && /\.(flag|consent)$/.test(name)) {
+      else if (el.type === "checkbox" && /\\.(flag|consent)$/.test(name)) {
         field.kind = "legal";
         field.label = text(form.querySelector(`[id="${el.getAttribute("aria-labelledby")}"]`));
       } else if (el.type === "checkbox") field.kind = "checkboxes";

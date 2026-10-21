@@ -25,7 +25,13 @@ def serve(route) -> None:
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    with browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page:
+    with (
+        pytest.MonkeyPatch.context() as mp,
+        browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
+    ):
+        mp.setattr("atsfill.adapters.oracle.SETTLE_MS", 100)
+        mp.setattr("atsfill.adapters.oracle.LIST_TIMEOUT_MS", 500)
+        mp.setattr("atsfill.adapters.oracle.UPLOAD_TIMEOUT_MS", 2_000)
         page.context.route("https://acme.fa.us2.oraclecloud.com/**", serve)
         yield page
 

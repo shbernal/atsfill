@@ -18,7 +18,10 @@ SURVEY = "surveysResponses[22222222-2222-2222-2222-222222222222][responses][fiel
 def serve(route) -> None:
     url, method = route.request.url, route.request.method
     if method == "POST" and url.endswith("/apply"):
-        route.fulfill(status=302, headers={"Location": POSTING + "/thanks"})
+        # Lever answers with a 302, but a route never sees the redirect it fulfils: the
+        # browser would fetch /thanks from the real site. A script redirect stays routed.
+        body = f"<script>location.replace('{POSTING}/thanks')</script>"
+        route.fulfill(content_type="text/html", body=body)
     elif url.endswith("/thanks"):
         route.fulfill(content_type="text/html", body="<h3>Application submitted!</h3>")
     elif "/0000" in url:
