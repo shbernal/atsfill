@@ -1,0 +1,274 @@
+<!doctype html>
+<!-- A Breezy application page: one example of each rendering in docs/adapters/breezy.md, in a
+     questionnaire of two sections, so the form goes in steps. The script stands in for Breezy's:
+     the uploads, the work history and education entries, and Continue. -->
+<html>
+<head><meta charset="utf-8"><title>Engineer</title>
+<script src="https://assets-cdn.breezy.hr/breezy-portal/javascripts/portal.js"></script>
+<style>.ng-hide { display: none !important; }</style>
+</head>
+<body class="breezy-portal-bold">
+<form name="form" novalidate>
+ <div data-section="application">
+  <div class="section-header">
+   <input type="hidden" id="resume_required" value="required">
+   <div class="file-input-container type">
+    <input id="main-attachment" name="cResume" style="display:none;" type="file" required
+           accept=".pdf, .doc, .docx, .txt, .rtd, .pages" class="attachment">
+   </div>
+  </div>
+  <div class="section">
+   <div class="section-header"><h2>Personal Details</h2></div>
+   <h3><span>Full Name</span><span class="required" title="Required">*</span></h3>
+   <input name="cName" ng-model="candidate.name" type="text" placeholder="Full Name" required>
+   <h3><span>Email Address</span><span class="required" title="Required">*</span></h3>
+   <input name="cEmail" ng-model="candidate.email_address" type="email" required>
+   <h3><span>Phone Number</span><span class="required" title="Required">*</span></h3>
+   <input name="cPhoneNumber" ng-model="candidate.phone_number" type="text" required>
+   <ul class="options">
+    <li class="option consent-form">
+     <input type="checkbox" name="smsConsent" ng-model="$storage[positionId].sms_consent">
+     <span>By providing your phone number you agree to receive text messages from Acme.</span>
+    </li>
+   </ul>
+   <div class="form-divider"></div>
+   <h3><span>Address</span></h3>
+   <input id="fullAddress" name="cAddress" ng-model="candidate.address" type="text">
+   <div class="desired-salary">
+    <h3><span>Desired Salary</span><span class="required" title="Required">*</span></h3>
+    <span>
+     <select name="salaryCurrency" ng-model="candidate.salary.currency">
+      <option value="0" selected>US Dollar ($)</option><option value="1">Euro (€)</option>
+     </select>
+    </span>
+    <input name="cSalary" ng-model="candidate.salary.salary" type="text" required>
+    <select name="" ng-model="candidate.salary.period" required>
+     <option value="hourly">Hourly</option><option value="yearly" selected>Yearly</option>
+    </select>
+   </div>
+   <div class="preferred-location">
+    <h3><span>Which location are you applying for</span></h3>
+    <select name="cLocation" ng-model="candidate.preferred_location">
+     <option value="?" selected></option><option value="0">Springfield</option>
+     <option value="1">Shelbyville</option>
+    </select>
+   </div>
+  </div>
+  <div class="section">
+   <div class="section-header"><h2>Experience</h2></div>
+   <input id="work_required" type="hidden" value="required">
+   <div class="section-header">
+    <h3><span>Work History</span><span class="required" title="Required">*</span></h3>
+   </div>
+   <ul class="entries" data-entry="candidatePosition"></ul>
+   <div class="section-footer"><a href="" ng-click="e.preventDefault(); addPosition()">
+    <span>Add Position</span></a></div>
+   <input id="education_required" type="hidden" value="optional">
+   <div class="section-header">
+    <h3><span>Education</span><span class="required ng-hide" title="Required">*</span></h3>
+   </div>
+   <ul class="entries" data-entry="candidateSchool"></ul>
+   <div class="section-footer"><a href="" ng-click="e.preventDefault(); addEducation()">
+    <span>Add Education</span></a></div>
+   <input id="summary_required" type="hidden" value="optional">
+   <div class="section-header"><h3><span>Experience Summary</span></h3></div>
+   <textarea name="cSummary" ng-model="candidate.summary"></textarea>
+  </div>
+  <div class="section">
+   <div class="section-header"><h3><span>Cover Letter</span></h3></div>
+   <textarea name="cCoverLetter" ng-model="candidate.cover_letter"></textarea>
+  </div>
+  <div class="apply-field-extra" aria-hidden="true"
+       style="position:absolute;left:-9999px;height:0;overflow:hidden;opacity:0">
+   <label for="hp_7f2b"></label><input id="hp_7f2b" type="text" name="hp_7f2b">
+   <input id="form_token" type="hidden" value="0">
+  </div>
+ </div>
+ <input id="questions" type="hidden" value="[]">
+ <input id="questionnaireVersion" type="hidden" value="2">
+ <div class="questionnaire-section ng-hide" data-section="111">
+  <div class="section questions"><ul>
+   <li class="question"><div class="dropdown">
+    <h3><span>Are you comfortable working outdoors?</span>
+        <span class="required" title="Required">*</span></h3>
+    <div class="question-body"><p>The role is mostly outside.</p></div>
+    <select name="section_111_question_0" required>
+     <option value="?" selected></option><option>YES</option><option>NO</option>
+    </select>
+   </div></li>
+   <li class="question"><div class="multiplechoice">
+    <h3><span>Will you require visa sponsorship?</span>
+        <span class="required" title="Required">*</span></h3>
+    <ul class="options">
+     <li class="option"><label><input type="radio" name="section_111_question_1" value="Yes"
+       required><span>Yes</span></label></li>
+     <li class="option"><label><input type="radio" name="section_111_question_1" value="No"
+       required><span>No</span></label></li>
+    </ul>
+   </div></li>
+   <li class="question"><div class="multiplechoice">
+    <h3>Which licenses do you hold?<span class="required" title="Required">*</span></h3>
+    <ul class="options">
+     <li class="option"><input type="checkbox" name="section_111_question_2" required>
+      <span>LPN</span></li>
+     <li class="option"><input type="checkbox" name="section_111_question_2" required>
+      <span>CNA</span></li>
+    </ul>
+   </div></li>
+   <li class="question"><div>
+    <h3><span>When are you available to begin work?</span>
+        <span class="required ng-hide" title="Required">*</span></h3>
+    <input type="text" name="section_111_question_3">
+   </div></li>
+  </ul></div>
+ </div>
+ <div class="questionnaire-section ng-hide" data-section="222">
+  <div class="section questions"><ul>
+   <li class="question"><div>
+    <h3><span>Why are you interested in this position?</span>
+        <span class="required ng-hide" title="Required">*</span></h3>
+    <textarea name="section_222_question_0"></textarea>
+   </div></li>
+   <li class="question"><div>
+    <h3><span>Earliest start date</span><span class="required" title="Required">*</span></h3>
+    <input type="date" name="section_222_question_1" required>
+   </div></li>
+   <li class="question"><div>
+    <h3><span>Please upload your writing sample</span>
+        <span class="required" title="Required">*</span></h3>
+    <div class="file-input-container type">
+     <a href="" class="placeholder bzyLinkColor"><span>Upload File</span></a>
+     <input id="questionnaire-file-2222" name="section_222_question_2" style="display:none;"
+            type="file" required accept=".pdf, .docx">
+    </div>
+   </div></li>
+   <li class="question"><div class="referencecheck">
+    <h3><span>Professional references</span><span class="required ng-hide" title="Required">*</span></h3>
+    <ul class="references">
+     <li class="reference">
+      <h3><span>Reference</span><span> 1</span></h3>
+      <input ng-model="reference.name" type="text" placeholder="Full Name"
+             name="section_222_question_3">
+      <input ng-model="reference.email_address" type="email" name="">
+      <input ng-model="reference.phone_number" type="tel" name="">
+      <h4>Relationship</h4>
+      <ul>
+       <li><input type="radio" name="reference.type_abc_222_1" ng-model="reference.type"
+            value="professional"><strong>Professional</strong></li>
+       <li><input type="radio" name="reference.type_abc_222_1" ng-model="reference.type"
+            value="personal"><strong>Personal</strong></li>
+      </ul>
+     </li>
+     <li class="reference">
+      <h3><span>Reference</span><span> 2</span></h3>
+      <input ng-model="reference.name" type="text" placeholder="Full Name"
+             name="section_222_question_3">
+      <input ng-model="reference.email_address" type="email" name="">
+      <input ng-model="reference.phone_number" type="tel" name="">
+      <h4>Relationship</h4>
+      <ul>
+       <li><input type="radio" name="reference.type_abc_222_2" ng-model="reference.type"
+            value="professional"><strong>Professional</strong></li>
+       <li><input type="radio" name="reference.type_abc_222_2" ng-model="reference.type"
+            value="personal"><strong>Personal</strong></li>
+      </ul>
+     </li>
+    </ul>
+   </div></li>
+   <li class="question"><div class="video">
+    <h3><span>Introduce yourself on video</span>
+        <span class="required ng-hide" title="Required">*</span></h3>
+    <div class="ziggeo"><input type="file"></div>
+   </div></li>
+  </ul></div>
+ </div>
+ <div data-section="eeoc" class="ng-hide">
+  <input type="hidden" id="eeoc" value="true">
+  <div class="section questions"><ul>
+   <li class="question"><div class="multiplechoice">
+    <h3>Race or Ethnicity</h3>
+    <ul class="options">
+     <li class="option"><input id="race_two" type="radio" name="race_ethnicity"
+       ng-model="eeoc.race_ethnicity" value="two_or_more" required>
+      <label for="race_two"><span>Two or more races/ethnicities</span></label></li>
+     <li class="option"><input id="race_white_no" type="radio" name="race_ethnicity"
+       ng-model="eeoc.race_ethnicity" value="unspecified" required>
+      <label for="race_white_no"><span>I don't wish to answer</span></label></li>
+    </ul>
+   </div></li>
+   <li class="question"><div class="multiplechoice">
+    <h3>Veteran status</h3>
+    <ul class="options">
+     <li class="option"><input id="vet_no" type="radio" name="eeoc.veteran_status"
+       ng-model="eeoc.veteran_status" value="no" required>
+      <label for="vet_no"><span>I AM NOT A PROTECTED VETERAN</span></label></li>
+     <li class="option"><input id="vet_nope" type="radio" name="eeoc.veteran_status"
+       ng-model="eeoc.veteran_status" value="unspecified" required>
+      <label for="vet_nope"><span>I CHOOSE NOT TO SELF-IDENTIFY</span></label></li>
+    </ul>
+   </div></li>
+  </ul></div>
+ </div>
+ <div data-section="gdpr" class="ng-hide">
+  <div class="gdpr-agreement"><div class="section"><div class="gdpr-accept">
+   <h3><span>Recruitment Privacy Notice</span><span class="required" title="Required">*</span></h3>
+   <label><input type="checkbox" name="gdprAgreement" ng-model="candidate.gdpr.consent"
+     value="true" required><div><p>I've read the Privacy Notice and consent.</p></div></label>
+  </div></div></div>
+ </div>
+ <div data-section="submission" class="ng-hide"></div>
+ <div class="apply-container">
+  <button type="button" ng-click="previousSection()" class="ng-hide">Back</button>
+  <button type="button" ng-click="nextSection()">Continue</button>
+  <button type="button" ng-click="apply()" class="ng-hide">Submit Application</button>
+ </div>
+</form>
+<script>
+  const form = document.forms.form;
+  const sections = [...form.querySelectorAll("[data-section]")];
+  const [back, next, submit] = form.querySelectorAll(".apply-container button");
+  let step = 0;
+  const show = n => {
+    sections.forEach((s, i) => s.classList.toggle("ng-hide", i !== n));
+    back.classList.toggle("ng-hide", n === 0);
+    next.classList.toggle("ng-hide", n >= sections.length - 2);
+    submit.classList.toggle("ng-hide", n < sections.length - 2);
+  };
+  next.addEventListener("click", () => {
+    const missing = [...sections[step].querySelectorAll("input[required]:not([type=file]), select[required]")]
+      .some(e => e.type === "radio" || e.type === "checkbox"
+        ? ![...form.querySelectorAll(`[name="${e.name}"]`)].some(o => o.checked)
+        : !e.value || e.value === "?");
+    if (!missing) show(++step);
+  });
+  back.addEventListener("click", () => show(--step));
+  submit.addEventListener("click", () => fetch("/api/apply/0a1b2c3d4e5f", {method: "POST"}));
+  for (const input of form.querySelectorAll("input[type=file]")) {
+    input.addEventListener("change", () => {
+      const box = input.closest(".file-input-container");
+      if (!box || !input.files.length) return;
+      box.querySelector(".placeholder")?.remove();
+      box.insertAdjacentHTML("afterbegin",
+        `<a href="" class="bzyLinkColor"><span>${input.files[0].name}</span></a>`);
+    });
+  }
+  const entry = model => `<li>
+    <input type="text" placeholder="${model === "candidatePosition" ? "Company" : "School"}"
+      ng-model="${model}.${model === "candidatePosition" ? "company_name" : "school_name"}">
+    <input type="text" ng-model="${model}.${model === "candidatePosition" ? "title" : "field_of_study"}">
+    <textarea ng-model="${model}.summary"></textarea>
+    <input type="date" ng-model="${model}.date_start"><input type="date" ng-model="${model}.date_end">
+  </li>`;
+  for (const link of form.querySelectorAll("a[ng-click*='add']")) {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      const model = link.getAttribute("ng-click").includes("addPosition") ? "candidatePosition"
+        : "candidateSchool";
+      setTimeout(() => form.querySelector(`[data-entry=${model}]`)
+        .insertAdjacentHTML("beforeend", entry(model)), 100);
+    });
+  }
+  show(0);
+</script>
+</body>
+</html>
