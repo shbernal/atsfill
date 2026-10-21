@@ -50,10 +50,11 @@ jobs:
 
   # PyPI has no dist-tags. A dev release (`0.0.3.dev42`: next patch, publish run number)
   # plays the part, since pip and uv skip pre-releases unless asked for one. PyPI refuses
-  # local versions, so the commit is in the run and the release notes, not the version. The version is written to
-  # the working tree only, never committed. A CI run for a commit `main` has moved past
-  # publishes nothing; the run for the newer commit does. The `next` tag and pre-release on
-  # GitHub follow the newest dev release, so the channel is visible from the repository.
+  # local versions, so the commit is in the run and the release notes, not the version.
+  # The version is written to the working tree only, never committed. A CI run for a
+  # commit `main` has moved past publishes nothing; the run for the newer commit does.
+  # The `next` tag and pre-release on GitHub follow the newest dev release, so the
+  # channel is visible from the repository.
   next:
     if: >-
       github.event_name == 'workflow_run' &&
