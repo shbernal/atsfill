@@ -13,7 +13,9 @@
 #           send_verified
 # unsupported
 #           date, version, commit, by, reason: a round that ended without the adapter passing
-#           the gate (ADR 0013), what stopped it
+#           the gate (ADR 0013), the known gap that stopped it
+# out_of_scope
+#           reason, date: a system atsfill will never fill, it needs the user live (ADR 0014)
 # send_broken
 #           date, version, commit, by, cause (system | code | unknown), reason: a send that
 #           worked fails now; send_verified stays as the last known good

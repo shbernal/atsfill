@@ -153,3 +153,24 @@ share = 0.1
     assert [r.split(" | ")[0][2:] for r in rows[1:]] == ["open", "stopped"]
     assert "[unsupported](stopped.md)" in rows[-1]
     assert "unsupported%202026--10--21" in registry._badge(systems["stopped"])
+
+
+def test_an_out_of_scope_system_joins_the_side_table_with_its_reason():
+    systems = registry.parse("""
+[video]
+kind = "ats"
+account = "none"
+share = 0.5
+out_of_scope = { reason = "every form records a video", date = 2026-10-22 }
+
+[open]
+kind = "ats"
+account = "none"
+share = 0.1
+""")
+    assert systems["video"].out_of_scope == registry.OutOfScope(
+        "every form records a video", date(2026, 10, 22)
+    )
+    main, side = registry.backlog(systems).split("counted and not adapted:")
+    assert "| open |" in main and "| video |" not in main
+    assert "| video |" in side and "out of scope: every form records a video" in side
