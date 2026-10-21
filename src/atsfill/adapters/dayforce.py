@@ -192,9 +192,6 @@ class Dayforce:
         found = _job(url)
         return f"https://{HOST}/{found[1]}/{found[2]}/jobs/{found[3]}" if found else url
 
-    def read_api(self, url: str) -> list[Field] | None:
-        return None  # the template leaves out the options of the country and contact dropdowns
-
     def read_form(self, page: Page) -> list[Field]:
         found = _job(page.url)
         if found is None:

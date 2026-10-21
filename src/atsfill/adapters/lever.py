@@ -132,9 +132,6 @@ class Lever:
         parts, job = urlsplit(url), _job(url)
         return f"https://{parts.hostname}/{job[0]}/{job[1]}" if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
-        return None  # Lever's postings API leaves the application's questions out
-
     def read_form(self, page: Page) -> list[Field]:
         if not urlsplit(page.url).path.rstrip("/").endswith("/apply"):
             page.goto(f"{self.posting(page.url)}/apply")

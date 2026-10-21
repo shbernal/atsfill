@@ -5,7 +5,7 @@ from pathlib import Path
 
 from atsfill.adapters import ADAPTERS
 from atsfill.core import accounts, attempts, browser, matching, paths, registry
-from atsfill.core.adapter import Adapter, Blocked, NeedsAccount, Unsupported
+from atsfill.core.adapter import Adapter, Blocked, NeedsAccount, ReadsOverHttp, Unsupported
 from atsfill.core.browser import Covered, OutOfTime, Page, open_page
 from atsfill.core.results import (
     AdapterState,
@@ -172,6 +172,8 @@ def _form_command(
 def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = None) -> Result:
     """Lists the form's fields, over HTTP when an adapter can (ADR 0011), else from the page."""
     for adapter in ADAPTERS:
+        if not isinstance(adapter, ReadsOverHttp):
+            continue
         if (fields := adapter.read_api(url)) is not None:
             result = _result(adapter, url)
             result.fields = fields

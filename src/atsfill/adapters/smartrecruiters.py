@@ -121,9 +121,6 @@ class SmartRecruiters:
     def posting(self, url: str) -> str:
         return _key(url) or url
 
-    def read_api(self, url: str) -> list[Field] | None:
-        return None  # the form's host answers 403 to anything but a browser
-
     def read_form(self, page: Page) -> list[Field]:
         if not ONECLICK.match(urlsplit(page.url).path):
             link = page.locator(APPLY_LINK).first

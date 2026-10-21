@@ -22,7 +22,7 @@ from pathlib import Path
 from atsfill.adapters import ADAPTERS
 from atsfill.cli import session as session_arg
 from atsfill.core import browser, registry
-from atsfill.core.adapter import Adapter
+from atsfill.core.adapter import ReadsOverHttp
 from scripts import survey
 
 ROOT = Path(__file__).parents[1]
@@ -56,7 +56,7 @@ def rows(paths: list[Path]) -> list[dict]:
     return list(latest.values())
 
 
-def parity(adapter: Adapter, url: str, data: Path) -> str | None:
+def parity(adapter: ReadsOverHttp, url: str, data: Path) -> str | None:
     """None when the fields read over HTTP and from the page match; else what differs."""
     over_http = adapter.read_api(url) or []
     with browser.open_page(data) as page:
@@ -171,14 +171,18 @@ def main() -> None:
             )
 
         urls = [r["url"] for r in list(ready.values())[:COMPANIES]]
-        over_http = [u for u in urls if adapter.read_api(u) is not None]
-        if not urls:
+        if not isinstance(adapter, ReadsOverHttp):
+            line(True, "read_api parity", "not applicable: no read_api")
+        elif not urls:
             line(True, "read_api parity", "not applicable: no ready posting")
-        elif not over_http:
+        elif not (over_http := [u for u in urls if adapter.read_api(u) is not None]):
             line(True, "read_api parity", "not applicable: read_api returned nothing for these")
-        for url in over_http:
-            problem = parity(adapter, url, corpus / "data")
-            line(problem is None, "read_api parity", f"{handle(url)}: {problem or 'same fields'}")
+        else:
+            for url in over_http:
+                problem = parity(adapter, url, corpus / "data")
+                line(
+                    problem is None, "read_api parity", f"{handle(url)}: {problem or 'same fields'}"
+                )
 
     passed = all(results)
     if passed and system and short:
