@@ -112,10 +112,19 @@ def test_a_break_names_a_known_cause():
 
 
 @pytest.mark.parametrize(
-    "verified, release", [("0.0.2", "this_release"), ("0.0.1", "older"), ("0.1.0", "newer")]
+    "verified, installed, release",
+    [
+        ("0.0.2", "0.0.2", "this_release"),
+        ("0.0.1", "0.0.2", "older"),
+        ("0.1.0", "0.0.2", "newer"),
+        ("0.0.2", "0.0.2+abc1234", "this_release"),
+        ("0.0.3", "0.0.4.dev32", "older"),
+        ("0.0.4", "0.0.4.dev32", "newer"),
+        ("0.0.4.dev32", "0.0.4.dev32", "this_release"),
+    ],
 )
-def test_a_verified_release_against_the_installed_one(verified, release):
-    assert registry.release(verified, "0.0.2") == release
+def test_a_verified_release_against_the_installed_one(verified, installed, release):
+    assert registry.release(verified, installed) == release
 
 
 def test_the_committed_badges_are_current():
