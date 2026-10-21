@@ -146,7 +146,7 @@ def test_required_experience_is_not_supported(page):
         """() => document.querySelector("oc-experience").insertAdjacentHTML("beforeend",
         '<span data-test="section-required-mark">*</span>')"""
     )
-    with pytest.raises(Unsupported, match="form_shape: experience entries are required"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: experience entries are required"):
         SmartRecruiters().read_form(page)
 
 

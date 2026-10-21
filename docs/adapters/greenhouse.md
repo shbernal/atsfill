@@ -31,7 +31,7 @@ On the page, `form#application-form`, each field rendering and on how many of 18
 | a lone checkbox (GDPR consent, an employment row's "Current role") | `choice`, `Yes`/`No` | 3 |
 | `.file-upload` group, with an "Enter manually" textarea behind a button | `file` | 18 |
 
-Sections built of these: employment rows (company, title, month selects, four-character year inputs) on 2, education rows on 5, US EEOC selects on 9, demographic selects with a consent box on 1. A radio input has not been seen; the read stops on one as `form_shape`.
+Sections built of these: employment rows (company, title, month selects, four-character year inputs) on 2, education rows on 5, US EEOC selects on 9, demographic selects with a consent box on 1. A radio input has not been seen; the read stops on one as `unsupported_rendering`.
 
 Required fields carry `aria-required="true"`. Labels hold a `*` marker hidden from screen readers.
 

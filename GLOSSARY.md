@@ -22,8 +22,18 @@ _Avoid_: company, recruiter
 ## Hiring systems
 
 **Hiring system**:
-A product that hosts application forms for many employers: an ATS, or a job board that takes the application itself.
+A source whose pages hold the form an application is submitted through, for many employers: an ATS or a board. "System" alone means a hiring system.
 _Avoid_: platform, provider, site
+
+**ATS**:
+A hiring system an employer runs its hiring on, showing the form on the employer's pages.
+
+**Board**:
+A job board that takes the application itself, so a hiring system.
+_Avoid_: job board
+
+**Aggregator**:
+A source whose postings only link to a form on another source: a job aggregator or a career-site front-end. Never a hiring system, never an adapter.
 
 **Adapter**:
 The module that knows one hiring system's page. Its name (`ashby`, `wttj`) identifies the system in commands, the config file and results.
@@ -51,18 +61,27 @@ Something the hiring system or the employer receives before the submit, such as 
 **Account**:
 A user's sign-in on a hiring system, needed by some systems to read or to send.
 
+**Login**:
+Signing in to an account, in a visible window only a person can complete, which stores its session. Also the `login` command.
+
 **Session**:
 The stored browser state of a signed-in account, loaded only into its own adapter's context.
-_Avoid_: cookies, login
+_Avoid_: cookies
+
+**Account profile**:
+What a hiring system keeps about an account and prefills its forms from.
 
 **Prefilled**:
-Said of a field that holds a value before any answer, from the account's profile.
+Said of a field that holds a value before any answer, from the account profile.
 
 ## Answers and read-back
 
 **Answers**:
 The user's map from field id to value for one form.
 _Avoid_: responses, profile
+
+**Fill**:
+An adapter writing the answers into a form, never submitting it. Also the `fill` command, which is a dry run.
 
 **Read-back**:
 What the hiring system will receive for each field after a fill: from the server's response where it has one, else from the form state.
@@ -94,7 +113,7 @@ The core's rules for whether a send may submit: every check matches, the adapter
 _Avoid_: gate, read-back gate
 
 **Attempt**:
-The record of a send that reached the submit step, keyed by posting. Its last outcome is what the double-send guard reads.
+The record of a send that reached the submit step, keyed by posting: `clicked` until its outcome is recorded. Its last outcome is what the double-send guard reads.
 
 **Double-send guard**:
 The part of the submit gate that refuses a send for a posting whose last attempt ended `submitted`, `unknown` or without an outcome, unless the user passes `--resend`.
@@ -104,6 +123,9 @@ The one outcome every form command ends in: `ready`, `refused`, `submitted`, `bl
 
 **Reason**:
 The snake_case code, with an optional detail, that explains a status other than `ready` or `submitted`.
+
+**Warning**:
+A code a send carries when it went ahead anyway: `not_send_verified` or `send_broken`.
 
 **Evidence**:
 A URL or network response that proves a submit went through. Never page text.
@@ -121,13 +143,16 @@ Where atsfill keeps the device identity, sessions, attempts and the lock.
 ## Registry
 
 **Registry**:
-The committed record of every mapped hiring system: its kind, share, account need, block and verification.
+The committed record of every mapped source: its kind, share, account need, block and verification.
 
 **Source**:
-freehire's name for where a posting comes from; the registry has one entry per source.
+freehire's label for where a posting was indexed. The registry has one entry per source; only an ATS or a board is a hiring system.
 
 **Kind**:
-What a source is: `ats`, `board` (a job board that takes the application), `aggregator` (links out to other sources) or `custom` (a form the employer built).
+What a source is: `ats`, `board`, `aggregator` or `custom` (a form the employer built, not a hiring system).
+
+**Hosting**:
+Where a source's forms are found: `hosted` on the hiring system, or `embedded` on the employer's own site.
 
 **Share**:
 A source's fraction of freehire's postings, worldwide, on the date it was measured.
@@ -167,12 +192,20 @@ The postings a round surveys first to learn its system, about fifteen employers'
 The field type × rendering table in an adapter's doc: every rendering the sample showed, supported or not, and how many postings showed it.
 
 **Round**:
-One session that adds or repairs one adapter, ending in a pull request or a registry entry.
+One agent run that adds or repairs one adapter, ending in a pull request or a registry entry.
 
 ## Flagged ambiguities
 
 - "Gate" meant both the submit gate and the adapter gate. Always qualify it.
 - "Inventory" meant both a round's surveyed postings (now the sample) and the field type × rendering table (still the inventory).
-- "Adapter state" meant both the verification and the whole `status` row for an adapter. The ladder is the verification.
+- "Adapter state" meant both the verification and the whole `status` row for an adapter. The ladder is the verification; "state" is left to the session (`signed_in`, `signed_out`, `missing`).
+- "Session" meant both the stored browser state and an agent's working session. The agent's is an agent run.
+- "Profile" meant the answers, the device identity and the account profile. Only the account profile keeps the word, never bare.
+- "Login" is the act of signing in; the session is what it stores.
+- "Corpus" meant both the survey's rows and which postings mapping covers. The second is coverage.
+- "Sample" meant the round's sample, a skipped posting, and drawing postings outside the sample. Only the first keeps the word.
+- "Job board" meant both a board, which takes the application, and an aggregator, which links out.
+- "System" meant both a hiring system and any registry entry. A registry entry is a source; "system" is a hiring system.
+- "Refusal" means the `refused` status only. A low reCAPTCHA score is `blocked`.
 - A **Block** (a bot protection in the registry) is not the `blocked` status, which also covers emailed codes, login walls and the time budget.
 - "Company" and "employer" named the same organization. It is the employer. "Company" stays only where it is a hiring system's own word: a field label, a URL path.

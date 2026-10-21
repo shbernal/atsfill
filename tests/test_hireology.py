@@ -168,14 +168,14 @@ def test_a_posting_gone(page):
 def test_an_unknown_field_type_is_unsupported():
     form = json.loads(json.dumps(FORM))
     form["template"]["sections"][0]["fieldsets"][0]["fields"][0]["attributes"]["type"] = "rating"
-    with pytest.raises(Unsupported, match="form_shape: first_name is a rating"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: first_name is a rating"):
         _form(form)
 
 
 def test_a_field_missing_from_the_page_is_unsupported(page):
     page.goto(JOB)
     page.evaluate("() => document.getElementById('company_name-0').remove()")
-    with pytest.raises(Unsupported, match="form_shape: company_name is not on the page"):
+    with pytest.raises(Unsupported, match="unsupported_flow: company_name is not on the page"):
         Hireology().read_form(page)
 
 

@@ -405,7 +405,7 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
             count = custom.get("referencesRequiredCount") or 1
         vocabulary = SECTIONS.get(name)
         if vocabulary is None:
-            raise Unsupported(f"form_shape: unknown section {name!r}")
+            raise Unsupported(f"unsupported_rendering: unknown section {name!r}")
         included = {f["name"] for f in section["fields"] if f["isIncluded"]}
         for n in range(count):
             prefix = f"Reference {n + 1}: " if name == "references" else ""
@@ -418,8 +418,8 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
                 if specs is None:
                     if entries and field["isRequired"] and field["name"] not in OPTIONAL_ONLY:
                         raise Unsupported(
-                            f"form_shape: {_plain(field['displayName'])!r} ({field['name']}) "
-                            "is not handled"
+                            "unsupported_rendering: "
+                            f"{_plain(field['displayName'])!r} ({field['name']}) is not handled"
                         )
                     continue
                 if SHOWN_WITH.get(field["name"], field["name"]) not in included:
@@ -437,7 +437,7 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
         elif kind == "text":
             kind, answers, dom = "screener_text", None, f"screener-question-{i}-textarea"
         else:
-            raise Unsupported(f"form_shape: a {kind} screener question")
+            raise Unsupported(f"unsupported_rendering: a {kind} screener question")
         field_id = f"screener.{question['screenerQuestionId']}"
         out.append((Field(field_id, _plain(question["title"]), TYPES[kind],
                           bool(question.get("isRequired")), answers),

@@ -281,7 +281,7 @@ class Dayforce:
             key, kind = PERSONAL_FIELDS.get(f["fieldName"], (None, None))
             if key is None or kind is None:
                 if f["isRequired"]:
-                    raise Unsupported(f"form_shape: personal field {f['fieldName']!r}")
+                    raise Unsupported(f"unsupported_rendering: personal field {f['fieldName']!r}")
                 continue
             options = {
                 "candidateSource": sources,
@@ -321,7 +321,9 @@ class Dayforce:
                 and ref not in CANDIDATE_INFO
                 and section.get("isRequired")
             ):
-                raise Unsupported(f"form_shape: {section['displayName']!r} section is required")
+                raise Unsupported(
+                    f"unsupported_rendering: {section['displayName']!r} section is required"
+                )
         self._sections = [
             s for s in sections if s.get("questionnaire") and s.get("xRefCode") != "SUBMIT"
         ]
@@ -549,7 +551,7 @@ def _entry_fields(
         key, kind = keys.get(re.sub(r"\s", "", f["fieldName"]).upper(), (None, None))
         if key is None or kind is None:
             if f["isRequired"] and section["isRequired"]:
-                raise Unsupported(f"form_shape: {prefix} field {f['fieldName']!r}")
+                raise Unsupported(f"unsupported_rendering: {prefix} field {f['fieldName']!r}")
             continue
         required = bool(f["isRequired"] and section["isRequired"])
         options = NO_YES if kind == "boolean" else None
@@ -594,7 +596,9 @@ def _question_fields(section: dict[str, Any], question: dict[str, Any]) -> list[
         label = _plain(question["displayName"])
     if kind is None:
         if question["isRequired"]:
-            raise Unsupported(f"form_shape: {label!r} has answer type {question['answerType']}")
+            raise Unsupported(
+                f"unsupported_rendering: {label!r} has answer type {question['answerType']}"
+            )
         return []
     field_id = f"q{question['questionId']}"
     options = None

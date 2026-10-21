@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -81,7 +81,7 @@ class WelcomeToTheJungle:
     def read_form(self, page: Page) -> list[Field]:
         """Opens the apply modal; a job that applies on another site has no form here."""
         if not JOB.match(urlsplit(page.url).path):
-            raise Unsupported(f"form_shape: {page.url} is not a Welcome to the Jungle job")
+            raise Unsupported(f"unsupported_flow: {page.url} is not a Welcome to the Jungle job")
         apply = page.locator('[data-testid="job_header-button-apply"]').first
         apply.wait_for()
         href = apply.get_attribute("href")
@@ -94,7 +94,7 @@ class WelcomeToTheJungle:
         if href and "/signin" in href:
             raise Blocked("login_required: run `atsfill login wttj`")
         if href:
-            raise Unsupported(f"form_shape: the job applies on another site ({href})")
+            raise Unsupported(f"external_step: the job applies on another site ({href})")
         form = page.locator(FORM).first
         if not form.is_visible():  # an easyapply link opens the form by itself
             try:
@@ -105,7 +105,7 @@ class WelcomeToTheJungle:
         try:
             form.wait_for(timeout=FORM_TIMEOUT_MS)
         except Timeout:
-            raise Unsupported("form_shape: the apply button opened no form") from None
+            raise Unsupported("unsupported_flow: the apply button opened no form") from None
         location = form.locator("[name=location]")
         deadline = time.monotonic() + LOCATION_TIMEOUT_S
         while location.count() and not location.input_value() and time.monotonic() < deadline:
@@ -116,7 +116,9 @@ class WelcomeToTheJungle:
         for raw in form.evaluate(_READ):
             field = _field(raw)
             if field is None and raw["required"]:
-                raise Unsupported(f"form_shape: {raw['label']!r} is a {raw['type']} question")
+                raise Unsupported(
+                    f"unsupported_rendering: {raw['label']!r} is a {raw['type']} question"
+                )
             if field is not None:
                 fields.append(field)
         self._fields = {f.id: f for f in fields}
@@ -142,7 +144,9 @@ class WelcomeToTheJungle:
                 case FieldType.TEXT | FieldType.PHONE, str():
                     target.fill(answer)
                 case kind, _:
-                    reason = f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
+                    reason = (
+                        f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
+                    )
                     raise Unsupported(reason)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -179,7 +183,7 @@ def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
                     option.click()
                     return
             page.wait_for_timeout(SUGGEST_POLL_MS)
-    raise Unsupported(f"form_shape: no suggestion for {answer!r} in {field.id}")
+    raise NotTaken(f"no suggestion for {answer!r} in {field.id}")
 
 
 def _field(raw: dict[str, Any]) -> Field | None:

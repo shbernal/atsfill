@@ -346,7 +346,7 @@ def _field(raw: dict[str, Any]) -> Field | None:
     kind = raw["kind"]
     if kind == "video":
         if raw["required"]:
-            raise Unsupported(f"form_shape: {raw['label']!r} asks for a recorded video")
+            raise Unsupported(f"unsupported_rendering: {raw['label']!r} asks for a recorded video")
         return None
     label = LABELS.get(raw["id"]) or raw.get("label", "")
     if "part" in raw:

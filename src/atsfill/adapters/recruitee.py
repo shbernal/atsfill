@@ -141,7 +141,9 @@ class Recruitee:
         for raw in form.evaluate(_READ):
             if raw["kind"] == "video":  # recorded in the page, or uploaded to a video service
                 if raw["required"]:
-                    raise Unsupported(f"form_shape: {raw['label']!r} is a video question")
+                    raise Unsupported(
+                        f"unsupported_rendering: {raw['label']!r} is a video question"
+                    )
                 continue
             fields.append(_field(raw))
             self._kinds[raw["id"]] = raw["kind"]

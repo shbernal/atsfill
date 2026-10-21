@@ -238,7 +238,7 @@ def _field(raw: dict[str, Any]) -> Field:
         case "consent":
             field_type, options = FieldType.CHOICE, YES_NO
         case _:
-            raise Unsupported(f"form_shape: {raw['id']} is a {kind}")
+            raise Unsupported(f"unsupported_rendering: {raw['id']} is a {kind}")
     accept = RESUME_TYPES if kind == "file" else None
     return Field(
         raw["id"], raw["label"], field_type, raw["required"], options, raw.get("maxLength"), accept

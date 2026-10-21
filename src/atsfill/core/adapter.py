@@ -5,14 +5,22 @@ from atsfill.core.results import Answer, Field, SideEffect
 
 
 class Blocked(Exception):
-    """The system stopped the command: a captcha, a score refusal, an emailed code, a login wall.
+    """The system stopped the command: a captcha, a low reCAPTCHA score, an emailed code, a
+    login wall.
 
     The message is the result's reason, `code` or `code: detail`.
     """
 
 
 class Unsupported(Exception):
-    """A form shape the adapter does not handle; the message is `code: detail`."""
+    """A rendering or a flow the adapter does not handle; the message is `code: detail`."""
+
+
+class NotTaken(Exception):
+    """The page would not take an answer the user gave: no suggestion or option holds it.
+
+    The message is the detail.
+    """
 
 
 class Adapter(Protocol):

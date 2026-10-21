@@ -4,7 +4,7 @@ import pytest
 
 from atsfill import core
 from atsfill.core import attempts, commands, registry
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Unsupported
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Status
 from tests.fake import FIELDS, Fake
@@ -118,13 +118,21 @@ def test_a_mismatch_refuses(fake, config, url, answers, data):
 
 
 @pytest.mark.parametrize(
-    "error, status",
-    [(Blocked("email_code"), Status.BLOCKED), (Unsupported("form_shape: x"), Status.UNSUPPORTED)],
+    "error, status, reason",
+    [
+        (Blocked("email_code"), Status.BLOCKED, "email_code"),
+        (Unsupported("unsupported_rendering: x"), Status.UNSUPPORTED, "unsupported_rendering: x"),
+        (
+            NotTaken("no suggestion for 'x'"),
+            Status.REFUSED,
+            "answer_not_taken: no suggestion for 'x'",
+        ),
+    ],
 )
-def test_the_adapter_stops_a_fill(fake, config, url, answers, data, error, status):
+def test_the_adapter_stops_a_fill(fake, config, url, answers, data, error, status, reason):
     fake.fill_raises = error
     result = core.fill(url, answers, data_dir=data)
-    assert (result.status, result.reason) == (status, str(error))
+    assert (result.status, result.reason) == (status, reason)
 
 
 def test_an_unexpected_error_keeps_the_detected_adapter(fake, config, url, answers, data):
@@ -217,7 +225,7 @@ def test_a_send_warns_on_an_adapter_not_send_verified(fake, config, url, answers
 def test_a_send_verified_adapter_sends_without_warning(
     fake, config, url, answers, data, monkeypatch
 ):
-    monkeypatch.setattr(registry, "systems", lambda: VERIFIED)
+    monkeypatch.setattr(registry, "sources", lambda: VERIFIED)
     config('submit = ["fake"]')
     assert core.send(url, answers, data_dir=data).warning is None
     (state,) = core.status(data_dir=data).adapters
@@ -241,7 +249,7 @@ reason = "resume empty"
 
 
 def test_a_broken_send_warns_and_shows_in_status(fake, config, url, answers, data, monkeypatch):
-    monkeypatch.setattr(registry, "systems", lambda: BROKEN)
+    monkeypatch.setattr(registry, "sources", lambda: BROKEN)
     monkeypatch.setattr(commands, "version", lambda _: "0.0.2")
     config('submit = ["fake"]')
     broken = "send broken since 2026-10-19 (0.0.2), resume empty; last verified 2026-10-18 (0.0.1)"

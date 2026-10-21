@@ -11,7 +11,7 @@ import re
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Unsupported
 from atsfill.core.browser import Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -207,7 +207,7 @@ class Paycor:
                     named.fill(answer)
                     named.dispatch_event("change")
                 case "select", str() if named.is_disabled():
-                    raise Unsupported(f"form_shape: {field.id} has no options for that country")
+                    raise NotTaken(f"{field.id} has no options for that country")
                 case "select", str():
                     named.select_option(label=answer)
                 case "radio", str():
@@ -221,7 +221,7 @@ class Paycor:
                     self._pick(named, field, answer)
                 case _:
                     raise Unsupported(
-                        f"form_shape: cannot fill {field.id}, a {kind}, with {answer!r}"
+                        f"unsupported_rendering: cannot fill {field.id}, a {kind}, with {answer!r}"
                     )
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -265,7 +265,7 @@ class Paycor:
         """Opens the apply page and answers the pages before the form: the persona's picks
         when filling, the last option and Yes when only reading, which list the fields."""
         if self._start is None:
-            raise Unsupported("form_shape: no Paycor job in the page")
+            raise Unsupported("unsupported_flow: no Paycor job in the page")
         page.goto(self._start, wait_until="domcontentloaded")
         for _ in range(STEPS):
             page.wait_for_load_state("domcontentloaded")
@@ -286,11 +286,11 @@ class Paycor:
             elif "no longer active" in (page.text_content("body") or ""):
                 raise Unsupported("posting_gone: this job is no longer active")
             else:
-                raise Unsupported(f"form_shape: an unknown page before the form ({page.url})")
+                raise Unsupported(f"unsupported_flow: an unknown page before the form ({page.url})")
             # The form's third-party scripts (Dropbox, Google) can hold its `load` back.
             with page.expect_navigation(wait_until="domcontentloaded", timeout=PAGE_TIMEOUT_MS):
                 button.click(no_wait_after=True)
-        raise Unsupported("form_shape: no form after the pages before it")
+        raise Unsupported("unsupported_flow: no form after the pages before it")
 
     def _eeo(self, page: Page, answers: dict[str, Answer] | None) -> None:
         for name in page.locator(f"{EEO_FORM} input[type=radio]").evaluate_all(

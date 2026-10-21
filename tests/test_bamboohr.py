@@ -204,7 +204,7 @@ def test_a_posting_gone(page):
 def test_an_unknown_question_type_is_unsupported():
     detail = json.loads(json.dumps(DETAIL))
     detail["result"]["formFields"]["customQuestions"][0]["type"] = "rating"
-    with pytest.raises(Unsupported, match="form_shape: question 11 is a rating"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: question 11 is a rating"):
         _form(detail, LISTS, None)
 
 
@@ -213,7 +213,7 @@ def test_a_field_missing_from_the_page_is_unsupported(page):
     page.click("#apply")
     page.wait_for_selector("form #firstName")
     page.evaluate("() => document.querySelector('[name=references]').remove()")
-    with pytest.raises(Unsupported, match="form_shape: references is not on the page"):
+    with pytest.raises(Unsupported, match="unsupported_flow: references is not on the page"):
         BambooHR().read_form(page)
 
 

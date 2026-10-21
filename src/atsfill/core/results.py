@@ -66,7 +66,7 @@ class Result:
 
 
 @dataclass
-class AdapterState:
+class AdapterStatus:
     name: str
     submit_enabled: bool
     side_effects: list[SideEffect]
@@ -85,7 +85,7 @@ class StatusReport:
     config: Path
     browser: str  # the installed build
     browser_pinned: str
-    adapters: list[AdapterState]
+    adapters: list[AdapterStatus]
 
 
 @dataclass

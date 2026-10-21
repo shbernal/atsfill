@@ -276,7 +276,7 @@ class Workable:
             case "group" if not raw["required"]:
                 return None  # an optional education or experience entry, left out
             case _:
-                raise Unsupported(f"form_shape: {raw['id']} is a {kind}")
+                raise Unsupported(f"unsupported_rendering: {raw['id']} is a {kind}")
         return Field(
             raw["id"],
             raw["label"],

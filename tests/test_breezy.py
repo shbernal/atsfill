@@ -162,7 +162,7 @@ def test_a_step_breezy_keeps_stops_the_fill(page):
 def test_a_required_video_is_unsupported(page):
     page.goto(APPLY)
     page.locator(".video .required").evaluate("e => e.classList.remove('ng-hide')")
-    with pytest.raises(Unsupported, match="form_shape: 'Introduce yourself on video'"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: 'Introduce yourself on video'"):
         Breezy().read_form(page)
 
 

@@ -223,7 +223,7 @@ class Hireology:
         form_el = page.locator(FORM)
         for field, _ in form:
             if field.id not in SHOWN_BY and form_el.evaluate(_CONTROL, field.id) is None:
-                raise Unsupported(f"form_shape: {field.id} is not on the page")
+                raise Unsupported(f"unsupported_flow: {field.id} is not on the page")
         return [f for f, _ in form]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
@@ -304,7 +304,7 @@ def _field(entry: dict[str, Any], section: str) -> Field:
     field_id, attributes = entry["id"], entry["attributes"]
     kind = attributes["type"]
     if kind not in TYPES:
-        raise Unsupported(f"form_shape: {field_id} is a {kind}")
+        raise Unsupported(f"unsupported_rendering: {field_id} is a {kind}")
     label = (
         section
         + (

@@ -242,7 +242,7 @@ class Greenhouse:
                 else:
                     field_type = FieldType.MULTI_CHOICE if kind == "multi" else FieldType.CHOICE
             case _:  # a radio input, not seen on a posting yet
-                raise Unsupported(f"form_shape: {raw['id']} is a {kind}")
+                raise Unsupported(f"unsupported_rendering: {raw['id']} is a {kind}")
         return Field(
             raw["id"],
             raw["label"],

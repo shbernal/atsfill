@@ -112,7 +112,7 @@ def test_a_radio_is_not_supported(page):
         """() => document.getElementById("application-form").insertAdjacentHTML("afterbegin",
         '<label for="r1">Remote</label><input type="radio" id="r1" name="remote">')"""
     )
-    with pytest.raises(Unsupported, match="form_shape: r1 is a radio"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: r1 is a radio"):
         Greenhouse().read_form(page)
 
 
