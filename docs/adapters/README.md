@@ -21,7 +21,6 @@ The registry covers 90.1% of postings.
 | hireology | ats | 1.0% | none | hosted |  | [dry_run_verified](hireology.md) |
 | paycor | ats | 0.9% | none | hosted, embedded |  | [dry_run_verified](paycor.md) |
 | zohorecruit | ats | 0.9% | none | hosted |  | mapped |
-| ukgready | ats | 0.9% | none | hosted |  | mapped |
 | phenom | ats | 0.7% | none | hosted |  | mapped |
 | breezy | ats | 0.7% | none | hosted |  | [dry_run_verified](breezy.md) |
 | recruitee | ats | 0.7% | none | hosted |  | [dry_run_verified](recruitee.md) |
@@ -40,6 +39,7 @@ The registry covers 90.1% of postings.
 | mycareersfuture | board | 1.6% | to_read | hosted |  | mapped |
 | taleo | ats | 1.2% | to_read | hosted |  | mapped |
 | adp | ats | 1.1% | to_read | hosted |  | mapped |
+| ukgready | ats | 0.9% | to_read | hosted |  | mapped |
 | adpmyjobs | ats | 0.8% | to_read | hosted |  | mapped |
 | hrmdirect | ats | 0.6% | to_read | hosted |  | mapped |
 | jobstreet | board | 0.5% | to_read | hosted |  | mapped |
