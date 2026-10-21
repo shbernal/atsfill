@@ -17,3 +17,4 @@ One file per decision, numbered in the order they were taken. A decision that ch
 | [0011](0011-http-read.md) | `read` over HTTP where the system publishes its form, the page otherwise |
 | [0012](0012-systems-registry.md) | A committed registry of hiring systems: kind, share, account, block, verification |
 | [0013](0013-survey-and-adapter-rounds.md) | A survey script, an adapter gate script, and one agent round per system |
+| [0014](0014-out-of-scope.md) | Out of scope is what needs the user live; out of scope, known gap and unhandled told apart at run time |

@@ -33,7 +33,7 @@ A job board that takes the application itself, so a hiring system.
 _Avoid_: job board
 
 **Aggregator**:
-A source whose postings only link to a form on another source: a job aggregator or a career-site front-end. Never a hiring system, never an adapter.
+A source whose postings only link to a form on another source: a job aggregator or a career-site front-end. Never a hiring system, never an adapter. A hiring system some of whose postings link out stays a hiring system; those postings end in `external_step`.
 
 **Adapter**:
 The module that knows one hiring system's page. Its name (`ashby`, `wttj`) identifies the system in commands, the config file and results.
@@ -124,6 +124,16 @@ The one outcome every form command ends in: `ready`, `refused`, `submitted`, `bl
 **Reason**:
 The snake_case code, with an optional detail, that explains a status other than `ready` or `submitted`.
 
+**Out of scope**:
+A field whose answer needs the user present for its content, such as a video recorded live or a timed assessment, so stored answers and files can never give it. Its reason is `out_of_scope`. Also a source the registry marks so.
+
+**Known gap**:
+A rendering or a flow an adapter does not handle yet but is wanted, declared by the adapter with an id and listed under "Known gaps" in its doc. Its reason is `unsupported_rendering` or `unsupported_flow`.
+_Avoid_: gap, coverage gap
+
+**Unhandled**:
+Said of a rendering or an error nobody has looked at yet, with no known gap behind it: `unhandled_rendering` or `adapter_error`.
+
 **Warning**:
 A code a send carries when it went ahead anyway: `not_send_verified` or `send_broken`.
 
@@ -189,7 +199,7 @@ _Avoid_: gate, done check
 The postings a round surveys first to learn its system, about fifteen employers' worth. The adapter gate counts only postings outside it.
 
 **Inventory**:
-The field type × rendering table in an adapter's doc: every rendering the sample showed, supported or not, and how many postings showed it.
+The field type × rendering table in an adapter's doc: every rendering the adapter handles and how many postings showed it. What it does not handle yet is a known gap.
 
 **Round**:
 One agent run that adds or repairs one adapter, ending in a pull request or a registry entry.
@@ -208,4 +218,6 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 - "System" meant both a hiring system and any registry entry. A registry entry is a source; "system" is a hiring system.
 - "Refusal" means the `refused` status only. A low reCAPTCHA score is `blocked`.
 - A **Block** (a bot protection in the registry) is not the `blocked` status, which also covers emailed codes, login walls and the time budget.
+- "Gap" meant both a known gap and anything atsfill could not fill. A form it cannot fill is out of scope, a known gap or unhandled; "gap" alone is not used.
+- "Out of scope" also named a `custom` source and finding postings. As a term it means only what needs the user live.
 - "Company" and "employer" named the same organization. It is the employer. "Company" stays only where it is a hiring system's own word: a field label, a URL path.
