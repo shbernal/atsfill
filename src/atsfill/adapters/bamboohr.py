@@ -30,6 +30,7 @@ CHALLENGE = "iframe[src*='recaptcha/api2/bframe']"
 FORM_TIMEOUT_MS = 30_000
 UPLOAD_TIMEOUT_MS = 30_000
 SHOWN_TIMEOUT_MS = 2_000
+STATES_TIMEOUT_MS = 15_000  # for the state's list a country change refetches
 SETTLE_MS = 300  # for React to render what a response brought
 CAPTCHA_TIMEOUT_MS = 20_000
 SUBMIT_TIMEOUT_MS = 90_000
@@ -215,12 +216,14 @@ class BambooHR:
                 case "file":
                     _attach(form, str(name), answer)
                 case "select" if field_id == "countryId":
+                    if _shown(control) == value:
+                        continue  # the state's list stays
                     with (
                         suppress(Timeout),
                         page.expect_response(
-                            lambda r: "/ajax/get_states" in r.url, timeout=SHOWN_TIMEOUT_MS
+                            lambda r: "/ajax/get_states" in r.url, timeout=STATES_TIMEOUT_MS
                         ),
-                    ):  # the state's list follows the country, none when it stays
+                    ):  # the state's list follows the country
                         _pick(page, control, value)
                     page.wait_for_timeout(SETTLE_MS)
                 case "select":
