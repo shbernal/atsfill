@@ -160,9 +160,6 @@ class Paycor:
         job = (query.get("id") or query.get("gni") or [url])[0]
         return f"{CAREER}JobIntroduction.action?id={job}"
 
-    def read_api(self, url: str) -> list[Field] | None:
-        return None  # the form is behind the pages before it, posted in a session
-
     def read_form(self, page: Page) -> list[Field]:
         self._before, self._codes = [], {}
         self._walk(page, None)

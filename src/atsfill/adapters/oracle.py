@@ -259,9 +259,6 @@ class Oracle:
         assert match, url
         return f"https://{parts.hostname}/hcmUI/CandidateExperience/job/{match[1]}"
 
-    def read_api(self, url: str) -> list[Field] | None:
-        return None  # the form's metadata is served only past the email step
-
     def read_form(self, page: Page) -> list[Field]:
         parts = urlsplit(page.url)
         match = JOB.search(parts.path)

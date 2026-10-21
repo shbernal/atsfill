@@ -78,9 +78,6 @@ class WelcomeToTheJungle:
         """`users/me` answers 200 for an account, 204 for a visitor."""
         return request.get(ME).status == 200
 
-    def read_api(self, url: str) -> list[Field] | None:
-        return None
-
     def read_form(self, page: Page) -> list[Field]:
         """Opens the apply modal; a job that applies on another site has no form here."""
         if not JOB.match(urlsplit(page.url).path):

@@ -29,10 +29,6 @@ class Adapter(Protocol):
         """The posting's key for the double-send guard: every URL of one posting gives the same."""
         ...
 
-    def read_api(self, url: str) -> list[Field] | None:
-        """Lists the fields over HTTP, without a browser; None when it cannot (ADR 0011)."""
-        ...
-
     def read_form(self, page: Page) -> list[Field]: ...
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None: ...
@@ -55,4 +51,13 @@ class NeedsAccount(Protocol):
 
     def signed_in(self, request: Request) -> bool:
         """Whether the cookies `request` carries are signed in, from one request to the system."""
+        ...
+
+
+@runtime_checkable
+class ReadsOverHttp(Adapter, Protocol):
+    """An adapter that can list a form's fields over HTTP, without a browser (ADR 0011)."""
+
+    def read_api(self, url: str) -> list[Field] | None:
+        """The same fields as `read_form`; None when it cannot for this URL."""
         ...
