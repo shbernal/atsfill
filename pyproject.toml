@@ -55,7 +55,7 @@ testpaths = ["tests"]
 markers = [
     "live: drives a real hiring system page with data from .env and .tmp/; opt-in with -m live",
 ]
-addopts = "-m 'not live' -n 8 --dist loadscope"
+addopts = "-m 'not live' -n auto --dist loadscope"
 
 [[tool.uv.index]]
 name = "testpypi"
