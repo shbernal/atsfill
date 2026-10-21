@@ -11,7 +11,7 @@ from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -33,7 +33,7 @@ LISTS: dict[str, tuple[str, Callable[[dict[str, Any]], str]]] = {
     "languages": ("languages/", lambda n: n["name"]),
     "industries": ("clients/{client}/industries/", lambda n: n["name"]),
 }
-ENTRIES = ("educations", "experiences")  # a sub-form of entries: left out when optional
+ENTRIES = ("educations", "experiences")  # a sub-form of entries
 SHORT = {"full_name", "email", "phone_number", "city", "address", "latest_degree",
          "latest_university", "current_company", "current_department", "current_position",
          "current_benefits", "expected_benefits", "skype", "contact"}  # fmt: skip
@@ -106,15 +106,11 @@ def _kind(entry: dict[str, Any]) -> str:
     return "text"
 
 
-def _field(entry: dict[str, Any], options: list[str] | None) -> Field | None:
-    """The field an entry of the endpoint lists, None for optional entries."""
+def _field(entry: dict[str, Any], options: list[str] | None) -> Field:
+    """The field an entry of the endpoint lists, a sub-form of entries aside."""
     kind, slug = _kind(entry), entry["client_field_slug"]
     fid, label, required = str(entry["id"]), entry["label"], bool(entry["is_required"])
     match kind:
-        case "entries" if required:
-            raise Unsupported(f"unsupported_rendering: {entry['field_type']} entries are required")
-        case "entries":
-            return None
         case "file":
             accept = RESUME_TYPES if entry["field_type"] == "resume" else None
             return Field(fid, label, FieldType.FILE, required, accept=accept)
@@ -157,6 +153,7 @@ def _options(entry: dict[str, Any], client: str) -> list[str] | None:
 
 class Manatal:
     name = "manatal"
+    known_gaps = {"entries": Gap.RENDERING}
     side_effects = [
         SideEffect("submit", "hiring_system", "the resume and attachments are uploaded"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -185,7 +182,7 @@ class Manatal:
             entries = _get(f"jobs/{job.group(1)}/application-form/")
             terms = bool(TERMS_REQUIRED.search(html))
             return self._fields(entries, terms, lambda e: _options(e, client))
-        except OSError, ValueError, KeyError, TypeError, Unsupported:
+        except OSError, ValueError, KeyError, TypeError:
             return None
 
     def read_form(self, page: Page) -> list[Field]:
@@ -245,7 +242,7 @@ class Manatal:
                     named.evaluate(_CHECK, answer == "Yes")
                 case kind, _:
                     raise Unsupported(
-                        f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
+                        f"unhandled_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -274,10 +271,21 @@ class Manatal:
         terms: bool,
         options: Callable[[dict[str, Any]], list[str] | None],
     ) -> list[Field]:
-        fields = [f for e in entries if (f := _field(e, options(e))) is not None]
+        fields = [
+            self._entries_field(e) if _kind(e) == "entries" else _field(e, options(e))
+            for e in entries
+        ]
         if terms:
             fields.append(Field(TERMS, TERMS_LABEL, FieldType.CHOICE, True, YES_NO))
         return fields
+
+    def _entries_field(self, entry: dict[str, Any]) -> Field:
+        """An "Add Education" or "Add Experience" sub-form of entries."""
+        fid = str(entry["id"])
+        gap = known_gap(self, "entries", f"{fid} is a list of {entry['field_type']}")
+        return Field(
+            fid, entry["label"], FieldType.TEXT, bool(entry["is_required"]), unfillable=gap
+        )
 
     @staticmethod
     def _shown(page: Page, entry: dict[str, Any]) -> list[str] | None:

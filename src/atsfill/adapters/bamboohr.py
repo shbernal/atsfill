@@ -10,11 +10,12 @@ import json
 import re
 import urllib.request
 from contextlib import suppress
+from dataclasses import replace
 from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -140,6 +141,7 @@ _READ_BACK = """(form, specs) => {
 
 class BambooHR:
     name = "bamboohr"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("upload", "hiring_system", "an attached file is stored by BambooHR at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -186,10 +188,11 @@ class BambooHR:
         country = form.locator("select[name='countryId.value']")
         default = (_shown(country) or "") if country.count() else None
         fields = _form(detail["json"], states, default)
-        self._specs = {f.id: spec for f, spec in fields}
+        out = []
         for field, (kind, name, _) in fields:
-            if field.id.endswith("_other"):
-                continue  # shown once its question is answered Other
+            if field.unfillable or field.id.endswith("_other"):
+                out.append(field)  # an `_other` shows once its question is answered Other
+                continue
             present = (
                 form.locator("input[placeholder*=yyyy]")
                 if kind == "date"
@@ -198,8 +201,14 @@ class BambooHR:
                 else form.locator(f"[name='{name}']")
             )
             if not present.count():
-                raise Unsupported(f"unsupported_flow: {field.id} is not on the page")
-        return [f for f, _ in fields]
+                field = replace(
+                    field, unfillable=f"unhandled_rendering: {field.id} is not on the page"
+                )
+            out.append(field)
+        self._specs = {
+            f.id: spec for f, (_, spec) in zip(out, fields, strict=True) if not f.unfillable
+        }
+        return out
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
@@ -388,7 +397,12 @@ def _form(
         if not entry:  # a demographic question the employer does not ask
             continue
         if key not in STANDARD:
-            raise Unsupported(f"unsupported_rendering: {key} is a field it does not know")
+            reason = f"unhandled_rendering: {key} is a field it does not know"
+            meta = entry if isinstance(entry, dict) else {}
+            label, required = str(meta.get("label") or key).strip(), bool(meta.get("isRequired"))
+            field = Field(key, label, FieldType.TEXT, required, unfillable=reason)
+            out.append((field, ("text", None, None)))
+            continue
         kind, name = STANDARD[key]
         label, required = entry["label"].strip(), entry["isRequired"]
         options = [o["text"] for o in entry.get("options") or []] or None
@@ -417,11 +431,13 @@ def _states(states: dict[str, Any], default: str | None) -> list[str]:
 
 def _custom(question: dict[str, Any]) -> list[tuple[Field, tuple[str, str | None, Any]]]:
     qid, kind_api = question["id"], question["type"]
+    label, required = question["question"].strip(), question["isRequired"]
     if kind_api not in CUSTOM:
-        raise Unsupported(f"unsupported_rendering: question {qid} is a {kind_api}")
+        reason = f"unhandled_rendering: question {qid} is a {kind_api}"
+        field = Field(f"question_{qid}", label, FieldType.TEXT, required, unfillable=reason)
+        return [(field, ("text", None, None))]
     kind = CUSTOM[kind_api]
     name = f"customQuestionAnswers.{kind_api}_{qid}"
-    label, required = question["question"].strip(), question["isRequired"]
     options, extra = None, None
     if kind_api == "yes_no" or kind == "checkbox":
         options = YES_NO

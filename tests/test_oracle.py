@@ -84,11 +84,15 @@ def test_read_form(opened):
         "coverLetter",
         "siteLink-1",
         "block:107",
+        "block:108",
         "US-STANDARD-ORA_ETHNICITY_US_OTHERS-STANDARD",
         "job-alerts",
         "fullName",
-    ]  # the profile import, the optional education tiles and the state, which the postal
-    # code fills, are left out
+    ]  # the profile import and the state, which the postal code fills, are left out
+    assert fields["block:108"].unfillable == (
+        "unsupported_rendering: entries: 'Education' needs entries added"
+    )
+    assert not fields["block:108"].required
     assert fields["legalDisclaimer"].label == "I agree with the terms and conditions"
     assert fields["lastName"].required and fields["lastName"].max_length == 150
     assert fields["title"].options == ["Mr.", "Ms."]

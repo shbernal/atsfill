@@ -169,10 +169,11 @@ def _asked(field: Field, given: dict[str, Answer]) -> bool:
 
 def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
-    prefilled to the account, a résumé aside, and a field its own answers keep hidden."""
+    prefilled to the account, a résumé aside, a field its own answers keep hidden, and one
+    atsfill cannot fill."""
     out, by_label = {}, {}
     for f in fields:
-        if (a := answer(f, cv, picture)) is None or not _asked(f, by_label):
+        if f.unfillable or (a := answer(f, cv, picture)) is None or not _asked(f, by_label):
             continue
         by_label[f.label] = a
         if not (f.prefilled and f.type is not FieldType.FILE):

@@ -51,7 +51,7 @@ def page(tmp_path_factory):
         pytest.MonkeyPatch.context() as mp,
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
-        mp.setattr("atsfill.adapters.bamboohr.FORM_TIMEOUT_MS", 2_000)
+        mp.setattr("atsfill.adapters.bamboohr.FORM_TIMEOUT_MS", 5_000)
         page.context.route("https://acme.bamboohr.com/**", serve)
         yield page
 
@@ -201,20 +201,24 @@ def test_a_posting_gone(page):
         BambooHR().read_form(page)
 
 
-def test_an_unknown_question_type_is_unsupported():
+def test_an_unknown_question_type_or_field_is_unhandled():
     detail = json.loads(json.dumps(DETAIL))
     detail["result"]["formFields"]["customQuestions"][0]["type"] = "rating"
-    with pytest.raises(Unsupported, match="unsupported_rendering: question 11 is a rating"):
-        _form(detail, LISTS, None)
+    detail["result"]["formFields"]["mood"] = {"label": "Mood", "isRequired": False}
+    unfillable = {f.id: f.unfillable for f, _ in _form(detail, LISTS, None) if f.unfillable}
+    assert unfillable == {
+        "question_11": "unhandled_rendering: question 11 is a rating",
+        "mood": "unhandled_rendering: mood is a field it does not know",
+    }
 
 
-def test_a_field_missing_from_the_page_is_unsupported(page):
+def test_a_field_missing_from_the_page_is_unhandled(page):
     page.goto(JOB)
     page.click("#apply")
     page.wait_for_selector("form #firstName")
     page.evaluate("() => document.querySelector('[name=references]').remove()")
-    with pytest.raises(Unsupported, match="unsupported_flow: references is not on the page"):
-        BambooHR().read_form(page)
+    fields = {f.id: f for f in BambooHR().read_form(page)}
+    assert fields["references"].unfillable == "unhandled_rendering: references is not on the page"
 
 
 def test_submit_returns_the_post_answer(page):

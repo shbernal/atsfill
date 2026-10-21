@@ -68,9 +68,11 @@ def test_read_form(opened):
         "question:102",
         "question:105",
         "question:106",
+        "question:107",
+        "question:109",
         "question:103",
         "question:104",
-    ]  # the optional video question is left out
+    ]
     assert fields["candidate[first_name]"].label == "Prénom"
     assert fields["candidate[first_name]"].max_length == 50
     assert fields["candidate[consent_given]"].required
@@ -90,6 +92,22 @@ def test_read_form(opened):
     assert not fields["question:108"].required  # only once an earlier answer asks it
     assert fields["question:105"].options == ["Samedi", "Dimanche"]
     assert fields["question:106"].options == [str(n) for n in range(11)]
+
+
+def test_a_video_or_file_question_is_a_known_gap(opened):
+    unfillable = {f.id: f.unfillable for f in opened[1] if f.unfillable}
+    assert unfillable == {
+        "question:107": "unsupported_rendering: video_upload: question:107 is a video, "
+        "recorded or uploaded",
+        "question:109": "unsupported_rendering: file_question: question:109 is a question's "
+        "file drop zone",
+    }
+
+
+def test_an_unknown_question_kind_is_unhandled():
+    raw = {"id": "question:1", "kind": "signature", "question": True, "label": "", "required": 1}
+    field = Teamtailor()._field(raw)
+    assert field.unfillable == "unhandled_rendering: question:1 is a Teamtailor signature question"
 
 
 def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume):

@@ -48,7 +48,7 @@ The registry covers 90.1% of postings.
 | paycom | ats | 2.4% | none | hosted | hCaptcha at form | mapped |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | mapped |
 
-Aggregators and employer-built forms, counted and not adapted:
+Aggregators, employer-built forms and out-of-scope systems ([ADR 0014](../adr/0014-out-of-scope.md)), counted and not adapted:
 
 | Source | Kind | Share | Account | Hosting | Block | Verification |
 |---|---|---|---|---|---|---|

@@ -38,10 +38,7 @@ Each rendering, and on how many of the 12 forms reached out of 15 postings (2026
 | `apply-flow-block--misc-attachments`, a file block listing what is attached (`.misc-attachment-list__item-name`) | `file`, id `block:<block id>` | 4 |
 | agreements block: job alerts, marketing opt-in checkboxes | `choice`, `Yes`/`No` | 9 |
 | e-signature, full name | `text` | 11 |
-| tiles to add (education, experience, timeline, skills, licenses, languages) | not handled | 12, required on none |
 | profile import (LinkedIn, Indeed, a resume to parse) | not read | 9 |
-
-  A required tiles block makes the form `unsupported`; an optional one is left out.
 
 ## Filling
 
@@ -58,3 +55,9 @@ Each rendering, and on how many of the 12 forms reached out of 15 postings (2026
 
 - The read-back is the page: each input's value, the selected pills, the checked inputs' labels, the dropdown's text, a date's three dropdowns as `YYYY-MM-DD`, a file as the name Oracle shows once attached (`.attachment-upload-button__download`). The terms read back `Yes`: the form opens only once they are accepted.
 - Submit is `.apply-flow-pagination__submit-button`; the evidence is the URL the page leaves `/apply/` for. No send has been made through this adapter, so the end of a send is unobserved.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `entries` | a block of tiles to add (education, experience, timeline, skills, licenses, languages) | `unsupported_rendering` | 12, required on none |

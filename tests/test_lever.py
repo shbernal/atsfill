@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.lever import Lever
+from atsfill.adapters.lever import Lever, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
@@ -136,6 +136,11 @@ def test_every_answer_reads_back(page, resume):
     assert len(checks) == len(answers)
     assert page.locator("[name=eeo\\[disabilitySignatureDate\\]]").input_value() == "10/20/2026"
     assert "London, Greater London" in page.locator("#selected-location").input_value()
+
+
+def test_an_unknown_rendering_is_listed_unhandled():
+    raw = {"id": "x", "label": "X", "kind": "slider", "required": True}
+    assert _field(raw).unfillable == "unhandled_rendering: x is a slider"
 
 
 def test_a_posting_gone(page):

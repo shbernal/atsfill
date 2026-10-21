@@ -28,8 +28,9 @@ Every field is a named control, and the name is the field's id: `candidate.name`
 | `legal` question: one checkbox `…flag` (`data-testid=legal-input-field-value-input`), labelled by `aria-labelledby` | `choice`, `Yes`/`No` | 7 |
 | legal agreement: one checkbox `candidate.agreements.<n>.consent` labelled by rich text; not in the offers API, on 1 of the 15 surveyed | `choice`, `Yes`/`No` | — |
 | preferred location: checkboxes `candidate.locations.value` valued by location id | `multi_choice`, by label | 4 |
-| `video` question: a Ziggeo recorder drawn after the form, with no named control; known by its labelled `…openQuestionId` alone, left out, `unsupported_rendering` when required (1) | — | 3 |
 | `infobox`: text only, no control | — | 5 |
+
+Out of scope here: a video recorded live (Ziggeo), see ADR 0014.
 
 "Write it here instead" turns the cover letter upload into a textarea; atsfill keeps the upload.
 

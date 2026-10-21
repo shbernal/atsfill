@@ -40,14 +40,22 @@ class Broken:
 
 @dataclass(frozen=True)
 class Shortfall:
-    """A round that ended without an adapter passing the adapter gate (ADR 0013); `reason` names
-    what stopped it, never postings."""
+    """A round that ended without an adapter passing the adapter gate (ADR 0013): still wanted.
+    `reason` names the known gap that stopped it, never postings."""
 
     date: date
     version: str
     commit: str
     by: str
     reason: str
+
+
+@dataclass(frozen=True)
+class OutOfScope:
+    """A source atsfill will never fill: it needs the user live (ADR 0014)."""
+
+    reason: str
+    date: date
 
 
 @dataclass(frozen=True)
@@ -76,6 +84,7 @@ class Source:
     send_verified: Verification | None = None  # the last known good, kept through a break
     send_broken: Broken | None = None
     unsupported: Shortfall | None = None
+    out_of_scope: OutOfScope | None = None
 
     @property
     def verification(self) -> str | None:
@@ -109,6 +118,7 @@ def _source(name: str, entry: dict) -> Source:
         _one_of(name, "send_broken.cause", broken.get("cause", "unknown"), CAUSES)
         broken = Broken(**broken)
     unsupported = entry.get("unsupported")
+    out_of_scope = entry.get("out_of_scope")
     return Source(
         name,
         entry["kind"],
@@ -121,6 +131,7 @@ def _source(name: str, entry: dict) -> Source:
         **verifications,
         send_broken=broken,
         unsupported=Shortfall(**unsupported) if unsupported is not None else None,
+        out_of_scope=OutOfScope(**out_of_scope) if out_of_scope is not None else None,
     )
 
 
@@ -179,6 +190,8 @@ def _row(s: Source) -> str:
     share = f"{s.share:.1%}" if s.share is not None else ""
     block = f"{s.block.vendor} at {s.block.step}" if s.block else ""
     v = "send_broken" if s.send_broken else "unsupported" if s.unsupported else s.verification or ""
+    if s.out_of_scope:
+        v = f"out of scope: {s.out_of_scope.reason}"
     if s.adapter:
         v = f"[{v}]({s.adapter}.md)" if v else f"[adapter]({s.adapter}.md)"
     kind = f"{s.kind} → {', '.join(s.links_to)}" if s.links_to else s.kind
@@ -191,12 +204,9 @@ def backlog(registry: dict[str, Source] | None = None) -> str:
     registry = sources() if registry is None else registry
     columns = ("Source", "Kind", "Share", "Account", "Hosting", "Block", "Verification")
     head = f"| {' | '.join(columns)} |\n" + "|---" * len(columns) + "|"
-    adapters = sorted(
-        (s for s in registry.values() if s.kind in ("ats", "board")), key=_backlog_key
-    )
-    others = sorted(
-        (s for s in registry.values() if s.kind not in ("ats", "board")), key=_backlog_key
-    )
+    wanted = lambda s: s.kind in ("ats", "board") and not s.out_of_scope  # noqa: E731
+    adapters = sorted((s for s in registry.values() if wanted(s)), key=_backlog_key)
+    others = sorted((s for s in registry.values() if not wanted(s)), key=_backlog_key)
     text = [
         "# Hiring systems",
         "",
@@ -212,7 +222,13 @@ def backlog(registry: dict[str, Source] | None = None) -> str:
         *map(_row, adapters),
     ]
     if others:
-        text += ["", "Aggregators and employer-built forms, counted and not adapted:", "", head]
+        text += [
+            "",
+            "Aggregators, employer-built forms and out-of-scope systems"
+            " ([ADR 0014](../adr/0014-out-of-scope.md)), counted and not adapted:",
+            "",
+            head,
+        ]
         text += map(_row, others)
     return "\n".join(text) + "\n"
 

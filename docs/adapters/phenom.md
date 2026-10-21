@@ -8,7 +8,7 @@ Phenom's apply wizard on employers' careers sites, observed on live postings, la
 - The job page's Apply link (`data-ph-at-id=apply-link`, `phw-tk=apply_click`) leads to the wizard, `/<site>/<lang>/apply?jobSeqNo=` (`hvhapply` for some hourly roles, the same configuration), or to the system behind Phenom: Workday, Taleo, iCIMS, ADP, Oracle, Ashby. The job page's `phApp.ddo.jobDetail.data.job.externalApply` says which. The backing system does not decide it. A link to another host is `unsupported`, `external_step`.
 - The wizard is react-jsonschema-form (`form.rjsf`) with Phenom's own widgets, three to eight steps. Only the current step is in the page. Next (`button#next`) posts the step to `/applySubmit`, which creates a Phenom candidate profile on the first step and checks the step server side; the last step's Submit sends the application to the backing system.
 - A cookie banner (Phenom's own, TrustArc, OneTrust, cookieconsent's `.cc-window`) shows at any time over the form; it is declined before each click. A loading overlay (`.overlaybg`) covers the form while a step loads.
-- Not handled: a first step other than the form (`applicantAcknowledgement`, `email`, `login`, `page=terms`), a closed posting (`500`, `404`, `410` or no form).
+- A closed posting (`500`, `404`, `410` or no form) is not told from a page that shows no form.
 
 ## Reading the form
 
@@ -38,7 +38,7 @@ Each rendering, and in how many of the 17 configurations read out of 23 companie
 | `checkbox`, `valuecheckbox`, a boolean | single checkbox (consents, opt-ins), clicked in the page | `choice`: `Yes`/`No` when required, `No`/`Yes` otherwise | 17 |
 | `multipleChoice` (`checkboxes`) | checkbox group | `multi_choice` | 1 |
 | `radio`, (`radio`, `radiov2`) | radio group, `Yes`/`No` for a boolean | `choice` | 9 |
-| `calendar`, `date` | react-datepicker, day: month and year lists, else previous and next month buttons; a typed date does not reach the form | `date` | 10 |
+| `calendar`, `date` | react-datepicker, day: month and year lists, else the month shown and previous and next month buttons; a typed date does not reach the form | `date` | 10 |
 | a questionnaire's `format: date` | the browser's `input[type=date]`, typed as `YYYY-MM-DD` | `date` | 1 |
 | `daterangepicker`, `format` `MM/yyyy` | two month pickers (`.react-datepicker__monthPicker`, years in `select.range-select` or paged in `.react-datepicker-year-header`), `fromTitle`/`toTitle`, required by `input1Required`/`input2Required`; read back as `MM/YYYY` whatever the order shown | `text`, label `(MM/YYYY)` | 13 |
 | `daterangepicker`, `format` `yyyy` | two year pickers (`.react-datepicker__year--container`, twelve years a page) | `text`, label `(year)` | |
@@ -58,5 +58,13 @@ Reading takes a page load and 1 to 8 seconds of requests.
 ## Read-back and submit
 
 - The read-back is each step's controls, read before Next: values, a select's text, the checked radio's or boxes' labels, a box as `Yes`/`No`, dates as `YYYY-MM-DD` from the picker's placeholder, a national phone with its code.
-- Not handled: an employer search with `allowNew` whose pick reads back but that the step still finds empty (`is a required property`), seen on one site.
+- On one site, an employer search with `allowNew` reads back its pick, yet the step still finds it empty (`is a required property`) and does not pass.
 - Submit is the last step's submit button; the evidence is `/applySubmit`'s answer to the post with `isLastStep: true`. No send has been made through this adapter, so the end of a send is unobserved.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `first_step` | a first step other than the form (`applicantAcknowledgement`, `email`, `login`, `page=terms`) | `unsupported_flow` | |
+| `long_wizard` | a wizard of more than twelve steps | `unsupported_flow` | 0 |
+| `calendar_without_month` | a react-datepicker with neither month and year lists nor the month shown | `unsupported_rendering` | 1 |

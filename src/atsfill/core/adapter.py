@@ -1,3 +1,4 @@
+from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
 from atsfill.core.browser import Page, Request
@@ -13,7 +14,28 @@ class Blocked(Exception):
 
 
 class Unsupported(Exception):
-    """A rendering or a flow the adapter does not handle; the message is `code: detail`."""
+    """What stops the form before any fill: a flow the adapter does not handle, or a fact about
+    the posting (`posting_gone`, `external_step`). The message is `code: detail`.
+
+    A field atsfill cannot fill is not raised: `read_form` returns it with `unfillable` set.
+    """
+
+
+class Gap(StrEnum):
+    """The code of a known gap (ADR 0014): wanted, not handled yet."""
+
+    RENDERING = "unsupported_rendering"
+    FLOW = "unsupported_flow"
+
+
+def known_gap(adapter: Adapter, gap: str, detail: str) -> str:
+    """The reason for one of the adapter's declared known gaps: `<code>: <gap id>: <detail>`."""
+    return f"{adapter.known_gaps[gap]}: {gap}: {detail}"
+
+
+def out_of_scope(field_id: str, what: str) -> str:
+    """The reason for a field that needs the user live (ADR 0014)."""
+    return f"out_of_scope: {field_id} is {what}"
 
 
 class NotTaken(Exception):
@@ -28,6 +50,7 @@ class Adapter(Protocol):
 
     name: str
     side_effects: list[SideEffect]
+    known_gaps: dict[str, Gap]  # by id, each listed under "Known gaps" in the adapter's doc
 
     def detect(self, url: str, page: Page | None) -> bool:
         """Claims the form from its URL (`page` is None), else from the loaded page."""
@@ -37,7 +60,9 @@ class Adapter(Protocol):
         """The posting's key for the double-send guard: every URL of one posting gives the same."""
         ...
 
-    def read_form(self, page: Page) -> list[Field]: ...
+    def read_form(self, page: Page) -> list[Field]:
+        """Every field, one atsfill cannot fill included with its reason in `unfillable`."""
+        ...
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None: ...
 

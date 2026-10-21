@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -117,6 +117,7 @@ _READ_BACK = """(form, kinds) => {
 
 class Lever:
     name = "lever"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("upload", "hiring_system", "the resume is uploaded to Lever and parsed at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -205,7 +206,8 @@ def _job(url: str) -> tuple[str, str] | None:
 def _field(raw: dict[str, Any]) -> Field:
     kind = raw["kind"]
     if kind not in KINDS:
-        raise Unsupported(f"unsupported_rendering: {raw['id']} is a {kind}")
+        reason = f"unhandled_rendering: {raw['id']} is a {kind}"
+        return Field(raw["id"], raw["label"], FieldType.TEXT, raw["required"], unfillable=reason)
     options = {"consent": YES_NO, "select": raw["options"]}.get(kind)
     if kind in ("radio", "checkboxes"):
         options = raw["options"]

@@ -76,6 +76,17 @@ def _result(adapter: Adapter, url: str) -> Result:
     return Result(Status.READY, url, adapter.name, side_effects=shown)
 
 
+def _unfillable(result: Result) -> bool:
+    """Stops the form on a required field atsfill cannot fill; an optional one stays listed,
+    left empty (ADR 0014)."""
+    field = next(
+        (f for f in result.fields if f.unfillable and f.required and not f.prefilled), None
+    )
+    if field:
+        result.status, result.reason = Status.UNSUPPORTED, field.unfillable
+    return field is not None
+
+
 def _no_adapter(url: str) -> Result:
     return Result(Status.UNSUPPORTED, url, reason="no_adapter: no adapter for this hiring system")
 
@@ -114,6 +125,8 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) ->
     result = _result(adapter, url)
     with _stops(result):
         result.fields = adapter.read_form(page)
+        if _unfillable(result):
+            return result
         if problems := matching.problems(result.fields, answers):
             result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
             return result
@@ -132,6 +145,7 @@ def _read_page(data: Path, url: str, sessions: Sessions | None, detected: list[s
         result = _result(adapter, url)
         with _stops(result):
             result.fields = adapter.read_form(page)
+            _unfillable(result)
         return result
 
 
@@ -186,6 +200,7 @@ def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = 
         if (fields := adapter.read_api(url)) is not None:
             result = _result(adapter, url)
             result.fields = fields
+            _unfillable(result)
             return result
     data = paths.data_dir(data_dir)
     return _in_budget(url, lambda seen: _read_page(data, url, sessions, seen))

@@ -4,9 +4,9 @@ import pytest
 
 from atsfill import core
 from atsfill.core import attempts, commands, registry
-from atsfill.core.adapter import Blocked, NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
-from atsfill.core.results import Status
+from atsfill.core.results import Field, FieldType, Status
 from tests.fake import FIELDS, Fake
 
 
@@ -142,6 +142,56 @@ def test_an_unexpected_error_keeps_the_detected_adapter(fake, config, url, answe
         Status.UNSUPPORTED,
         "fake",
         "adapter_error: RuntimeError: boom",
+    )
+
+
+def _unfillable(fake: Fake, reason: str, required: bool) -> Field:
+    field = Field("extra", "Extra", FieldType.FILE, required, unfillable=reason)
+    fake.fields = [*FIELDS, field]
+    return field
+
+
+UNFILLABLE = [
+    out_of_scope("extra", "a video recorded live"),
+    known_gap(Fake(), "ranking", "a ranked list"),
+    "unhandled_rendering: extra is a slider",
+]
+
+
+@pytest.mark.parametrize("reason", UNFILLABLE)
+def test_a_required_unfillable_field_stops_the_form(fake, config, url, answers, data, reason):
+    field = _unfillable(fake, reason, required=True)
+    for result in core.read(url, data_dir=data), core.fill(url, answers, data_dir=data):
+        assert (result.status, result.reason) == (Status.UNSUPPORTED, reason)
+        assert field in result.fields
+        assert result.checks == []
+
+
+def test_read_over_http_shows_a_required_unfillable_field(fake, config, data):
+    _unfillable(fake, UNFILLABLE[0], required=True)
+    result = core.read("https://example.com/form?api", data_dir=data)
+    assert (result.status, result.reason) == (Status.UNSUPPORTED, UNFILLABLE[0])
+
+
+@pytest.mark.parametrize("reason", UNFILLABLE)
+def test_an_optional_unfillable_field_is_left_empty(fake, config, url, answers, data, reason):
+    field = _unfillable(fake, reason, required=False)
+    result = core.fill(url, answers, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert field in result.fields
+    assert "extra" not in [c.field_id for c in result.checks]
+
+
+def test_an_answer_to_an_unfillable_field_refuses(fake, config, url, answers, data):
+    _unfillable(fake, UNFILLABLE[0], required=False)
+    result = core.fill(url, answers | {"extra": answers["cv"]}, data_dir=data)
+    assert result.status is Status.REFUSED
+    assert result.reason == f"invalid_answers: extra: cannot be filled ({UNFILLABLE[0]})"
+
+
+def test_a_known_gap_names_its_code_and_id():
+    assert known_gap(Fake(), "ranking", "a ranked list") == (
+        "unsupported_rendering: ranking: a ranked list"
     )
 
 

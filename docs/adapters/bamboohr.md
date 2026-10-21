@@ -29,6 +29,8 @@ Each rendering, and in how many of 325 postings' detail answers it shows (2026-1
 | `textarea`: custom `long`, references | `text` | 200, 41 |
 | veteran status: a radio (Decline to Answer, Not a Veteran, Veteran); Veteran shows a multi-select `role=listbox` of the kinds the JSON lists | `choice`: the two radios, then each kind | 38 |
 
+A key or question type outside this table, or a field the JSON lists and the page does not show, is listed as `unhandled_rendering`.
+
 The page shows a country before any answer, the employer's; the country field is `prefilled`, so the persona keeps it and answers the state from that country's list.
 
 ## Filling

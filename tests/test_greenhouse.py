@@ -7,7 +7,6 @@ import pytest
 from atsfill.adapters import greenhouse
 from atsfill.adapters.greenhouse import Greenhouse, _api_fields
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
 
 PAGE = Path(__file__).parent / "pages/greenhouse/job.html"
@@ -106,14 +105,14 @@ def test_a_number_input_left_empty_for_text(page):
     assert not matching.check(fields, answers, adapter.read_back(page))[0].match
 
 
-def test_a_radio_is_not_supported(page):
+def test_a_radio_is_listed_unhandled(page):
     page.goto(JOB)
     page.evaluate(
         """() => document.getElementById("application-form").insertAdjacentHTML("afterbegin",
         '<label for="r1">Remote</label><input type="radio" id="r1" name="remote">')"""
     )
-    with pytest.raises(Unsupported, match="unsupported_rendering: r1 is a radio"):
-        Greenhouse().read_form(page)
+    radio = next(f for f in Greenhouse().read_form(page) if f.id == "r1")
+    assert radio.unfillable == "unhandled_rendering: r1 is a radio"
 
 
 def test_submit_returns_the_confirmation(page):

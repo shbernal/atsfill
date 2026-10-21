@@ -24,7 +24,6 @@ Each rendering, and in how many of 60 postings' configurations it shows (2026-10
 | react-widgets dropdown (`.rw-dropdownlist`, list `[id=<id>__listbox] [role=option]` once clicked): Yes/No questions (the SMS consent's Yes reads `Yes*`), school type, degree, EEO, reference type, years known | `choice` | 60 |
 | address block (`public-site-address-*`, a work entry's `public-candidate-work-history-address-0-*`): line 1 is a suggestion combobox that drops keys while it loads, county, city, zip, line 2 | `text` | 60 |
 | state in the address block: a `pcty-input-select` listing codes (`[role=listitem][title=DC]`) | `choice`, the code | 60 |
-| country in the address block, United States until changed | not read; optional on all | 39 |
 | radio group by `name` (how did you hear) | `choice` | 54 |
 | date (`info.dateAvailableToStart`, prior employment dates): a native date input, `MM/DD/YYYY` typed | `date` | 43 |
 | month (`txt-workHistory-startDate-0`, end date): `MM/YYYY` typed | `text`, label `(MM/YYYY)` | 53 |
@@ -36,8 +35,8 @@ Each rendering, and in how many of 60 postings' configurations it shows (2026-10
 | screener: radios or checkboxes (`multiQuestionAnswer<id>_<n>`, labelled by `label[for]`), text (`screener-question-<n>-textarea`) | `choice`, `multi_choice`, `text` | 44 |
 | acknowledgement checkbox (`#applyAcknowledgement`), currently working here | `choice`, `Yes`/`No` | 60 |
 | felony, misdemeanor questions: shown only when `priorConviction` is on the form; supervisor fields only when `mayWeContact` is | `choice`, `text` | 15, 27 |
-| expanded identity questions (gender identity, pronouns…), E-Verify notice | not read; optional on all | 30 |
-| date of birth, starting and ending salaries, a reference's address, GPA | not handled: `unsupported` when required in a shown entry | 1, 2, 1, 1 |
+
+A field of a shown section outside this table is listed as `unhandled_rendering`, as is a screener question of another type. The acknowledgement, the E-Verify message and the conviction switch in the configuration are no field of their own.
 
 ## Filling
 
@@ -50,3 +49,14 @@ Each rendering, and in how many of 60 postings' configurations it shows (2026-10
 
 - The read-back is each step's controls, read before leaving it: input values, a dropdown's shown text, the checked radio or boxes, a date as `YYYY-MM-DD`, a tag's text, a file's name as listed.
 - Submit is `[data-automation-id=btnSubmit]`; the evidence is the URL the page leaves for. No send has been made through this adapter, so the end of a send is unobserved.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `country` | country in the address block, United States until changed | `unsupported_rendering` | 39 |
+| `expanded_identity` | expanded identity questions (gender identity, pronouns…) | `unsupported_rendering` | 30 |
+| `date_of_birth` | date of birth | `unsupported_rendering` | 1 |
+| `salary_history` | a work entry's starting and ending salaries | `unsupported_rendering` | 2 |
+| `reference_address` | a reference's address | `unsupported_rendering` | 1 |
+| `gpa` | an education entry's GPA | `unsupported_rendering` | 1 |

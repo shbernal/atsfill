@@ -23,7 +23,7 @@ def probe(page, url: str, requested: str | None = None) -> survey.Probe:
 def test_a_block_page_names_its_vendor(page, server):
     found = probe(page, f"{server}/survey/blocked.html")
     assert (found.label, found.vendor, found.signal) == (
-        "blocked",
+        "block",
         "DataDome",
         "captcha-delivery.com",
     )
@@ -52,6 +52,21 @@ def test_a_plain_form_has_no_label(page, server):
     assert probe(page, f"{server}/form.html").label is None
 
 
+@pytest.mark.parametrize(
+    "reason, label",
+    [
+        ("out_of_scope: q1 is a video recorded live", "out_of_scope"),
+        ("unsupported_rendering: education_history: schools is a list", "known_gap"),
+        ("unsupported_flow: steps: more than 8 steps", "known_gap"),
+        ("unhandled_rendering: q2 is a slider", "unhandled"),
+        ("adapter_error: KeyError: 'x'", "unhandled"),
+        ("external_step: the application is on example.com", None),
+    ],
+)
+def test_an_unsupported_reason_is_labelled_by_its_case(reason, label):
+    assert survey.case(reason) == label
+
+
 def test_the_persona_answers_from_the_fields(tmp_path):
     cv = persona.resume(tmp_path / "resume.pdf")
     picture = persona.photo(tmp_path / "photo.png")
@@ -71,6 +86,7 @@ def test_the_persona_answers_from_the_fields(tmp_path):
         Field("b", "Scan", FieldType.FILE, False, accept=[".tiff"]),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
         Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
+        Field("o", "Video", FieldType.FILE, False, unfillable="out_of_scope: o is a video"),
     ]
     answers = persona.answers(fields, cv, picture)
     assert answers == {

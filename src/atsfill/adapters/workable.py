@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import Gap, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -142,6 +142,7 @@ _READ_BACK = """(form, kinds) => {
 
 class Workable:
     name = "workable"
+    known_gaps = {"entries": Gap.RENDERING}
     side_effects = [
         SideEffect("upload", "hiring_system", "an attached file is stored by Workable at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -158,7 +159,8 @@ class Workable:
         return f"https://apply.workable.com/j/{_code(url) or url}"
 
     def read_api(self, url: str) -> list[Field] | None:
-        """The fields from the form API the page itself loads, unless it has a required group."""
+        """The fields from the form API the page itself loads, unless it has a type it does not
+        know."""
         code = _code(url)
         if code is None:
             return None
@@ -167,7 +169,7 @@ class Workable:
                 API.format(code=code), headers={"User-Agent": "atsfill"}
             )
             with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
-                return _api_fields(json.load(response))
+                return self._api_fields(json.load(response))
         except OSError, ValueError, KeyError, TypeError:
             return None
 
@@ -182,12 +184,10 @@ class Workable:
         _decline_cookies(page)
         fields, self._kinds, self._formats = [], {}, {}
         for raw in form.evaluate(_READ):
-            field = self._field(page, raw)
-            if field is not None:
-                fields.append(field)
-                self._kinds[field.id] = raw["kind"]
-                if raw["kind"] == "date":
-                    self._formats[field.id] = raw["format"]
+            fields.append(self._field(page, raw))
+            self._kinds[raw["id"]] = raw["kind"]
+            if raw["kind"] == "date":
+                self._formats[raw["id"]] = raw["format"]
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
@@ -254,7 +254,7 @@ class Workable:
             raise RuntimeError(f"apply answered {response.status}: {response.text()[:200]}")
         return f"{response.url} {response.status}"
 
-    def _field(self, page: Page, raw: dict[str, Any]) -> Field | None:
+    def _field(self, page: Page, raw: dict[str, Any]) -> Field:
         kind, options = raw["kind"], raw.get("options")
         match kind:
             case "text" | "number":
@@ -273,10 +273,13 @@ class Workable:
                 field_type = FieldType.MULTI_CHOICE
             case "select":
                 field_type, options = FieldType.CHOICE, _options(page, raw["id"])
-            case "group" if not raw["required"]:
-                return None  # an optional education or experience entry, left out
+            case "group":
+                return self._entries(raw["id"], raw["label"], raw["required"])
             case _:
-                raise Unsupported(f"unsupported_rendering: {raw['id']} is a {kind}")
+                reason = f"unhandled_rendering: {raw['id']} is a {kind}"
+                return Field(
+                    raw["id"], raw["label"], FieldType.TEXT, raw["required"], unfillable=reason
+                )
         return Field(
             raw["id"],
             raw["label"],
@@ -287,6 +290,42 @@ class Workable:
             raw.get("accept"),
         )
 
+    def _api_fields(self, form: list[dict[str, Any]]) -> list[Field] | None:
+        fields = []
+        for entry in (f for section in form for f in section["fields"]):
+            kind = entry["type"]
+            if kind == "group":
+                fields.append(self._entries(entry["id"], entry.get("label", ""), entry["required"]))
+                continue
+            options = [o["value"].strip() for o in entry.get("options") or []] or None
+            if kind == "multiple":
+                single = entry.get("singleOption", True)
+                field_type = FieldType.CHOICE if single else FieldType.MULTI_CHOICE
+            elif kind == "boolean":
+                field_type, options = FieldType.CHOICE, YES_NO
+            elif kind in API_TYPES:
+                field_type = API_TYPES[kind]
+            else:
+                return None
+            accept = entry.get("supportedFileTypes") if kind == "file" else None
+            fields.append(
+                Field(
+                    entry["id"],
+                    entry.get("label", ""),
+                    field_type,
+                    entry["required"],
+                    options,
+                    entry.get("maxLength"),
+                    accept,
+                )
+            )
+        return fields
+
+    def _entries(self, field_id: str, label: str, required: bool) -> Field:
+        """An education or experience group, entries added one by one."""
+        gap = known_gap(self, "entries", f"{field_id} is a list of entries")
+        return Field(field_id, label, FieldType.TEXT, required, unfillable=gap)
+
 
 def _code(url: str) -> str | None:
     """The posting's shortcode, from `apply.workable.com[/<account>]/j/<code>`."""
@@ -295,39 +334,6 @@ def _code(url: str) -> str | None:
         return None
     match = JOB.match(parts.path)
     return match[1] if match else None
-
-
-def _api_fields(form: list[dict[str, Any]]) -> list[Field] | None:
-    fields = []
-    for entry in (f for section in form for f in section["fields"]):
-        kind = entry["type"]
-        if kind == "group":
-            if entry["required"]:
-                return None
-            continue
-        options = [o["value"].strip() for o in entry.get("options") or []] or None
-        if kind == "multiple":
-            single = entry.get("singleOption", True)
-            field_type = FieldType.CHOICE if single else FieldType.MULTI_CHOICE
-        elif kind == "boolean":
-            field_type, options = FieldType.CHOICE, YES_NO
-        elif kind in API_TYPES:
-            field_type = API_TYPES[kind]
-        else:
-            return None
-        accept = entry.get("supportedFileTypes") if kind == "file" else None
-        fields.append(
-            Field(
-                entry["id"],
-                entry.get("label", ""),
-                field_type,
-                entry["required"],
-                options,
-                entry.get("maxLength"),
-                accept,
-            )
-        )
-    return fields
 
 
 def _decline_cookies(page: Page, wait: bool = True) -> None:

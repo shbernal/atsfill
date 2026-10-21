@@ -13,7 +13,7 @@ from contextlib import suppress
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import Gap, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -69,7 +69,10 @@ FIELD_TYPES = {
     "checkbox": FieldType.CHOICE,
 }
 SKIPPED = ("info",)  # text with no input
-OPTIONAL_ONLY = ("files", "languages")  # left out when optional, unsupported when required
+GAPS = {
+    "files": ("attachments", "a list of attachments"),
+    "languages": ("languages", "a list of languages"),
+}
 
 _CONTEXT = """() => {
   const s = [...document.scripts].find(s => s.textContent.includes("__OC_CONTEXT__"));
@@ -101,6 +104,11 @@ _CONTAINERS = """(form, questions) => {
 
 class SmartRecruiters:
     name = "smartrecruiters"
+    known_gaps = {
+        "entries": Gap.RENDERING,
+        "attachments": Gap.RENDERING,
+        "languages": Gap.RENDERING,
+    }
     side_effects = [
         SideEffect(
             "upload", "hiring_system", "an attached resume is stored by SmartRecruiters at once"
@@ -134,16 +142,12 @@ class SmartRecruiters:
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
         _decline_cookies(page)
-        for section in ENTRIES:
-            if page.locator(f"{section} [data-test=section-required-mark]").count():
-                raise Unsupported(
-                    f"unsupported_rendering: {section.removeprefix('oc-')} entries are required"
-                )
         context = page.evaluate(_CONTEXT) or {}
         screening = context.get("screeningConfiguration") or {}
         self._questions = {q["id"]: q for q in screening.get("questions") or []}
         self._conditions = screening.get("conditionalConfigurations") or []
         fields = [f for f in (_profile_field(page, *row) for row in PROFILE) if f]
+        fields += [f for f in (self._entries(page, section) for section in ENTRIES) if f]
         for question in self._questions.values():
             fields += self._question_fields(question)
         self._consents = {}
@@ -196,7 +200,7 @@ class SmartRecruiters:
 
     def _question_fields(self, question: dict[str, Any]) -> list[Field]:
         kind = question["type"]
-        if kind in SKIPPED or (kind in OPTIONAL_ONLY and not question["required"]):
+        if kind in SKIPPED:
             return []
         label = _plain(question["label"])
         if condition := self._condition(question["id"]):
@@ -204,13 +208,18 @@ class SmartRecruiters:
             picks = [v["label"] for f in trigger["fields"] for v in f["values"]
                      if v["id"] in condition["fieldValues"]]  # fmt: skip
             label += f" (asked when {_plain(trigger['label'])!r} is {' or '.join(picks)})"
+        required = bool(question["required"]) and not condition
+        unfillable = None
+        if kind in GAPS:
+            gap, what = GAPS[kind]
+            unfillable = known_gap(self, gap, f"{question['id']} is {what}")
+        elif kind != "currency" and any(e["type"] not in FIELD_TYPES for e in question["fields"]):
+            unfillable = f"unhandled_rendering: {label!r} is a {kind} question"
+        if unfillable:
+            return [Field(question["id"], label, FieldType.TEXT, required, unfillable=unfillable)]
         fields = []
         for entry in question["fields"]:
-            field_type = FIELD_TYPES.get(entry["type"])
-            if kind == "currency":
-                field_type = FieldType.TEXT
-            if field_type is None or kind in OPTIONAL_ONLY:
-                raise Unsupported(f"unsupported_rendering: {label!r} is a {kind} question")
+            field_type = FieldType.TEXT if kind == "currency" else FIELD_TYPES[entry["type"]]
             options = [v["label"] for v in entry["values"]] or None
             if kind == "checkbox":
                 options = YES_NO
@@ -221,7 +230,7 @@ class SmartRecruiters:
                 f"{question['id']}.{entry['id']}" if many else question["id"],
                 f"{label}: {_plain(entry['label'])}" if many else label,
                 field_type,
-                bool(question["required"] and entry.get("required", True)) and not condition,
+                required and entry.get("required", True),
                 options,
             ))  # fmt: skip
         return fields
@@ -230,7 +239,23 @@ class SmartRecruiters:
         """(field id, the question's field) for each field `read_form` listed."""
         entries = self._questions[question_id]["fields"]
         ids = [f"{question_id}.{e['id']}" if len(entries) > 1 else question_id for e in entries]
-        return [(i, e) for i, e in zip(ids, entries, strict=True) if i in self._fields]
+        return [
+            (i, e)
+            for i, e in zip(ids, entries, strict=True)
+            if i in self._fields and not self._fields[i].unfillable
+        ]
+
+    def _entries(self, page: Page, section: str) -> Field | None:
+        """Experience or education, shown: entries added through a sub-form."""
+        host = page.locator(section).first
+        if not host.count():
+            return None
+        field_id = section.removeprefix("oc-")
+        title = host.locator("[data-test=section-title]")
+        label = title.first.inner_text().replace("*", "").strip() if title.count() else field_id
+        required = host.locator("[data-test=section-required-mark]").count() > 0
+        gap = known_gap(self, "entries", f"{field_id} is a list of entries")
+        return Field(field_id, label, FieldType.TEXT, required, unfillable=gap)
 
     def _condition(self, question_id: str) -> dict[str, Any] | None:
         return next(

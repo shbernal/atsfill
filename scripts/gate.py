@@ -29,6 +29,8 @@ ROOT = Path(__file__).parents[1]
 REGISTRY = ROOT / "src/atsfill/registry.toml"
 GENERATED = [REGISTRY, ROOT / "docs/adapters/README.md", ROOT / "README.md"]
 EMPLOYERS = 5
+# A skipped posting (ADR 0013): a fact about the posting or out of scope, not the adapter's job
+SKIPPED = ("posting_gone", "external_step", "out_of_scope")
 CHECKS = [
     ["uv", "run", "pytest", "-q"],
     ["uv", "run", "ruff", "check"],
@@ -68,6 +70,24 @@ def parity(adapter: ReadsOverHttp, url: str, data: Path) -> str | None:
     if diff := shape(over_http) ^ shape(from_page):
         return "differ on " + ", ".join(sorted(f[0] for f in diff))
     return None
+
+
+def stops(counted: list[dict]) -> list[str]:
+    """The rows that were not ready, by status, label and reason: the adapter's, then the
+    skipped postings apart."""
+    stopped = [r for r in counted if r["status"] != "ready"]
+    skipped = lambda r: survey.code(r.get("reason")) in SKIPPED  # noqa: E731
+    others = Counter(
+        (r["status"], r.get("label"), public(r.get("reason"))) for r in stopped if not skipped(r)
+    )
+    passed = Counter(public(r.get("reason")) for r in stopped if skipped(r))
+    return [
+        *(
+            f"not ready ({n}): {s}, {label}, {reason}"
+            for (s, label, reason), n in others.most_common()
+        ),
+        *(f"skipped ({n}): {reason}" for reason, n in passed.most_common()),
+    ]
 
 
 def handle(value: str) -> str:
@@ -158,13 +178,8 @@ def main() -> None:
         ready = {survey.employer(r): r for r in counted if r["status"] == "ready"}
         detail = ", ".join(f"{handle(c)} on {r['date']}" for c, r in ready.items()) or "none"
         line(len(ready) >= EMPLOYERS, criterion, detail)
-        others = Counter(
-            (r["status"], r.get("label"), public(r.get("reason")))
-            for r in counted
-            if r["status"] != "ready"
-        )
-        for (status, label, reason), n in others.most_common():
-            print(f"      not ready ({n}): {status}, {label}, {reason}")
+        for text in stops(counted):
+            print(f"      {text}")
         if len(ready) < EMPLOYERS and source.send_verified and not source.send_broken:
             print(
                 f"      {name} is send verified: if the stops above are a regression, record it"

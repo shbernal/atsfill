@@ -91,11 +91,16 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
     out += [
         f"no answer for required {f.id} ({f.label})"
         for f in fields
-        if f.required and not f.prefilled and f.id not in answers
+        if f.required and not f.prefilled and not f.unfillable and f.id not in answers
+    ]
+    out += [
+        f"{i}: cannot be filled ({f.unfillable})"
+        for i in answers
+        if (f := by_id.get(i)) and f.unfillable
     ]
     out += [
         f"{i}: {problem}"
         for i, a in answers.items()
-        if i in by_id and (problem := _answer_problem(by_id[i], a))
+        if i in by_id and not by_id[i].unfillable and (problem := _answer_problem(by_id[i], a))
     ]
     return out

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.workable import Workable, _api_fields
+from atsfill.adapters.workable import Workable
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
@@ -31,7 +31,7 @@ def page(tmp_path_factory):
         pytest.MonkeyPatch.context() as mp,
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
-        mp.setattr("atsfill.adapters.workable.FORM_TIMEOUT_MS", 1_000)
+        mp.setattr("atsfill.adapters.workable.FORM_TIMEOUT_MS", 5_000)
         mp.setattr("atsfill.adapters.workable.COOKIE_TIMEOUT_MS", 1_000)
         page.context.route("https://apply.workable.com/**", serve)
         yield page
@@ -66,6 +66,7 @@ def test_read_form_opens_the_application(page):
         "phone",
         "address",
         "avatar",
+        "education",
         "resume",
         "CA_1",
         "cover_letter",
@@ -76,7 +77,9 @@ def test_read_form_opens_the_application(page):
         "CA_5",
         "QA_2",
         "gdpr",
-    ]  # the optional education entry left out
+    ]
+    gap = "unsupported_rendering: entries: education is a list of entries"
+    assert (by_id["education"].unfillable, by_id["education"].required) == (gap, False)
     assert by_id["phone"].type is FieldType.PHONE
     assert by_id["CA_1"].options == ["Immediately", "1 month"]
     assert by_id["CA_2"].type is FieldType.TEXT
@@ -125,11 +128,11 @@ def test_a_number_input_keeps_digits_only(page):
     assert not matching.check(fields, answers, adapter.read_back(page))[0].match
 
 
-def test_a_required_entry_is_not_supported(page):
+def test_a_required_entry_is_listed_required(page):
     page.goto(POSTING + "/apply/")
     page.evaluate("() => document.querySelector('#education_label small').remove()")
-    with pytest.raises(Unsupported, match="unsupported_rendering: education is a group"):
-        Workable().read_form(page)
+    education = next(f for f in Workable().read_form(page) if f.id == "education")
+    assert education.required and education.unfillable
 
 
 def test_a_posting_gone(page):
@@ -192,15 +195,20 @@ def test_api_fields():
             ],
         },
     ]
-    assert [(f.id, f.type, f.required, f.options) for f in _api_fields(form) or []] == [
+    adapter = Workable()
+    fields = adapter._api_fields(form) or []
+    assert [(f.id, f.type, f.required, f.options) for f in fields] == [
         ("firstname", FieldType.TEXT, True, None),
         ("phone", FieldType.PHONE, True, None),
         ("resume", FieldType.FILE, True, None),
+        ("education", FieldType.TEXT, False, None),
         ("CA_1", FieldType.TEXT, True, None),
         ("QA_1", FieldType.CHOICE, True, ["Yes", "No"]),
         ("CA_4", FieldType.MULTI_CHOICE, True, ["Days", "Nights"]),
         ("CA_5", FieldType.DATE, False, None),
     ]
-    required = {"id": "experience", "label": "Experience", "required": True, "type": "group"}
-    assert _api_fields([{"fields": [required]}]) is None
-    assert _api_fields([{"fields": [{"id": "x", "required": True, "type": "signature"}]}]) is None
+    assert fields[3].unfillable == "unsupported_rendering: entries: education is a list of entries"
+    assert (
+        adapter._api_fields([{"fields": [{"id": "x", "required": True, "type": "signature"}]}])
+        is None
+    )

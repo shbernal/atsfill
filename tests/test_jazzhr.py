@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.jazzhr import JazzHR
+from atsfill.adapters.jazzhr import JazzHR, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
@@ -138,6 +138,11 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_an_unknown_rendering_is_listed_unhandled():
+    raw = {"id": "x", "label": "X", "kind": "range", "required": False}
+    assert _field(raw).unfillable == "unhandled_rendering: x is a range"
 
 
 def test_a_posting_gone(page):

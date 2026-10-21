@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported, out_of_scope
 from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -110,6 +110,7 @@ _READ_BACK = """(form, kinds) => {
 
 class Recruitee:
     name = "recruitee"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
 
     def __init__(self) -> None:
@@ -139,14 +140,9 @@ class Recruitee:
             raise Unsupported("posting_gone: no application form on the page") from None
         fields, self._kinds = [], {}
         for raw in form.evaluate(_READ):
-            if raw["kind"] == "video":  # recorded in the page, or uploaded to a video service
-                if raw["required"]:
-                    raise Unsupported(
-                        f"unsupported_rendering: {raw['label']!r} is a video question"
-                    )
-                continue
             fields.append(_field(raw))
-            self._kinds[raw["id"]] = raw["kind"]
+            if raw["kind"] != "video":
+                self._kinds[raw["id"]] = raw["kind"]
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
@@ -191,6 +187,9 @@ class Recruitee:
 
 def _field(raw: dict[str, Any]) -> Field:
     kind = raw["kind"]
+    if kind == "video":
+        reason = out_of_scope(raw["id"], "a video recorded live")
+        return Field(raw["id"], raw["label"], FieldType.FILE, raw["required"], unfillable=reason)
     label = raw["label"] + (" (a number)" if kind == "number" else "")
     options = {"legal": YES_NO, "radio": raw["options"], "checkboxes": raw["options"]}.get(kind)
     accept = None

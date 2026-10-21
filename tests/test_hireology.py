@@ -165,18 +165,20 @@ def test_a_posting_gone(page):
         Hireology().read_form(page)
 
 
-def test_an_unknown_field_type_is_unsupported():
+def test_an_unknown_field_type_is_unhandled():
     form = json.loads(json.dumps(FORM))
     form["template"]["sections"][0]["fieldsets"][0]["fields"][0]["attributes"]["type"] = "rating"
-    with pytest.raises(Unsupported, match="unsupported_rendering: first_name is a rating"):
-        _form(form)
+    first = _form(form)[0][0]
+    assert first.unfillable == "unhandled_rendering: first_name is a rating"
 
 
-def test_a_field_missing_from_the_page_is_unsupported(page):
+def test_a_field_missing_from_the_page_is_unhandled(page):
     page.goto(JOB)
     page.evaluate("() => document.getElementById('company_name-0').remove()")
-    with pytest.raises(Unsupported, match="unsupported_flow: company_name is not on the page"):
-        Hireology().read_form(page)
+    fields = {f.id: f for f in Hireology().read_form(page)}
+    assert fields["company_name"].unfillable == (
+        "unhandled_rendering: company_name is not on the page"
+    )
 
 
 def test_submit_returns_the_api_answer(page):

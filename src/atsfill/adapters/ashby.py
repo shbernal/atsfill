@@ -12,7 +12,7 @@ from functools import partial
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, Gap, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -67,6 +67,7 @@ def _op(response: Response) -> str:
 
 class Ashby:
     name = "ashby"
+    known_gaps = {"education_history": Gap.RENDERING}
     side_effects = [
         SideEffect(
             "fill", "hiring_system", "each answer and the resume are saved to Ashby as typed"
@@ -166,7 +167,7 @@ class Ashby:
                     self._saved(page, partial(upload.set_input_files, answer))
                 case kind, _:
                     raise Unsupported(
-                        f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
+                        f"unhandled_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
         self._answered = list(answers)
 
@@ -227,16 +228,20 @@ class Ashby:
             if not e.get("isHidden")
         ]
 
-    @staticmethod
-    def _field(entry: dict[str, Any]) -> Field:
+    def _field(self, entry: dict[str, Any]) -> Field:
         f = entry["field"]
+        path, title, required = f["path"], f["title"], bool(entry["isRequired"])
+        if f["type"] == "EducationHistory":
+            gap = known_gap(self, "education_history", f"{path} is a list of schools")
+            return Field(path, title, FieldType.TEXT, required, unfillable=gap)
         kind = TYPES.get(f["type"])
         if kind is None:
-            raise Unsupported(f"unsupported_rendering: {f['path']} is an Ashby {f['type']} field")
+            reason = f"unhandled_rendering: {path} is an Ashby {f['type']} field"
+            return Field(path, title, FieldType.TEXT, required, unfillable=reason)
         options = [v["label"] for v in f.get("selectableValues") or []] or None
         if f["type"] == "Boolean":
             options = ["Yes", "No"]
-        return Field(f["path"], f["title"], kind, bool(entry["isRequired"]), options)
+        return Field(path, title, kind, required, options)
 
     def _values(self) -> dict[str, Answer | None]:
         return {e["field"]["path"]: self._value(e) for e in self._entries()}

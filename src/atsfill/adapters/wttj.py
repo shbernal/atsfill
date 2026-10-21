@@ -11,7 +11,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -32,7 +32,7 @@ KEY_DELAY_MS = 30
 YES_NO = ["Yes", "No"]
 
 # The fillable fields: an input's name is its id. Email comes from the account, disabled.
-_READ = """form => [...form.querySelectorAll("input[name], textarea[name]")]
+_READ = """form => [...form.querySelectorAll("input[name], textarea[name], select[name]")]
   .filter(e => !e.disabled && e.name !== "avatar")
   .map(e => {
     const label = form.querySelector(`label[for="${CSS.escape(e.id)}"]`);
@@ -58,6 +58,7 @@ _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
 class WelcomeToTheJungle:
     name = "wttj"
     login_url = f"https://{HOST}/en/signin"
+    known_gaps: dict[str, Gap] = {}
     side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
 
     def __init__(self) -> None:
@@ -81,7 +82,7 @@ class WelcomeToTheJungle:
     def read_form(self, page: Page) -> list[Field]:
         """Opens the apply modal; a job that applies on another site has no form here."""
         if not JOB.match(urlsplit(page.url).path):
-            raise Unsupported(f"unsupported_flow: {page.url} is not a Welcome to the Jungle job")
+            raise RuntimeError(f"{page.url} is not a Welcome to the Jungle job")
         apply = page.locator('[data-testid="job_header-button-apply"]').first
         apply.wait_for()
         href = apply.get_attribute("href")
@@ -105,24 +106,19 @@ class WelcomeToTheJungle:
         try:
             form.wait_for(timeout=FORM_TIMEOUT_MS)
         except Timeout:
-            raise Unsupported("unsupported_flow: the apply button opened no form") from None
+            raise RuntimeError("the apply button opened no form") from None
         location = form.locator("[name=location]")
         deadline = time.monotonic() + LOCATION_TIMEOUT_S
         while location.count() and not location.input_value() and time.monotonic() < deadline:
             page.wait_for_timeout(
                 LOCATION_POLL_MS
             )  # the profile's location comes last, a second later
-        fields = []
+        fields: dict[str, Field] = {}
         for raw in form.evaluate(_READ):
-            field = _field(raw)
-            if field is None and raw["required"]:
-                raise Unsupported(
-                    f"unsupported_rendering: {raw['label']!r} is a {raw['type']} question"
-                )
-            if field is not None:
-                fields.append(field)
-        self._fields = {f.id: f for f in fields}
-        return fields
+            if raw["id"] not in fields and (field := _field(raw)) is not None:
+                fields[field.id] = field  # a radio group once
+        self._fields = {i: f for i, f in fields.items() if not f.unfillable}
+        return list(fields.values())
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM).first
@@ -145,7 +141,7 @@ class WelcomeToTheJungle:
                     target.fill(answer)
                 case kind, _:
                     reason = (
-                        f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
+                        f"unhandled_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
                     raise Unsupported(reason)
 
@@ -187,9 +183,12 @@ def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
 
 
 def _field(raw: dict[str, Any]) -> Field | None:
-    """The field an input is, None for one atsfill cannot fill."""
+    """The field an input is, listed unfillable when atsfill cannot fill it; None for a hidden
+    input, no field."""
     name, kind, options = raw["id"], None, None
     match raw["type"]:
+        case "hidden":
+            return None
         case "file":
             kind = FieldType.FILE
         case "checkbox" if name == "consent":
@@ -199,7 +198,8 @@ def _field(raw: dict[str, Any]) -> Field | None:
                 name, FieldType.TEXT
             )
     if kind is None:
-        return None
+        reason = f"unhandled_rendering: {raw['label'] or name!r} is a {raw['type']} input"
+        return Field(name, raw["label"], FieldType.TEXT, bool(raw["required"]), unfillable=reason)
     return Field(
         name, raw["label"], kind, bool(raw["required"]), options, None, raw["accept"],
         raw["prefilled"],

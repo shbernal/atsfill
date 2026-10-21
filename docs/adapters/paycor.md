@@ -43,6 +43,8 @@ Each rendering, and in how many of 40 postings it shows (2026-10-20; 30 forms re
 | privacy policy acknowledgement (`ccpaDisclaimerAgree`) | `multi_choice` | 30 |
 | a disclaimer's date (`current_date`), signature date | not a field: hidden | 30 |
 
+A control of another type is listed as `unhandled_rendering`; a page before the form other than these is an `adapter_error`.
+
 Work history, education and references are flat custom questions (three blocks each at most), not entries to add.
 
 ## Filling
@@ -50,7 +52,7 @@ Work history, education and references are flat custom questions (three blocks e
 - The pages before the form are walked again from the start with the answers; reading walks them picking the last option and Yes.
 - The resume is uploaded first and waited for (`ajaxResumeFilename`): its parse fills fields, which the answers then override.
 - Controls are filled in page order, so a country comes before its state and the mobile number before the opt-in. Text is filled, a native date takes `YYYY-MM-DD`, a text date `MM/DD/YYYY`, a select its option's text, radios and boxes are clicked.
-- A state select left disabled by the country answered is `unsupported`.
+- A state select left disabled by the country answered is `answer_not_taken`.
 
 ## Read-back and submit
 

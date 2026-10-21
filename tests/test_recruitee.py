@@ -71,6 +71,7 @@ def test_read_form_opens_the_application(page):
         f"{Q}.107.content",
         f"{Q}.108.multiContent",
         f"{Q}.109.file",
+        f"{Q}.111",
         "candidate.locations.value",
         f"{Q}.112.flag",
         "candidate.agreements.0.consent",
@@ -159,9 +160,10 @@ def test_posting_urls():
     assert not adapter.detect("https://acme.recruitee.com/", None)
 
 
-def test_a_required_video_question_is_unsupported(page):
+def test_a_video_question_is_out_of_scope(page):
     adapter = Recruitee()
     page.goto(POSTING + "/c/new")
     page.locator("label[for$='111.content-31']").evaluate("l => l.append(' *')")
-    with pytest.raises(Unsupported, match="video question"):
-        adapter.read_form(page)
+    video = next(f for f in adapter.read_form(page) if f.unfillable)
+    assert video.required
+    assert video.unfillable == f"out_of_scope: {video.id} is a video recorded live"
