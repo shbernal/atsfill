@@ -51,6 +51,13 @@ PROTECTIONS = [
     ("PerimeterX", re.compile(r"_px\w*=|perimeterx", re.IGNORECASE)),
     ("Akamai", re.compile(r"akamaighost|_abck=", re.IGNORECASE)),
 ]
+CASES = {  # an `unsupported` reason's code, by its case (ADR 0014)
+    "out_of_scope": "out_of_scope",
+    "unsupported_rendering": "known_gap",
+    "unsupported_flow": "known_gap",
+    "unhandled_rendering": "unhandled",
+    "adapter_error": "unhandled",
+}
 NOT_A_BLOCK = ("covered", "time_budget")  # `blocked` statuses that are atsfill's own limits
 LOGIN_PATH = re.compile(r"/(log-?in|sign-?in|auth|authenticate|sso)\b", re.IGNORECASE)
 
@@ -60,9 +67,18 @@ class Probe:
     """What the page itself shows, before atsfill reads it."""
 
     final_url: str
-    label: str | None = None  # login_wall | blocked | embedded | redirect
+    label: str | None = None  # login_wall | block | embedded | redirect
     signal: str | None = None
     vendor: str | None = None
+
+
+def code(reason: str | None) -> str:
+    return (reason or "").partition(":")[0]
+
+
+def case(reason: str | None) -> str | None:
+    """Out of scope, a known gap or unhandled, for an `unsupported` reason (ADR 0014)."""
+    return CASES.get(code(reason))
 
 
 def _vendor(text: str, signals: list[tuple[str, re.Pattern]]) -> tuple[str, str] | None:
@@ -85,10 +101,10 @@ def probe(page: Page, url: str, response: Response | None) -> Probe:
     text = "\n".join([*(f"{k}: {v}" for k, v in headers.items()), cookies, page.content()])
     status = response.status if response else None
     if hit := _vendor(text, CHALLENGES):
-        found.label, found.vendor, found.signal = "blocked", *hit
+        found.label, found.vendor, found.signal = "block", *hit
     elif status in (403, 429):
         vendor, signal = _vendor(text, PROTECTIONS) or ("unknown", "")
-        found.label, found.vendor = "blocked", vendor
+        found.label, found.vendor = "block", vendor
         found.signal = f"http {status}" + (f", {signal}" if signal else "")
     elif (
         LOGIN_PATH.search(urlsplit(page.url).path)
@@ -146,13 +162,15 @@ def survey(
         answers = persona.answers(read.fields, cv, cv.with_name("photo.png"))
         result = core.fill(url, answers, data_dir=data, sessions=sessions)
     step = None
-    if found.label == "blocked":
+    if found.label == "block":
         step = "posting"
     elif result.status is Status.BLOCKED and (result.reason or "").startswith("login_required"):
         found.label, found.signal = "login_wall", result.reason
     elif result.status is Status.BLOCKED and not (result.reason or "").startswith(NOT_A_BLOCK):
         step = "upload" if "upload" in (result.reason or "") else "form"
-        found.label, found.vendor, found.signal = "blocked", "unknown", result.reason
+        found.label, found.vendor, found.signal = "block", "unknown", result.reason
+    if result.status is Status.UNSUPPORTED and found.label is None:
+        found.label = case(result.reason)
     if result.status is not Status.READY and found.label is None:
         found.label = "unclear"
     return {
