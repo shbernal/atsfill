@@ -6,8 +6,22 @@ on:
   pull_request:
 
 jobs:
-  check:
+  lint:
     runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: uv sync --locked
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run ty check
+
+  test:
+    runs-on: ubuntu-26.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.0
@@ -21,9 +35,6 @@ jobs:
       - run: uv run atsfill install-browser
         env:
           GITHUB_TOKEN: ${{ github.token }}  # until daijro/camoufox#920 is released: a pinned fetch lists every repo
-      - run: uv run ruff check
-      - run: uv run ruff format --check
-      - run: uv run ty check
       - name: Time one browser launch, alone on the runner
         run: |
           echo "cores: $(nproc)"
@@ -37,7 +48,15 @@ jobs:
                   page.goto("about:blank")
               print(f"launch {run}: {time.monotonic() - start:.1f}s")
           EOF
-      - run: uv run pytest --durations=20
+      - run: uv run pytest --durations=20 --shard ${{ matrix.shard }}/3
+
+  # The check the ruleset requires: green only when lint and every shard are.
+  check:
+    if: always()
+    needs: [lint, test]
+    runs-on: ubuntu-26.04
+    steps:
+      - run: test "${{ needs.lint.result }}" = success && test "${{ needs.test.result }}" = success
 
   commit-check:
     runs-on: ubuntu-26.04

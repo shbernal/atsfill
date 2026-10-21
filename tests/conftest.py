@@ -24,6 +24,27 @@ class Pages(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption("--shard", help="i/n: runs the i-th of n parts of the suite")
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Deals the suite into parts in turn: the tests on a module's browser as one, then the
+    rest one by one."""
+    if not (shard := config.getoption("shard")):
+        return
+    i, n = map(int, shard.split("/"))
+    units: dict[str, list[pytest.Item]] = {}
+    for item in items:
+        defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[unresolved-attribute]
+        shared = any(d[-1].scope == "module" for d in defs)
+        units.setdefault(item.module.__name__ if shared else item.nodeid, []).append(item)  # ty: ignore[unresolved-attribute]
+    order = sorted(units, key=lambda key: ("::" in key, key))
+    kept = {id(t) for k, key in enumerate(order) if k % n == i - 1 for t in units[key]}
+    config.hook.pytest_deselected(items=[t for t in items if id(t) not in kept])
+    items[:] = [t for t in items if id(t) in kept]
+
+
 @pytest.fixture(scope="session")
 def server() -> Generator[str]:
     """Serves tests/pages on localhost; 127.0.0.1 on the same port is a second origin."""
