@@ -28,7 +28,7 @@ Each type, how the page renders it, and on how many of 15 employers' postings (2
 | `ValueSelect` | `choice` | combobox, from 10 options seen | 2 |
 | `MultiValueSelect` | `multi_choice` | checkbox group | 6 |
 
-A type outside this table is `unsupported_rendering`, as is `EducationHistory`, a list of schools seen on one posting.
+A type outside this table is listed as `unhandled_rendering`.
 
 Survey forms come after the application form on the same page, on about half the postings sampled. Their questions seen so far are optional demographic selects with an "I prefer not to answer" option.
 
@@ -48,3 +48,9 @@ Survey forms come after the application form on the same page, on about half the
 - The submit button sends `ApiSubmitSingleApplicationFormAction`, or `ApiSubmitMultipleFormsAction` when there are survey forms (the same result plus `surveyFormResults`).
 - `applicationFormResult` is `FormSubmitSuccess` when sent, else a form render whose `errorMessages` and `formErrors` say why. `messages.blockMessageForCandidateHtml` is Ashby refusing the candidate.
 - Submit runs reCAPTCHA Enterprise. A low score answers `RECAPTCHA_SCORE_BELOW_THRESHOLD`, which the page shows as "flagged as possible spam", and sends nothing. Camoufox passes it, headless; stock Playwright does not (ADR 0002).
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `education_history` | `EducationHistory`, a list of schools | `unsupported_rendering` | 1 |

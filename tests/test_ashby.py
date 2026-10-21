@@ -111,6 +111,19 @@ def test_read_form_lists_the_visible_fields_of_every_form(ashby, page):
     assert next(f for f in fields if f.id == "right").options == ["Yes", "No"]
 
 
+def test_a_known_gap_and_an_unknown_type_are_listed_unfillable(ashby, page):
+    adapter, api = ashby
+    entries = api.job["applicationForm"]["sections"][0]["fieldEntries"]
+    for path, kind in [("schools", "EducationHistory"), ("mood", "Slider")]:
+        entries.append({"isRequired": False, "field": {"path": path, "title": path, "type": kind}})
+    page.goto(URL)
+    unfillable = {f.id: f.unfillable for f in adapter.read_form(page) if f.unfillable}
+    assert unfillable == {
+        "schools": "unsupported_rendering: education_history: schools is a list of schools",
+        "mood": "unhandled_rendering: mood is an Ashby Slider field",
+    }
+
+
 def test_every_answer_reads_back_from_ashby(ashby, page, resume):
     adapter, _ = ashby
     page.goto(URL)
