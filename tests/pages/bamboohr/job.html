@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Placeholder Engineer - Acme</title>
+<!-- A BambooHR job page, composed from observed postings: one example of each rendering in
+     docs/adapters/bamboohr.md. The form is built from the job's detail JSON, as the page does. -->
+<style>
+  [role=menu], [role=listbox] { border: 1px solid #ccc; background: #fff; }
+  [role=menuitem], [role=option] { padding: 2px 8px; cursor: pointer; }
+  select[aria-hidden] { position: absolute; opacity: 0; width: 0; height: 0; border: 0; }
+  input[type=file] { display: none; }
+</style>
+</head>
+<body>
+<main id="job">
+  <h2>Placeholder Engineer</h2>
+  <p>Acme is hiring.</p>
+  <button type="button" id="apply" data-fabric-component="Button">Apply for This Job</button>
+</main>
+<script>
+const JOB = location.pathname.match(/\/careers\/(\d+)/)[1];
+const EMPTY = "–Select–";
+let menus = 0;
+
+function el(tag, attrs = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  e.append(...children);
+  return e;
+}
+
+function wrap(label, control, forId) {
+  return el("div", {}, el("label", forId ? {for: forId} : {}, label), control);
+}
+
+// A Fabric select: a button that opens a menu, over a hidden native select.
+function fabricSelect(name, options, {id = name, multiple = false} = {}) {
+  const menuId = `fab-menu${++menus}`;
+  const select = el("select", {"aria-hidden": "true", id, name, readonly: ""}, el("option", {value: ""}));
+  if (multiple) select.multiple = true;
+  const button = el("button", {type: "button", "data-menu-id": menuId}, EMPTY);
+  const box = el("div", {"data-fabric-component": "Select"}, button, select);
+  const pick = (option) => {
+    if (!multiple) select.innerHTML = "";
+    select.append(el("option", {value: option.id}));
+    [...select.options].forEach(o => o.selected = o.value !== "");
+    button.textContent = multiple ? `${select.selectedOptions.length} selected` : option.text;
+  };
+  button.addEventListener("click", () => {
+    document.getElementById(menuId)?.remove();
+    const menu = multiple
+      ? el("div", {id: menuId, role: "listbox", "aria-multiselectable": "true"})
+      : el("div", {id: menuId, role: "menu"});
+    for (const option of options) {
+      const item = el("div", {role: multiple ? "option" : "menuitem"}, option.text);
+      item.addEventListener("click", () => {
+        pick(option);
+        if (!multiple) menu.remove();
+      });
+      menu.append(item);
+    }
+    document.body.append(menu);
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") document.getElementById(menuId)?.remove();
+  });
+  box.pick = pick;
+  return box;
+}
+
+function radios(name, options) {
+  return el("fieldset", {role: "radiogroup"}, ...options.map(([value, text, id]) =>
+    el("label", {}, el("input", {type: "radio", name, value, ...(id ? {id} : {})}), el("span", {}, text))));
+}
+
+// A file control: the file input, then the hidden id the upload fills.
+function upload(name, label, {inside = true, multiple = false} = {}) {
+  const input = el("input", {type: "file", "aria-label": "file-input", accept: ".pdf,.doc,.docx"});
+  if (multiple) input.multiple = true;
+  const hidden = el("input", {type: "hidden", name, value: ""});
+  const component = el("div", {"data-fabric-component": "FileUpload"},
+    el("button", {type: "button"}, "Choose File"), input);
+  const holder = inside ? component : el("div", {}, component);
+  holder.append(hidden);
+  input.addEventListener("change", async () => {
+    const response = await fetch("/ajax/files/attachTemporary.php", {method: "POST"});
+    const {fileId} = await response.json();
+    hidden.value = fileId;
+    holder.querySelector("[data-fabric-component=FileUploadList]")?.remove();
+    holder.prepend(el("div", {"data-fabric-component": "FileUploadList"},
+      [...input.files].map(f => f.name).join(", ")));
+  });
+  return el("div", {}, el("label", {}, label), holder);
+}
+
+async function states(country) {
+  const response = await fetch(`/ajax/get_states?country=${country}`);
+  return (await response.json()).data.map(s => ({id: s.id, text: s.full_name}));
+}
+
+async function stateControl(country) {
+  const list = await states(country);
+  return list.length
+    ? fabricSelect("state.value", list, {id: "state"})
+    : el("input", {type: "text", id: "state", name: "state.value"});
+}
+
+async function form() {
+  const {result} = await (await fetch(`/careers/${JOB}/detail`)).json();
+  const f = result.formFields;
+  const form = el("form", {});
+  // the honeypot the page carries
+  form.append(el("input", {name: "nickname_hp", tabindex: "-1", style: "display:none"}));
+  for (const key of ["firstName", "lastName", "email", "phone", "desiredPay", "websiteUrl",
+                     "linkedinUrl", "referredBy", "educationInstitutionName"]) {
+    if (f[key]) form.append(wrap(f[key].label, el("input", {type: "text", id: key, name: key}), key));
+  }
+  for (const key of ["streetAddress", "city", "zip"]) {
+    form.append(wrap(f[key].label, el("input", {type: "text", id: `t-${key}`, name: `${key}.value`}), `t-${key}`));
+  }
+  const stateBox = el("div", {}, el("label", {}, "State"), await stateControl(f.countryId.value));
+  form.append(stateBox);
+  const countries = [{id: "1", text: "United States"}, {id: "2", text: "Canada"}, {id: "192", text: "Spain"}];
+  const country = fabricSelect("countryId.value", countries, {id: "country"});
+  country.pick(countries.find(c => c.id === f.countryId.value));
+  new MutationObserver(async () => {
+    const chosen = country.querySelector("select").value;
+    stateBox.lastChild.replaceWith(await stateControl(chosen));
+  }).observe(country.querySelector("button"), {childList: true, characterData: true, subtree: true});
+  form.append(wrap("Country", country));
+  form.append(wrap("Date Available", el("input", {type: "text", id: "date", placeholder: "dd mon yyyy"}), "date"));
+  form.append(upload("resumeFileId", "Resume"));
+  form.append(upload("coverLetterFileId", "Cover Letter"));
+  form.append(wrap("Highest Education Obtained",
+    fabricSelect("educationLevelId", f.educationLevelId.options)));
+  form.append(wrap("References", el("textarea", {id: "references", name: "references"}), "references"));
+  for (const q of f.customQuestions) {
+    const name = `customQuestionAnswers.${q.type}_${q.id}`;
+    if (q.type === "short") form.append(wrap(q.question, el("input", {type: "text", id: name, name}), name));
+    else if (q.type === "long") form.append(wrap(q.question, el("textarea", {id: name, name}), name));
+    else if (q.type === "yes_no") form.append(el("div", {}, el("legend", {}, q.question),
+      radios(name, [["Yes", "Yes"], ["No", "No"]])));
+    else if (q.type === "checkbox") form.append(el("label", {},
+      el("input", {type: "checkbox", id: name, name, value: ""}), q.question));
+    else if (q.type === "file") form.append(upload(name, q.question, {inside: false, multiple: true}));
+    else if (q.type === "multi") {
+      const options = q.options.map(o => [String(o.id), o.option]);
+      if (q.hasOther === "yes") options.push(["other", "Other"]);
+      const group = radios(name, options);
+      const box = el("div", {}, el("legend", {}, q.question), group);
+      group.addEventListener("change", e => {
+        box.querySelector(`[name="${name}_other"]`)?.remove();
+        if (e.target.value === "other")
+          box.append(el("input", {type: "text", name: `${name}_other`, placeholder: "Please Specify"}));
+      });
+      form.append(box);
+    }
+  }
+  form.append(wrap("Gender", fabricSelect("genderId", f.genderId.options)));
+  const veteran = el("div", {}, el("legend", {}, "Veteran Status"), radios(":r6:", [
+    ["declineToAnswer", "Decline to Answer", "declineToAnswer"],
+    ["notVeteran", "Not a Veteran", "notVeteran"],
+    ["veteran", "Veteran", "veteran"],
+  ]));
+  veteran.addEventListener("change", e => {
+    if (e.target.name !== ":r6:") return;
+    veteran.querySelector("[data-fabric-component=Select]")?.remove();
+    if (e.target.value === "veteran") {
+      const kinds = f.veteranStatusId.options.filter(o => Number(o.id) > 0);
+      veteran.append(fabricSelect("veteranStatusId", kinds, {multiple: true}));
+    }
+  });
+  form.append(veteran);
+  form.addEventListener("submit", e => e.preventDefault());
+  document.body.append(form);
+  document.body.append(el("button", {type: "button", id: "submit"}, "Submit Application"));
+  document.getElementById("submit").addEventListener("click", () =>
+    fetch(`/careers/${JOB}/apply`, {method: "POST"}));
+}
+
+document.getElementById("apply").addEventListener("click", () => {
+  document.getElementById("job").remove();
+  form();
+});
+</script>
+</body>
+</html>

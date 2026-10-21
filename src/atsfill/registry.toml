@@ -173,7 +173,9 @@ kind = "ats"
 share = 0.0133
 account = "none"
 hosting = ["hosted"]
+adapter = "bamboohr"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "gate", commit = "b756312" }
 
 [taleo]
 kind = "ats"
