@@ -51,7 +51,7 @@ def page(tmp_path_factory):
         pytest.MonkeyPatch.context() as mp,
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
-        mp.setattr("atsfill.adapters.bamboohr.FORM_TIMEOUT_MS", 15_000)
+        mp.setattr("atsfill.adapters.bamboohr.FORM_TIMEOUT_MS", 2_000)
         page.context.route("https://acme.bamboohr.com/**", serve)
         yield page
 
