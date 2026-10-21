@@ -35,6 +35,7 @@ def page(tmp_path_factory):
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
         mp.setattr("atsfill.adapters.breezy.FORM_TIMEOUT_MS", 1_000)
+        mp.setattr("atsfill.adapters.breezy.STEP_TIMEOUT_MS", 1_000)
         for host in ("acme.breezy.hr", "jobs.acme.example", "assets-cdn.breezy.hr"):
             page.context.route(f"https://{host}/**", serve)
         yield page
