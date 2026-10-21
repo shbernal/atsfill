@@ -36,6 +36,7 @@ SUBMIT_TIMEOUT_MS = 90_000
 UPDATE_TRIES = 3
 FOLLOWUP_TIMEOUT_MS = 3_000
 DIAL_TIMEOUT_MS = 2_000  # per dial code tried, longest first
+OPTIONS_TIMEOUT_MS = 5_000  # for a dropdown's options to render
 NEXT_TRIES = 3
 STEP_POLLS = 16  # of POLL_MS, before Next is clicked again
 POLL_MS = 500
@@ -701,7 +702,7 @@ def _pick(page: Page, target: Locator, texts: list[str]) -> bool:
             target.fill("")
             target.press_sequentially(text[:40], delay=10)
         with suppress(Timeout):
-            options.first.wait_for(timeout=5_000)
+            options.first.wait_for(timeout=OPTIONS_TIMEOUT_MS)
         page.evaluate(_REVEAL, [target.get_attribute("id"), [text]])
         if _click_option(page, target, _plain(text).casefold().__eq__):
             return True
@@ -751,7 +752,7 @@ def _pick_suggestion(page: Page, target: Locator, value: str) -> None:
     _open(target)
     target.press_sequentially(value[:40], delay=10)
     with suppress(Timeout):
-        page.locator(_option(target)).first.wait_for(timeout=5_000)
+        page.locator(_option(target)).first.wait_for(timeout=OPTIONS_TIMEOUT_MS)
     if not _click_option(page, target, lambda shown: shown.startswith(_plain(value).casefold())):
         target.press("Escape")
 
