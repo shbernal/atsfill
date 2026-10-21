@@ -17,6 +17,7 @@
 <div style="position: absolute; top: 140px"><iframe id="open-frame"></iframe></div>
 <div style="position: absolute; top: 260px"><iframe id="covered-frame"></iframe></div>
 <div id="frame-cover"></div>
+<div style="position: absolute; top: 400px; width: 200px">Some text before <label id="wrapped">a label that wraps</label></div>
 <script>
   const child = location.href.replace("localhost", "127.0.0.1").replace("covered.html", "button.html");
   document.getElementById("open-frame").src = child;
