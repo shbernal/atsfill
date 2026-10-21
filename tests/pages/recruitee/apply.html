@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- One example of each rendering docs/adapters/recruitee.md lists, as the career site's
+     application page shows it (`/o/<slug>/c/new`); the career site's own scripts are left out. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Product Designer - Acme</title>
+<script async data-chunk="main" src="/js/PublicApp/web/main-bundle-0000.js"></script>
+<style>
+  .box { position: relative; }
+  .box input { position: absolute; opacity: 0; }
+</style>
+</head>
+<body>
+<div role="tabpanel" id="tabs--1--panel--1">
+<form id="offer-application-form" autocomplete="on" novalidate="">
+<section><fieldset><legend>My information</legend><p>Fill out the information below</p>
+  <div><label for="input-candidate.name-2">Full name<span aria-hidden="true">&nbsp;<span title="This field is required and can not be left empty.">*</span></span></label>
+    <input type="text" id="input-candidate.name-2" required="" maxlength="255" placeholder="Full name" name="candidate.name"></div>
+  <div><label for="input-candidate.email-3">Email address<span aria-hidden="true">&nbsp;<span>*</span></span></label>
+    <input type="email" id="input-candidate.email-3" required="" maxlength="255" placeholder="Your email address" name="candidate.email"></div>
+  <div><label for="input-candidate.phone-4">Phone number<span aria-hidden="true">&nbsp;<span>*</span></span></label>
+    <div class="PhoneInput">
+      <button type="button" id="country-select-input-candidate.phone-4" aria-haspopup="listbox" aria-label="Select country calling code: Italy">Italy</button>
+      <div role="listbox" aria-labelledby="country-select-input-candidate.phone-4"><ul><li><div role="option" aria-label="International">International</div></li></ul></div>
+      <input type="tel" required="" name="candidate.phone" placeholder="Your phone number" id="input-candidate.phone-4" value="+39">
+    </div></div>
+  <div><label for="input-candidate.photo-5" id="input-candidate.photo-7">Photo</label>
+    <div role="presentation" class="box"><input type="file" accept="image/png, image/jpeg" name="candidate.photo" id="input-candidate.photo-5" aria-labelledby="input-candidate.photo-7"><div aria-hidden="true"><span>Upload a file</span> or drag and drop here</div></div></div>
+</fieldset></section>
+<section><label for="input-candidate.cv-11">CV or resume<span aria-hidden="true">&nbsp;<span>*</span></span></label>
+  <p id="input-cv-description-12">Upload your CV or resume file</p>
+  <div role="presentation" class="box"><input type="file" accept="application/msword, application/pdf, image/png, image/jpeg" required="" name="candidate.cv" id="input-candidate.cv-11" data-cy="fileInputField"><div aria-hidden="true"><span>Upload a file</span> or drag and drop here</div></div>
+</section>
+<section><label for="input-candidate.coverLetterFile-17">Cover letter</label>
+  <div role="presentation" class="box"><input type="file" accept="application/msword, application/pdf" name="candidate.coverLetterFile" id="input-candidate.coverLetterFile-17" data-cy="candidate.coverLetterFile"></div>
+  <button type="button" data-cy="cover-letter-switch-button">Write it here instead</button>
+</section>
+<section data-testid="segment-open-questions"><fieldset><legend>Questions</legend><p>Please fill in additional questions</p>
+  <div><input type="hidden" value="101" name="candidate.openQuestionAnswers.101.openQuestionId">
+  <fieldset><legend>Which best describes your right to work?<span aria-hidden="true">&nbsp;<span>*</span></span></legend>
+    <div class="box"><input type="radio" required="" id="input-candidate.openQuestionAnswers.101.content-18-0" value="Citizen" name="candidate.openQuestionAnswers.101.content"><label for="input-candidate.openQuestionAnswers.101.content-18-0"><span>Citizen</span></label></div>
+    <div class="box"><input type="radio" required="" id="input-candidate.openQuestionAnswers.101.content-18-1" value="I need a permit" name="candidate.openQuestionAnswers.101.content"><label for="input-candidate.openQuestionAnswers.101.content-18-1"><span>I need a permit</span></label></div>
+  </fieldset>
+  </div><div><input type="hidden" value="102" name="candidate.openQuestionAnswers.102.openQuestionId">
+  <fieldset><legend>Can you work on site?<span aria-hidden="true">&nbsp;<span>*</span></span></legend>
+    <div class="box"><input type="radio" required="" id="input-candidate.openQuestionAnswers.102.flag-19-0" value="true" name="candidate.openQuestionAnswers.102.flag"><label for="input-candidate.openQuestionAnswers.102.flag-19-0"><span>Yes</span></label></div>
+    <div class="box"><input type="radio" required="" id="input-candidate.openQuestionAnswers.102.flag-19-1" value="false" name="candidate.openQuestionAnswers.102.flag"><label for="input-candidate.openQuestionAnswers.102.flag-19-1"><span>No</span></label></div>
+  </fieldset>
+  </div><div><input type="hidden" value="103" name="candidate.openQuestionAnswers.103.openQuestionId">
+  <div><label for="input-candidate.openQuestionAnswers.103.content-20">What is your expected annual salary?<span aria-hidden="true">&nbsp;<span>*</span></span></label>
+    <input type="number" required="" id="input-candidate.openQuestionAnswers.103.content-20" step="any" inputmode="decimal" name="candidate.openQuestionAnswers.103.content"><span id="input-currency-21">EUR</span></div>
+  </div><div><input type="hidden" value="104" name="candidate.openQuestionAnswers.104.openQuestionId">
+  <div><label for="input-candidate.openQuestionAnswers.104.content-22">How many years of sales experience do you have?</label>
+    <input type="number" id="input-candidate.openQuestionAnswers.104.content-22" step="any" inputmode="decimal" name="candidate.openQuestionAnswers.104.content"></div>
+  </div><div><input type="hidden" value="105" name="candidate.openQuestionAnswers.105.openQuestionId">
+  <div><label for="input-candidate.openQuestionAnswers.105.content-23">Link to your portfolio<span aria-hidden="true">&nbsp;<span>*</span></span></label>
+    <input type="text" id="input-candidate.openQuestionAnswers.105.content-23" required="" maxlength="255" name="candidate.openQuestionAnswers.105.content"></div>
+  </div><div><input type="hidden" value="106" name="candidate.openQuestionAnswers.106.openQuestionId">
+  <div><label for="input-candidate.openQuestionAnswers.106.content-24">Tell us about yourself.</label>
+    <textarea data-cy="textAreaInputField" id="input-candidate.openQuestionAnswers.106.content-24" rows="6" name="candidate.openQuestionAnswers.106.content"></textarea></div>
+  </div><div><input type="hidden" value="107" name="candidate.openQuestionAnswers.107.openQuestionId">
+  <div><label for="input-candidate.openQuestionAnswers.107.content-25" id="input-candidate.openQuestionAnswers.107.content-26">What is your earliest start date?<span aria-hidden="true">&nbsp;<span>*</span></span></label>
+    <input type="date" id="input-candidate.openQuestionAnswers.107.content-25" required="" name="candidate.openQuestionAnswers.107.content"><button type="button">Clear</button></div>
+  </div><div><input type="hidden" value="108" name="candidate.openQuestionAnswers.108.openQuestionId">
+  <fieldset><legend>How did you find this job?</legend>
+    <div class="box"><input type="checkbox" id="input-candidate.openQuestionAnswers.108.multiContent-27-0" value="Job board" name="candidate.openQuestionAnswers.108.multiContent"><label for="input-candidate.openQuestionAnswers.108.multiContent-27-0"><span aria-hidden="true"></span><span>Job board</span></label></div>
+    <div class="box"><input type="checkbox" id="input-candidate.openQuestionAnswers.108.multiContent-27-1" value="Referral" name="candidate.openQuestionAnswers.108.multiContent"><label for="input-candidate.openQuestionAnswers.108.multiContent-27-1"><span aria-hidden="true"></span><span>Referral</span></label></div>
+  </fieldset>
+  </div><div><input type="hidden" value="109" name="candidate.openQuestionAnswers.109.openQuestionId">
+  <div><label for="input-candidate.openQuestionAnswers.109.file-28" id="input-candidate.openQuestionAnswers.109.file-30">Certificates</label>
+    <div role="presentation" class="box"><input type="file" name="candidate.openQuestionAnswers.109.file" id="input-candidate.openQuestionAnswers.109.file-28" aria-labelledby="input-candidate.openQuestionAnswers.109.file-30" data-cy="fileInputField"></div></div>
+  </div><div><input type="hidden" value="110" name="candidate.openQuestionAnswers.110.openQuestionId">
+  <div aria-hidden="true"><span aria-hidden="true"><p>Please review the <a href="https://example.com/privacy">privacy policy</a>.</p></span></div>
+  </div><div><input type="hidden" value="111" name="candidate.openQuestionAnswers.111.openQuestionId">
+  <div><label for="input-candidate.openQuestionAnswers.111.content-31" id="input-candidate.openQuestionAnswers.111.content-32">Leave us a short video introduction.</label>
+    <div><div data-selector="video-recorder-container"><input type="file" accept=".mp4,.webm" aria-label="Upload a file"></div></div></div>
+  </div>
+</fieldset></section>
+<section><input type="hidden" value="multiple_choice" name="candidate.locations.type">
+  <fieldset><legend>What is your preferred work location?<span aria-hidden="true">&nbsp;<span>*</span></span></legend>
+    <div class="box"><input type="checkbox" required="" id="input-candidate.locations.value-33-0" value="38397" name="candidate.locations.value"><label for="input-candidate.locations.value-33-0"><span aria-hidden="true"></span><span>Springfield (Calle Mayor 1, Springfield)</span></label></div>
+    <div class="box"><input type="checkbox" required="" id="input-candidate.locations.value-33-1" value="52675" name="candidate.locations.value"><label for="input-candidate.locations.value-33-1"><span aria-hidden="true"></span><span>Shelbyville</span></label></div>
+  </fieldset></section>
+<section><fieldset><legend>Legal agreements</legend>
+  <div data-testid="open-question-answer"><input type="hidden" value="112" name="candidate.openQuestionAnswers.112.openQuestionId">
+    <div class="box"><input type="checkbox" data-testid="legal-input-field-value-input" required="" value="false" aria-labelledby="input-candidate.openQuestionAnswers.112.flag-34" name="candidate.openQuestionAnswers.112.flag">
+    <div id="input-candidate.openQuestionAnswers.112.flag-34"><span aria-hidden="true"></span><div>I agree with the privacy statement</div></div></div></div>
+</fieldset></section>
+<section data-testid="segment-legal-agreements"><fieldset><legend>Legal Agreements</legend>
+  <input type="hidden" value="747" name="candidate.agreements.0.agreementId">
+  <div class="box"><input type="checkbox" required="" value="false" aria-labelledby="input-candidate.agreements.0.consent-35-0" name="candidate.agreements.0.consent">
+  <div id="input-candidate.agreements.0.consent-35-0"><span aria-hidden="true"></span><div data-slate-editor="true"><p><span>By submitting my CV I let Acme keep it for future openings.</span></p></div></div></div>
+</fieldset></section>
+<div id="input-captchaToken-undefined"><iframe title="Widget containing checkbox for hCaptcha security challenge" style="visibility: hidden;"></iframe></div>
+<div><button type="submit" data-testid="submit-application-form-button">Send</button></div>
+</form>
+</div>
+<div role="tabpanel" id="tabs--1--panel--2" hidden=""><div aria-live="assertive"><h3>All done!</h3><p>Your application has been successfully submitted!</p></div><a href="/">Other jobs</a></div>
+<div role="tabpanel" id="tabs--1--panel--3" hidden=""><div aria-live="assertive"><h3>You have already applied for this job</h3><p>Write to us at <a href="mailto:jobs@example.com">jobs@example.com</a>.</p></div></div>
+<script>
+  // The career site posts the form, then shows the thanks panel, or the already-applied one
+  // for a known address.
+  document.getElementById("offer-application-form").addEventListener("submit", e => {
+    e.preventDefault();
+    const known = e.target.elements["candidate.email"].value === "known@example.com";
+    document.getElementById("tabs--1--panel--1").hidden = true;
+    document.getElementById(known ? "tabs--1--panel--3" : "tabs--1--panel--2").hidden = false;
+  });
+</script>
+</body>
+</html>
