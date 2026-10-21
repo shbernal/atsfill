@@ -1,6 +1,6 @@
 # Hiring systems
 
-Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `uv run python -m scripts.backlog`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked last, then by share of postings.
+Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `uv run python -m scripts.backlog`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked and unsupported last, then by share of postings.
 
 The registry covers 90.1% of postings.
 
@@ -21,7 +21,7 @@ The registry covers 90.1% of postings.
 | hireology | ats | 1.0% | none | hosted |  | [dry_run_verified](hireology.md) |
 | paycor | ats | 0.9% | none | hosted, embedded |  | [dry_run_verified](paycor.md) |
 | zohorecruit | ats | 0.9% | none | hosted |  | mapped |
-| phenom | ats | 0.7% | none | hosted |  | mapped |
+| phenom | ats | 0.7% | none | hosted |  | [dry_run_verified](phenom.md) |
 | breezy | ats | 0.7% | none | hosted |  | [dry_run_verified](breezy.md) |
 | recruitee | ats | 0.7% | none | hosted |  | [dry_run_verified](recruitee.md) |
 | applicantpro | ats | 0.6% | none | hosted |  | mapped |

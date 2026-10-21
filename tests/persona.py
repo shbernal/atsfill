@@ -29,6 +29,11 @@ DECLINE = re.compile(
     r"decline|prefer not|not to (answer|say|disclose|self-identify)|(don.?t|do not) (wish|want)",
     re.IGNORECASE,
 )
+# A question a "Yes" can end the application on, or open fields the form did not list.
+ANSWER_NO = re.compile(
+    r"employee of|employed by|worked (for|at)|relative|sponsor|preferred name", re.IGNORECASE
+)
+PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
 # A field's label that says it is asked only after another's answer.
 ASKED_WHEN = re.compile(
     r"""\(asked when (["'])(?P<trigger>.+?)\1 is (?P<negated>not )?"?(?P<value>.+?)"?\)$"""
@@ -36,6 +41,7 @@ ASKED_WHEN = re.compile(
 BY_LABEL = [
     (re.compile(r"MM/YYYY"), "01/2020"),
     (re.compile(r"zip|postal", re.IGNORECASE), "20001"),
+    (re.compile(r"extension", re.IGNORECASE), "1"),
     (re.compile(r"e-?mail", re.IGNORECASE), EMAIL),
     (re.compile(r"first.?name|given name|pr[ée]nom", re.IGNORECASE), FIRST),
     (re.compile(r"last.?name|family name|surname", re.IGNORECASE), LAST),
@@ -103,8 +109,11 @@ def _option(field: Field) -> str:
     if SENSITIVE.search(field.label):
         return next((o for o in options if DECLINE.search(o)), options[0])
     if re.search(r"country", field.label, re.IGNORECASE):
-        # where the persona's phone and zip code are
-        return next((o for o in options if o in COUNTRY_NAMES), options[0])
+        # where the persona's phone and zip code are; `United States of America (+1)`
+        mentioned = sorted((o for o in options if COUNTRY in o), key=len)
+        return next((o for o in options if o in COUNTRY_NAMES), next(iter(mentioned), options[0]))
+    if ANSWER_NO.search(field.label) and "No" in options:
+        return "No"
     return options[0]
 
 
@@ -125,8 +134,10 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
             return PHONE
         case FieldType.DATE:  # an end date after a start date; a past one in a history entry
             end = re.search(r"\bend|finish|until", field.label, re.IGNORECASE)
-            if re.search(r"history|employment|education", field.label, re.IGNORECASE):
-                days = -365 if end else -3 * 365
+            if PAST_DATE.match(field.label) or re.search(
+                r"history|employment|education", field.label, re.IGNORECASE
+            ):
+                days = -365 if end or field.label.lower().startswith("to") else -3 * 365
             else:
                 days = 60 if end else 30
             return (date.today() + timedelta(days=days)).isoformat()

@@ -1,0 +1,205 @@
+{
+  "version": 2,
+  "schema": {
+    "type": "object",
+    "required": ["firstName", "country"],
+    "properties": {
+      "profileHeading": {"title": "{{apply.label.profile}}", "type": "string"},
+      "jobSeqNo": {"type": "string"},
+      "locale": {"type": "string"},
+      "resumeName": {"type": "string"},
+      "firstName": {"title": "{{apply.label.firstName}}", "type": "string"},
+      "country": {
+        "title": "Country", "type": "string", "default": "USA",
+        "enum": ["CAN", "USA"], "enumNames": ["Canada", "{{apply.label.option.USA}}"]
+      },
+      "state": {"title": "State", "type": "string", "enum": [], "enumNames": []},
+      "phoneWidget": {
+        "type": "object", "required": ["countryPhoneCode", "phoneNumber"],
+        "properties": {
+          "countryPhoneCode": {
+            "title": "Country Phone Code", "type": "string",
+            "enum": ["CAN_1", "FRA_33", "USA_1"],
+            "enumNames": ["Canada (+1)", "France (+33)", "United States of America (+1)"]
+          },
+          "phoneNumber": {"title": "Phone Number", "type": "string"}
+        }
+      },
+      "sourceType": {"title": "How did you hear about us?", "type": "string"},
+      "nationality": {
+        "title": "Nationality", "type": "array",
+        "items": {"type": "string", "enum": ["1", "2"], "enumNames": ["American", "Canadian"]}
+      },
+      "emailAgreement": {"title": "I agree to be contacted by email", "type": "boolean"},
+      "smsOptIn": {"title": "<p>Text me about my application</p>", "type": "boolean"},
+      "authorized": {"title": "Are you authorized to work in the country of the job?", "type": "boolean"},
+      "contactBy": {
+        "title": "How may we contact you?", "type": "array",
+        "items": {"type": "string", "enum": ["email", "sms"], "enumNames": ["Email", "SMS"]}
+      },
+      "startDate": {"title": "Earliest start date", "type": "string", "format": "MM/dd/yyyy"},
+      "experienceData": {
+        "type": "array", "minItems": 1,
+        "items": {
+          "type": "object", "required": ["title"],
+          "properties": {
+            "title": {"title": "Job Title", "type": "string"},
+            "fromTo": {
+              "type": "object", "fromTitle": "From", "toTitle": "To", "format": "MM/yyyy",
+              "HtmlInputName1": "startDate", "HtmlInputName2": "endDate",
+              "properties": {"startDate": {"type": "string"}, "endDate": {"type": "string"}}
+            }
+          }
+        }
+      },
+      "educationData": {
+        "type": "array", "minItems": 1,
+        "items": {
+          "type": "object",
+          "properties": {
+            "schoolName": {"title": "School or University", "type": "array"},
+            "fromTo": {
+              "type": "object", "fromTitle": "From", "toTitle": "To", "format": "yyyy",
+              "HtmlInputName1": "startDate", "HtmlInputName2": "endDate",
+              "properties": {"startDate": {"type": "string"}, "endDate": {"type": "string"}}
+            }
+          }
+        }
+      },
+      "certificates": {
+        "type": "array",
+        "items": {"type": "object", "properties": {"name": {"title": "Certificate", "type": "string"}}}
+      },
+      "jsqData": {"title": "Job Specific Questions", "type": "object"},
+      "additionalJsqData": {"title": "More Questions", "type": "object"},
+      "comments": {"title": "Anything else?", "type": "string"},
+      "custAgreement": {"title": "I have read and understand this section", "type": "string", "checked": "Yes", "unchecked": "No"},
+      "eeoPoster": {"title": "EEO is the Law", "type": "null"}
+    },
+    "allOf": [
+      {
+        "if": {"not": {"properties": {"resumeName": {"isNotEmpty": true}}, "required": ["resumeName"]}},
+        "then": {"properties": {"summary": {"title": "Summary of your experience", "type": "string"}}, "required": ["summary"]},
+        "__event_name": "show"
+      },
+      {
+        "if": {"properties": {"locale": {"const": "fr_fr"}}, "required": ["locale"]},
+        "then": {"properties": {"frenchConsent": {"title": "Consentement", "type": "boolean"}}},
+        "__event_name": "show"
+      }
+    ]
+  },
+  "uiSchema": {
+    "ui:order": [
+      "profileHeading", "firstName", "country", "state", "phoneWidget", "sourceType",
+      "applicantSource", "nationality", "emailAgreement", "smsOptIn", "summary", "frenchConsent",
+      "authorized", "contactBy", "startDate", "experienceData", "educationData", "certificates",
+      "jsqData", "additionalJsqData", "comments", "custAgreement", "eeoPoster", "*"
+    ],
+    "profileHeading": {"htmlType": "markdown", "ui:widget": "markdown", "nav": "{{apply.breadcumb.info}}"},
+    "jobSeqNo": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}"},
+    "locale": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}", "preFillWindowObj": "phApp.locale"},
+    "resumeName": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}"},
+    "firstName": {"htmlType": "text", "nav": "{{apply.breadcumb.info}}"},
+    "country": {
+      "htmlType": "country", "nav": "{{apply.breadcumb.info}}", "ui:required": true,
+      "preFillWindowObj": "phApp.ddo.response.response.jobCountry",
+      "apiConfig": {
+        "resourceUrl": {"type": "static", "value": "/applySubmit"}, "httpMethod": "POST",
+        "headers": {"x-csrf-token": {"type": "windowRef", "value": "phApp.sessionParams.csrfToken"}},
+        "payload": "{\"ddoKey\": \"applyGetReferences\", \"formData\": {\"refNum\": \"%%phApp.refNum%%\", \"applyddokey\": \"getCountrySpecificFields\", \"locale\": \"%%phApp.locale%%\"}}"
+      }
+    },
+    "state": {"htmlType": "choice", "nav": "{{apply.breadcumb.info}}", "ui:required": true},
+    "phoneWidget": {
+      "htmlType": "phoneNumber_v2", "nav": "{{apply.breadcumb.info}}", "ui:order": ["countryPhoneCode", "phoneNumber", "*"],
+      "countryPhoneCode": {"htmlType": "choiceKeyValue", "nav": "EEO"},
+      "phoneNumber": {"htmlType": "text"}
+    },
+    "sourceType": {"htmlType": "sourceTypeSchema", "nav": "{{apply.breadcumb.info}}", "ui:required": true},
+    "applicantSource": {
+      "htmlType": "dependent_utm", "nav": "{{apply.breadcumb.info}}", "ui:required": true,
+      "ui:placeholder": "Source",
+      "data": [
+        {"title": "Job Board", "value": "Job Board", "show": false, "child": [
+          {"key": "LinkedIn", "value": "SOURCE-1", "show": true},
+          {"key": "Indeed", "value": "SOURCE-2", "show": true},
+          {"key": "Retired board", "value": "SOURCE-9", "show": false}
+        ]},
+        {"title": "Referral", "value": "Referral", "child": [
+          {"key": "{{apply.label.employee}}", "value": "SOURCE-3", "show": true}
+        ]}
+      ]
+    },
+    "nationality": {"htmlType": "typeahead", "ui:widget": "typeahead", "nav": "{{apply.breadcumb.info}}"},
+    "emailAgreement": {"htmlType": "checkbox", "nav": "{{apply.breadcumb.info}}", "ui:required": true},
+    "smsOptIn": {"htmlType": "checkbox", "nav": "{{apply.breadcumb.info}}"},
+    "summary": {"htmlType": "textarea", "ui:widget": "textarea", "nav": "{{apply.breadcumb.info}}"},
+    "frenchConsent": {"htmlType": "checkbox", "nav": "{{apply.breadcumb.info}}"},
+    "authorized": {"htmlType": "radio", "ui:widget": "radio", "nav": "workAndEducation", "ui:required": true},
+    "contactBy": {"htmlType": "multipleChoice", "ui:widget": "checkboxes", "nav": "workAndEducation"},
+    "startDate": {"htmlType": "calendar", "ui:widget": "calendar", "nav": "workAndEducation"},
+    "experienceData": {
+      "htmlType": "array-of-object", "nav": "workAndEducation",
+      "items": {
+        "title": {"htmlType": "text", "nav": "EEO"},
+        "fromTo": {"htmlType": "daterangepicker", "ui:field": "daterangepicker", "input1Required": true, "input2Required": false}
+      }
+    },
+    "educationData": {
+      "htmlType": "array-of-object", "nav": "workAndEducation",
+      "items": {
+        "ui:order": ["schoolName", "fromTo"],
+        "schoolName": {"htmlType": "asynctypeaheadv3", "ui:widget": "asynctypeaheadv3", "ui:required": true},
+        "fromTo": {"htmlType": "daterangepicker", "ui:field": "daterangepicker", "input1Required": false, "input2Required": true}
+      }
+    },
+    "certificates": {"htmlType": "array-of-object", "nav": "workAndEducation"},
+    "jsqData": {
+      "htmlType": "asyncfield", "ui:field": "asyncfield", "nav": "{{apply.breadcumb.jsq}}",
+      "datasourcepath": "applyGetReferences.data",
+      "apiConfig": {"payload": "{\"ddoKey\": \"applyGetReferences\", \"formData\": {\"refNum\": \"%%phApp.refNum%%\", \"applyddokey\": \"getWorkdayJSQs\", \"questionnaireId\": \"%%phApp.ddo.response.response.jobData.primaryQuestionnaireId%%\"}}"}
+    },
+    "additionalJsqData": {
+      "htmlType": "asyncfield", "ui:field": "asyncfield", "nav": "{{apply.breadcumb.additionaljsq}}",
+      "datasourcepath": "applyGetReferences.data",
+      "apiConfig": {"payload": "{\"ddoKey\": \"applyGetReferences\", \"formData\": {\"refNum\": \"%%phApp.refNum%%\", \"applyddokey\": \"getWorkdayJSQs\", \"questionnaireId\": \"%%phApp.ddo.response.response.jobData.secondaryQuestionnaireId%%\"}}"}
+    },
+    "comments": {"htmlType": "textarea", "ui:widget": "textarea", "nav": "agreement"},
+    "custAgreement": {"htmlType": "valuecheckbox", "ui:widget": "valuecheckbox", "nav": "agreement", "ui:required": true},
+    "eeoPoster": {"htmlType": "label", "nav": "agreement"}
+  },
+  "stepConfig": {
+    "{{apply.breadcumb.info}}": {"stepId": "personalInformation", "name": "{{apply.breadcumb.info}}"},
+    "workAndEducation": {"stepId": "workAndEducation", "name": "Work and education"},
+    "{{apply.breadcumb.jsq}}": {"stepId": "questions", "name": "{{apply.breadcumb.jsq}}"},
+    "{{apply.breadcumb.additionaljsq}}": {"stepId": "additionalQuestions", "name": "{{apply.breadcumb.additionaljsq}}"},
+    "agreement": {"stepId": "agreement", "name": "Agreement"}
+  },
+  "stepRules": {
+    "{{apply.breadcumb.jsq}}": {"rules": {"all": [{"fact": "ddo.response.response.jobData.hasPrimaryQuestionnaire", "operator": "notEqual", "value": "yes"}]}},
+    "{{apply.breadcumb.additionaljsq}}": {"rules": {"all": [{"fact": "ddo.response.response.jobData.hasSecondaryQuestionnaire", "operator": "notEqual", "value": "yes"}]}}
+  },
+  "workflow": [
+    {
+      "name": "country-state", "events": ["onchange"],
+      "workflows": [
+        {"id": "fetchStates", "type": "http", "data": {"name": "fetchStates", "config": {
+          "baseUrl": "/applySubmit", "httpMethod": "POST",
+          "payload": "{\"ddoKey\": \"applyGetReferences\", \"formData\": {\"refNum\": \"%%phApp.refNum%%\", \"applyddokey\": \"getCustomerDependentData\", \"objectType\": \"states\", \"parent_key\": \"%%formData.country%%\"}}"
+        }}},
+        {"id": "toStates", "type": "transform", "data": {"name": "transform", "config": [
+          {"Path": "#schema.schema.properties.state", "Expression": "{\"enum\": NODE_DATA.fetchStates.applyGetReferences.data.values.key}"}
+        ]}}
+      ]
+    }
+  ],
+  "commonRules": [{}],
+  "cloudWidget": {
+    "commonCloudOptions": {
+      "enableFileUpload": true,
+      "resumeInfoText": "{{apply.html.resumeheader}}",
+      "suppResFileType": "doc, docx, pdf or txt"
+    }
+  }
+}

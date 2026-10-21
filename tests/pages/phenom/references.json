@@ -1,0 +1,27 @@
+{
+  "getCountrySpecificFields": {"applyGetReferences": {"status": "success", "data": {
+    "countryCode": "USA",
+    "schema": {"type": "object", "required": ["city"], "properties": {"city": {"title": "City", "type": "string"}}},
+    "uiSchema": {"ui:order": ["city", "*"]}
+  }}},
+  "getCustomerDependentData": {"applyGetReferences": {"status": "success", "data": {
+    "objectType": "states",
+    "values": [{"key": "US-TX", "label": "Texas"}, {"key": "US-UT", "label": "Utah"}]
+  }}},
+  "getWorkdayJSQs": {"applyGetReferences": {"status": "success", "data": {
+    "questionnaireId": "Q1",
+    "schema": {"type": "object", "properties": {"jsqData": {"type": "object", "properties": {"Q1": {
+      "type": "object", "required": ["a"],
+      "properties": {
+        "a": {"title": "Have you worked for Acme before?", "type": "string", "enum": ["A-1", "A-2"], "enumNames": ["Yes", "No"]}
+      },
+      "allOf": [{
+        "if": {"not": {"allOf": [{"not": {"properties": {"a": {"const": "A-1"}}, "required": ["a"]}}]}},
+        "then": {"properties": {"a_dot_a": {"title": "When did you leave?", "type": "string"}}, "required": ["a_dot_a"]},
+        "__event_name": "remove"
+      }]
+    }}}}},
+    "uiSchema": {"jsqData": {"Q1": {"ui:order": ["a", "a_dot_a"], "a_dot_a": {"ui:widget": "textarea"}}}},
+    "rules": {}
+  }}}
+}

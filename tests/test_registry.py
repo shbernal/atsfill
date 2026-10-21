@@ -130,3 +130,26 @@ def test_a_verified_release_against_the_installed_one(verified, installed, relea
 def test_the_committed_badges_are_current():
     readme = (ROOT / "README.md").read_text()
     assert readme == registry.with_badges(readme), "run `uv run python -m scripts.backlog`"
+
+
+def test_an_unsupported_system_goes_last_with_its_reason():
+    systems = registry.parse("""
+[stopped]
+kind = "ats"
+account = "none"
+share = 0.5
+adapter = "stopped"
+unsupported = { date = 2026-10-21, version = "0.0.3", commit = "abc1234", by = "a", reason = "x" }
+
+[open]
+kind = "ats"
+account = "to_read"
+share = 0.1
+""")
+    assert systems["stopped"].unsupported == registry.Shortfall(
+        date(2026, 10, 21), "0.0.3", "abc1234", "a", "x"
+    )
+    rows = [line for line in registry.backlog(systems).splitlines() if line.startswith("| ")]
+    assert [r.split(" | ")[0][2:] for r in rows[1:]] == ["open", "stopped"]
+    assert "[unsupported](stopped.md)" in rows[-1]
+    assert "unsupported%202026--10--21" in registry._badge(systems["stopped"])

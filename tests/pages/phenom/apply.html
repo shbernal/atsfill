@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Apply | Acme Careers</title>
+<style>
+  .react-datepicker-popper { position: absolute; background: #fff; border: 1px solid #999; z-index: 5; }
+  .react-datepicker__day, .react-datepicker__month-text, .react-datepicker__year-text {
+    display: inline-block; width: 2.5em; cursor: pointer; }
+  .rbt-menu { border: 1px solid #999; }
+  .dropdown-item { display: block; }
+  #cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #eee; }
+</style>
+</head>
+<body>
+<!-- Phenom's apply wizard, one example of each rendering in docs/adapters/phenom.md, as
+     form_schema.json, Messages_en_us.json and references.json configure it. Each step renders
+     on its own; Next checks the required fields and moves to the next step. -->
+<script>var phApp = phApp || {"refNum": "ACMEUS", "locale": "en_us"};
+phApp.ddo = {"response": {"response": {"applyATS": "WORKDAY", "jobCountry": "United States", "jobData": {
+  "jobSeqNo": "ACMEUS1001EXTERNALENUS", "jobId": "1001", "primaryQuestionnaireId": "Q1",
+  "hasPrimaryQuestionnaire": "yes", "secondaryQuestionnaireId": "", "hasSecondaryQuestionnaire": "no"}}}};
+phApp.sessionParams = {"csrfToken": "token"};</script>
+<div id="cookie-banner" class="cookie-banner"><p>We use cookies.</p><button>Deny</button><button>Allow</button></div>
+<h2>You are applying for Data Analyst</h2>
+<div class="resume-section">
+  <p><span class="required">*</span> Upload either DOC, DOCX, PDF or TXT file types (1MB max)</p>
+  <div class="resume-upload-wrapper">
+    <input type="file" style="display: none">
+    <button type="button" class="upload-resume-btn">Upload Resume</button>
+  </div>
+  <div id="resume-name"></div>
+</div>
+<div id="root"></div>
+<script>
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August",
+  "September", "October", "November", "December"];
+const STATES = {"USA": ["Texas", "Utah"], "CAN": ["Ontario", "Quebec"]};
+const SOURCES = {"Job Board": ["LinkedIn", "Indeed"], "Referral": ["Employee"]};
+const STEPS = [
+  {name: "personalInformation", fields: [
+    {id: "firstName", kind: "text", label: "First Name", required: true},
+    {id: "country", kind: "select", label: "Country", required: true, options: [["CAN", "Canada"], ["USA", "United States"]]},
+    {id: "cntryFields.city", kind: "text", label: "City", required: true},
+    {id: "state", kind: "select", label: "State", required: true, options: []},
+    {id: "phoneWidget.countryPhoneCode", kind: "select", label: "Country Phone Code", required: true,
+     options: [["CAN_1", "Canada (+1)"], ["FRA_33", "France (+33)"], ["USA_1", "United States of America (+1)"]],
+     autocomplete: "tel-country-code"},
+    {id: "phoneWidget.phoneNumber", kind: "text", label: "Phone Number", required: true, autocomplete: "tel-national"},
+    {id: "sourceType", kind: "select", label: "How did you hear about us?", required: true, options: ["Job Board", "Referral"]},
+    {id: "applicantSource", kind: "select", label: "Source", required: true, options: []},
+    {id: "nationality", kind: "typeahead", label: "Nationality", required: false, options: ["American", "Canadian"]},
+    {id: "emailAgreement", kind: "checkbox", label: "I agree to be contacted by email", required: true},
+    {id: "smsOptIn", kind: "checkbox", label: "Text me about my application", required: false},
+    {id: "summary", kind: "textarea", label: "Summary of your experience", required: true, withoutResume: true},
+  ]},
+  {name: "workAndEducation", fields: [
+    {id: "authorized", kind: "radio", label: "Are you authorized to work in the country of the job?", required: true,
+     options: ["Yes", "No"]},
+    {id: "contactBy", kind: "checkboxes", label: "How may we contact you?", required: false,
+     options: ["Email", "SMS"]},
+    {id: "startDate", kind: "day", label: "Earliest start date", required: false},
+    {id: "experienceData[0].title", kind: "text", label: "Job Title", required: true},
+    {id: "experienceData[0].fromTo.startDate", kind: "monthPicker", label: "From", required: true},
+    {id: "experienceData[0].fromTo.endDate", kind: "monthPicker", label: "To", required: false},
+    {id: "educationData[0].schoolName", kind: "search", label: "School or University", required: true},
+    {id: "educationData[0].fromTo.startDate", kind: "yearPicker", label: "From", required: false},
+    {id: "educationData[0].fromTo.endDate", kind: "yearPicker", label: "To", required: true},
+  ]},
+  {name: "questions", fields: [
+    {id: "jsqData.Q1.a", kind: "select", label: "Have you worked for Acme before?", required: true, options: [["A-1", "Yes"], ["A-2", "No"]]},
+    {id: "jsqData.Q1.a_dot_a", kind: "textarea", label: "When did you leave?", required: true, shownWhen: ["jsqData.Q1.a", "A-1"]},
+  ]},
+  {name: "agreement", last: true, fields: [
+    {id: "comments", kind: "textarea", label: "Anything else?", required: false},
+    {id: "custAgreement", kind: "checkbox", label: "I have read and understand this section", required: true},
+  ]},
+];
+const values = {};
+
+function stepIndex() {
+  const step = new URLSearchParams(location.search).get("step");
+  return step ? Number(step) - 1 : 0;
+}
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") node.className = v; else if (k in node && k !== "list") node[k] = v; else node.setAttribute(k, v);
+  }
+  node.append(...children);
+  return node;
+}
+
+function label(f) {
+  const l = el("label", {class: "control-label", for: f.id}, f.label);
+  if (f.required) l.append(el("span", {class: "required"}, "*"));
+  return l;
+}
+
+function closePickers() { document.querySelectorAll(".react-datepicker-popper").forEach(p => p.remove()); }
+
+function picker(f, input, group) {
+  closePickers();
+  const box = el("div", {class: "react-datepicker"});
+  const popper = el("div", {class: "react-datepicker-popper"}, box);
+  const choose = text => { input.value = text; values[f.id] = text; closePickers(); };
+  if (f.kind === "day") {
+    let year = 2026, month = 9;
+    const draw = () => {
+      box.replaceChildren();
+      const years = el("select", {class: "react-datepicker__year-select"});
+      for (let y = 2015; y <= 2030; y++) years.append(el("option", {value: String(y)}, String(y)));
+      years.value = String(year);
+      years.addEventListener("change", () => { year = Number(years.value); draw(); });
+      const months = el("select", {class: "react-datepicker__month-select"});
+      MONTHS.forEach((m, i) => months.append(el("option", {value: String(i)}, m)));
+      months.value = String(month);
+      months.addEventListener("change", () => { month = Number(months.value); draw(); });
+      box.append(years, months);
+      const days = new Date(year, month + 1, 0).getDate();
+      for (let d = 1; d <= days; d++) {
+        const cell = el("div", {class: `react-datepicker__day react-datepicker__day--${String(d).padStart(3, "0")}`}, String(d));
+        cell.addEventListener("click", () =>
+          choose(`${String(month + 1).padStart(2, "0")}/${String(d).padStart(2, "0")}/${year}`));
+        box.append(cell);
+      }
+    };
+    draw();
+  } else if (f.kind === "monthPicker") {
+    const range = el("select", {class: "range-select"});
+    for (let y = 2026; y >= 2000; y--) range.append(el("option", {value: String(y)}, String(y)));
+    const months = el("div", {class: "react-datepicker__month react-datepicker__monthPicker"});
+    MONTHS.forEach((m, i) => {
+      const cell = el("div", {class: "react-datepicker__month-text"}, m.slice(0, 3));
+      cell.addEventListener("click", () => choose(`${String(i + 1).padStart(2, "0")}/${range.value}`));
+      months.append(cell);
+    });
+    box.append(el("div", {class: "react-datepicker__header"}, range), months);
+  } else {
+    let first = 2017;
+    const draw = () => {
+      box.replaceChildren();
+      const prev = el("button", {type: "button", class: "react-datepicker__navigation react-datepicker__navigation--previous"}, "Previous Year");
+      const next = el("button", {type: "button", class: "react-datepicker__navigation react-datepicker__navigation--next"}, "Next Year");
+      prev.addEventListener("click", () => { first -= 12; draw(); });
+      next.addEventListener("click", () => { first += 12; draw(); });
+      const wrapper = el("div", {class: "react-datepicker__year-wrapper"});
+      for (let y = first; y < first + 12; y++) {
+        const cell = el("div", {class: "react-datepicker__year-text"}, String(y));
+        cell.addEventListener("click", () => choose(String(y)));
+        wrapper.append(cell);
+      }
+      box.append(prev, next, el("div", {class: "react-datepicker__year--container"}, wrapper));
+    };
+    draw();
+  }
+  group.append(popper);
+}
+
+function typeahead(f, group) {
+  const input = el("input", {type: "text", id: f.id, class: "rbt-input-main form-control", role: "combobox",
+    placeholder: "Please Select", value: values[f.id] || ""});
+  input.dataset.attribute = "typeAHead";
+  if (f.required) input.setAttribute("aria-required", "true");
+  const rbt = el("div", {class: "rbt"}, input);
+  const show = () => {
+    rbt.querySelector(".rbt-menu")?.remove();
+    const typed = input.value.trim();
+    const items = f.kind === "search"
+      ? (typed ? [`${typed} University`, `${typed} College`] : [])
+      : f.options.filter(o => o.toLowerCase().includes(typed.toLowerCase()) || !typed);
+    const menu = el("div", {class: "rbt-menu dropdown-menu", id: f.id, role: "listbox"});
+    for (const text of items) {
+      const item = el("a", {class: "dropdown-item", href: "#"}, text);
+      item.addEventListener("click", e => {
+        e.preventDefault(); input.value = text; values[f.id] = text; menu.remove();
+      });
+      menu.append(item);
+    }
+    rbt.append(menu);
+  };
+  input.addEventListener("focus", show);
+  input.addEventListener("click", show);
+  input.addEventListener("input", () => { values[f.id] = ""; show(); });
+  input.addEventListener("keydown", e => { if (e.key === "Escape") rbt.querySelector(".rbt-menu")?.remove(); });
+  group.append(label(f), rbt);
+}
+
+function field(f) {
+  const group = el(f.kind === "radio" ? "fieldset" : "div", {class: "form-group field"});
+  if (f.kind === "text" || f.kind === "textarea") {
+    const input = el(f.kind === "textarea" ? "textarea" : "input", {id: f.id, class: "form-control", value: values[f.id] || ""});
+    if (f.kind === "text") input.type = "text";
+    if (f.autocomplete) input.setAttribute("autocomplete", f.autocomplete);
+    if (f.required) input.required = true;
+    input.addEventListener("input", () => { values[f.id] = input.value; });
+    group.append(label(f), input);
+  } else if (f.kind === "select") {
+    const select = el("select", {id: f.id, class: "form-control"}, el("option", {value: ""}, "Please Select"));
+    const options = f.id === "state" ? (STATES[values.country] || [])
+      : f.id === "applicantSource" ? (SOURCES[values.sourceType] || []) : f.options;
+    for (const o of options) {
+      const [value, text] = Array.isArray(o) ? o : [o, o];
+      select.append(el("option", {value}, text));
+    }
+    if (f.autocomplete) select.setAttribute("autocomplete", f.autocomplete);
+    if (f.required) select.required = true;
+    select.value = values[f.id] || "";
+    select.addEventListener("change", () => {
+      values[f.id] = select.value;
+      if (f.id === "country" || f.id === "sourceType") {  // a list that follows, a moment later
+        values[f.id === "country" ? "state" : "applicantSource"] = "";
+        setTimeout(render, 300);
+      }
+      if (step().fields.some(other => other.shownWhen?.[0] === f.id)) render();
+    });
+    group.append(label(f), select);
+  } else if (f.kind === "typeahead" || f.kind === "search") {
+    typeahead(f, group);
+  } else if (f.kind === "checkbox") {
+    const box = el("input", {type: "checkbox", id: f.id, checked: values[f.id] === true});
+    if (f.required) box.required = true;
+    box.addEventListener("change", () => { values[f.id] = box.checked; });
+    group.append(el("div", {class: "checkbox"}, el("label", {}, box, el("span", {}, f.label))));
+  } else if (f.kind === "checkboxes") {
+    const list = el("div", {class: "checkboxes"});
+    f.options.forEach((o, i) => {
+      const box = el("input", {type: "checkbox", id: `${f.id}_${i}`, checked: (values[f.id] || []).includes(o)});
+      box.addEventListener("change", () => {
+        const now = new Set(values[f.id] || []);
+        box.checked ? now.add(o) : now.delete(o);
+        values[f.id] = [...now];
+      });
+      list.append(el("label", {}, box, el("span", {}, o)));
+    });
+    group.append(el("label", {class: "control-label"}, f.label), list);
+  } else if (f.kind === "radio") {
+    const legend = el("legend", {}, f.label);
+    if (f.required) legend.append(el("span", {class: "required"}, "*"));
+    group.append(legend);
+    f.options.forEach((o, i) => {
+      const radio = el("input", {type: "radio", name: f.id, id: `${f.id}_${i}`, value: o, checked: values[f.id] === o});
+      if (f.required) radio.required = true;
+      radio.addEventListener("change", () => { values[f.id] = o; });
+      group.append(el("label", {}, radio, el("span", {}, o)));
+    });
+  } else {
+    const input = el("input", {type: "text", id: f.id, class: "form-control", value: values[f.id] || ""});
+    if (f.kind === "day") input.placeholder = "MM/DD/YYYY";
+    if (f.required) input.setAttribute("aria-required", "true");
+    input.addEventListener("click", () => picker(f, input, group));
+    input.addEventListener("keydown", e => { if (e.key === "Escape") closePickers(); });
+    const wrapper = el("div", {class: "react-datepicker-wrapper"}, el("div", {class: "react-datepicker__input-container"}, input));
+    group.append(label(f), wrapper);
+  }
+  return group;
+}
+
+function step() { return STEPS[stepIndex()]; }
+
+function shown(f) {
+  if (f.withoutResume && document.getElementById("resume-name").textContent) return false;
+  return !f.shownWhen || values[f.shownWhen[0]] === f.shownWhen[1];
+}
+
+function render() {
+  const step = STEPS[stepIndex()];
+  const form = el("form", {class: "rjsf", novalidate: true});
+  for (const f of step.fields.filter(shown)) form.append(el("div", {class: "col-md-12"}, field(f)));
+  const button = step.last
+    ? el("button", {type: "submit", id: "submit", class: "btn btn-navigate btn-submit"}, "Submit")
+    : el("button", {type: "submit", id: "next", class: "btn btn-navigate btn-next"}, "Next");
+  form.append(button);
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    if (step.last) return;
+    const missing = step.fields.filter(f => shown(f) && f.required && !(values[f.id] && values[f.id].length !== 0));
+    form.querySelectorAll(".error-message").forEach(m => m.remove());
+    if (missing.length) {
+      for (const f of missing) {
+        const control = form.querySelector(`[id="${CSS.escape(f.id)}"], [name="${CSS.escape(f.id)}"]`);
+        control.closest(".form-group").append(el("span", {class: "error-message"}, "This field is required"));
+      }
+      return;
+    }
+    const next = STEPS[stepIndex() + 1];
+    history.pushState({}, "", `${location.pathname}?jobSeqNo=ACMEUS1001EXTERNALENUS&step=${stepIndex() + 2}&stepname=${next.name}`);
+    setTimeout(render, 200);
+  });
+  document.getElementById("root").replaceChildren(form);
+}
+
+document.querySelector(".resume-upload-wrapper input").addEventListener("change", e => {
+  document.getElementById("resume-name").textContent = e.target.files[0].name;
+  render();
+});
+document.querySelectorAll("#cookie-banner button").forEach(b => b.addEventListener("click", () =>
+  document.getElementById("cookie-banner").remove()));
+render();
+</script>
+</body>
+</html>
