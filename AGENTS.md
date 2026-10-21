@@ -1,7 +1,7 @@
 `atsfill`: CLI that reads, dry-runs and submits job application forms on hiring systems (Ashby, Teamtailor, Greenhouse, Welcome to the Jungle), one adapter per system.
 
 - Key commands
-  - `uv run pytest` (add `-m live` for dry runs on real postings)
+  - `uv run pytest`
   - `uv run ruff check && uv run ruff format && uv run ty check`
 
 - Key documentation

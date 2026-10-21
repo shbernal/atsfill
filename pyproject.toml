@@ -53,10 +53,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = [
-    "live: drives a real hiring system page with data from .env and .tmp/; opt-in with -m live",
-]
-addopts = "-m 'not live' -n auto --dist loadscope"
+addopts = "-n auto --dist loadscope"
 
 [[tool.uv.index]]
 name = "testpypi"

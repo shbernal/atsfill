@@ -28,8 +28,6 @@ uv run ruff check && uv run ruff format && uv run ty check
 uv run pytest
 ```
 
-`uv run pytest -m live` dry-runs real postings from a gitignored `.env` and `.tmp/`. It never sends.
-
 ## Survey
 
 `uv run python -m scripts.survey` reads and dry-runs postings with the committed test persona and writes one row per URL to `.tmp/corpus/` ([ADR 0013](docs/adr/0013-survey-and-adapter-rounds.md)). It never sends. Sampling a source needs:
