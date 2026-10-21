@@ -24,3 +24,6 @@
   - Minimal attention when model implements without errors, we document in more detail when model struggles.
   - Do not expect the user to have read each line, don't lose him on the internals, give visibility on a higher-architectural level.
   - No journaling: code comments / documentation describe current state, they don't carry a log of their own edit history.
+
+- Domain model
+  - Domain terms are defined in `GLOSSARY.md`. Use those terms in code, comments, and conversation; never use a word listed under `_Avoid_` to refer to a domain term.
