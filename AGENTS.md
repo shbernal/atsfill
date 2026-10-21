@@ -14,6 +14,9 @@
   - Development dry-runs real postings freely. A `send` is a real application: never during development unless the user asks for that send.
   - The send rules (matching, refusal, statuses, double-send guard) live in the core, once. An adapter only knows its system's page.
   - A hiring system's behaviour is observed, not specified. Its doc, its adapter and its fixture page change together.
+  - CI green on the first run: merge. A red run counts even if a re-run goes green; re-run only to tell a flake from a break.
+  - A flake (red then green on one commit, main red after a green PR, green locally and red in CI) in the code the PR touches is its bug: fix it before merging. Elsewhere: find or file a `flaky` issue, then merge. After merging, check main's CI the same way.
+  - Waits and timeouts are named constants, never hardcoded.
 
 - Iron Laws
   - Tokens are expensive, state of the art models need minimal guidance, don't repeat yourself, don't babysit, don't be over-specific.
