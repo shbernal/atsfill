@@ -6,6 +6,8 @@ from datetime import date
 from functools import cache
 from importlib.resources import files
 
+from packaging.version import Version
+
 KINDS = ("ats", "board", "aggregator", "custom")
 ACCOUNTS = ("none", "to_send", "to_read")  # also the backlog order (ADR 0013)
 HOSTING = ("hosted", "embedded")
@@ -143,8 +145,7 @@ def with_state(text: str, source: str, key: str, value: Verification | Broken) -
 
 def release(verified: str, installed: str) -> str:
     """Whether a verified release is the installed one, `older` or `newer`."""
-    as_tuple = lambda v: tuple(int(n) for n in v.split("+")[0].split("."))  # noqa: E731
-    a, b = as_tuple(verified), as_tuple(installed)
+    a, b = (Version(Version(v).public) for v in (verified, installed))
     return "this_release" if a == b else "older" if a < b else "newer"
 
 
