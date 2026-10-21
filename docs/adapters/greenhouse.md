@@ -1,12 +1,12 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding company page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding employer page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 
 - Job boards: `job-boards.greenhouse.io`, `boards.greenhouse.io` and their EU hosts (`job-boards.eu.greenhouse.io`), at `/<board>/jobs/<id>`, the form on the job page itself. The double-send key is `https://job-boards.greenhouse.io/<board>/jobs/<id>`.
-- A company page with `?gh_jid=<id>` loads Greenhouse's embed, `iframe#grnhse_iframe` on `job-boards.greenhouse.io/embed/job_app?for=<board>&token=<id>`. atsfill opens that URL itself, keeping `gh_src`. A posting that is gone shows the embed without a form.
-- Many company career sites list Greenhouse jobs on pages of their own with no embed, `?gh_jid=` in the URL all the same: a form the employer built, or another system's apply flow (Phenom's `/apply?jobSeqNo=`, behind a Cloudflare challenge on a first visit). Those are not claimed.
+- An employer page with `?gh_jid=<id>` loads Greenhouse's embed, `iframe#grnhse_iframe` on `job-boards.greenhouse.io/embed/job_app?for=<board>&token=<id>`. atsfill opens that URL itself, keeping `gh_src`. A posting that is gone shows the embed without a form.
+- Many employer career sites list Greenhouse jobs on pages of their own with no embed, `?gh_jid=` in the URL all the same: a form the employer built, or another system's apply flow (Phenom's `/apply?jobSeqNo=`, behind a Cloudflare challenge on a first visit). Those are not claimed.
 
 ## Reading the form
 
@@ -31,7 +31,7 @@ On the page, `form#application-form`, each field rendering and on how many of 18
 | a lone checkbox (GDPR consent, an employment row's "Current role") | `choice`, `Yes`/`No` | 3 |
 | `.file-upload` group, with an "Enter manually" textarea behind a button | `file` | 18 |
 
-Sections built of these: employment rows (company, title, month selects, four-character year inputs) on 2, education rows on 5, US EEOC selects on 9, demographic selects with a consent box on 1. A radio input has not been seen; the read stops on one as `form_shape`.
+Sections built of these: employment rows (company, title, month selects, four-character year inputs) on 2, education rows on 5, US EEOC selects on 9, demographic selects with a consent box on 1. A radio input has not been seen; the read stops on one as `unsupported_rendering`.
 
 Required fields carry `aria-required="true"`. Labels hold a `*` marker hidden from screen readers.
 

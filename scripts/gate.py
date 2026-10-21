@@ -1,10 +1,10 @@
 """Whether an adapter is done (ADR 0013): one line per criterion, then PASS or FAIL.
 
-    uv run python -m scripts.gate <system> [--fresh] [--companies N] [--session ADAPTER=PATH]
+    uv run python -m scripts.gate <system> [--fresh] [--employers N] [--session ADAPTER=PATH]
     uv run python -m scripts.gate <system> --broken "<reason>" [--cause system|code|unknown]
 
 On PASS it records `dry_run_verified` in the registry; `--broken` records `send_broken` (ADR
-0012). Either is its own commit, so the commit it names is the code's. Never sends. Companies
+0012). Either is its own commit, so the commit it names is the code's. Never sends. Employers
 and postings are printed as hashes, so the output can go in a public pull request.
 """
 
@@ -28,7 +28,7 @@ from scripts import survey
 ROOT = Path(__file__).parents[1]
 REGISTRY = ROOT / "src/atsfill/registry.toml"
 GENERATED = [REGISTRY, ROOT / "docs/adapters/README.md", ROOT / "README.md"]
-COMPANIES = 5
+EMPLOYERS = 5
 CHECKS = [
     ["uv", "run", "pytest", "-q"],
     ["uv", "run", "ruff", "check"],
@@ -71,7 +71,7 @@ def parity(adapter: ReadsOverHttp, url: str, data: Path) -> str | None:
 
 
 def handle(value: str) -> str:
-    """A company or a posting, named without naming it: the output goes in a public PR."""
+    """An employer or a posting, named without naming it: the output goes in a public PR."""
     return hashlib.sha1(value.encode()).hexdigest()[:8]
 
 
@@ -82,8 +82,8 @@ def public(reason: str | None) -> str:
 
 def record(source: str, key: str, value: registry.Verification | registry.Broken) -> None:
     """Writes `key` into the registry and the files generated from it, as its own commit."""
-    REGISTRY.write_text(registry.with_state(REGISTRY.read_text(), source, key, value))
-    registry.systems.cache_clear()
+    REGISTRY.write_text(registry.with_verification(REGISTRY.read_text(), source, key, value))
+    registry.sources.cache_clear()
     subprocess.run(["uv", "run", "python", "-m", "scripts.backlog"], check=True, cwd=ROOT)
     message = f"Record {source} as {key.replace('_', ' ')}"
     subprocess.run(["git", "commit", "-qm", message, "--", *GENERATED], check=True, cwd=ROOT)
@@ -93,15 +93,15 @@ def record(source: str, key: str, value: registry.Verification | registry.Broken
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("system", help="the adapter's name")
-    p.add_argument("--fresh", action="store_true", help="survey new companies first")
-    p.add_argument("--companies", type=int, default=2 * COMPANIES, help="companies to sample")
+    p.add_argument("--fresh", action="store_true", help="survey new employers first")
+    p.add_argument("--employers", type=int, default=2 * EMPLOYERS, help="employers to sample")
     p.add_argument(
         "--session", type=session_arg, action="append", default=[], metavar="ADAPTER=PATH",
         help="a stored session, the dry runs fill under it",
     )  # fmt: skip
     p.add_argument("--broken", metavar="REASON", help="record that sending is broken")
     p.add_argument("--cause", choices=registry.CAUSES, default="unknown")
-    p.add_argument("--by", default="gate", help="who records it")
+    p.add_argument("--by", default="adapter_gate", help="who records it")
     args = p.parse_args()
     name = args.system
     head = survey.commit()
@@ -110,18 +110,18 @@ def main() -> None:
           f" browser {browser.version()}, {date.today()}")  # fmt: skip
 
     adapter = next((a for a in ADAPTERS if a.name == name), None)
-    system = registry.for_adapter(name)
+    source = registry.for_adapter(name)
     if args.broken:
-        if not (system and short):
+        if not (source and short):
             sys.exit("--broken needs a registry entry and a tree with no uncommitted changes")
         broken = registry.Broken(
             date.today(), version("atsfill"), short, args.by, args.broken, args.cause
         )
-        record(system.source, "send_broken", broken)
+        record(source.name, "send_broken", broken)
         return
 
     line(adapter is not None, "adapter registered in atsfill.adapters.ADAPTERS")
-    line(system is not None, "registry entry", system.source if system else "none names it")
+    line(source is not None, "registry entry", source.name if source else "none names it")
     pages = ROOT / "tests/pages" / name
     line(pages.is_dir() and any(pages.iterdir()), "fixture page", str(pages.relative_to(ROOT)))
     doc = ROOT / "docs/adapters" / f"{name}.md"
@@ -132,30 +132,32 @@ def main() -> None:
         tail = (run.stdout + run.stderr).strip().splitlines()[-1:] or [""]
         line(run.returncode == 0, " ".join(command[2:]), tail[0])
 
-    criterion = f"dry run ready on >= {COMPANIES} companies outside the inventory"
-    if not (adapter and system):
+    criterion = f"dry run ready on >= {EMPLOYERS} employers outside the sample"
+    if not (adapter and source):
         line(False, criterion, "no adapter or no registry entry")
     elif head is None:
         line(False, criterion, "uncommitted changes: only rows from a commit count")
     else:
         corpus = survey.CORPUS
-        inventory = {
-            r["company"] for r in rows([corpus / f"{system.source}.jsonl"]) if r.get("company")
+        sample = {
+            survey.employer(r)
+            for r in rows([corpus / f"{source.name}.jsonl"])
+            if survey.employer(r)
         }
         if args.fresh:
             postings = survey.freehire(
-                system.source, args.companies, lambda u: adapter.detect(u, None), inventory
+                source.name, args.employers, lambda u: adapter.detect(u, None), sample
             )
-            survey.run(postings, system.source, echo=False, sessions=dict(args.session),
-                       out=f"gate-{system.source}")  # fmt: skip
+            survey.run(postings, source.name, echo=False, sessions=dict(args.session),
+                       out=f"gate-{source.name}")  # fmt: skip
         counted = [
             r
             for r in rows(sorted(corpus.glob("*.jsonl")), head)
-            if r.get("system") == name and r.get("company") not in inventory
+            if r.get("system") == name and survey.employer(r) not in sample
         ]
-        ready = {r["company"]: r for r in counted if r["status"] == "ready"}
+        ready = {survey.employer(r): r for r in counted if r["status"] == "ready"}
         detail = ", ".join(f"{handle(c)} on {r['date']}" for c, r in ready.items()) or "none"
-        line(len(ready) >= COMPANIES, criterion, detail)
+        line(len(ready) >= EMPLOYERS, criterion, detail)
         others = Counter(
             (r["status"], r.get("label"), public(r.get("reason")))
             for r in counted
@@ -163,13 +165,13 @@ def main() -> None:
         )
         for (status, label, reason), n in others.most_common():
             print(f"      not ready ({n}): {status}, {label}, {reason}")
-        if len(ready) < COMPANIES and system.send_verified and not system.send_broken:
+        if len(ready) < EMPLOYERS and source.send_verified and not source.send_broken:
             print(
                 f"      {name} is send verified: if the stops above are a regression, record it"
                 f' with `gate {name} --broken "<fields and steps>" --cause unknown`'
             )
 
-        urls = [r["url"] for r in list(ready.values())[:COMPANIES]]
+        urls = [r["url"] for r in list(ready.values())[:EMPLOYERS]]
         if not isinstance(adapter, ReadsOverHttp):
             line(True, "read_api parity", "not applicable: no read_api")
         elif not urls:
@@ -184,9 +186,9 @@ def main() -> None:
                 )
 
     passed = all(results)
-    if passed and system and short:
+    if passed and source and short:
         v = registry.Verification(date.today(), version("atsfill"), args.by, short)
-        record(system.source, "dry_run_verified", v)
+        record(source.name, "dry_run_verified", v)
     print("PASS" if passed else "FAIL")
     sys.exit(0 if passed else 1)
 

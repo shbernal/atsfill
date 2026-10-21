@@ -4,9 +4,9 @@ Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/
 
 ## Where the form is
 
-- Jobs: `www.welcometothejungle.com/<lang>/companies/<company>/jobs/<slug>`. The double-send key drops the language: `https://www.welcometothejungle.com/companies/<company>/jobs/<slug>`.
+- Jobs: `www.welcometothejungle.com/<lang>/companies/<employer>/jobs/<slug>`. The double-send key drops the language: `https://www.welcometothejungle.com/companies/<employer>/jobs/<slug>`.
 - `easyapply.jobs/r/<id>` links (from job boards) redirect to the job, with or without a session, and open the apply form by themselves. The key comes from the job they land on.
-- Some jobs apply on the company's own site: their apply button is a link, and atsfill reports them `unsupported`.
+- Some jobs apply on the employer's own site: their apply button is a link, and atsfill reports them `unsupported`.
 - CloudFront lets Camoufox through headless with its own user agent. (Headless Chromium is answered 403.)
 
 ## Account
@@ -17,7 +17,7 @@ The job page is rendered for a visitor first: the apply button is a link to `/en
 
 ## Reading and filling
 
-The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with the form holding `[data-testid=apply-form-submit]`, prefilled from the profile. Field ids are the input names. Every form is the profile's fields, the ones the employer picked, and the employer's questions; the inventory, on 15 companies, then 10 at the gate:
+The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with the form holding `[data-testid=apply-form-submit]`, prefilled from the profile. Field ids are the input names. Every form is the profile's fields, the ones the employer picked, and the employer's questions; the inventory, on 15 employers, then 10 at the adapter gate:
 
 | Name | Field type | Rendering | Postings |
 |---|---|---|---|

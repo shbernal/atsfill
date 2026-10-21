@@ -15,5 +15,5 @@ One file per decision, numbered in the order they were taken. A decision that ch
 | [0009](0009-tests.md) | Hand-made fixture pages, live runs opt-in, a committed test persona |
 | [0010](0010-package-layout.md) | One package: a thin CLI over a core that owns every rule, adapters behind it |
 | [0011](0011-http-read.md) | `read` over HTTP where the system publishes its form, the page otherwise |
-| [0012](0012-systems-registry.md) | A committed registry of hiring systems: kind, share, account, block, adapter state |
-| [0013](0013-survey-and-adapter-rounds.md) | A survey script, a gate script, and one agent round per system |
+| [0012](0012-systems-registry.md) | A committed registry of hiring systems: kind, share, account, block, verification |
+| [0013](0013-survey-and-adapter-rounds.md) | A survey script, an adapter gate script, and one agent round per system |

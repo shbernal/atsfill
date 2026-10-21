@@ -12,7 +12,7 @@ from atsfill.core.results import Answer, FieldType
 
 PAGE = Path(__file__).parent / "pages/greenhouse/job.html"
 JOB = "https://job-boards.greenhouse.io/acme/jobs/1234"
-COMPANY = "https://www.example.com/careers?gh_jid=1234&gh_src=abc"
+EMPLOYER_PAGE = "https://www.example.com/careers?gh_jid=1234&gh_src=abc"
 
 
 def serve(route) -> None:
@@ -112,7 +112,7 @@ def test_a_radio_is_not_supported(page):
         """() => document.getElementById("application-form").insertAdjacentHTML("afterbegin",
         '<label for="r1">Remote</label><input type="radio" id="r1" name="remote">')"""
     )
-    with pytest.raises(Unsupported, match="form_shape: r1 is a radio"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: r1 is a radio"):
         Greenhouse().read_form(page)
 
 
@@ -122,11 +122,11 @@ def test_submit_returns_the_confirmation(page):
 
 
 def test_an_embedding_company_page(page):
-    adapter, fields = opened(page, COMPANY)
+    adapter, fields = opened(page, EMPLOYER_PAGE)
     assert (
         page.url == "https://job-boards.greenhouse.io/embed/job_app?for=acme&token=1234&gh_src=abc"
     )
-    assert adapter.posting(COMPANY) == JOB
+    assert adapter.posting(EMPLOYER_PAGE) == JOB
     assert fields
     page.goto(JOB)
     assert adapter.detect(JOB, None)

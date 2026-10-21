@@ -1,4 +1,4 @@
-"""Greenhouse (`job-boards.greenhouse.io`, `boards.greenhouse.io`, their EU hosts, and company
+"""Greenhouse (`job-boards.greenhouse.io`, `boards.greenhouse.io`, their EU hosts, and employer
 pages embedding them), as docs/adapters/greenhouse.md observes.
 
 Nothing but an attached file reaches Greenhouse before submit, so the read-back is the page:
@@ -128,11 +128,11 @@ class Greenhouse:
     def __init__(self) -> None:
         self._fields: dict[str, Field] = {}
         self._kinds: dict[str, str] = {}  # how the page renders each field
-        self._embed: str | None = None  # the job_app URL a company page embeds
+        self._embed: str | None = None  # the job_app URL an employer page embeds
 
     def detect(self, url: str, page: Page | None) -> bool:
-        """A board URL, or a company page whose `#grnhse_iframe` embeds a job application."""
-        self._embed = None  # one process detects many postings: a survey, the gate
+        """A board URL, or an employer page whose `#grnhse_iframe` embeds a job application."""
+        self._embed = None  # one process detects many postings: a survey, the adapter gate
         if _board_job(url):
             return True
         if page is None:
@@ -242,7 +242,7 @@ class Greenhouse:
                 else:
                     field_type = FieldType.MULTI_CHOICE if kind == "multi" else FieldType.CHOICE
             case _:  # a radio input, not seen on a posting yet
-                raise Unsupported(f"form_shape: {raw['id']} is a {kind}")
+                raise Unsupported(f"unsupported_rendering: {raw['id']} is a {kind}")
         return Field(
             raw["id"],
             raw["label"],

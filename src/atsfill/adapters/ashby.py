@@ -166,7 +166,7 @@ class Ashby:
                     self._saved(page, partial(upload.set_input_files, answer))
                 case kind, _:
                     raise Unsupported(
-                        f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
+                        f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
         self._answered = list(answers)
 
@@ -232,7 +232,7 @@ class Ashby:
         f = entry["field"]
         kind = TYPES.get(f["type"])
         if kind is None:
-            raise Unsupported(f"form_shape: {f['path']} is an Ashby {f['type']} field")
+            raise Unsupported(f"unsupported_rendering: {f['path']} is an Ashby {f['type']} field")
         options = [v["label"] for v in f.get("selectableValues") or []] or None
         if f["type"] == "Boolean":
             options = ["Yes", "No"]

@@ -1,4 +1,4 @@
-"""Breezy HR (`<company>.breezy.hr/p/<position>`, or a company's own domain), as
+"""Breezy HR (`<employer>.breezy.hr/p/<position>`, or an employer's own domain), as
 docs/adapters/breezy.md observes.
 
 Two page engines, an AngularJS one and a React one, render the same markup: named controls
@@ -219,7 +219,7 @@ class Breezy:
         self._kinds: dict[str, str] = {}  # how the page renders each field
 
     def detect(self, url: str, page: Page | None) -> bool:
-        """A `*.breezy.hr` position, or one on a company's domain that serves Breezy's portal."""
+        """A `*.breezy.hr` position, or one on an employer's domain that serves Breezy's portal."""
         parts = urlsplit(url)
         if not JOB.match(parts.path):
             return False
@@ -346,7 +346,7 @@ def _field(raw: dict[str, Any]) -> Field | None:
     kind = raw["kind"]
     if kind == "video":
         if raw["required"]:
-            raise Unsupported(f"form_shape: {raw['label']!r} asks for a recorded video")
+            raise Unsupported(f"unsupported_rendering: {raw['label']!r} asks for a recorded video")
         return None
     label = LABELS.get(raw["id"]) or raw.get("label", "")
     if "part" in raw:

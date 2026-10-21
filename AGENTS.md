@@ -10,7 +10,7 @@
 
 - Rules
   - Public repository. Personal data (answers, resumes, posting URLs, sessions) lives only in the gitignored `.env` and `.tmp/`, never in commits, fixtures or docs.
-  - The same goes for names: no employer, company or applicant names in code, fixtures, docs, branch names or commit messages. Use generic placeholders (`Acme`, `Jane Doe`).
+  - The same goes for names: no employer or user names in code, fixtures, docs, branch names or commit messages. Use generic placeholders (`Acme`, `Jane Doe`).
   - Development dry-runs real postings freely. A `send` is a real application: never during development unless the user asks for that send.
   - The send rules (matching, refusal, statuses, double-send guard) live in the core, once. An adapter only knows its system's page.
   - A hiring system's behaviour is observed, not specified. Its doc, its adapter and its fixture page change together.
@@ -24,3 +24,6 @@
   - Minimal attention when model implements without errors, we document in more detail when model struggles.
   - Do not expect the user to have read each line, don't lose him on the internals, give visibility on a higher-architectural level.
   - No journaling: code comments / documentation describe current state, they don't carry a log of their own edit history.
+
+- Domain model
+  - Domain terms are defined in `GLOSSARY.md`. Use those terms in code, comments, and conversation; never use a word listed under `_Avoid_` to refer to a domain term.

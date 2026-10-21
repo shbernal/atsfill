@@ -1,10 +1,10 @@
 # Teamtailor
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as a company's career site in `tests/test_teamtailor.py`.
+Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
 
 ## Where the form is
 
-- Career sites live at `<company>.teamtailor.com` or on the company's domain (`careers.<company>.com`, `jobs.<company>.fr`), sometimes under a locale (`/fr/jobs/…`). A job is `/jobs/<id>-<slug>`; the double-send key is `https://<host>/jobs/<id>`.
+- Career sites live at `<employer>.teamtailor.com` or on the employer's domain (`careers.<employer>.com`, `jobs.<employer>.fr`), sometimes under a locale (`/fr/jobs/…`). A job is `/jobs/<id>-<slug>`; the double-send key is `https://<host>/jobs/<id>`.
 - On a custom domain, the page shows itself by the "powered by" link to `www.teamtailor.com` in its footer. The footer text is translated ("Career site by Teamtailor", "Outil de recrutement de Teamtailor"), the link is not. Some sites drop the link; they still load Teamtailor's `careersite-*.js` from `teamtailor-cdn.com`.
 - The form has its own page, `<job>/applications/new`. "Apply for this job" on the job page opens the same form in an overlay; "Apply with LinkedIn" sits above it and is never used.
 - A career site can send its applications elsewhere: `applications/new` then redirects to another host, and the posting is `unsupported` as applying on another site.
@@ -58,5 +58,5 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
 ## Read-back and submit
 
-- Nothing reaches the company before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
+- Nothing reaches the employer before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
 - Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, the id a UUID, titled "Applied to <role>". An optional "Connect" step that follows is skipped.

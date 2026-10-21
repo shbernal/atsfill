@@ -22,7 +22,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Covered, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -311,7 +311,7 @@ class Phenom:
         try:
             ph = _phapp_of(page.content())  # the page's scripts' own world is out of reach
         except ValueError as e:
-            raise Unsupported(f"form_shape: {e}") from None
+            raise Unsupported(f"unsupported_flow: {e}") from None
         token = get(ph, "sessionParams.csrfToken") or ""
         try:
             fields, raws = _read(
@@ -320,7 +320,7 @@ class Phenom:
                 lambda body: page.evaluate(_FETCH, ["/applySubmit", body, token]),
             )
         except (BrowserError, ValueError, KeyError) as e:
-            raise Unsupported(f"form_shape: no configuration for the wizard ({e})") from None
+            raise Unsupported(f"unsupported_flow: no configuration for the wizard ({e})") from None
         self._raws = {raw["id"]: raw for raw in raws}
         return fields
 
@@ -348,7 +348,7 @@ class Phenom:
             if not _has_next(page):
                 return
             _next(page, number)
-        raise Unsupported(f"form_shape: the wizard has more than {MAX_STEPS} steps")
+        raise Unsupported(f"unsupported_flow: the wizard has more than {MAX_STEPS} steps")
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         return self._kept
@@ -381,7 +381,7 @@ class Phenom:
         except Timeout:
             step = parse_qs(urlsplit(page.url).query).get("stepname", ["none"])[0]
             raise Unsupported(
-                f"form_shape: no application step on the page (step {step})"
+                f"unsupported_flow: no application step on the page (step {step})"
             ) from None
 
     def _step(self, page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
@@ -442,7 +442,7 @@ def _read(
     reader = _Config(ph, config, texts, post)
     raws = [raw for step in reader.steps() for raw in step]
     if not raws:
-        raise Unsupported("form_shape: the wizard shows no fields")
+        raise Unsupported("unsupported_flow: the wizard shows no fields")
     resume = reader.resume()
     return ([resume] if resume else []) + [_field(raw) for raw in raws], raws
 
@@ -816,7 +816,7 @@ class _Config:
             }
         response = get(self.call(payload, **extra), "applyGetReferences")
         if not isinstance(response, dict):
-            raise Unsupported("form_shape: the job's questionnaire did not load")
+            raise Unsupported("unsupported_flow: the job's questionnaire did not load")
         part = response.get("data") if isinstance(get(response, "data.schema"), dict) else response
         if not isinstance(get(part, "schema"), dict):
             return []
@@ -1063,9 +1063,9 @@ def _apply_url(page: Page) -> str:
         time.sleep(SETTLE_S)
     target = urlsplit(href or "")
     if target.hostname and target.hostname != parts.hostname:
-        raise Unsupported(f"other_system: the application is on {target.hostname}")
+        raise Unsupported(f"external_step: the application is on {target.hostname}")
     if href and not APPLY.match(target.path):
-        raise Unsupported(f"form_shape: the Apply link leads to {target.path}")
+        raise Unsupported(f"unsupported_flow: the Apply link leads to {target.path}")
     if href:
         return f"{parts.scheme}://{parts.netloc}{target.path}?jobSeqNo={seq}"
     return f"{parts.scheme}://{parts.netloc}{prefix[1]}/apply?jobSeqNo={_seq(page.url)}"
@@ -1107,8 +1107,8 @@ def _next(page: Page, number: int) -> None:
                 return
         if errors := page.locator(FORM).evaluate(_ERRORS) if page.locator(FORM).count() else []:
             shown = "; ".join(f"{dom}: {message}" for dom, message in errors)
-            raise Unsupported(f"form_shape: step {number} did not pass: {shown}")
-    raise Unsupported(f"form_shape: step {number} did not pass in time")
+            raise Unsupported(f"unsupported_flow: step {number} did not pass: {shown}")
+    raise Unsupported(f"unsupported_flow: step {number} did not pass in time")
 
 
 def _click(page: Page, target: Locator) -> None:
@@ -1159,11 +1159,11 @@ def _pick_day(page: Page, dom: str, iso: str) -> None:
         by_year = [s for s in lists if any(o.isdigit() for o in s.evaluate(OPTIONS))]
         by_month = [s for s in lists if s not in by_year]
         if not by_year or not by_month or not by_year[0].evaluate(_SELECT, str(year)):
-            raise Unsupported(f"form_shape: {dom} does not list the year {year}")
+            raise NotTaken(f"{dom} does not list the year {year}")
         names = by_month[0].evaluate(OPTIONS)
         by_month[0].evaluate(_SELECT, names[month - 1 + len(names) - 12])
     elif not picker.locator(".react-datepicker__current-month").count():
-        raise Unsupported(f"form_shape: {dom} has a calendar without its month")
+        raise Unsupported(f"unsupported_rendering: {dom} has a calendar without its month")
     else:
         for _ in range(MAX_MONTH_STEPS):
             shown = picker.locator(".react-datepicker__current-month").inner_text().split()
@@ -1173,12 +1173,12 @@ def _pick_day(page: Page, dom: str, iso: str) -> None:
             step = "next" if at < (year, month) else "previous"
             _click(page, picker.locator(f".react-datepicker__navigation--{step}"))
         else:
-            raise Unsupported(f"form_shape: {dom} does not reach {iso}")
+            raise NotTaken(f"{dom} does not reach {iso}")
     cell = picker.locator(
         f".react-datepicker__day--{day:03d}:not(.react-datepicker__day--outside-month)"
     ).first
     if "--disabled" in (cell.get_attribute("class") or ""):
-        raise Unsupported(f"form_shape: {dom} does not take {iso}")
+        raise NotTaken(f"{dom} does not take {iso}")
     _click(page, cell)
 
 
@@ -1190,7 +1190,7 @@ def _page_to(page: Page, picker: Locator, header: str, year: int, dom: str) -> N
             return
         step = "next" if year > shown else "previous"
         _click(page, picker.locator(f".react-datepicker__navigation--{step}"))
-    raise Unsupported(f"form_shape: {dom} does not reach the year {year}")
+    raise NotTaken(f"{dom} does not reach the year {year}")
 
 
 def _date_tokens(form: str) -> list[str]:
@@ -1236,7 +1236,7 @@ def _upload(page: Page, path: str) -> None:
         deadline = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000
         while not uploaded and not page.evaluate(_SHOWS, name):
             if time.monotonic() > deadline:
-                raise Unsupported("form_shape: the resume upload did not show the file")
+                raise Unsupported("unsupported_rendering: the resume upload did not show the file")
             time.sleep(UPLOAD_POLL_S)
         deadline, quiet_since = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000, time.monotonic()
         while time.monotonic() < deadline and time.monotonic() - quiet_since < QUIET_S:
@@ -1270,7 +1270,7 @@ def _fill(page: Page, raw: dict[str, Any], answer: Answer) -> None:
                     break
                 parent = raw.get("parent")
                 if attempt or not parent or not (held := form.locator(f"[id='{parent}']")).count():
-                    raise Unsupported(f"form_shape: {raw['id']} has no option {_one(answer)!r}")
+                    raise NotTaken(f"{raw['id']} has no option {_one(answer)!r}")
                 held.evaluate(_SELECT, held.evaluate("el => el.selectedOptions[0]?.text.trim()"))
         case "typeahead":  # a list, or suggestions for what is typed
             _click(page, control)
@@ -1297,7 +1297,7 @@ def _fill(page: Page, raw: dict[str, Any], answer: Answer) -> None:
         case "radio":  # its label wraps it or names it by `for`
             page.evaluate(_COOKIES)
             if not form.evaluate(_RADIO, [raw["id"], _one(answer)]):
-                raise Unsupported(f"form_shape: {raw['id']} has no option {_one(answer)!r}")
+                raise NotTaken(f"{raw['id']} has no option {_one(answer)!r}")
         case "checkbox":
             if control.is_checked() != (_one(answer) == "Yes"):
                 control.evaluate("el => el.click()")  # the box is drawn over; React sees a click
@@ -1321,7 +1321,7 @@ def _fill(page: Page, raw: dict[str, Any], answer: Answer) -> None:
             picker = page.locator(PICKER).last
             if picker.locator("select.range-select").count():
                 if not picker.locator("select.range-select").evaluate(_SELECT, str(int(year))):
-                    raise Unsupported(f"form_shape: {dom} does not list the year {year}")
+                    raise NotTaken(f"{dom} does not list the year {year}")
             else:
                 _page_to(page, picker, ".react-datepicker-year-header", int(year), dom)
             _click(page, picker.locator(".react-datepicker__month-text").nth(int(month) - 1))
@@ -1340,7 +1340,7 @@ def _fill(page: Page, raw: dict[str, Any], answer: Answer) -> None:
                 step = "next" if year > first else "previous"
                 _click(page, picker.locator(f".react-datepicker__navigation--{step}"))
             else:
-                raise Unsupported(f"form_shape: {dom} does not list the year {year}")
+                raise NotTaken(f"{dom} does not list the year {year}")
         case "phone":  # a national number goes without the code the form asks on its own
             digits = re.sub(r"\D", "", _one(answer))
             dial = form.evaluate(_DIAL) if raw.get("national") else None

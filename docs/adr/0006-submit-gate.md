@@ -15,13 +15,13 @@
 | Status | Means |
 |---|---|
 | `ready` | dry run clean |
-| `refused` | a mismatch, a missing answer, or an adapter not enabled to submit |
+| `refused` | a mismatch, a missing answer, an answer the page would not take, or an adapter not enabled to submit |
 | `submitted` | sent, with the evidence |
-| `blocked` | a captcha challenge, an emailed code, a reCAPTCHA score refusal, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason and the URL come back |
+| `blocked` | a captcha challenge, an emailed code, a low reCAPTCHA score, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason and the URL come back |
 | `unknown` | submit was clicked and no evidence came before the time budget ran out |
-| `unsupported` | no adapter for the system, an account required, or a form shape the adapter does not handle; the reason comes back |
+| `unsupported` | no adapter for the system, or a rendering or a flow the adapter does not handle, or a step on another site; the reason comes back |
 
-The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `email_code`, `time_budget`, `covered: …` (what sits on a control), `no_adapter`, `form_shape: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`.
+The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `answer_not_taken: …` (no suggestion or option holds it), `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `email_code`, `time_budget`, `covered: …` (what sits on a control), `no_adapter`, `unsupported_rendering: …`, `unsupported_flow: …` (a step, page or section the adapter does not know), `external_step: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`.
 
 The exit code is 0 for `ready` and `submitted`, 1 for any other status, 2 for a usage error.
 

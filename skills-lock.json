@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "domain-modeling": {
+      "source": "shbernal/skills",
+      "sourceType": "github",
+      "skillPath": "skills/domain-modeling/SKILL.md",
+      "computedHash": "2529d5d7859bf582fb98ea2978a46c9bda29dcf50aea8a383723ae7ae90fb014"
+    },
     "freehire-search": {
       "source": "shbernal/skills",
       "sourceType": "github",

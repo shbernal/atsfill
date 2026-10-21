@@ -12,7 +12,7 @@ Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/
 
 A Vue 2 app draws the endpoint's entries in their order, each by `field_type`, then the candidate field's `client_field_slug` and `client_field_field_type`, then `response_type`. Field ids are the entries' numeric ids; the terms box is `terms_and_condition`.
 
-Each rendering and on how many of 100 postings from 25 companies (2026-10-20, over the endpoint):
+Each rendering and on how many of 100 postings from 25 employers (2026-10-20, over the endpoint):
 
 | Rendering | Field type | Postings |
 |---|---|---|

@@ -114,9 +114,9 @@ flowchart LR
     CLI[atsfill CLI] --> Core
     Core -->|detect, read, fill, read back, submit| Adapter[adapter for the system]
     Adapter --> Browser[headless Camoufox]
-    Core --> Gate{read-back matches,<br>submit enabled,<br>not already sent}
-    Gate -->|yes| Submit[submit]
-    Gate -->|no| Refused[refused]
+    Core --> SubmitGate{read-back matches,<br>submit enabled,<br>not already sent}
+    SubmitGate -->|yes| Submit[submit]
+    SubmitGate -->|no| Refused[refused]
 ```
 
 Each command launches its own headless Camoufox, a Firefox build patched to hide automation, with a fresh context and one saved device identity.

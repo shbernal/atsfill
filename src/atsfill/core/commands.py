@@ -5,10 +5,17 @@ from pathlib import Path
 
 from atsfill.adapters import ADAPTERS
 from atsfill.core import accounts, attempts, browser, matching, paths, registry
-from atsfill.core.adapter import Adapter, Blocked, NeedsAccount, ReadsOverHttp, Unsupported
+from atsfill.core.adapter import (
+    Adapter,
+    Blocked,
+    NeedsAccount,
+    NotTaken,
+    ReadsOverHttp,
+    Unsupported,
+)
 from atsfill.core.browser import Covered, OutOfTime, Page, open_page
 from atsfill.core.results import (
-    AdapterState,
+    AdapterStatus,
     Answer,
     Result,
     SessionReport,
@@ -75,11 +82,13 @@ def _no_adapter(url: str) -> Result:
 
 @contextmanager
 def _stops(result: Result) -> Generator[None]:
-    """Turns an adapter's `Unsupported` or `Blocked` into the result's status."""
+    """Turns an adapter's `Unsupported`, `NotTaken` or `Blocked` into the result's status."""
     try:
         yield
     except Unsupported as e:
         result.status, result.reason = Status.UNSUPPORTED, str(e)
+    except NotTaken as e:
+        result.status, result.reason = Status.REFUSED, f"answer_not_taken: {e}"
     except Blocked as e:
         result.status, result.reason = Status.BLOCKED, str(e)
     except Covered as e:
@@ -212,13 +221,13 @@ def send(
 def _unverified(adapter: str) -> str | None:
     """The warning a send carries when no send through the adapter was verified, or the last
     verified one fails now (ADR 0012)."""
-    system = registry.for_adapter(adapter)
-    if system and system.send_broken:
-        return f"send_broken: {_broken(system)}"
-    if system and system.send_verified:
+    source = registry.for_adapter(adapter)
+    if source and source.send_broken:
+        return f"send_broken: {_broken(source)}"
+    if source and source.send_verified:
         return None
-    state = system.state if system else None
-    return f"not_send_verified: {adapter} is {state or 'not in the registry'}"
+    verification = source.verification if source else None
+    return f"not_send_verified: {adapter} is {verification or 'not in the registry'}"
 
 
 def _session_state(adapter: Adapter, data: Path) -> str | None:
@@ -236,22 +245,22 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         config=paths.config_file(),
         browser=browser.version(),
         browser_pinned=browser.BUILD,
-        adapters=[_adapter_state(a, data) for a in ADAPTERS],
+        adapters=[_adapter_status(a, data) for a in ADAPTERS],
     )
 
 
-def _broken(system: registry.System) -> str:
-    broken, last = system.send_broken, system.send_verified
+def _broken(source: registry.Source) -> str:
+    broken, last = source.send_broken, source.send_verified
     assert broken
     since = f"send broken since {broken.date} ({broken.version}), {broken.reason}"
     return since + (f"; last verified {last.date} ({last.version})" if last else "")
 
 
-def _adapter_state(adapter: Adapter, data: Path) -> AdapterState:
-    system = registry.for_adapter(adapter.name)
-    verified = system.state if system else None
-    v = getattr(system, verified) if system and verified else None
-    return AdapterState(
+def _adapter_status(adapter: Adapter, data: Path) -> AdapterStatus:
+    source = registry.for_adapter(adapter.name)
+    verified = source.verification if source else None
+    v = getattr(source, verified) if source and verified else None
+    return AdapterStatus(
         adapter.name,
         submit_enabled=paths.submit_enabled(adapter.name),
         side_effects=adapter.side_effects,
@@ -259,7 +268,7 @@ def _adapter_state(adapter: Adapter, data: Path) -> AdapterState:
         verified=verified,
         verified_version=v.version if v else None,
         verified_release=registry.release(v.version, version("atsfill")) if v else None,
-        send_broken=_broken(system) if system and system.send_broken else None,
+        send_broken=_broken(source) if source and source.send_broken else None,
         session=_session_state(adapter, data),
     )
 

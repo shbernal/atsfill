@@ -21,7 +21,7 @@ account = "none"
 mapped = { date = 2026-10-01, version = "0.0.1", by = "agent" }
 dry_run_verified = { date = 2026-10-02, version = "0.0.1", by = "agent" }
 """).values()
-    assert system.state == "dry_run_verified"
+    assert system.verification == "dry_run_verified"
 
 
 @pytest.mark.parametrize(
@@ -84,21 +84,21 @@ def test_the_committed_backlog_is_current():
 
 def test_a_state_is_written_into_its_entry_only():
     text = '[a]\nkind = "ats"\naccount = "none"\n\n[b]\nkind = "ats"\naccount = "none"\n'
-    v = registry.Verification(date(2026, 10, 19), "0.0.2", "gate", "abc1234")
-    once = registry.with_state(text, "a", "dry_run_verified", v)
-    twice = registry.with_state(once, "a", "dry_run_verified", v)
+    v = registry.Verification(date(2026, 10, 19), "0.0.2", "adapter_gate", "abc1234")
+    once = registry.with_verification(text, "a", "dry_run_verified", v)
+    twice = registry.with_verification(once, "a", "dry_run_verified", v)
     assert once == twice
     systems = registry.parse(twice)
-    assert (systems["a"].dry_run_verified, systems["b"].state) == (v, None)
+    assert (systems["a"].dry_run_verified, systems["b"].verification) == (v, None)
 
 
 def test_a_verified_send_ends_a_break():
     text = '[a]\nkind = "ats"\naccount = "none"\n'
     broken = registry.Broken(date(2026, 10, 19), "0.0.2", "abc1234", "user", "resume empty")
-    text = registry.with_state(text, "a", "send_broken", broken)
+    text = registry.with_verification(text, "a", "send_broken", broken)
     assert registry.parse(text)["a"].send_broken == broken
     v = registry.Verification(date(2026, 10, 20), "0.0.3", "user", "def5678")
-    (system,) = registry.parse(registry.with_state(text, "a", "send_verified", v)).values()
+    (system,) = registry.parse(registry.with_verification(text, "a", "send_verified", v)).values()
     assert (system.send_verified, system.send_broken) == (v, None)
 
 

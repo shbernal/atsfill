@@ -4,7 +4,7 @@ Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `
 
 The registry covers 90.1% of postings.
 
-| Source | Kind | Share | Account | Hosting | Block | State |
+| Source | Kind | Share | Account | Hosting | Block | Verification |
 |---|---|---|---|---|---|---|
 | oracle | ats | 8.3% | none | hosted |  | [dry_run_verified](oracle.md) |
 | smartrecruiters | ats | 4.4% | none | hosted |  | [dry_run_verified](smartrecruiters.md) |
@@ -48,9 +48,9 @@ The registry covers 90.1% of postings.
 | paycom | ats | 2.4% | none | hosted | hCaptcha at form | mapped |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | mapped |
 
-Aggregators and company-built forms, counted and not adapted:
+Aggregators and employer-built forms, counted and not adapted:
 
-| Source | Kind | Share | Account | Hosting | Block | State |
+| Source | Kind | Share | Account | Hosting | Block | Verification |
 |---|---|---|---|---|---|---|
 | adzuna | aggregator | 1.3% | none |  |  | mapped |
 | eures | aggregator | 1.0% | none |  |  | mapped |

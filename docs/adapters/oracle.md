@@ -30,7 +30,7 @@ Each rendering, and on how many of the 12 forms reached out of 15 postings (2026
 | hidden `input.apply-flow-input-radio-control` under `label.apply-flow-input-radio` | `choice` | 5 |
 | checkbox list, `.input-row__control-item` inputs with their labels | `multi_choice` | 6 |
 | dropdown with a list (country, gender, veteran status, a question) | `choice` | 12 |
-| address geography (`.geo-hierarchy-form-element`): state, city, postal code dropdowns, each filtering the others; an item names the levels above it (`0200, Acton, ACT`), and once picked shows only its own (`0200`) | `choice`, the most specific level only; required when any level is | 3 of 10 at the gate |
+| address geography (`.geo-hierarchy-form-element`): state, city, postal code dropdowns, each filtering the others; an item names the levels above it (`0200, Acton, ACT`), and once picked shows only its own (`0200`) | `choice`, the most specific level only; required when any level is | 3 of 10 at the adapter gate |
 | dropdown listing only what is typed | `typeahead` | 0 |
 | address search in the address block (`addressLine1`, US format): suggestions fill ZIP, city, state and county | `text`, typed and left unpicked | US tenants |
 | date: `.datepicker-row`, three dropdowns, month name, day, year | `date` | 2 |

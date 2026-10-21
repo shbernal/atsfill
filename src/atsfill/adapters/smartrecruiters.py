@@ -136,7 +136,9 @@ class SmartRecruiters:
         _decline_cookies(page)
         for section in ENTRIES:
             if page.locator(f"{section} [data-test=section-required-mark]").count():
-                raise Unsupported(f"form_shape: {section.removeprefix('oc-')} entries are required")
+                raise Unsupported(
+                    f"unsupported_rendering: {section.removeprefix('oc-')} entries are required"
+                )
         context = page.evaluate(_CONTEXT) or {}
         screening = context.get("screeningConfiguration") or {}
         self._questions = {q["id"]: q for q in screening.get("questions") or []}
@@ -208,7 +210,7 @@ class SmartRecruiters:
             if kind == "currency":
                 field_type = FieldType.TEXT
             if field_type is None or kind in OPTIONAL_ONLY:
-                raise Unsupported(f"form_shape: {label!r} is a {kind} question")
+                raise Unsupported(f"unsupported_rendering: {label!r} is a {kind} question")
             options = [v["label"] for v in entry["values"]] or None
             if kind == "checkbox":
                 options = YES_NO
@@ -254,7 +256,7 @@ class SmartRecruiters:
 
 
 def _key(url: str) -> str | None:
-    """`https://jobs.smartrecruiters.com/<company>/<job id>`, or the One Click form's URL."""
+    """`https://jobs.smartrecruiters.com/<employer>/<job id>`, or the One Click form's URL."""
     parts = urlsplit(url)
     if parts.hostname not in HOSTS:
         return None

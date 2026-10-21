@@ -128,7 +128,7 @@ def test_a_number_input_keeps_digits_only(page):
 def test_a_required_entry_is_not_supported(page):
     page.goto(POSTING + "/apply/")
     page.evaluate("() => document.querySelector('#education_label small').remove()")
-    with pytest.raises(Unsupported, match="form_shape: education is a group"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: education is a group"):
         Workable().read_form(page)
 
 

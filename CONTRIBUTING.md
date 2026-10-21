@@ -35,9 +35,9 @@ uv run pytest
 - the [freehire CLI](https://github.com/strelov1/freehire-cli): `mise use -g github:strelov1/freehire-cli`;
 - the `freehire-search` skill, committed under `.agents/` and `.claude/skills/`; to reinstall it: `npx skills add shbernal/skills --skill freehire-search -a claude-code -a codex -y`.
 
-`uv run python -m scripts.gate <system> [--fresh]` says whether an adapter is done: the fixture page and doc, the checks, a dry run `ready` on five companies at the current commit, `read_api` parity. On PASS it commits `dry_run_verified` to the registry; `--broken "<reason>" --cause <cause>` commits `send_broken` ([ADR 0012](docs/adr/0012-systems-registry.md)). Its output names no company or posting, so it can go in a pull request.
+`uv run python -m scripts.gate <system> [--fresh]` says whether an adapter is done: the fixture page and doc, the checks, a dry run `ready` on five employers at the current commit, `read_api` parity. On PASS it commits `dry_run_verified` to the registry; `--broken "<reason>" --cause <cause>` commits `send_broken` ([ADR 0012](docs/adr/0012-systems-registry.md)). Its output names no employer or posting, so it can go in a pull request.
 
-The survey and the gate take `--session ADAPTER=PATH` for a system that needs an account: the dry runs fill under that account. The target is a dedicated test account per system, never a personal one.
+The survey and the adapter gate take `--session ADAPTER=PATH` for a system that needs an account: the dry runs fill under that account. The target is a dedicated test account per system, never a personal one.
 
 `uv run python -m scripts.backlog` regenerates [docs/adapters/README.md](docs/adapters/README.md) and the README's adapter badges from the registry.
 

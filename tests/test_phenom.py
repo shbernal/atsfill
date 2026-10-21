@@ -202,7 +202,7 @@ def test_an_apply_link_to_another_system_is_unsupported(page):
     )
     try:
         page.goto(JOB)
-        with pytest.raises(Unsupported, match="other_system: .*myworkdayjobs"):
+        with pytest.raises(Unsupported, match="external_step: .*myworkdayjobs"):
             Phenom().read_form(page)
     finally:
         page.unroute(JOB)

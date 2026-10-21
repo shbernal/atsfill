@@ -14,7 +14,7 @@ The page asks `POST /api/non-user-graphql?op=ApiJobPosting` with `organizationHo
 
 The endpoint answers without a session, so `read_api` sends the same query over HTTP. Cloudflare turns away Python's default user agent (error 1010), not a named one.
 
-Each type, how the page renders it, and on how many of 15 companies' postings (2026-10-19):
+Each type, how the page renders it, and on how many of 15 employers' postings (2026-10-19):
 
 | Ashby type | Field type | Rendering | Postings |
 |---|---|---|---|
@@ -28,7 +28,7 @@ Each type, how the page renders it, and on how many of 15 companies' postings (2
 | `ValueSelect` | `choice` | combobox, from 10 options seen | 2 |
 | `MultiValueSelect` | `multi_choice` | checkbox group | 6 |
 
-A type outside this table is `form_shape`, as is `EducationHistory`, a list of schools seen on one posting.
+A type outside this table is `unsupported_rendering`, as is `EducationHistory`, a list of schools seen on one posting.
 
 Survey forms come after the application form on the same page, on about half the postings sampled. Their questions seen so far are optional demographic selects with an "I prefer not to answer" option.
 

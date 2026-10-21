@@ -1,4 +1,4 @@
-# The hiring systems atsfill has mapped (ADR 0012), one table per freehire `source`.
+# The freehire sources atsfill has mapped (ADR 0012), one table per source.
 # `docs/adapters/README.md` is generated from this file: `uv run scripts/backlog.py`.
 #
 # kind      ats | board | aggregator | custom
@@ -25,7 +25,7 @@ account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "ashby"
 send_verified = { date = 2026-10-19, version = "0.0.2", by = "shbernal", commit = "7622376" }
-dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "c230c5e" }
+dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "adapter_gate", commit = "c230c5e" }
 
 [teamtailor]
 kind = "ats"
@@ -34,7 +34,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "teamtailor"
 send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "9bc6d84" }
-dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "91a0bba" }
+dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "adapter_gate", commit = "91a0bba" }
 
 [greenhouse]
 kind = "ats"
@@ -42,7 +42,7 @@ share = 0.0352
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "greenhouse"
-dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "c0fb0c5" }
+dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "adapter_gate", commit = "c0fb0c5" }
 
 [wttj]
 kind = "board"
@@ -51,7 +51,7 @@ account = "to_send"
 hosting = ["hosted"]
 adapter = "wttj"
 send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "9bc6d84" }
-dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "gate", commit = "ad9f478" }
+dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "adapter_gate", commit = "ad9f478" }
 
 [workday]
 kind = "ats"
@@ -75,7 +75,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "oracle"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "1b67ce5" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "1b67ce5" }
 
 [smartrecruiters]
 kind = "ats"
@@ -84,7 +84,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "smartrecruiters"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "d7eb8e7" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "d7eb8e7" }
 
 [successfactors]
 kind = "ats"
@@ -105,7 +105,7 @@ kind = "ats"
 share = 0.0244
 account = "none"
 hosting = ["hosted"]
-block = { vendor = "hCaptcha", signal = "image challenge on Continue To Application, the step before the form, 3 of 3 companies headless, and again on a virtual display and headed", step = "form", date = 2026-10-20, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
+block = { vendor = "hCaptcha", signal = "image challenge on Continue To Application, the step before the form, 3 of 3 employers headless, and again on a virtual display and headed", step = "form", date = 2026-10-20, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [icims]
@@ -122,7 +122,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "manatal"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "e682656" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "e682656" }
 
 [paylocity]
 kind = "ats"
@@ -131,7 +131,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "paylocity"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "d3edb25" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "d3edb25" }
 
 [dayforce]
 kind = "ats"
@@ -140,7 +140,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "dayforce"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "b3f33ce" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "b3f33ce" }
 
 [workable]
 kind = "ats"
@@ -149,7 +149,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "workable"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "76fb0fd" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "76fb0fd" }
 
 [energyjobline]
 kind = "aggregator"
@@ -178,7 +178,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "bamboohr"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "gate", commit = "b756312" }
+dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "adapter_gate", commit = "b756312" }
 
 [taleo]
 kind = "ats"
@@ -194,7 +194,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "jazzhr"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "2cf848b" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "2cf848b" }
 
 [lever]
 kind = "ats"
@@ -203,7 +203,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "lever"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "d35da0b" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "d35da0b" }
 
 [adp]
 kind = "ats"
@@ -225,7 +225,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "hireology"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "87c2539" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "87c2539" }
 
 [paycor]
 kind = "ats"
@@ -234,7 +234,7 @@ account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "paycor"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "gate", commit = "98b626f" }
+dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "98b626f" }
 
 [zohorecruit]
 kind = "ats"
@@ -264,7 +264,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "phenom"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "gate", commit = "8cab6dd" }
+dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "adapter_gate", commit = "8cab6dd" }
 
 [breezy]
 kind = "ats"
@@ -273,7 +273,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "breezy"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "gate", commit = "aac3924" }
+dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "adapter_gate", commit = "aac3924" }
 
 [recruitee]
 kind = "ats"
@@ -282,7 +282,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "recruitee"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "gate", commit = "4489120" }
+dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "adapter_gate", commit = "4489120" }
 
 [hrmdirect]
 kind = "ats"

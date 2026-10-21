@@ -1,7 +1,7 @@
 """Reads and dry-runs postings with the test persona, one row per URL in .tmp/corpus/ (ADR 0013).
 
     uv run python -m scripts.survey URL...
-    uv run python -m scripts.survey --source greenhouse --companies 5
+    uv run python -m scripts.survey --source greenhouse --employers 5
     uv run python -m scripts.survey --session wttj=PATH URL...
 
 Never sends. A row records the commit it ran at, or null on a tree with uncommitted changes.
@@ -128,7 +128,7 @@ def commit() -> str | None:
 
 
 def survey(
-    url: str, company: str, source: str | None, data: Path, cv: Path, sessions: Sessions
+    url: str, employer: str, source: str | None, data: Path, cv: Path, sessions: Sessions
 ) -> dict:
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
     session = next(
@@ -157,7 +157,7 @@ def survey(
         found.label = "unclear"
     return {
         "source": source,
-        "company": company,
+        "employer": employer,
         "url": url,
         "final_url": found.final_url,
         "system": result.system,
@@ -175,18 +175,23 @@ def survey(
     }
 
 
+def employer(row: dict) -> str:
+    """A row's employer; older rows carry it as `company`."""
+    return row.get("employer") or row.get("company") or ""
+
+
 def freehire(
     source: str,
-    companies: int,
+    employers: int,
     keep: Callable[[str], bool] = lambda url: True,
     exclude: set[str] = set(),  # noqa: B006
 ) -> list[tuple[str, str]]:
-    """One posting, with its company, from each of `companies` companies on a freehire source,
-    sampling until enough postings pass `keep` or the source runs out; `exclude`d companies
+    """One posting, with its employer, from each of `employers` employers on a freehire source,
+    sampling until enough postings pass `keep` or the source runs out; `exclude`d employers
     are skipped."""
     urls: dict[str, str] = {}
     offset, page_size = 0, 50
-    while len(urls) < companies:
+    while len(urls) < employers:
         run = subprocess.run(
             ["freehire", "--json", "search", "", "--facet", f"source={source}",
              "--limit", str(page_size), "--offset", str(offset)],
@@ -201,7 +206,7 @@ def freehire(
             if job["company_slug"] not in exclude and keep(job["url"]):
                 urls.setdefault(job["company_slug"], job["url"])
         offset += page_size
-    return [(url, company) for company, url in urls.items()][:companies]
+    return [(url, employer) for employer, url in urls.items()][:employers]
 
 
 def run(
@@ -213,19 +218,19 @@ def run(
     sessions: Sessions | None = None,
     out: str | None = None,
 ) -> list[dict]:
-    """Surveys each (URL, company), appending its row to .tmp/corpus/<out or source>.jsonl."""
+    """Surveys each (URL, employer), appending its row to .tmp/corpus/<out or source>.jsonl."""
     CORPUS.mkdir(parents=True, exist_ok=True)
     cv = persona.resume(CORPUS / "resume.pdf")
     persona.photo(CORPUS / "photo.png")
     data = paths.data_dir(data_dir)
     path, rows = CORPUS / f"{out or source or 'urls'}.jsonl", []
-    for n, (url, company) in enumerate(postings):
+    for n, (url, employer) in enumerate(postings):
         if n:
             time.sleep(delay)
         try:
-            row = survey(url, company, source, data, cv, sessions or {})
+            row = survey(url, employer, source, data, cv, sessions or {})
         except Exception as e:  # one posting's failure is a row, not the end of the survey
-            row = {"source": source, "company": company, "url": url, "label": "unclear",
+            row = {"source": source, "employer": employer, "url": url, "label": "unclear",
                    "reason": f"survey_error: {type(e).__name__}: {e}",
                    "date": date.today().isoformat()}  # fmt: skip
         with path.open("a") as f:
@@ -242,7 +247,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("urls", nargs="*")
     p.add_argument("--source", help="a freehire source to sample")
-    p.add_argument("--companies", type=int, default=5, help="distinct companies to sample")
+    p.add_argument("--employers", type=int, default=5, help="distinct employers to sample")
     p.add_argument("--data-dir", type=Path, default=CORPUS / "data")
     p.add_argument("--delay", type=float, default=DELAY_S, help="seconds between postings")
     p.add_argument(
@@ -252,7 +257,7 @@ def main() -> None:
     args = p.parse_args()
     if not args.urls and not args.source:
         p.error("give URLs or --source")
-    postings = [(u, _host(u)) for u in args.urls] or freehire(args.source, args.companies)
+    postings = [(u, _host(u)) for u in args.urls] or freehire(args.source, args.employers)
     run(postings, args.source, args.data_dir, args.delay, sessions=dict(args.session))
 
 

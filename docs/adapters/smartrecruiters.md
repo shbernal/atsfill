@@ -4,9 +4,9 @@ Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/
 
 ## Where the form is
 
-- Job pages: `jobs.smartrecruiters.com/<company>/<job id>-<slug>`. Their "I'm interested" link opens the One Click form, `jobs.smartrecruiters.com/oneclick-ui/company/<company>/publication/<uuid>` (also served on `www.smartr.me`), which atsfill follows. The double-send key is `https://jobs.smartrecruiters.com/<company>/<job id>`, or the form's URL when that is what was given.
+- Job pages: `jobs.smartrecruiters.com/<employer>/<job id>-<slug>`. Their "I'm interested" link opens the One Click form, `jobs.smartrecruiters.com/oneclick-ui/company/<employer>/publication/<uuid>` (also served on `www.smartr.me`), which atsfill follows. The double-send key is `https://jobs.smartrecruiters.com/<employer>/<job id>`, or the form's URL when that is what was given.
 - A job page with no One Click link is read as `posting_gone`.
-- The form's host answers 403 (Cloudflare) to anything but a browser, so there is no `read_api`. The public Posting API (`api.smartrecruiters.com/v1/companies/<company>/postings/<id>`) answers but carries no questions.
+- The form's host answers 403 (Cloudflare) to anything but a browser, so there is no `read_api`. The public Posting API (`api.smartrecruiters.com/v1/companies/<employer>/postings/<id>`) answers but carries no questions.
 - The page loads DataDome's tag; it has not stopped a dry run.
 
 ## Reading the form

@@ -1,4 +1,4 @@
-"""BambooHR (`<company>.bamboohr.com/careers/<job>`), as docs/adapters/bamboohr.md observes.
+"""BambooHR (`<employer>.bamboohr.com/careers/<job>`), as docs/adapters/bamboohr.md observes.
 
 The job page renders its application form, behind Apply for This Job, from a public JSON
 answer that lists every field with its label, requirement and options. `read_api` fetches it
@@ -198,7 +198,7 @@ class BambooHR:
                 else form.locator(f"[name='{name}']")
             )
             if not present.count():
-                raise Unsupported(f"form_shape: {field.id} is not on the page")
+                raise Unsupported(f"unsupported_flow: {field.id} is not on the page")
         return [f for f, _ in fields]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
@@ -388,7 +388,7 @@ def _form(
         if not entry:  # a demographic question the employer does not ask
             continue
         if key not in STANDARD:
-            raise Unsupported(f"form_shape: {key} is a field it does not know")
+            raise Unsupported(f"unsupported_rendering: {key} is a field it does not know")
         kind, name = STANDARD[key]
         label, required = entry["label"].strip(), entry["isRequired"]
         options = [o["text"] for o in entry.get("options") or []] or None
@@ -418,7 +418,7 @@ def _states(states: dict[str, Any], default: str | None) -> list[str]:
 def _custom(question: dict[str, Any]) -> list[tuple[Field, tuple[str, str | None, Any]]]:
     qid, kind_api = question["id"], question["type"]
     if kind_api not in CUSTOM:
-        raise Unsupported(f"form_shape: question {qid} is a {kind_api}")
+        raise Unsupported(f"unsupported_rendering: question {qid} is a {kind_api}")
     kind = CUSTOM[kind_api]
     name = f"customQuestionAnswers.{kind_api}_{qid}"
     label, required = question["question"].strip(), question["isRequired"]

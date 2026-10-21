@@ -11,7 +11,7 @@ import pytest
 
 from atsfill.adapters.paycor import Paycor
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import FieldType
 from tests import persona
 
@@ -203,7 +203,7 @@ def test_submit_posts_the_form(page, resume):
 
 def test_a_country_without_states_closes_the_state(page):
     adapter, _ = opened(page)
-    with pytest.raises(Unsupported, match="no options for that country"):
+    with pytest.raises(NotTaken, match="no options for that country"):
         adapter.fill(
             page,
             {

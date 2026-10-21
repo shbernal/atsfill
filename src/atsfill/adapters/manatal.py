@@ -112,7 +112,7 @@ def _field(entry: dict[str, Any], options: list[str] | None) -> Field | None:
     fid, label, required = str(entry["id"]), entry["label"], bool(entry["is_required"])
     match kind:
         case "entries" if required:
-            raise Unsupported(f"form_shape: {entry['field_type']} entries are required")
+            raise Unsupported(f"unsupported_rendering: {entry['field_type']} entries are required")
         case "entries":
             return None
         case "file":
@@ -245,7 +245,7 @@ class Manatal:
                     named.evaluate(_CHECK, answer == "Yes")
                 case kind, _:
                     raise Unsupported(
-                        f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}"
+                        f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
 
     def read_back(self, page: Page) -> dict[str, Answer]:

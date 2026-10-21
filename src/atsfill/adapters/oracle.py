@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -358,7 +358,7 @@ class Oracle:
         except browser.Timeout:
             if page.locator(CAPTCHA).count():
                 raise Blocked("captcha: the email step asks for an hCaptcha") from None
-            raise Unsupported("form_shape: the email step did not open the form") from None
+            raise Unsupported("unsupported_flow: the email step did not open the form") from None
         if page.locator(CODE_PAGE).count():
             raise Blocked(
                 f"emailed_code: {email} is known to this employer's Oracle, which emails it a"
@@ -371,7 +371,7 @@ class Oracle:
         """The field a raw description is, None for one atsfill leaves out."""
         if raw["kind"] == "tiles":
             if raw["required"]:
-                raise Unsupported(f"form_shape: {raw['label']!r} needs entries added")
+                raise Unsupported(f"unsupported_rendering: {raw['label']!r} needs entries added")
             return None
         if raw["kind"] == "email":
             self._kinds[EMAIL] = "email"
@@ -388,7 +388,7 @@ class Oracle:
         """The innermost row holding the field."""
         selector = page.evaluate(_ROW, field_id)
         if selector is None:
-            raise Unsupported(f"form_shape: {field_id} left the form while it was filled")
+            raise Unsupported(f"unsupported_flow: {field_id} left the form while it was filled")
         return page.locator(".input-row").filter(has=page.locator(selector)).last
 
     def _options(self, page: Page, field_id: str) -> list[str]:
@@ -454,7 +454,9 @@ class Oracle:
                 _choose(page, boxes.nth(1), str(int(day)), exact=True)
                 _choose(page, boxes.nth(2), year, exact=True)
             case _:
-                raise Unsupported(f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}")
+                raise Unsupported(
+                    f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
+                )
 
     def _phone(self, page: Page, row: Locator, answer: str) -> None:
         """Picks the country code the number starts with, the longest that fits, then types
@@ -468,7 +470,7 @@ class Oracle:
         )
         prefix = next((c for c in codes if digits.startswith(c)), None)
         if prefix is None:
-            raise Unsupported(f"form_shape: no country code for {answer!r}")
+            raise NotTaken(f"no country code for {answer!r}")
         _choose(page, code, f"+{prefix}", code=True)
         number = row.locator("input[type=tel]")
         number.fill(digits[len(prefix) :])
@@ -541,7 +543,7 @@ def _go_to(page: Page, number: int) -> None:
             )
             _settle(page)
             return
-    raise Unsupported(f"form_shape: page {number} of the form did not open")
+    raise Unsupported(f"unsupported_flow: page {number} of the form did not open")
 
 
 def _upload(field_id: str) -> str:
@@ -611,7 +613,7 @@ def _choose(
         box.press("Escape")
         if field is not None:
             break  # a search lists nothing untyped
-    raise Unsupported(f"form_shape: no item for {answer!r} in a dropdown")
+    raise NotTaken(f"no item for {answer!r} in a dropdown")
 
 
 def _field(raw: dict[str, Any]) -> Field:

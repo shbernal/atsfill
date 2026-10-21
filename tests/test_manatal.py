@@ -173,5 +173,5 @@ def test_submit_posts_the_form(page):
 
 def test_required_entries_are_not_supported(page):
     form = [*FORM[:-1], {**FORM[-1], "is_required": True}]
-    with pytest.raises(Unsupported, match="form_shape: educations entries are required"):
+    with pytest.raises(Unsupported, match="unsupported_rendering: educations entries are required"):
         opened(page, form)

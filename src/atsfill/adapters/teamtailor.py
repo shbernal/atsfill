@@ -1,4 +1,4 @@
-"""Teamtailor (`<company>.teamtailor.com` and career sites on the company's domain), as
+"""Teamtailor (`<employer>.teamtailor.com` and career sites on the employer's domain), as
 docs/adapters/teamtailor.md observes.
 
 The form posts nothing before submit except the resume, which goes to Teamtailor's storage as
@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -192,7 +192,7 @@ class Teamtailor:
         assert job, page.url  # detected on a job URL
         page.goto(f"{parts.scheme}://{parts.netloc}{parts.path[: job.end()]}/applications/new")
         if urlsplit(page.url).hostname != parts.hostname:
-            raise Unsupported(f"form_shape: the job applies on another site ({page.url})")
+            raise Unsupported(f"external_step: the job applies on another site ({page.url})")
         form = page.locator(FORM)
         try:
             form.wait_for()
@@ -206,7 +206,9 @@ class Teamtailor:
                 self._follow_ups[raw["id"]] = raw["asked"]
             field = _field(raw)
             if field is None and raw["required"]:
-                raise Unsupported(f"form_shape: {raw['label']!r} is a {raw['kind']} question")
+                raise Unsupported(
+                    f"unsupported_rendering: {raw['label']!r} is a {raw['kind']} question"
+                )
             if field is not None:
                 fields.append(field)
         self._fields = {f.id: f for f in fields}
@@ -272,7 +274,9 @@ class Teamtailor:
                 box = host.locator("input:not([type=hidden]):not([type=search]), textarea")
                 box.first.fill(answer)
             case kind, _:
-                raise Unsupported(f"form_shape: cannot fill {field_id}, a {kind}, with {answer!r}")
+                raise Unsupported(
+                    f"unsupported_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
+                )
 
     def _shown(self, form: Locator, field_id: str) -> bool:
         """Whether a follow-up question shows, once the answer before it has opened it."""
@@ -364,7 +368,7 @@ def _suggest(page: Page, field: Field, host: Locator, answer: str) -> None:
         if matching.matches(field, answer, options.nth(i).get_attribute("data-description") or ""):
             _click(page, options.nth(i))
             return
-    raise Unsupported(f"form_shape: no suggestion for {answer!r} in {field.id}")
+    raise NotTaken(f"no suggestion for {answer!r} in {field.id}")
 
 
 def _pick(page: Page, question: Locator, value: str) -> None:
