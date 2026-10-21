@@ -24,6 +24,15 @@ class Pages(SimpleHTTPRequestHandler):
         self.end_headers()
 
 
+@pytest.hookimpl(tryfirst=True)  # before xdist reads the groups
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """A test on a module's browser runs on that module's worker; any other, on any worker."""
+    for item in items:
+        defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[unresolved-attribute]
+        if any(d[-1].scope == "module" for d in defs):
+            item.add_marker(pytest.mark.xdist_group(item.module.__name__))  # ty: ignore[unresolved-attribute]
+
+
 @pytest.fixture(scope="session")
 def server() -> Generator[str]:
     """Serves tests/pages on localhost; 127.0.0.1 on the same port is a second origin."""
