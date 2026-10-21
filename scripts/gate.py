@@ -46,13 +46,14 @@ def line(ok: bool, criterion: str, detail: str = "") -> None:
     print(f"{'ok  ' if ok else 'FAIL'}  {criterion}" + (f": {detail}" if detail else ""))
 
 
-def rows(paths: list[Path]) -> list[dict]:
-    """The latest survey row of each URL in these files."""
+def rows(paths: list[Path], commit: str | None = None) -> list[dict]:
+    """The latest survey row of each URL in these files, of that commit if one is given."""
     latest: dict[str, dict] = {}
     for path in paths:
         for text in path.read_text().splitlines() if path.exists() else []:
             row = json.loads(text)
-            latest[row["url"]] = row
+            if commit is None or row.get("commit") == commit:
+                latest[row["url"]] = row
     return list(latest.values())
 
 
@@ -149,10 +150,8 @@ def main() -> None:
                        out=f"gate-{system.source}")  # fmt: skip
         counted = [
             r
-            for r in rows(sorted(corpus.glob("*.jsonl")))
-            if r.get("commit") == head
-            and r.get("system") == name
-            and r.get("company") not in inventory
+            for r in rows(sorted(corpus.glob("*.jsonl")), head)
+            if r.get("system") == name and r.get("company") not in inventory
         ]
         ready = {r["company"]: r for r in counted if r["status"] == "ready"}
         detail = ", ".join(f"{handle(c)} on {r['date']}" for c, r in ready.items()) or "none"

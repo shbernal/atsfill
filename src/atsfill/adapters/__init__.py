@@ -10,6 +10,7 @@ from atsfill.adapters.manatal import Manatal
 from atsfill.adapters.oracle import Oracle
 from atsfill.adapters.paycor import Paycor
 from atsfill.adapters.paylocity import Paylocity
+from atsfill.adapters.phenom import Phenom
 from atsfill.adapters.recruitee import Recruitee
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
@@ -35,4 +36,5 @@ ADAPTERS: list[Adapter] = [
     Recruitee(),
     Breezy(),
     BambooHR(),
+    Phenom(),  # last: it claims a URL by its path alone
 ]

@@ -39,6 +39,18 @@ class Broken:
 
 
 @dataclass(frozen=True)
+class Shortfall:
+    """A round that ended without an adapter reaching the gate (ADR 0013); `reason` names
+    what stopped it, never postings."""
+
+    date: date
+    version: str
+    commit: str
+    by: str
+    reason: str
+
+
+@dataclass(frozen=True)
 class Block:
     vendor: str
     signal: str
@@ -63,6 +75,7 @@ class System:
     dry_run_verified: Verification | None = None
     send_verified: Verification | None = None  # the last known good, kept through a break
     send_broken: Broken | None = None
+    unsupported: Shortfall | None = None
 
     @property
     def state(self) -> str | None:
@@ -95,6 +108,7 @@ def _system(source: str, entry: dict) -> System:
     if broken is not None:
         _one_of(source, "send_broken.cause", broken.get("cause", "unknown"), CAUSES)
         broken = Broken(**broken)
+    unsupported = entry.get("unsupported")
     return System(
         source,
         entry["kind"],
@@ -106,6 +120,7 @@ def _system(source: str, entry: dict) -> System:
         block,
         **states,
         send_broken=broken,
+        unsupported=Shortfall(**unsupported) if unsupported is not None else None,
     )
 
 
@@ -122,7 +137,7 @@ def _toml(value: object) -> str:
     return str(value) if isinstance(value, date) else f'"{value}"'
 
 
-def with_state(text: str, source: str, key: str, value: Verification | Broken) -> str:
+def with_state(text: str, source: str, key: str, value: Verification | Broken | Shortfall) -> str:
     """The registry file's text with `key` of `source` set to `value`, the rest untouched.
     Writing `send_verified` ends a `send_broken`."""
     lines = text.splitlines()
@@ -154,13 +169,14 @@ def for_adapter(name: str) -> System | None:
 
 
 def _backlog_key(s: System) -> tuple:
-    return (s.block is not None, ACCOUNTS.index(s.account), -(s.share or 0), s.source)
+    stopped = s.block is not None or s.unsupported is not None
+    return (stopped, ACCOUNTS.index(s.account), -(s.share or 0), s.source)
 
 
 def _row(s: System) -> str:
     share = f"{s.share:.1%}" if s.share is not None else ""
     block = f"{s.block.vendor} at {s.block.step}" if s.block else ""
-    state = "send_broken" if s.send_broken else s.state or ""
+    state = "send_broken" if s.send_broken else "unsupported" if s.unsupported else s.state or ""
     if s.adapter:
         state = f"[{state}]({s.adapter}.md)" if state else f"[adapter]({s.adapter}.md)"
     kind = f"{s.kind} → {', '.join(s.links_to)}" if s.links_to else s.kind
@@ -184,8 +200,8 @@ def backlog(registry: dict[str, System] | None = None) -> str:
         "Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by"
         " `uv run python -m scripts.backlog`. The registry is described in"
         " [ADR 0012](../adr/0012-systems-registry.md), the order in"
-        " [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked last,"
-        " then by share of postings.",
+        " [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked and"
+        " unsupported last, then by share of postings.",
         "",
         f"The registry covers {sum(s.share or 0 for s in registry.values()):.1%} of postings.",
         "",
@@ -205,6 +221,8 @@ COLORS = {"send_verified": "9ece6a", "dry_run_verified": "7aa2f7", "mapped": "a9
 def _badge(s: System) -> str:
     if s.send_broken:
         message, color = f"send broken {s.send_broken.date}", "f7768e"
+    elif s.unsupported:
+        message, color = f"unsupported {s.unsupported.date}", "e0af68"
     elif s.state:
         v: Verification = getattr(s, s.state)
         message, color = f"{s.state.replace('_', ' ')} {v.date}", COLORS[s.state]

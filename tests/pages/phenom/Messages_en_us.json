@@ -1,0 +1,10 @@
+{
+  "apply.label.profile": "Profile",
+  "apply.label.firstName": "First Name",
+  "apply.label.option.USA": "United States",
+  "apply.label.employee": "Employee",
+  "apply.breadcumb.info": "My Information",
+  "apply.breadcumb.jsq": "Questions",
+  "apply.breadcumb.additionaljsq": "More Questions",
+  "apply.html.resumeheader": "<p><span class='required'>*</span> Upload either DOC, DOCX, PDF or TXT file types (1MB max)</p>"
+}
