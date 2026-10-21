@@ -14,7 +14,7 @@ The page asks `POST /api/non-user-graphql?op=ApiJobPosting` with `organizationHo
 
 The endpoint answers without a session, so `read_api` sends the same query over HTTP. Cloudflare turns away Python's default user agent (error 1010), not a named one.
 
-Each type, how the page renders it, and on how many of 15 companies' postings (2026-10-19):
+Each type, how the page renders it, and on how many of 15 employers' postings (2026-10-19):
 
 | Ashby type | Field type | Rendering | Postings |
 |---|---|---|---|

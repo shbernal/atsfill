@@ -1,4 +1,4 @@
-"""Teamtailor (`<company>.teamtailor.com` and career sites on the company's domain), as
+"""Teamtailor (`<employer>.teamtailor.com` and career sites on the employer's domain), as
 docs/adapters/teamtailor.md observes.
 
 The form posts nothing before submit except the resume, which goes to Teamtailor's storage as

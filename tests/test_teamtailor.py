@@ -1,4 +1,4 @@
-"""The Teamtailor adapter on tests/pages/teamtailor, served as a company's career site."""
+"""The Teamtailor adapter on tests/pages/teamtailor, served as an employer's career site."""
 
 from pathlib import Path
 

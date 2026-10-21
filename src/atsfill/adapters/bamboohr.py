@@ -1,4 +1,4 @@
-"""BambooHR (`<company>.bamboohr.com/careers/<job>`), as docs/adapters/bamboohr.md observes.
+"""BambooHR (`<employer>.bamboohr.com/careers/<job>`), as docs/adapters/bamboohr.md observes.
 
 The job page renders its application form, behind Apply for This Job, from a public JSON
 answer that lists every field with its label, requirement and options. `read_api` fetches it

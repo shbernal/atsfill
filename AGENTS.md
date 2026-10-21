@@ -10,7 +10,7 @@
 
 - Rules
   - Public repository. Personal data (answers, resumes, posting URLs, sessions) lives only in the gitignored `.env` and `.tmp/`, never in commits, fixtures or docs.
-  - The same goes for names: no employer, company or applicant names in code, fixtures, docs, branch names or commit messages. Use generic placeholders (`Acme`, `Jane Doe`).
+  - The same goes for names: no employer or applicant names in code, fixtures, docs, branch names or commit messages. Use generic placeholders (`Acme`, `Jane Doe`).
   - Development dry-runs real postings freely. A `send` is a real application: never during development unless the user asks for that send.
   - The send rules (matching, refusal, statuses, double-send guard) live in the core, once. An adapter only knows its system's page.
   - A hiring system's behaviour is observed, not specified. Its doc, its adapter and its fixture page change together.

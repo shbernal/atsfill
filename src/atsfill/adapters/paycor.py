@@ -142,7 +142,7 @@ class Paycor:
 
     def detect(self, url: str, page: Page | None) -> bool:
         """A `recruitingbypaycor.com/career` job URL, or an employer page that embeds one."""
-        self._start = None  # one process detects many postings: a survey, the gate
+        self._start = None  # one process detects many postings: a survey, the adapter gate
         parts = urlsplit(url)
         if parts.hostname == HOST and (ids := _ids(url)):
             self._start = self._apply(*ids)

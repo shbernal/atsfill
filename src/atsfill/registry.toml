@@ -105,7 +105,7 @@ kind = "ats"
 share = 0.0244
 account = "none"
 hosting = ["hosted"]
-block = { vendor = "hCaptcha", signal = "image challenge on Continue To Application, the step before the form, 3 of 3 companies headless, and again on a virtual display and headed", step = "form", date = 2026-10-20, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
+block = { vendor = "hCaptcha", signal = "image challenge on Continue To Application, the step before the form, 3 of 3 employers headless, and again on a virtual display and headed", step = "form", date = 2026-10-20, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [icims]

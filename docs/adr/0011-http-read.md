@@ -13,4 +13,4 @@
 
 ## Consequences
 
-`read` on a known host takes a request instead of a browser launch and runs where no browser or display is available. An endpoint that is not documented (Ashby's) can change without notice; the fallback keeps `read` working, and the next gate run shows the drift. Between runs, a drifted endpoint can list the wrong fields; `fill` reads the page, so the send is not affected.
+`read` on a known host takes a request instead of a browser launch and runs where no browser or display is available. An endpoint that is not documented (Ashby's) can change without notice; the fallback keeps `read` working, and the next adapter gate run shows the drift. Between runs, a drifted endpoint can list the wrong fields; `fill` reads the page, so the send is not affected.

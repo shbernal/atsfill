@@ -1,10 +1,10 @@
 """Whether an adapter is done (ADR 0013): one line per criterion, then PASS or FAIL.
 
-    uv run python -m scripts.gate <system> [--fresh] [--companies N] [--session ADAPTER=PATH]
+    uv run python -m scripts.gate <system> [--fresh] [--employers N] [--session ADAPTER=PATH]
     uv run python -m scripts.gate <system> --broken "<reason>" [--cause system|code|unknown]
 
 On PASS it records `dry_run_verified` in the registry; `--broken` records `send_broken` (ADR
-0012). Either is its own commit, so the commit it names is the code's. Never sends. Companies
+0012). Either is its own commit, so the commit it names is the code's. Never sends. Employers
 and postings are printed as hashes, so the output can go in a public pull request.
 """
 
@@ -28,7 +28,7 @@ from scripts import survey
 ROOT = Path(__file__).parents[1]
 REGISTRY = ROOT / "src/atsfill/registry.toml"
 GENERATED = [REGISTRY, ROOT / "docs/adapters/README.md", ROOT / "README.md"]
-COMPANIES = 5
+EMPLOYERS = 5
 CHECKS = [
     ["uv", "run", "pytest", "-q"],
     ["uv", "run", "ruff", "check"],
@@ -71,7 +71,7 @@ def parity(adapter: ReadsOverHttp, url: str, data: Path) -> str | None:
 
 
 def handle(value: str) -> str:
-    """A company or a posting, named without naming it: the output goes in a public PR."""
+    """An employer or a posting, named without naming it: the output goes in a public PR."""
     return hashlib.sha1(value.encode()).hexdigest()[:8]
 
 
@@ -93,8 +93,8 @@ def record(source: str, key: str, value: registry.Verification | registry.Broken
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     p.add_argument("system", help="the adapter's name")
-    p.add_argument("--fresh", action="store_true", help="survey new companies first")
-    p.add_argument("--companies", type=int, default=2 * COMPANIES, help="companies to sample")
+    p.add_argument("--fresh", action="store_true", help="survey new employers first")
+    p.add_argument("--employers", type=int, default=2 * EMPLOYERS, help="employers to sample")
     p.add_argument(
         "--session", type=session_arg, action="append", default=[], metavar="ADAPTER=PATH",
         help="a stored session, the dry runs fill under it",
@@ -132,30 +132,32 @@ def main() -> None:
         tail = (run.stdout + run.stderr).strip().splitlines()[-1:] or [""]
         line(run.returncode == 0, " ".join(command[2:]), tail[0])
 
-    criterion = f"dry run ready on >= {COMPANIES} companies outside the inventory"
+    criterion = f"dry run ready on >= {EMPLOYERS} employers outside the sample"
     if not (adapter and system):
         line(False, criterion, "no adapter or no registry entry")
     elif head is None:
         line(False, criterion, "uncommitted changes: only rows from a commit count")
     else:
         corpus = survey.CORPUS
-        inventory = {
-            r["company"] for r in rows([corpus / f"{system.source}.jsonl"]) if r.get("company")
+        sample = {
+            survey.employer(r)
+            for r in rows([corpus / f"{system.source}.jsonl"])
+            if survey.employer(r)
         }
         if args.fresh:
             postings = survey.freehire(
-                system.source, args.companies, lambda u: adapter.detect(u, None), inventory
+                system.source, args.employers, lambda u: adapter.detect(u, None), sample
             )
             survey.run(postings, system.source, echo=False, sessions=dict(args.session),
                        out=f"gate-{system.source}")  # fmt: skip
         counted = [
             r
             for r in rows(sorted(corpus.glob("*.jsonl")), head)
-            if r.get("system") == name and r.get("company") not in inventory
+            if r.get("system") == name and survey.employer(r) not in sample
         ]
-        ready = {r["company"]: r for r in counted if r["status"] == "ready"}
+        ready = {survey.employer(r): r for r in counted if r["status"] == "ready"}
         detail = ", ".join(f"{handle(c)} on {r['date']}" for c, r in ready.items()) or "none"
-        line(len(ready) >= COMPANIES, criterion, detail)
+        line(len(ready) >= EMPLOYERS, criterion, detail)
         others = Counter(
             (r["status"], r.get("label"), public(r.get("reason")))
             for r in counted
@@ -163,13 +165,13 @@ def main() -> None:
         )
         for (status, label, reason), n in others.most_common():
             print(f"      not ready ({n}): {status}, {label}, {reason}")
-        if len(ready) < COMPANIES and system.send_verified and not system.send_broken:
+        if len(ready) < EMPLOYERS and system.send_verified and not system.send_broken:
             print(
                 f"      {name} is send verified: if the stops above are a regression, record it"
                 f' with `gate {name} --broken "<fields and steps>" --cause unknown`'
             )
 
-        urls = [r["url"] for r in list(ready.values())[:COMPANIES]]
+        urls = [r["url"] for r in list(ready.values())[:EMPLOYERS]]
         if not isinstance(adapter, ReadsOverHttp):
             line(True, "read_api parity", "not applicable: no read_api")
         elif not urls:

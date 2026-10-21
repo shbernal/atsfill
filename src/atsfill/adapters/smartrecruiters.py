@@ -254,7 +254,7 @@ class SmartRecruiters:
 
 
 def _key(url: str) -> str | None:
-    """`https://jobs.smartrecruiters.com/<company>/<job id>`, or the One Click form's URL."""
+    """`https://jobs.smartrecruiters.com/<employer>/<job id>`, or the One Click form's URL."""
     parts = urlsplit(url)
     if parts.hostname not in HOSTS:
         return None

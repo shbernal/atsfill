@@ -1,12 +1,12 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding company page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding employer page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 
 - Job boards: `job-boards.greenhouse.io`, `boards.greenhouse.io` and their EU hosts (`job-boards.eu.greenhouse.io`), at `/<board>/jobs/<id>`, the form on the job page itself. The double-send key is `https://job-boards.greenhouse.io/<board>/jobs/<id>`.
-- A company page with `?gh_jid=<id>` loads Greenhouse's embed, `iframe#grnhse_iframe` on `job-boards.greenhouse.io/embed/job_app?for=<board>&token=<id>`. atsfill opens that URL itself, keeping `gh_src`. A posting that is gone shows the embed without a form.
-- Many company career sites list Greenhouse jobs on pages of their own with no embed, `?gh_jid=` in the URL all the same: a form the employer built, or another system's apply flow (Phenom's `/apply?jobSeqNo=`, behind a Cloudflare challenge on a first visit). Those are not claimed.
+- An employer page with `?gh_jid=<id>` loads Greenhouse's embed, `iframe#grnhse_iframe` on `job-boards.greenhouse.io/embed/job_app?for=<board>&token=<id>`. atsfill opens that URL itself, keeping `gh_src`. A posting that is gone shows the embed without a form.
+- Many employer career sites list Greenhouse jobs on pages of their own with no embed, `?gh_jid=` in the URL all the same: a form the employer built, or another system's apply flow (Phenom's `/apply?jobSeqNo=`, behind a Cloudflare challenge on a first visit). Those are not claimed.
 
 ## Reading the form
 

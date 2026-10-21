@@ -4,15 +4,15 @@ Observed on live postings, last on 2026-10-21. The fixture page is [tests/pages/
 
 ## Where the form is
 
-- Positions: `<company>.breezy.hr/p/<position id>-<slug>`; some companies serve the same portal on their own domain, detected from the page by Breezy's portal scripts. The form is `…/apply`, which atsfill opens. The double-send key is `https://<host>/p/<position id>`.
-- A closed position redirects to the company's openings, with no form: `posting_gone`.
+- Positions: `<employer>.breezy.hr/p/<position id>-<slug>`; some employers serve the same portal on their own domain, detected from the page by Breezy's portal scripts. The form is `…/apply`, which atsfill opens. The double-send key is `https://<host>/p/<position id>`.
+- A closed position redirects to the employer's openings, with no form: `posting_gone`.
 - Two page engines serve the portal, an AngularJS one and a React one (about half each); the React one copies the AngularJS markup, `ng-model` attributes included, so one reading covers both. The form's configuration sits in the page (`#portal-data` JSON on React, `data-position` and `#questions` on AngularJS), in two shapes and without the EEO and consent sections on AngularJS, so there is no `read_api`.
 
 ## Reading the form
 
 A field is a named control and the name is its id (`cName`, `section_<section>_question_<n>`, `race_ethnicity`); its label is the `h3` before it, a lone checkbox's its own text. Required ones carry a visible `span.required` in the heading or a `required` attribute. The configuration's `headline` and `profile_photo` are never rendered on the form.
 
-Each rendering, and on how many of 200 postings from 115 companies (2026-10-21):
+Each rendering, and on how many of 200 postings from 115 employers (2026-10-21):
 
 | Rendering | Field type | Postings |
 |---|---|---|
@@ -42,7 +42,7 @@ Breezy can send a step to another on an answer (`next_section` actions); not see
 ## Filling
 
 - The step on show is filled, then Continue clicked while answers are left; a step Breezy keeps (a required answer missing) ends the fill there.
-- Attaching a file uploads it at once to `app.breezy.hr/api/portal/<company>/upload` (`…/upload/file` for a question's); the name then shows in its `.file-input-container`, waited for.
+- Attaching a file uploads it at once to `app.breezy.hr/api/portal/<employer>/upload` (`…/upload/file` for a question's); the name then shows in its `.file-input-container`, waited for.
 - An entry's link is clicked once before its first answer; selects pick by option text, radios and checkboxes are checked by their option's text.
 
 ## Read-back and submit

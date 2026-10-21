@@ -22,4 +22,4 @@ Adapters are built in order of how often their system shows up: Ashby, Teamtailo
 
 ## Consequences
 
-When a system changes its page, an adapter breaks where an agent would adapt. The read-back gate turns most breakage into a refusal rather than a wrong application, but where the read-back comes from the same page the adapter filled, a selector that hits the wrong input reads back what it wrote. Adapters that have a server-side read-back (Ashby) are stronger than those that read the page.
+When a system changes its page, an adapter breaks where an agent would adapt. The submit gate turns most breakage into a refusal rather than a wrong application, but where the read-back comes from the same page the adapter filled, a selector that hits the wrong input reads back what it wrote. Adapters that have a server-side read-back (Ashby) are stronger than those that read the page.

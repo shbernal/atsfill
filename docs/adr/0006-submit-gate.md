@@ -19,7 +19,7 @@
 | `submitted` | sent, with the evidence |
 | `blocked` | a captcha challenge, an emailed code, a reCAPTCHA score refusal, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason and the URL come back |
 | `unknown` | submit was clicked and no evidence came before the time budget ran out |
-| `unsupported` | no adapter for the system, an account required, or a form shape the adapter does not handle; the reason comes back |
+| `unsupported` | no adapter for the system, or a form shape the adapter does not handle; the reason comes back |
 
 The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `email_code`, `time_budget`, `covered: …` (what sits on a control), `no_adapter`, `form_shape: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`.
 

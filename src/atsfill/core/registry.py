@@ -209,7 +209,7 @@ def backlog(registry: dict[str, System] | None = None) -> str:
         *map(_row, adapters),
     ]
     if others:
-        text += ["", "Aggregators and company-built forms, counted and not adapted:", "", head]
+        text += ["", "Aggregators and employer-built forms, counted and not adapted:", "", head]
         text += map(_row, others)
     return "\n".join(text) + "\n"
 
