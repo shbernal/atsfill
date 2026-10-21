@@ -50,9 +50,11 @@ jobs:
 
   # PyPI has no dist-tags. A dev release (`0.0.3.dev42`: next patch, publish run number)
   # plays the part, since pip and uv skip pre-releases unless asked for one. PyPI refuses
-  # local versions, so the commit is in the run, not the version. The version is written to
-  # the working tree only, never committed. A CI run for a commit `main` has moved past
-  # publishes nothing; the run for the newer commit does.
+  # local versions, so the commit is in the run and the release notes, not the version.
+  # The version is written to the working tree only, never committed. A CI run for a
+  # commit `main` has moved past publishes nothing; the run for the newer commit does.
+  # The `next` tag and pre-release on GitHub follow the newest dev release, so the
+  # channel is visible from the repository.
   next:
     if: >-
       github.event_name == 'workflow_run' &&
@@ -61,6 +63,8 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository &&
       github.event.workflow_run.head_sha == github.sha
     runs-on: ubuntu-26.04
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -73,5 +77,15 @@ jobs:
         run: uv publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      - name: Replace the next pre-release
+        run: |
+          gh release delete next --yes || true
+          git tag -f next
+          git push -f origin next
+          gh release create next --verify-tag --prerelease --title "next: $(uv version --short)" \
+            --notes "\`atsfill==$(uv version --short)\` from $GITHUB_SHA, the newest build of \`main\`. Run it with \`uvx --prerelease allow atsfill\`." \
+            --generate-notes --notes-start-tag "$(gh release view --json tagName --jq .tagName)" dist/*
+        env:
+          GH_TOKEN: ${{ github.token }}
       - name: Summary
         run: echo "Published \`atsfill==$(uv version --short)\`." >> "$GITHUB_STEP_SUMMARY"
