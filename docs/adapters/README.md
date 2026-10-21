@@ -14,7 +14,7 @@ The registry covers 90.1% of postings.
 | dayforce | ats | 1.7% | none | hosted |  | [dry_run_verified](dayforce.md) |
 | workable | ats | 1.6% | none | hosted |  | [dry_run_verified](workable.md) |
 | ashby | ats | 1.5% | none | hosted, embedded |  | [send_verified](ashby.md) |
-| bamboohr | ats | 1.3% | none | hosted |  | [mapped](bamboohr.md) |
+| bamboohr | ats | 1.3% | none | hosted |  | [dry_run_verified](bamboohr.md) |
 | teamtailor | ats | 1.2% | none | hosted |  | [send_verified](teamtailor.md) |
 | jazzhr | ats | 1.2% | none | hosted |  | [dry_run_verified](jazzhr.md) |
 | lever | ats | 1.2% | none | hosted |  | [dry_run_verified](lever.md) |
