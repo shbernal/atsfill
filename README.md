@@ -64,7 +64,7 @@ uvx atsfill install-browser
 
 This downloads the Camoufox browser build atsfill is pinned to: 1.3 GB, about 2.5 GB once unpacked.
 
-Every push to `main` that passes CI is also published as a dev release; `uvx --prerelease allow atsfill` runs the newest.
+Every push to `main` that passes CI is also published as a dev release, listed on GitHub as the [`next` pre-release](https://github.com/shbernal/atsfill/releases/tag/next); `uvx --prerelease allow atsfill` runs the newest.
 
 ## Quickstart
 
