@@ -53,7 +53,6 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-n auto --dist loadscope"
 
 [[tool.uv.index]]
 name = "testpypi"
