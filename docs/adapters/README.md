@@ -25,7 +25,7 @@ The registry covers 90.1% of postings.
 | breezy | ats | 0.7% | none | hosted |  | [dry_run_verified](breezy.md) |
 | recruitee | ats | 0.7% | none | hosted |  | [dry_run_verified](recruitee.md) |
 | applicantpro | ats | 0.6% | none | hosted |  | mapped |
-| rippling | ats | 0.5% | none | hosted |  | mapped |
+| rippling | ats | 0.5% | none | hosted |  | [mapped](rippling.md) |
 | isolvedhire | ats | 0.5% | none | hosted |  | mapped |
 | personio | ats | 0.4% | none | hosted |  | mapped |
 | eightfold | ats | 0.4% | none | hosted |  | mapped |
