@@ -13,7 +13,7 @@ from tests.fake import FIELDS, Fake
 @pytest.fixture
 def fake(monkeypatch) -> Fake:
     adapter = Fake()
-    monkeypatch.setattr(commands, "ADAPTERS", [adapter])
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
     return adapter
 
 
@@ -315,3 +315,24 @@ def test_a_broken_send_warns_and_shows_in_status(fake, config, url, answers, dat
         "older",
         broken,
     )
+
+
+class Remembers(Fake):
+    """Keeps the page it reads, as an adapter keeps what it found on its posting's page."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.read_on: str | None = None
+
+    def read_form(self, page):
+        if self.read_on:
+            raise Unsupported(f"carried: {self.read_on}")
+        self.read_on = page.url
+        return self.fields
+
+
+def test_no_state_carries_from_one_posting_to_the_next(config, server, data, monkeypatch):
+    monkeypatch.setattr(commands, "adapters", lambda: [Remembers()])
+    first = core.read(f"{server}/form.html", data_dir=data)
+    second = core.read(f"{server}/form.html?second", data_dir=data)
+    assert (first.status, second.status, second.reason) == (Status.READY, Status.READY, None)

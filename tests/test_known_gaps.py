@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters import ADAPTERS
+from atsfill.adapters import adapters
 from atsfill.core.adapter import Adapter
 
 DOCS = Path(__file__).parent.parent / "docs/adapters"
@@ -19,6 +19,6 @@ def _documented(adapter: Adapter) -> dict[str, str]:
     return dict(ROW.findall(section[1])) if section else {}
 
 
-@pytest.mark.parametrize("adapter", ADAPTERS, ids=lambda a: a.name)
+@pytest.mark.parametrize("adapter", adapters(), ids=lambda a: a.name)
 def test_the_doc_lists_every_known_gap_and_no_other(adapter):
     assert _documented(adapter) == {k: str(v) for k, v in adapter.known_gaps.items()}

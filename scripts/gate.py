@@ -19,7 +19,7 @@ from datetime import date
 from importlib.metadata import version
 from pathlib import Path
 
-from atsfill.adapters import ADAPTERS
+from atsfill.adapters import adapters
 from atsfill.cli import session as session_arg
 from atsfill.core import browser, registry
 from atsfill.core.adapter import ReadsOverHttp
@@ -129,7 +129,7 @@ def main() -> None:
     print(f"gate {name}, atsfill {version('atsfill')} ({short or 'uncommitted'}),"
           f" browser {browser.version()}, {date.today()}")  # fmt: skip
 
-    adapter = next((a for a in ADAPTERS if a.name == name), None)
+    adapter = next((a for a in adapters() if a.name == name), None)
     source = registry.for_adapter(name)
     if args.broken:
         if not (source and short):
@@ -140,7 +140,7 @@ def main() -> None:
         record(source.name, "send_broken", broken)
         return
 
-    line(adapter is not None, "adapter registered in atsfill.adapters.ADAPTERS")
+    line(adapter is not None, "adapter registered in atsfill.adapters.adapters()")
     line(source is not None, "registry entry", source.name if source else "none names it")
     pages = ROOT / "tests/pages" / name
     line(pages.is_dir() and any(pages.iterdir()), "fixture page", str(pages.relative_to(ROOT)))

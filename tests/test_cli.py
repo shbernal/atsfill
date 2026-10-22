@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters import ADAPTERS
+from atsfill.adapters import adapters
 from atsfill.cli import parser, run
 from atsfill.core import browser
 
@@ -34,7 +34,7 @@ def test_status(tmp_path, monkeypatch, capsys):
     assert report["data_dir"] == str(tmp_path / "data")
     assert report["config"] == str(tmp_path / "conf/atsfill/config.toml")
     assert report["version"] and report["browser"]
-    assert [a["name"] for a in report["adapters"]] == [a.name for a in ADAPTERS]
+    assert [a["name"] for a in report["adapters"]] == [a.name for a in adapters()]
 
 
 def test_status_fails_on_another_browser_build(tmp_path, monkeypatch, capsys):

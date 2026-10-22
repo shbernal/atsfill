@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from atsfill import core
-from atsfill.adapters import ADAPTERS
+from atsfill.adapters import adapters
 from atsfill.core import browser
 from atsfill.core.adapter import NeedsAccount
 from atsfill.core.results import Result, SessionReport, Status, StatusReport
@@ -64,7 +64,7 @@ def parser() -> argparse.ArgumentParser:
     )
     sub.add_parser("status", help="version, paths, browser, and each adapter's state")
     sub.add_parser("install-browser", help="download the Camoufox build atsfill is pinned to")
-    accounts = [a.name for a in ADAPTERS if isinstance(a, NeedsAccount)]
+    accounts = [a.name for a in adapters() if isinstance(a, NeedsAccount)]
     sub.add_parser(
         "login", help="sign in, in a visible window, to a system that needs an account"
     ).add_argument("adapter", choices=accounts)
