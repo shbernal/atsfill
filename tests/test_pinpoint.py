@@ -221,6 +221,7 @@ def test_submit_returns_the_page_after(page):
     page.evaluate(
         "document.querySelectorAll('[required]').forEach(e => e.removeAttribute('required'))"
     )
+    adapter.fill(page, {})  # a send fills first, declining the cookie banner
     evidence = adapter.submit(page)
     assert evidence == f"{JOB}/applications/1/thanks"
 

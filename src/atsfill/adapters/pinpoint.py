@@ -34,6 +34,8 @@ FORM_TIMEOUT_MS = 30_000
 HYDRATE_TIMEOUT_MS = 30_000
 OPTION_TIMEOUT_MS = 5_000
 SHOWN_TIMEOUT_MS = 2_000
+COOKIE_TIMEOUT_MS = 5_000
+ONETRUST = "#onetrust-consent-sdk"
 US_STATE = ".react-select:has(input[type=hidden][name$='[town]'])"  # the town's place in the US
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
@@ -143,6 +145,7 @@ class Pinpoint:
         return [f for f, _ in listed]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        _decline_cookies(page)
         form = page.locator(FORM)
         for f in self._fields:
             if f.id not in answers:
@@ -231,6 +234,16 @@ def _hydrated(page: Page) -> None:
             arg=sorted(NOT_FIELDS),
             timeout=HYDRATE_TIMEOUT_MS,
         )
+
+
+def _decline_cookies(page: Page) -> None:
+    """Declines an employer's OneTrust banner, whose backdrop covers the form."""
+    if not page.locator(ONETRUST).count():
+        return
+    reject = page.locator(f"{ONETRUST} #onetrust-reject-all-handler")
+    with suppress(Timeout):
+        reject.wait_for(state="visible", timeout=COOKIE_TIMEOUT_MS)
+        reject.click()
 
 
 def _shown(root: Locator) -> bool:

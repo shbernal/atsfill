@@ -8,6 +8,7 @@ Pinpoint's career sites, observed on live postings, last on 2026-10-22. The fixt
 - The apply page is rendered on the server (Rails, React on Rails). The standard fields are native controls; every other field is a React component whose props sit in a `script.js-react-on-rails-component` JSON next to its empty root, the scripts staying in the page once React has rendered. `read_api` fetches that HTML over HTTP, `read_form` takes the page's form, and one parser lists the fields from both, from the controls outside the components and from the props: parity holds by construction.
 - A document is uploaded as soon as it is attached (an Active Storage direct upload to S3): it reaches Pinpoint before the submit.
 - The country of the address starts on the visitor's country, guessed by the page.
+- Some career domains carry the employer's OneTrust banner, whose backdrop covers the form: the fill first declines it.
 - 3 of 35 forms load an invisible reCAPTCHA Enterprise that puts its token in a hidden input; the others none.
 
 ## Reading the form

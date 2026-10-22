@@ -15,6 +15,11 @@
      controls, every other field as a React component whose props sit in the JSON script after
      its root. The script at the end stands in for React: it renders each component from its
      props, in the markup the live page has. -->
+<!-- An employer's OneTrust banner: its backdrop covers the form until declined. -->
+<div id="onetrust-consent-sdk">
+  <div class="onetrust-pc-dark-filter" style="position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.5)"></div>
+  <button id="onetrust-reject-all-handler" style="position: fixed; top: 0; z-index: 11" onclick="document.getElementById('onetrust-consent-sdk').remove()">Reject All</button>
+</div>
 <form id="application-form" class="external-form" enctype="multipart/form-data" action="/en/postings/1a2b3c4d-0000-4000-8000-000000000001/applications" accept-charset="UTF-8" method="post">
 <input type="hidden" name="authenticity_token" value="token" />
 <input type="hidden" name="application_form[linkedin_url]" id="application_form_linkedin_url" />
