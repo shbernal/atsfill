@@ -11,8 +11,11 @@ from atsfill.adapters.manatal import Manatal
 from atsfill.adapters.oracle import Oracle
 from atsfill.adapters.paycor import Paycor
 from atsfill.adapters.paylocity import Paylocity
+from atsfill.adapters.personio import Personio
 from atsfill.adapters.phenom import Phenom
+from atsfill.adapters.pinpoint import Pinpoint
 from atsfill.adapters.recruitee import Recruitee
+from atsfill.adapters.rippling import Rippling
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.workable import Workable
@@ -42,6 +45,9 @@ def adapters() -> list[Adapter]:
         Breezy(),
         BambooHR(),
         ZohoRecruit(),
+        Personio(),
+        Rippling(),
+        Pinpoint(),
         Eightfold(),
         Phenom(),  # last: it claims a URL by its path alone
     ]
