@@ -2,9 +2,11 @@
 
     uv run python -m scripts.gate <system> [--fresh] [--employers N] [--session ADAPTER=PATH]
     uv run python -m scripts.gate <system> --broken "<reason>" [--cause system|code|unknown]
+    uv run python -m scripts.gate <system> --cause system|code|unknown
 
 On PASS it records `dry_run_verified` in the registry; `--broken` records `send_broken` (ADR
-0012). Either is its own commit, so the commit it names is the code's. Never sends. Employers
+0012). Either is its own commit, so the commit it names is the code's. `--cause` alone settles
+the recorded break's cause and keeps the rest of it, its commit too. Never sends. Employers
 and postings are printed as hashes, so the output can go in a public pull request.
 """
 
@@ -15,6 +17,7 @@ import re
 import subprocess
 import sys
 from collections import Counter
+from dataclasses import replace
 from datetime import date
 from importlib.metadata import version
 from pathlib import Path
@@ -120,7 +123,10 @@ def main() -> None:
         help="a stored session, the dry runs fill under it",
     )  # fmt: skip
     p.add_argument("--broken", metavar="REASON", help="record that sending is broken")
-    p.add_argument("--cause", choices=registry.CAUSES, default="unknown")
+    p.add_argument(
+        "--cause", choices=registry.CAUSES,
+        help="the break's cause, `unknown` by default; alone, settles the recorded break's",
+    )  # fmt: skip
     p.add_argument("--by", default="adapter_gate", help="who records it")
     args = p.parse_args()
     name = args.system
@@ -135,9 +141,14 @@ def main() -> None:
         if not (source and short):
             sys.exit("--broken needs a registry entry and a tree with no uncommitted changes")
         broken = registry.Broken(
-            date.today(), version("atsfill"), short, args.by, args.broken, args.cause
+            date.today(), version("atsfill"), short, args.by, args.broken, args.cause or "unknown"
         )
         record(source.name, "send_broken", broken)
+        return
+    if args.cause:
+        if not (source and source.send_broken):
+            sys.exit("--cause alone needs a recorded send_broken")
+        record(source.name, "send_broken", replace(source.send_broken, cause=args.cause))
         return
 
     line(adapter is not None, "adapter registered in atsfill.adapters.adapters()")
