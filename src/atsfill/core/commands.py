@@ -39,9 +39,10 @@ def _login_required(url: str, adapter: Adapter) -> Result:
 def _opened(
     data: Path, url: str, sessions: Sessions | None, detected: list[str]
 ) -> Generator[tuple[Page, Adapter] | Result]:
-    """The loaded page and the adapter that claims it by its URL, else by its page; or the
-    result that ends the command first. An adapter that needs an account gets its session,
-    and only that adapter's (ADR 0007). The adapter's name goes in `detected` once known."""
+    """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
+    lands on, else by its page; or the result that ends the command first. An adapter that
+    needs an account gets its session, and only that adapter's (ADR 0007). The adapter's name
+    goes in `detected` once known."""
     adapter = _detect(url)
     if adapter:
         detected.append(adapter.name)
@@ -59,7 +60,7 @@ def _opened(
                 raise
             # A page that never finishes loading (a redirect to an employer's career page)
             # is left to the adapter that claimed its URL.
-        if adapter is None and (adapter := _detect(url, page)):
+        if adapter is None and (adapter := _detect(page.url) or _detect(url, page)):
             detected.append(adapter.name)
         if adapter is None:
             yield _no_adapter(url)

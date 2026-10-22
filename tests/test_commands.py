@@ -65,6 +65,11 @@ def test_read_detects_from_the_url(fake, config, server, data):
     assert (result.status, result.fields) == (Status.READY, FIELDS)
 
 
+def test_read_detects_from_the_url_a_redirect_lands_on(fake, config, server, data):
+    result = core.read(f"{server}/go/button.html%3Ffake", data_dir=data)
+    assert (result.status, result.fields) == (Status.READY, FIELDS)
+
+
 def test_a_page_that_never_loads_is_left_to_the_adapter_of_its_url(
     fake, config, server, data, monkeypatch
 ):
