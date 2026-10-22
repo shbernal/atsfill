@@ -1,6 +1,6 @@
 # Dayforce
 
-Dayforce's career sites (`jobs.dayforcehcm.com`) and their guest application, observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/dayforce/apply.html](../../tests/pages/dayforce/apply.html), served with the JSON it and the adapter read in `tests/test_dayforce.py`: one example of each rendering below.
+Dayforce's career sites (`jobs.dayforcehcm.com`) and their guest application, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/dayforce/apply.html](../../tests/pages/dayforce/apply.html), served with the JSON it and the adapter read in `tests/test_dayforce.py`: one example of each rendering below.
 
 ## Where the form is
 
@@ -34,6 +34,7 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | SMS consent dialog | `choice`, `No`/`Yes` | where enabled |
 | resume, cover letter, additional documents, `input[type=file]` | `file` | 25 |
 | history entry (employment, education): "Add …" (`[test-id=add-<section>-record]`), fields, Update | one entry, the fields' types, `max_length` read from an entry `read` adds; required only with the section | 16 each, required on 1 |
+| G.P.A. of an education entry: a number box (`role=spinbutton`) that drops what is not a number, and `4.0` to `4`, when it loses focus | `text`, labelled `(a number)`, read back after it loses focus | seen required on 1, 2026-10-22 |
 | work hours: a box per day, each ticked day a start and end `input[type=time]`, comments; open from the start, saved only with a day ticked | `workHours.days` `multi_choice`, `.start`, `.end` (`HH:MM`, every day alike), `.comment` | 5, required on 2 |
 | question type 1, a statement | not a field | 7 |
 | type 2 radio, type 5 yes/no: `.ant-radio-group` | `choice` | 13, 23 |

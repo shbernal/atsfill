@@ -70,6 +70,10 @@ TEMPLATE = {
          ]}},
         {"xRefCode": "SUBMIT", "displayName": "Submit", "sequence": 32767, "isRequired": True,
          "questionnaire": None, "fields": None},
+        {"xRefCode": "EDUCATIONHISTORY", "displayName": "Education History", "sequence": 4,
+         "isRequired": False, "questionnaire": None, "fields": [
+            field("SchoolName", True), field("GPA", True),
+         ]},
     ],
     "candidateAcknowledgement": "<p>By submitting this application, I certify it is true.</p>",
 }  # fmt: skip
@@ -146,7 +150,8 @@ def test_read_form_lists_every_page(page):
         "preferredContactMethod", "countryCode", "stateCode", "city", "postalCode",
         "candidateSource", "candidateSourceDescription", "smsConsent", "resume", "coverLetter",
         "additionalDocument", "workHistory.companyName", "workHistory.effectiveStart",
-        "workHistory.isCurrent", "workHistory.stateCode", "workHours.days", "workHours.start",
+        "workHistory.isCurrent", "workHistory.stateCode", "educationHistory.schoolName",
+        "educationHistory.gpa", "workHours.days", "workHours.start",
         "workHours.end", "workHours.comment", "q11", "q11.followup", "q13", "q14",
         "q15", "q16", "q16.followup", "q22", "q23", "userAcknowledged",
     ]  # fmt: skip
@@ -159,6 +164,7 @@ def test_read_form_lists_every_page(page):
     assert not by_id["workHistory.companyName"].required  # the section is optional
     assert by_id["workHistory.companyName"].max_length == 50  # read from an entry it opens
     assert by_id["workHistory.isCurrent"].options == ["No", "Yes"]
+    assert by_id["educationHistory.gpa"].label == "Education History: GPA (a number)"
     assert by_id["candidateSourceDescription"].label.endswith(
         "(asked when 'CandidateSource' is Agency)"
     )
@@ -195,6 +201,8 @@ def test_every_answer_reads_back(page, resume):
         "workHistory.effectiveStart": past,
         "workHistory.isCurrent": "Yes",
         "workHistory.stateCode": "New York",
+        "educationHistory.schoolName": "Acme College",
+        "educationHistory.gpa": "3.5",
         "workHours.days": ["Monday", "Friday"],
         "workHours.start": "09:00",
         "workHours.end": "17:00",
@@ -243,6 +251,34 @@ def test_a_future_start_date_keeps_the_wizard_on_candidate_info(page, resume):
     mismatched = {c.field_id for c in matching.check(fields, answers, adapter.read_back(page))
                   if not c.match}  # fmt: skip
     assert mismatched == {"q15", "userAcknowledged"}
+
+
+def test_a_gpa_not_a_number_reads_back_empty_and_keeps_the_wizard_on_candidate_info(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {
+        "email": "ada@example.com",
+        "confirmEmail": "ada@example.com",
+        "firstName": "Ada",
+        "lastName": "Placeholder",
+        "mobilePhone": "+12025550143",
+        "preferredContactMethod": "Email",
+        "countryCode": "United Kingdom",
+        "stateCode": "Greater London",
+        "city": "London",
+        "postalCode": "SW1A 1AA",
+        "candidateSource": "Job Board",
+        "educationHistory.schoolName": "Acme College",
+        "educationHistory.gpa": "Good",
+        "workHours.days": ["Monday"],
+        "workHours.start": "09:00",
+        "workHours.end": "17:00",
+        "q15": "Yes",
+        "userAcknowledged": "Yes",
+    }
+    adapter.fill(page, answers)
+    mismatched = {c.field_id for c in matching.check(fields, answers, adapter.read_back(page))
+                  if not c.match}  # fmt: skip
+    assert mismatched == {"educationHistory.gpa", "q15", "userAcknowledged"}
 
 
 def test_an_empty_follow_up_keeps_the_wizard_on_its_questionnaire(page):
