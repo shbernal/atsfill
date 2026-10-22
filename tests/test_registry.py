@@ -3,14 +3,14 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters import ADAPTERS
+from atsfill.adapters import adapters
 from atsfill.core import registry
 
 ROOT = Path(__file__).parents[1]
 
 
 def test_every_adapter_is_in_the_registry():
-    assert all(registry.for_adapter(a.name) for a in ADAPTERS)
+    assert all(registry.for_adapter(a.name) for a in adapters())
 
 
 def test_the_furthest_state_wins():

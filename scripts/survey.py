@@ -23,7 +23,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from atsfill import core
-from atsfill.adapters import ADAPTERS
+from atsfill.adapters import adapters
 from atsfill.cli import session as session_arg
 from atsfill.core import browser, paths
 from atsfill.core.browser import Page, Response
@@ -148,7 +148,7 @@ def survey(
 ) -> dict:
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
     session = next(
-        (sessions[a.name] for a in ADAPTERS if a.name in sessions and a.detect(url, None)), None
+        (sessions[a.name] for a in adapters() if a.name in sessions and a.detect(url, None)), None
     )
     with browser.open_page(data, session) as page:
         response = page.goto(url)

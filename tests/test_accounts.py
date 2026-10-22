@@ -13,7 +13,7 @@ from tests.fake import FakeAccount
 @pytest.fixture
 def account(server, monkeypatch) -> FakeAccount:
     adapter = FakeAccount(server)
-    monkeypatch.setattr(commands, "ADAPTERS", [adapter])
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
     monkeypatch.setattr(accounts, "POLL_MS", 100)
     monkeypatch.setattr(
         browser, "login_window", functools.partial(browser.login_window, headless=True)

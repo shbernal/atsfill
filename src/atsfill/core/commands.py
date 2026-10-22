@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from importlib.metadata import version
 from pathlib import Path
 
-from atsfill.adapters import ADAPTERS
+from atsfill.adapters import adapters
 from atsfill.core import accounts, attempts, browser, matching, paths, registry
 from atsfill.core.adapter import (
     Adapter,
@@ -26,8 +26,8 @@ from atsfill.core.results import (
 type Sessions = dict[str, Path]
 
 
-def _detect(url: str, page: Page | None = None) -> Adapter | None:
-    return next((a for a in ADAPTERS if a.detect(url, page)), None)
+def _detect(candidates: list[Adapter], url: str, page: Page | None = None) -> Adapter | None:
+    return next((a for a in candidates if a.detect(url, page)), None)
 
 
 def _login_required(url: str, adapter: Adapter) -> Result:
@@ -42,8 +42,10 @@ def _opened(
     """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
     lands on, else by its page; or the result that ends the command first. An adapter that
     needs an account gets its session, and only that adapter's (ADR 0007). The adapter's name
-    goes in `detected` once known."""
-    adapter = _detect(url)
+    goes in `detected` once known. The adapters are fresh: none keeps state from another
+    posting (a survey or the adapter gate runs many commands in one process)."""
+    candidates = adapters()
+    adapter = _detect(candidates, url)
     if adapter:
         detected.append(adapter.name)
     session = None
@@ -60,7 +62,9 @@ def _opened(
                 raise
             # A page that never finishes loading (a redirect to an employer's career page)
             # is left to the adapter that claimed its URL.
-        if adapter is None and (adapter := _detect(page.url) or _detect(url, page)):
+        if adapter is None and (
+            adapter := _detect(candidates, page.url) or _detect(candidates, url, page)
+        ):
             detected.append(adapter.name)
         if adapter is None:
             yield _no_adapter(url)
@@ -195,7 +199,7 @@ def _form_command(
 
 def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = None) -> Result:
     """Lists the form's fields, over HTTP when an adapter can (ADR 0011), else from the page."""
-    for adapter in ADAPTERS:
+    for adapter in adapters():
         if not isinstance(adapter, ReadsOverHttp):
             continue
         if (fields := adapter.read_api(url)) is not None:
@@ -261,7 +265,7 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         config=paths.config_file(),
         browser=browser.version(),
         browser_pinned=browser.BUILD,
-        adapters=[_adapter_status(a, data) for a in ADAPTERS],
+        adapters=[_adapter_status(a, data) for a in adapters()],
     )
 
 
@@ -290,7 +294,7 @@ def _adapter_status(adapter: Adapter, data: Path) -> AdapterStatus:
 
 
 def _account(name: str) -> NeedsAccount:
-    adapter = next((a for a in ADAPTERS if a.name == name), None)
+    adapter = next((a for a in adapters() if a.name == name), None)
     if not isinstance(adapter, NeedsAccount):
         raise ValueError(f"{name} is not an adapter that needs an account")
     return adapter

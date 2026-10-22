@@ -127,10 +127,6 @@ def test_an_embedding_company_page(page):
     )
     assert adapter.posting(EMPLOYER_PAGE) == JOB
     assert fields
-    page.goto(JOB)
-    assert adapter.detect(JOB, None)
-    adapter.read_form(page)
-    assert page.url == JOB  # not the earlier posting's embed
 
 
 def test_board_urls():

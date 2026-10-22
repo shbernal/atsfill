@@ -18,23 +18,26 @@ from atsfill.adapters.workable import Workable
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.core.adapter import Adapter
 
-ADAPTERS: list[Adapter] = [
-    Ashby(),
-    Teamtailor(),
-    Greenhouse(),
-    WelcomeToTheJungle(),
-    SmartRecruiters(),
-    Oracle(),
-    Manatal(),
-    Paylocity(),
-    Workable(),
-    Hireology(),
-    Paycor(),
-    JazzHR(),
-    Lever(),
-    Dayforce(),
-    Recruitee(),
-    Breezy(),
-    BambooHR(),
-    Phenom(),  # last: it claims a URL by its path alone
-]
+
+def adapters() -> list[Adapter]:
+    """One fresh instance of each adapter: a command's adapters never see another posting."""
+    return [
+        Ashby(),
+        Teamtailor(),
+        Greenhouse(),
+        WelcomeToTheJungle(),
+        SmartRecruiters(),
+        Oracle(),
+        Manatal(),
+        Paylocity(),
+        Workable(),
+        Hireology(),
+        Paycor(),
+        JazzHR(),
+        Lever(),
+        Dayforce(),
+        Recruitee(),
+        Breezy(),
+        BambooHR(),
+        Phenom(),  # last: it claims a URL by its path alone
+    ]

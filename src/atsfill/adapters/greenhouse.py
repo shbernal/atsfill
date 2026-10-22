@@ -133,7 +133,6 @@ class Greenhouse:
 
     def detect(self, url: str, page: Page | None) -> bool:
         """A board URL, or an employer page whose `#grnhse_iframe` embeds a job application."""
-        self._embed = None  # one process detects many postings: a survey, the adapter gate
         if _board_job(url):
             return True
         if page is None:
