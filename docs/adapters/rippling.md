@@ -42,7 +42,7 @@ Not observed: the voluntary disability form (`showCc305Form`), listed as `unhand
 
 ## Filling
 
-- The résumé first, then the fields in the page's order. Text, textarea and date parts are filled; a dropdown or a search box is opened and its option clicked; a radio, a box or a scale step is clicked; a place is typed and the first suggestion picked; a comment's button is clicked before its textarea is filled.
+- The résumé first, then the fields in the page's order. Text, textarea and date parts are filled; a dropdown or a search box is opened and its option clicked; a radio, a box or a scale step is clicked; a place is typed and the first suggestion picked once the list has stopped changing (each key typed renders its own suggestions, replacing the shown ones); a comment's button is clicked before its textarea is filled.
 
 ## Read-back and submit
 
