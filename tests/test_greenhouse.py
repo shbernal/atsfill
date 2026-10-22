@@ -12,6 +12,17 @@ from atsfill.core.results import Answer, FieldType
 PAGE = Path(__file__).parent / "pages/greenhouse/job.html"
 JOB = "https://job-boards.greenhouse.io/acme/jobs/1234"
 EMPLOYER_PAGE = "https://www.example.com/careers?gh_jid=1234&gh_src=abc"
+SCHOOLS = ["Acme College", "Acme University", "Other College", "Other"]  # two per page
+
+
+def education(url: str) -> dict:
+    """The board's education endpoint: School's options over two pages, the menu shows one."""
+    assert url.startswith("https://boards-api.greenhouse.io/v1/boards/acme/education/schools?")
+    page = int(url.rsplit("=", 1)[1])
+    return {
+        "items": [{"text": s} for s in SCHOOLS[2 * page - 2 : 2 * page]],
+        "meta": {"total_count": 4},
+    }
 
 
 def serve(route) -> None:
@@ -32,6 +43,7 @@ def page(tmp_path_factory):
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
         mp.setattr(greenhouse, "OPTIONS_TIMEOUT_MS", 500)
+        mp.setattr(greenhouse, "_get_json", education)
         for host in ("https://job-boards.greenhouse.io/**", "https://www.example.com/**"):
             page.context.route(host, serve)
         yield page
@@ -61,6 +73,7 @@ def test_read_form_waits_for_the_live_page(page):
         "resume",
         "question_1",
         "question_3",
+        "school--0",
         "start-year--0",
         "question_4",
         "question_2[]",
@@ -70,6 +83,7 @@ def test_read_form_waits_for_the_live_page(page):
     assert by_id["phone"].type is FieldType.PHONE
     assert by_id["candidate-location"].type is FieldType.TYPEAHEAD
     assert by_id["start-year--0"].type is FieldType.TEXT
+    assert by_id["school--0"].options == SCHOOLS
     assert by_id["question_4"].type is FieldType.MULTI_CHOICE
     assert by_id["question_2[]"].type is FieldType.MULTI_CHOICE
     assert by_id["gdpr_processing_consent_given"].label == "I agree to the processing of my data."
@@ -86,6 +100,7 @@ def test_every_answer_reads_back(page, resume):
         "resume": resume,
         "question_1": "No",
         "question_3": "Placeholder answer.",
+        "school--0": "Other",  # second of the options typing it shows, past the menu's first page
         "start-year--0": "2020",
         "question_4": ["Rust", "Go"],
         "question_2[]": ["French", "English"],
@@ -96,6 +111,15 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_education_options_from_the_menu_without_the_endpoint(page, monkeypatch):
+    def down(url: str) -> dict:
+        raise OSError(url)
+
+    monkeypatch.setattr(greenhouse, "_get_json", down)
+    _, fields = opened(page)
+    assert next(f for f in fields if f.id == "school--0").options == SCHOOLS[:2]
 
 
 def test_a_number_input_left_empty_for_text(page):

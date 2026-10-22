@@ -1,10 +1,11 @@
 <!doctype html>
 <meta charset="utf-8">
 <!-- A Greenhouse job board application as the adapter meets it, one field per rendering:
-     react-selects that open only once the page is live (Location suggests as you type, one takes
-     several values), a phone whose typed dial code sets its Country select, a textarea, a number
-     input, a checkbox group, a consent box that appears with the live page, and an attach that
-     swaps its input for the file's name. -->
+     react-selects that open only once the page is live and pick the option focused with the arrow
+     keys (Location suggests as you type, one takes several values, School shows only its first
+     page until typed into), a phone whose typed dial code sets its Country select, a textarea, a
+     number input, a checkbox group, a consent box that appears with the live page, and an attach
+     that swaps its input for the file's name. -->
 <style>.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; }</style>
 <form id="application-form">
   <div class="field-wrapper">
@@ -37,6 +38,10 @@
   </div>
   <label id="question_3-label" for="question_3">Why us?</label>
   <textarea id="question_3" aria-required="false"></textarea>
+  <div class="select" data-options="Acme College|Acme University|Other College|Other" data-page="2">
+    <label id="school--0-label" for="school--0">School</label>
+    <input id="school--0" role="combobox" aria-required="false">
+  </div>
   <label id="start-year--0-label" for="start-year--0">Start date year</label>
   <input id="start-year--0" type="number" aria-required="false">
   <div class="select" data-options="Rust|Python|Go" data-multi>
@@ -75,8 +80,11 @@
     select.append(shown);
     const fixed = (select.dataset.options || "").split("|").filter(Boolean).map(o => o.split(":"));
     const suggest = select.dataset.suggest?.split("|");
-    let focused = null, listbox = null;
-    const close = () => { listbox?.remove(); listbox = null; focused = null; };
+    const first = +select.dataset.page || Infinity;  // the options shown before typing
+    let items = [], focus = 0, listbox = null;
+    const close = () => { listbox?.remove(); listbox = null; items = []; };
+    const show = () => listbox?.querySelectorAll("[role=option]").forEach((o, i) =>
+      o.className = i === focus ? "select__option select__option--is-focused" : "select__option");
     const pick = ([label]) => {
       if (multi) shown.insertAdjacentHTML("beforeend", `<div class="select__multi-value__label">${label}</div>`);
       else shown.innerHTML = id === "country" ? `<div class="iti__flag"></div><span>${label.split(" ").pop()}</span>` : label;
@@ -87,7 +95,8 @@
     const open = () => {
       close();
       const query = input.value.toLowerCase();
-      const items = suggest ? (query.length > 1 ? suggest.map(s => [s]) : []) : fixed.filter(([l]) => l.toLowerCase().includes(query));
+      items = suggest ? (query.length > 1 ? suggest.map(s => [s]) : [])
+        : fixed.filter(([l]) => l.toLowerCase().includes(query)).slice(0, query ? Infinity : first);
       listbox = document.createElement("div");
       listbox.id = `react-select-${id}-listbox`;
       listbox.setAttribute("role", "listbox");
@@ -95,17 +104,18 @@
         const option = document.createElement("div");
         option.setAttribute("role", "option");
         option.textContent = item[0];
-        option.onmouseover = () => focused = item;
         option.onmousedown = e => { e.preventDefault(); if (!("enterOnly" in select.dataset)) pick(item); };
         listbox.append(option);
       }
-      focused = items[0] ?? null;
+      focus = 0;
+      show();
       if (items.length || !suggest) select.append(listbox);
     };
     input.addEventListener("mousedown", open);
     input.addEventListener("input", () => suggest ? setTimeout(open, 200) : open());
     input.addEventListener("keydown", e => {
-      if (e.key === "Enter" && focused) { e.preventDefault(); pick(focused); }
+      if (e.key === "ArrowDown" && items.length) { e.preventDefault(); focus = (focus + 1) % items.length; show(); }
+      if (e.key === "Enter" && items[focus]) { e.preventDefault(); pick(items[focus]); }
       if (e.key === "Escape") close();
     });
   }

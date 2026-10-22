@@ -1,6 +1,6 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding employer page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as a job board and an embedding employer page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 
@@ -36,11 +36,13 @@ Sections built of these: employment rows (company, title, month selects, four-ch
 
 Required fields carry `aria-required="true"`. Labels hold a `*` marker hidden from screen readers.
 
+An education row's School, Degree and Discipline selects open on the first page of the board's `boards-api.greenhouse.io/v1/boards/<board>/education/{schools,degrees,disciplines}` (100 per page, `meta.total_count`; schools run to thousands) and load the rest as you type. Their options are read from every page of that endpoint, falling back to the opened menu when it does not answer.
+
 The form is server-rendered and goes live a second or two later. Until then a select does not open and late sections (the consent box) are missing, so the read waits until the first select opens.
 
 ## Filling
 
-- React-selects: type, then hover the option with the exact text and press Enter, which every select takes.
+- React-selects: type, then move the focus (`.select__option--is-focused`) to the option with the exact text with ArrowDown and press Enter, which every select takes. Once typed into, a select's options ignore a hover.
 - The phone is typed with its dial code: intl-tel-input picks the country from it (by area code too: `+1 514` is Canada), spaces the number and sets the Country select, which then shows only `+1` and a flag.
 - Location wants one of its suggestions; the first one for the typed text is taken.
 - The resume goes to `#resume`, which an attach replaces with the file's name. Attaching uploads the file to Greenhouse's S3 at once.
