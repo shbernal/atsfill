@@ -34,6 +34,9 @@ LISTS: dict[str, tuple[str, Callable[[dict[str, Any]], str]]] = {
     "industries": ("clients/{client}/industries/", lambda n: n["name"]),
 }
 ENTRIES = ("educations", "experiences")  # a sub-form of entries
+# A salary's amount comes with a currency and a frequency select, each with an id of its own.
+SALARIES = {"expected_salary": "expected", "current_salary": "current"}
+FREQUENCIES = ["Hourly", "Daily", "Weekly", "Monthly", "Yearly"]
 OTHER = "Other"  # the radio or checkbox list option that opens a text box once picked
 SHORT = {"full_name", "email", "phone_number", "city", "address", "latest_degree",
          "latest_university", "current_company", "current_department", "current_position",
@@ -43,8 +46,8 @@ LOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 120_000
 
 # The answer each input holds, by field id, read as the page reads them on Apply.
-_READ = """fields => Object.fromEntries(fields.map(([id, kind]) => {
-  const el = document.getElementById('field' + id);
+_READ = """fields => Object.fromEntries(fields.map(([id, kind, dom]) => {
+  const el = document.getElementById(dom);
   const named = [...document.querySelectorAll(`input[name="${id}"]`)];
   const texts = s => [...s.selectedOptions].filter(o => o.value).map(o => o.text.trim());
   switch (kind) {
@@ -105,6 +108,24 @@ def _kind(entry: dict[str, Any]) -> str:
         case "integer":
             return "number"
     return "text"
+
+
+def _salary(entry: dict[str, Any]) -> list[tuple[str, str]]:
+    """A salary's currency and frequency selects: the field id each is listed as, and its own id."""
+    prefix = SALARIES.get(entry["client_field_slug"])
+    if prefix is None or entry["field_type"] != "candidate_field":
+        return []
+    return [(f"{entry['id']}.{part}", f"{prefix}_{part}") for part in ("currency", "frequency")]
+
+
+def _inputs(entries: list[dict[str, Any]]) -> list[tuple[str, str, str]]:
+    """Each input the page reads on Apply: its field id, its kind and its element id."""
+    inputs = []
+    for entry in entries:
+        if (kind := _kind(entry)) != "entries":
+            inputs.append((str(entry["id"]), kind, f"field{entry['id']}"))
+            inputs += [(fid, "select", dom) for fid, dom in _salary(entry)]
+    return inputs
 
 
 def _field(entry: dict[str, Any], options: list[str] | None) -> Field:
@@ -182,7 +203,10 @@ class Manatal:
                 return None
             entries = _get(f"jobs/{job.group(1)}/application-form/")
             terms = bool(TERMS_REQUIRED.search(html))
-            return self._fields(entries, terms, lambda e: _options(e, client))
+            salary = any(_salary(e) for e in entries)
+            currencies = [c["name"] for c in _get("currencies/")] if salary else []
+            salaries = lambda dom: currencies if dom.endswith("currency") else FREQUENCIES  # noqa: E731
+            return self._fields(entries, terms, lambda e: _options(e, client), salaries)
         except OSError, ValueError, KeyError, TypeError:
             return None
 
@@ -199,19 +223,31 @@ class Manatal:
             raise Unsupported(f"posting_gone: the form answered {response.status}")
         self._entries = response.json()
         page.wait_for_selector("#submit-id-submit", timeout=LOAD_TIMEOUT_MS)
-        # The lists of a multiple select come in their own requests, once the form is drawn.
+        # The lists of a multiple select and the currencies come in their own requests, once the
+        # form is drawn.
         page.wait_for_function(
             "() => [...document.querySelectorAll('select.multiselect')]"
-            ".every(s => s.options.length && s.classList.contains('select2-hidden-accessible'))",
+            ".every(s => s.options.length && s.classList.contains('select2-hidden-accessible'))"
+            " && [...document.querySelectorAll('#expected_currency, #current_currency')]"
+            ".every(s => s.options.length)",
             timeout=LOAD_TIMEOUT_MS,
         )
         terms = page.locator(f'input[name="{TERMS}"]').count() > 0
-        return self._fields(self._entries, terms, lambda e: self._shown(page, e))
+        return self._fields(
+            self._entries,
+            terms,
+            lambda e: self._shown(page, e),
+            lambda dom: page.locator(f"#{dom} option").evaluate_all(
+                "os => os.map(o => o.text.trim())"
+            ),
+        )
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        kinds = {str(e["id"]): _kind(e) for e in self._entries} | {TERMS: "terms"}
+        inputs = _inputs(self._entries)
+        kinds = {fid: kind for fid, kind, _ in inputs} | {TERMS: "terms"}
+        doms = {fid: dom for fid, _, dom in inputs}
         for field_id, answer in answers.items():
-            box = page.locator(f"#field{field_id}")
+            box = page.locator(f"#{doms.get(field_id, f'field{field_id}')}")
             named = page.locator(f'input[name="{field_id}"]')
             match kinds.get(field_id), answer:
                 case "text", str():
@@ -247,10 +283,10 @@ class Manatal:
                     )
 
     def read_back(self, page: Page) -> dict[str, Answer]:
-        kinds = [[str(e["id"]), _kind(e)] for e in self._entries if _kind(e) != "entries"]
+        inputs = [list(i) for i in _inputs(self._entries)]
         if page.locator(f'input[name="{TERMS}"]').count():
-            kinds.append([TERMS, "terms"])
-        held = page.evaluate(_READ, kinds)
+            inputs.append([TERMS, "terms", ""])
+        held = page.evaluate(_READ, inputs)
         return {k: v for k, v in held.items() if v not in (None, [])}
 
     def submit(self, page: Page) -> str | None:
@@ -271,6 +307,7 @@ class Manatal:
         entries: list[dict[str, Any]],
         terms: bool,
         options: Callable[[dict[str, Any]], list[str] | None],
+        salaries: Callable[[str], list[str]],
     ) -> list[Field]:
         fields = []
         for entry in entries:
@@ -278,6 +315,9 @@ class Manatal:
                 fields.append(self._entries_field(entry))
                 continue
             fields.append(field := _field(entry, options(entry)))
+            for fid, dom in _salary(entry):
+                label = f"{entry['label']}: {fid.rsplit('.', 1)[1]}"
+                fields.append(Field(fid, label, FieldType.CHOICE, field.required, salaries(dom)))
             if _kind(entry) in ("radio", "checkbox") and OTHER in (field.options or []):
                 fields.append(self._other_field(field))
         if terms:

@@ -17,6 +17,11 @@ NATIONALITIES = [
     {"id": 75, "common_name": "France", "demonym": "French"},
     {"id": 196, "common_name": "Singapore", "demonym": "Singaporean"},
 ]
+CURRENCIES = [
+    {"id": 1067, "name": "Barbados dollar", "code": "BBD"},
+    {"id": 3, "name": "Euro", "code": "EUR"},
+    {"id": 6, "name": "Singapore dollar", "code": "SGD"},
+]
 submitted: list[str] = []
 
 
@@ -66,7 +71,10 @@ def test_read_form_lists_each_rendering(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     ids = [str(i) for i in range(1, 23)]
-    assert list(by_id) == [*ids[:18], "18.other", *ids[18:], "terms_and_condition"]
+    salary = ["10", "10.currency", "10.frequency"]
+    other = ["18", "18.other"]
+    listed = [*ids[:9], *salary, *ids[10:17], *other, *ids[18:], "terms_and_condition"]
+    assert list(by_id) == listed
     gap = "unsupported_rendering: other: 18.other is the text box an answer of Other opens"
     assert (by_id["18.other"].unfillable, by_id["18.other"].required) == (gap, False)
     gap = "unsupported_rendering: entries: 22 is a list of educations"
@@ -78,6 +86,10 @@ def test_read_form_lists_each_rendering(page):
         ".docx",
         ".rtf",
     ]
+    assert by_id["10.currency"].type is FieldType.CHOICE and by_id["10.currency"].required
+    assert by_id["10.currency"].label == "Expected Salary: currency"
+    assert by_id["10.currency"].options == ["Barbados dollar", "Euro", "Singapore dollar"]
+    assert by_id["10.frequency"].options == ["Hourly", "Daily", "Weekly", "Monthly", "Yearly"]
     assert by_id["12"].type is FieldType.MULTI_CHOICE
     assert by_id["12"].options == [
         "American (United States)",
@@ -121,6 +133,8 @@ def test_read_api_lists_the_same_fields(page, monkeypatch):
             return Body(json.dumps(FORM).encode())
         if url.endswith("/nationalities/"):
             return Body(json.dumps(NATIONALITIES).encode())
+        if url.endswith("/currencies/"):
+            return Body(json.dumps(CURRENCIES).encode())
         return Body(html)
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
@@ -142,6 +156,8 @@ def test_every_answer_reads_back(page, resume):
         "8": "Engineer",
         "9": "Placeholder answer.",
         "10": "50000",
+        "10.currency": "Euro",
+        "10.frequency": "Yearly",
         "11": "3",
         "12": ["French (France)", "Singaporean (Singapore)"],
         "13": "30 days",

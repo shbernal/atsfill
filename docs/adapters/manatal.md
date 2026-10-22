@@ -1,6 +1,6 @@
 # Manatal
 
-Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/manatal/apply.html](../../tests/pages/manatal/apply.html), drawing the fields of [form.json](../../tests/pages/manatal/form.json), served behind a job page in `tests/test_manatal.py`.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/manatal/apply.html](../../tests/pages/manatal/apply.html), drawing the fields of [form.json](../../tests/pages/manatal/form.json), served behind a job page in `tests/test_manatal.py`.
 
 ## Where the form is
 
@@ -21,7 +21,7 @@ Each rendering and on how many of 100 postings from 25 employers (2026-10-20, ov
 | file input, resume (PDF, DOC, DOCX, RTF) | `file` | 92 |
 | textarea: cover letter (`description`), `longtext` fields | `text` | 94 |
 | text input, social profile (`social_media`) | `text` | 7 |
-| number input with currency and frequency selects (`expected_salary`, `current_salary`) | `text` labelled `(a number)`, the amount; currency and frequency left at their first option | 11 |
+| number input with currency and frequency selects (`expected_salary`, `current_salary`) | `text` labelled `(a number)`, the amount; `<id>.currency` and `<id>.frequency`, `choice`, required with the amount | 11 |
 | number input (`integer`) | `text` labelled `(a number)` | 2 |
 | select2 multiple select from a list of its own (`nationalities`, `industries`, also `languages`) | `multi_choice` | 7 |
 | select with a fixed list (`current_notice_period`, `years_of_experience`, `gender`) | `choice` | 6 |
@@ -33,7 +33,9 @@ Each rendering and on how many of 100 postings from 25 employers (2026-10-20, ov
 | checkbox list (`checkbox`), select2 multiple (`multiple_select_dropdown`) | `multi_choice` | 0, from the template |
 | terms and privacy box | `choice`, `Yes`/`No`, required | 100 |
 
-The options of a select, a radio or a checkbox list are read from the page, labels rather than values (`30 days`, not `30 00:00:00`). `read_api` takes them from the entries' `client_field_answer_choices`, the template's fixed lists (gender, notice period, years of experience) and the lists the page fetches apart (`/api/v1.0/nationalities/`, `languages/`, `clients/<client>/industries/`), labelled as the page labels them.
+The options of a select, a radio or a checkbox list are read from the page, labels rather than values (`30 days`, not `30 00:00:00`). `read_api` takes them from the entries' `client_field_answer_choices`, the template's fixed lists (gender, notice period, years of experience, salary frequency) and the lists the page fetches apart (`/api/v1.0/nationalities/`, `languages/`, `clients/<client>/industries/`, `currencies/`), labelled as the page labels them.
+
+A salary's currency and frequency selects (`#expected_currency`, `#expected_frequency`, `#current_…`) have no placeholder: unanswered, they send their first option, a currency that depends on the order `currencies/` returns.
 
 A radio or checkbox list with an `Other` option opens a text box (`.custom-other-val-input`) under it once `Other` is picked; Apply sends that text in place of `Other`, and refuses an empty one on a required list. It is listed as `<id>.other`, optional, a known gap.
 
