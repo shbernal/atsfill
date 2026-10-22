@@ -314,7 +314,7 @@ dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", 
 [isolvedhire]
 kind = "ats"
 share = 0.0047
-account = "none"
+account = "to_read"  # Apply now first verifies the email or phone with a one-time code, then creates an account on the employer's careers site; the application wizard (/apply/<job>-0.php) redirects to that site's login until then
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
@@ -336,7 +336,9 @@ kind = "ats"
 share = 0.0041
 account = "none"
 hosting = ["hosted"]
+adapter = "personio"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "ca99247" }
 
 [gupy]
 kind = "ats"
