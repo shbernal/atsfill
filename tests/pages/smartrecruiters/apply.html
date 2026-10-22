@@ -64,7 +64,7 @@
     <spl-dropzone><input type="file" accept=".doc, .pdf"><ul class="c-spl-file-list"></ul></spl-dropzone>
   </oc-resume-upload>
   <spl-textarea id="hiring-manager-message-input" label="Message to the Hiring Team"><textarea id="hiring-manager-message-input"></textarea></spl-textarea>
-  <oc-nav-first-page><button type="button" onclick="next()">Next</button></oc-nav-first-page>
+  <oc-nav-first-page><oc-button data-test="footer-next"><button type="button" onclick="next()">Suivant</button></oc-button></oc-nav-first-page>
 </main>
 
 <main id="screening" class="hidden">
@@ -99,7 +99,7 @@
     <spl-checkbox data-test="consent-box"><input type="checkbox"> You declare that you have read the privacy notice of Acme and agree to future offers.</spl-checkbox>
     <p>A notice with no box.</p>
   </oc-consent>
-  <button type="button" onclick="location.href = location.href.replace('/screening', '/success')">Submit</button>
+  <oc-button data-test="footer-submit"><button type="button" onclick="location.href = location.href.replace('/screening', '/success')">Envoyer</button></oc-button>
 </main>
 
 <script>
