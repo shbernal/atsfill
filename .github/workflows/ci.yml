@@ -48,7 +48,7 @@ jobs:
                   page.goto("about:blank")
               print(f"launch {run}: {time.monotonic() - start:.1f}s")
           EOF
-      - run: uv run pytest --durations=20 --shard ${{ matrix.shard }}/3
+      - run: uv run pytest -n auto --dist loadscope --durations=20 --shard ${{ matrix.shard }}/3
 
   # The check the ruleset requires: green only when lint and every shard are.
   check:

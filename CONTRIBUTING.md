@@ -25,8 +25,10 @@ uv run ruff check && uv run ruff format && uv run ty check
 ```
 
 ```sh
-uv run pytest
+uv run pytest tests/<file>
 ```
+
+Tests run in one process by default. The whole suite in parallel, as CI runs it, launches a browser per core: `uv run pytest -n auto --dist loadscope`.
 
 ## Survey
 
