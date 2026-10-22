@@ -362,7 +362,7 @@ class Oracle:
             raise RuntimeError("the email step did not open the form") from None
         if page.locator(CODE_PAGE).count():
             raise Blocked(
-                f"emailed_code: {email} is known to this employer's Oracle, which emails it a"
+                f"email_code: {email} is known to this employer's Oracle, which emails it a"
                 " code before it shows the form"
             )
         page.locator(f"{PAGINATION}:visible").first.wait_for(timeout=STEP_TIMEOUT_MS)
