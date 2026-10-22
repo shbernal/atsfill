@@ -4,7 +4,8 @@
     uv run python -m scripts.survey --source greenhouse --employers 5
     uv run python -m scripts.survey --session wttj=PATH URL...
 
-Never sends. A row records the commit it ran at, or null on a tree with uncommitted changes.
+Never sends. A row records the commit it ran at, or null on a tree with uncommitted changes,
+and each failing check with its answer and read-back.
 """
 
 import argparse
@@ -182,6 +183,11 @@ def survey(
         "status": result.status,
         "reason": result.reason,
         "fields": len(read.fields),
+        "mismatches": [
+            {"field_id": c.field_id, "answer": c.answer, "read_back": c.read_back}
+            for c in result.checks
+            if not c.match
+        ],
         **asdict(found),
         "step": step,
         "date": date.today().isoformat(),
