@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Apply - Product Designer - Acme</title>
+<style>
+  .react-select__menu { border: 1px solid #ccc; }
+  .react-select__option { padding: 4px; cursor: pointer; }
+  input[type=file] { opacity: 0.01; position: absolute; }
+</style>
+</head>
+<body>
+<!-- One example of each rendering Pinpoint's apply page shows: the standard fields as native
+     controls, every other field as a React component whose props sit in the JSON script after
+     its root. The script at the end stands in for React: it renders each component from its
+     props, in the markup the live page has. -->
+<form id="application-form" class="external-form" enctype="multipart/form-data" action="/en/postings/1a2b3c4d-0000-4000-8000-000000000001/applications" accept-charset="UTF-8" method="post">
+<input type="hidden" name="authenticity_token" value="token" />
+<input type="hidden" name="application_form[linkedin_url]" id="application_form_linkedin_url" />
+<fieldset class="external-form__fieldset" id="application-fieldset-details">
+  <legend class="external-form__legend"><span class="external-form__legend-index">1.</span>Personal Details</legend>
+  <div class="col-md-1-1">
+    <label class="external-form__label external-form__label--required" for="application_form_application_first_name">First Name</label>
+    <input required="required" maxlength="255" type="text" name="application_form[application][first_name]" id="application_form_application_first_name" />
+  </div>
+  <div class="col-md-1-1">
+    <label class="external-form__label" for="application_form_application_preferred_name">Preferred Name</label>
+    <input type="text" name="application_form[application][preferred_name]" id="application_form_application_preferred_name" />
+  </div>
+  <div class="col-md-1-1">
+    <label class="external-form__label external-form__label--required" for="application_form_application_last_name">Last Name</label>
+    <input required="required" type="text" name="application_form[application][last_name]" id="application_form_application_last_name" />
+  </div>
+  <div class="col-1-1">
+    <label class="external-form__label external-form__label--required" for="application_form_application_email">Email Address</label>
+    <input required="required" type="email" name="application_form[application][email]" id="application_form_application_email" />
+  </div>
+  <div class="col-1-1">
+    <label class="external-form__label external-form__label--required" for="application_form_application_phone">Phone</label>
+    <div id="Shared::Form::Phonenumberinput-react-component-1"></div>
+    <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Phonenumberinput" data-dom-id="Shared::Form::Phonenumberinput-react-component-1">{"name":"application_form[application][phone]","value":null,"iso2":null,"primaryIso2":"GB","fallbackIso2":"US","placeholder":"Phone","required":true,"id":"application_form_application_phone"}</script>
+  </div>
+  <div class="col-1-1">
+    <label for="application_form_application_date_of_birth"><span class="external-form__label external-form__label--inline">Date of Birth</span></label>
+    <div class="date-select">
+      <select id="application_form_application_date_of_birth_3i" name="application_form[application][date_of_birth(3i)]" class="date-select__field day"><option value="">Day</option><option value="1">1</option><option value="31">31</option></select>
+      <select id="application_form_application_date_of_birth_2i" name="application_form[application][date_of_birth(2i)]" class="date-select__field month"><option value="">Month</option><option value="1">January</option><option value="2">February</option></select>
+      <select id="application_form_application_date_of_birth_1i" name="application_form[application][date_of_birth(1i)]" class="date-select__field year"><option value="">Year</option><option value="2011">2011</option><option value="1990">1990</option></select>
+    </div>
+  </div>
+  <div id="Shared::Form::Address-react-component-2"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Address" data-dom-id="Shared::Form::Address-react-component-2">{"countryOptions":[{"label":"United Kingdom","value":"GB"},{"label":"United States Minor Outlying Islands","value":"UM"},{"label":"United States","value":"US"}],"fieldNames":{"addressOne":"application_form[application][address1]","addressTwo":"application_form[application][address2]","country":"application_form[application][country]","town":"application_form[application][town]","postcode":"application_form[application][postcode]"},"storedAttributes":{"addressOne":null,"addressTwo":null,"country":null,"town":null,"postcode":null},"stateOptions":[{"value":"AL","label":"Alabama"},{"value":"DC","label":"Washington DC"}],"translations":{"addressOne":"Address Line 1","addressTwo":"Address Line 2","city":"City","country":"Country","state":"State","streetAddress":"Street Address","town":"Town","postcode":"Postcode","zipcode":"Zipcode"}}</script>
+</fieldset>
+<fieldset class="external-form__fieldset" id="application-fieldset-profile">
+  <legend class="external-form__legend"><span class="external-form__legend-index">2.</span> Profile</legend>
+  <div class="external-form__label"><div class="external-form__label--required">Résumé / CV</div><span>Accepted file formats are .pdf and .docx</span></div>
+  <div id="Shared::Form::Filefield-react-component-3"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Filefield" data-dom-id="Shared::Form::Filefield-react-component-3">{"defaultValue":null,"labelText":"Attach Résumé / CV","name":"application_form[application][cv]","isDirectUpload":true,"accept":["doc","docx","pdf"]}</script>
+  <label class="external-form__label" for="personal-summary"><div>Personal Summary</div></label>
+  <textarea rows="5" id="personal-summary" name="application_form[application][summary]"></textarea>
+</fieldset>
+<fieldset class="external-form__fieldset" id="application-fieldset-questions">
+  <legend class="external-form__legend"><span class="external-form__legend-index">3.</span>Questions</legend>
+  <div id="Shared::Form::Questions::Shorttext-react-component-4"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Shorttext" data-dom-id="Shared::Form::Questions::Shorttext-react-component-4">{"name":"application_form[application][answers_attributes][0][text_answer]","id":"application_form_application_answers_attributes_0_text_answer","required":true,"questionDetails":{"index":0,"questionId":1001,"questionType":"short_text","title":"What is your notice period?","additionalInformation":"","required":true},"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Longtext-react-component-5"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Longtext" data-dom-id="Shared::Form::Questions::Longtext-react-component-5">{"name":"application_form[application][answers_attributes][1][text_answer]","id":"application_form_application_answers_attributes_1_text_answer","questionDetails":{"index":1,"questionId":1002,"questionType":"long_text","title":"Why this role?","additionalInformation":"","required":false},"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Numberinput-react-component-6"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Numberinput" data-dom-id="Shared::Form::Questions::Numberinput-react-component-6">{"name":"application_form[application][answers_attributes][2][number_answer]","id":"application_form_application_answers_attributes_2_number_answer","required":true,"questionDetails":{"index":2,"questionId":1003,"questionType":"number","title":"Years of experience","additionalInformation":null,"required":true},"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Url-react-component-7"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Url" data-dom-id="Shared::Form::Questions::Url-react-component-7">{"name":"application_form[application][answers_attributes][3][url_answer]","placeholder":"https://example.com","questionDetails":{"index":3,"questionId":1004,"questionType":"url","title":"Link to your portfolio","additionalInformation":"","required":false},"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Boolean-react-component-8"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Boolean" data-dom-id="Shared::Form::Questions::Boolean-react-component-8">{"translations":{"yes":"Yes","no":"No"},"questionDetails":{"index":4,"questionId":1005,"questionType":"boolean","title":"Do you require any adjustments?","additionalInformation":null,"required":true},"initialValue":null,"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Longtext-react-component-9"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Longtext" data-dom-id="Shared::Form::Questions::Longtext-react-component-9">{"name":"application_form[application][answers_attributes][5][text_answer]","id":"application_form_application_answers_attributes_5_text_answer","questionDetails":{"index":5,"questionId":1006,"questionType":"long_text","title":"Which adjustments?","additionalInformation":null,"required":true},"conditionalQuestionParentQuestionId":1005,"conditionalQuestionConditions":[{"operator":"equals","value":"true"}]}</script>
+  <div id="Shared::Form::Questions::Singleselect-react-component-10"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Singleselect" data-dom-id="Shared::Form::Questions::Singleselect-react-component-10">{"name":"application_form[application][answers_attributes][6][answer_options_attributes]","options":[{"value":"Full time","label":"Full time"},{"value":"Part time","label":"Part time"}],"questionDetails":{"index":6,"questionId":1007,"questionType":"multiple_choice","title":"Which hours suit you?","additionalInformation":"","required":true},"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Multiselect-react-component-11"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Multiselect" data-dom-id="Shared::Form::Questions::Multiselect-react-component-11">{"name":"application_form[application][answers_attributes][7][answer_options_attributes]","options":[{"value":"Figma","label":"Figma"},{"value":"Sketch","label":"Sketch"},{"value":"Other","label":"Other"}],"maxNumAnswerOptions":null,"questionDetails":{"index":7,"questionId":1008,"questionType":"multiple_choice","title":"Which tools do you use?","additionalInformation":"","required":true},"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Dateselect-react-component-12"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Dateselect" data-dom-id="Shared::Form::Questions::Dateselect-react-component-12">{"translations":{"day":"Day","month":"Month","year":"Year"},"questionDetails":{"index":8,"questionId":1009,"questionType":"date","title":"When could you start?","additionalInformation":null,"required":true},"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Document-react-component-13"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Document" data-dom-id="Shared::Form::Questions::Document-react-component-13">{"translations":{"documentLabelText":"Attach"},"questionDetails":{"index":9,"questionId":1010,"questionType":"document","title":"Supporting documents","additionalInformation":"","required":false},"name":"application_form[application][answers_attributes][9][document]","isDirectUpload":true,"accept":["pdf","doc","docx","png"],"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+  <div id="Shared::Form::Questions::Multipledocuments-react-component-14"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="Shared::Form::Questions::Multipledocuments" data-dom-id="Shared::Form::Questions::Multipledocuments-react-component-14">{"translations":{"documentLabelText":"Attach"},"questionDetails":{"index":10,"questionId":1011,"questionType":"multi_document","title":"Certificates","additionalInformation":"","required":false},"name":"application_form[application][answers_attributes][10][documents_list]","isDirectUpload":true,"accept":["pdf","png"],"conditionalQuestionParentQuestionId":null,"conditionalQuestionConditions":null}</script>
+</fieldset>
+<fieldset class="external-form__fieldset" id="diversity-and-inclusion-form">
+  <legend class="external-form__legend">Diversity and Inclusion</legend>
+  <label for="application_form_equality_monitoring_gender" class="external-form__label">Gender</label>
+  <div id="External::Jobs::Equalitymonitoring::Tsselect-react-component-15"></div>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="External::Jobs::Equalitymonitoring::Tsselect" data-dom-id="External::Jobs::Equalitymonitoring::Tsselect-react-component-15">{"name":"application_form[equality_monitoring_options][]","id":"application_form_equality_monitoring_Gender","inputId":"application_form_equality_monitoring_gender","options":[{"value":11,"label":"Male"},{"value":12,"label":"Female"},{"value":13,"label":"Prefer Not To Say"}],"defaultValue":null,"required":false,"placeholder":"Select..."}</script>
+</fieldset>
+<fieldset class="external-form__fieldset">
+  <input name="application[process_information]" type="hidden" value="0" />
+  <input required="required" type="checkbox" value="1" name="application[process_information]" id="application_process_information" />
+  <label class="external-form__label" for="application_process_information">(Required) Allow us to process your personal information. <span class="external-form__label--title">*</span></label>
+</fieldset>
+<div id="External::Jobs::Applications::New-react-component-16"></div>
+<script type="application/json" class="js-react-on-rails-component" data-component-name="External::Jobs::Applications::New" data-dom-id="External::Jobs::Applications::New-react-component-16">{"draftUuid":null,"jobPostingUuid":"1a2b3c4d-0000-4000-8000-000000000001","locale":"en"}</script>
+<button name="button" type="submit" class="external-button">Submit Application</button>
+</form>
+<script>
+(() => {
+  const h = (tag, attrs = {}, ...children) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    el.append(...children);
+    return el;
+  };
+  const prefix = d => `application_form[application][answers_attributes][${d.index}]`;
+  const label = (forId, d) => h("label", {class: "external-form__label", for: forId},
+    h("span", {class: "external-form__label--title"}, d.title));
+
+  // A react-select: a control that opens a menu of options, a hidden input with the pick.
+  function select(options, {multi = false, name = "selectBox", searchable = false, onPick} = {}) {
+    const hidden = h("input", {type: "hidden", name, value: ""});
+    const value = h("div", {class: "react-select__value-container"});
+    const input = h("input", {class: "react-select__input", role: "combobox", value: ""});
+    if (!searchable) input.setAttribute("readonly", "");
+    const control = h("div", {class: "react-select__control"}, value, input);
+    const box = h("div", {class: "react-select"}, control, hidden);
+    let menu = null, picked = [];
+    const close = () => { menu?.remove(); menu = null; };
+    const open = (filter = "") => {
+      close();
+      menu = h("div", {class: "react-select__menu"});
+      for (const o of options.filter(o => o.label.toLowerCase().startsWith(filter.toLowerCase()))) {
+        const option = h("div", {class: "react-select__option"}, o.label);
+        option.addEventListener("click", () => {
+          picked = multi ? [...picked, o] : [o];
+          value.replaceChildren(...picked.map(p => multi
+            ? h("div", {class: "react-select__multi-value"},
+                h("div", {class: "react-select__multi-value__label"}, p.label))
+            : h("div", {class: "react-select__single-value"}, p.label)));
+          hidden.value = picked.map(p => p.value).join(",");
+          input.value = "";
+          if (!multi) close(); else option.remove();
+          onPick?.(o);
+        });
+        menu.append(option);
+      }
+      box.append(menu);
+    };
+    control.addEventListener("click", () => menu ? close() : open());
+    input.addEventListener("input", () => open(input.value));
+    return box;
+  }
+
+  // A document input: uploaded at once, shown as a tag holding its name.
+  function file(id, name, accept) {
+    const input = h("input", {type: "file", id, accept: accept.map(a => `.${a}`).join(",")});
+    const tags = h("div", {class: "tags"});
+    input.addEventListener("change", () => setTimeout(() => {
+      for (const f of input.files) tags.append(h("span", {class: "bp3-tag"},
+        h("a", {class: "link", title: f.name}, f.name), h("input", {type: "hidden", name, value: "signed"})));
+    }, 100));
+    return [input, h("label", {for: id}, "Attach"), tags];
+  }
+
+  const shown = {};  // a conditional question's render, by its parent's question id
+  const render = {
+    "Shared::Form::Phonenumberinput": p => [h("input", {type: "tel", name: p.name, id: p.id, required: ""})],
+    "Shared::Form::Address": p => {
+      const names = p.fieldNames, t = p.translations, lines = h("div");
+      const layout = us => lines.replaceChildren(
+        h("label", {class: "external-form__label"}, us ? t.streetAddress : t.addressOne),
+        h("input", {type: "text", name: names.addressOne, id: "address1"}),
+        h("label", {class: "external-form__label"}, us ? t.city : t.addressTwo),
+        h("input", {type: "text", name: names.addressTwo, id: "address2"}),
+        h("label", {class: "external-form__label"}, us ? t.state : t.town),
+        us ? select(p.stateOptions, {name: names.town, searchable: true})
+           : h("input", {type: "text", name: names.town, id: "town"}),
+        h("label", {class: "external-form__label"}, us ? t.zipcode : t.postcode),
+        h("input", {type: "text", name: names.postcode, id: "postcode"}));
+      layout(false);
+      const country = select(p.countryOptions, {name: names.country, searchable: true,
+        onPick: o => layout(o.value === "US")});
+      return [h("div", {id: "address-country"}, h("label", {}, t.country), country), lines];
+    },
+    "Shared::Form::Filefield": p => file(p.name, p.name, p.accept),
+    "External::Jobs::Equalitymonitoring::Tsselect": p => [select(p.options, {name: p.name})],
+    "Shared::Form::Questions::Shorttext": p => [label(p.id, p.questionDetails),
+      h("input", {type: "text", id: p.id, name: p.name})],
+    "Shared::Form::Questions::Longtext": p => [label(p.id, p.questionDetails),
+      h("textarea", {id: p.id, name: p.name})],
+    "Shared::Form::Questions::Numberinput": p => [label(p.id, p.questionDetails),
+      h("input", {type: "number", id: p.id, name: p.name})],
+    "Shared::Form::Questions::Url": p => [label(p.name, p.questionDetails),
+      h("input", {type: "text", id: p.name, name: p.name})],
+    "Shared::Form::Questions::Boolean": p => {
+      const d = p.questionDetails, name = `${prefix(d)}[boolean_answer]`;
+      return [label("", d), ...[["true", p.translations.yes], ["false", p.translations.no]].map(([v, text]) => {
+        const id = `answer_${d.index}_${v}`;
+        const radio = h("input", {type: "radio", id, name, value: v});
+        radio.addEventListener("change", () => shown[d.questionId]?.(v));
+        return h("div", {}, radio, h("label", {for: id}, text));
+      })];
+    },
+    "Shared::Form::Questions::Singleselect": p => [label("", p.questionDetails), select(p.options)],
+    "Shared::Form::Questions::Multiselect": p => [label("", p.questionDetails), select(p.options, {multi: true})],
+    "Shared::Form::Questions::Dateselect": p => {
+      const d = p.questionDetails, name = n => `${prefix(d)}[date_answer(${n}i)]`;
+      const options = (first, values) => [h("option", {value: ""}, first),
+        ...values.map(v => h("option", {value: String(v)}, String(v)))];
+      const range = (a, b) => Array.from({length: b - a + 1}, (_, i) => a + i);
+      const year = new Date().getFullYear();
+      return [label("", d),
+        h("select", {name: name(3)}, ...options("Day", range(1, 31))),
+        h("select", {name: name(2)}, ...options("Month", range(1, 12))),
+        h("select", {name: name(1)}, ...options("Year", range(year, year + 3)))];
+    },
+    "Shared::Form::Questions::Document": p => [label("", p.questionDetails),
+      ...file(p.name, p.name, p.accept)],
+    "Shared::Form::Questions::Multipledocuments": p => [label("", p.questionDetails),
+      ...file(p.name, `${p.name}[]`, p.accept)],
+  };
+  for (const script of document.querySelectorAll("script.js-react-on-rails-component")) {
+    const props = JSON.parse(script.textContent), make = render[script.dataset.componentName];
+    const root = document.getElementById(script.dataset.domId);
+    if (!make) continue;
+    const parent = props.conditionalQuestionParentQuestionId;
+    if (parent) {
+      const wanted = props.conditionalQuestionConditions.map(c => c.value);
+      shown[parent] = v => root.replaceChildren(...(wanted.includes(v) ? make(props) : []));
+    } else root.replaceChildren(...make(props));
+  }
+})();
+</script>
+</body>
+</html>

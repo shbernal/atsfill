@@ -12,6 +12,7 @@ from atsfill.adapters.paycor import Paycor
 from atsfill.adapters.paylocity import Paylocity
 from atsfill.adapters.personio import Personio
 from atsfill.adapters.phenom import Phenom
+from atsfill.adapters.pinpoint import Pinpoint
 from atsfill.adapters.recruitee import Recruitee
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
@@ -43,5 +44,6 @@ def adapters() -> list[Adapter]:
         BambooHR(),
         ZohoRecruit(),
         Personio(),
+        Pinpoint(),
         Phenom(),  # last: it claims a URL by its path alone
     ]
