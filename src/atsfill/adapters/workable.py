@@ -25,6 +25,7 @@ API = "https://apply.workable.com/api/v1/jobs/{code}/form"
 APPLIED = re.compile(r"/api/v1/jobs/[0-9A-F]{10}/apply$")
 FORM = "form[data-ui=application-form]"
 COOKIES = "[data-ui=cookie-consent-decline]"
+UPLOADED = "[data-action=delete]"  # an uploading file shows its name and an abort button
 FORM_TIMEOUT_MS = 30_000
 COOKIE_TIMEOUT_MS = 5_000
 OPTIONS_TIMEOUT_MS = 5_000
@@ -101,7 +102,7 @@ _READ = """form => {
   return found;
 }"""
 
-# What each field shows: a choice its checked option's label, a file its attached name (a photo
+# What each field shows: a choice its checked option's label, a file its uploaded name (a photo
 # its preview's alt), the phone its country's dial code then its number.
 _READ_BACK = """(form, kinds) => {
   const text = el => el ? el.textContent.replace(/\\s+/g, " ").trim() : null;
@@ -114,7 +115,9 @@ _READ_BACK = """(form, kinds) => {
     if (kind === "file") {
       const zone = el.closest("[data-role=dropzone]");
       const preview = zone?.querySelector("[data-role=preview] img");  // a photo, named by its alt
-      out[id] = preview ? preview.alt : text(zone?.querySelector("[data-id=filename]"));
+      const uploaded = zone?.querySelector("[data-action=delete]");  // not while it uploads
+      out[id] = !uploaded ? null
+        : preview ? preview.alt : text(zone.querySelector("[data-id=filename]"));
     } else if (kind === "phone") {
       const dial = (el.querySelector("button[aria-label]")?.getAttribute("aria-label") || "")
         .match(/\\((\\+\\d+)\\)/);
@@ -201,13 +204,14 @@ class Workable:
                     field.set_input_files(values[0])
                     zone = field.locator("xpath=ancestor::*[@data-role='dropzone']")
                     crop = page.locator("button[data-ui=crop-image]")
+                    # attaching another file while one uploads empties it, so each waits
+                    uploaded = zone.locator(UPLOADED)
                     with suppress(Timeout):
-                        zone.locator("[data-id=filename]").or_(crop).first.wait_for(
-                            timeout=UPLOAD_TIMEOUT_MS
-                        )
+                        uploaded.or_(crop).first.wait_for(timeout=UPLOAD_TIMEOUT_MS)
                         if crop.is_visible():
                             crop.click()
                             crop.wait_for(state="hidden", timeout=UPLOAD_TIMEOUT_MS)
+                            uploaded.wait_for(timeout=UPLOAD_TIMEOUT_MS)
                 case "phone":  # the number's dial code picks the country
                     number = field.locator("input[type=tel]")
                     number.fill("")

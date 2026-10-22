@@ -1,6 +1,6 @@
 # Workable
 
-Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/workable/apply.html](../../tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/workable/apply.html](../../tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
 
 ## Where the form is
 
@@ -37,8 +37,8 @@ On the page, every field sits under an element whose `data-ui` is that id, so `r
 - A dropdown is opened and the option with the exact text clicked. Its list stays on the page about 200 ms after closing and takes clicks meant for the field below, so filling waits for it to go.
 - The date input takes typed digits in its placeholder's order and adds the slashes.
 - The phone is typed with its dial code, which sets the country button; the read-back is the button's dial code then the number.
-- Attaching a file uploads it to Workable's S3 (`workable-application-form.s3…`) at once; the dropzone then shows its name.
-- A photo opens a crop dialog, confirmed by its `[data-ui=crop-image]` button; the dropzone then shows a preview whose `alt` is the file's name. Attaching the resume afterwards empties the photo, so the resume goes first.
+- Attaching a file uploads it to Workable's S3 (`workable-application-form.s3…`) at once. The dropzone shows its name, a progress bar and an abort button (`[data-action=abort]`) while it uploads, about a second, then a delete button (`[data-action=delete]`). Attaching another file while one uploads empties the one uploading, so filling waits for the delete button, and a file reads back only once it shows.
+- A photo opens a crop dialog, confirmed by its `[data-ui=crop-image]` button; the dropzone then shows a preview whose `alt` is the file's name, and uploads it. Attaching the resume afterwards empties the photo, so the resume goes first.
 
 ## Read-back and submit
 
