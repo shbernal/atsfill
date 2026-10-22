@@ -1,0 +1,240 @@
+<!doctype html>
+<!-- A Zoho Recruit job page whose "I'm interested" shows the form form.json describes: one
+     example of each rendering in docs/adapters/zohorecruit.md, in the page's markup. Zoho's
+     Lyte components are reduced to their DOM and a few lines that act as they do. -->
+<html>
+<head>
+<meta charset="utf-8"><title>Acme - Placeholder Role</title>
+<script>var jobData = {"page_name":"Careers","webform_id":"100000000000000001","hide_share":false};</script>
+<style>
+  .lyteDropdownHidden, .hidden { display: none; }
+  .cw-cookie-freeze-layer { position: fixed; inset: 0; background: rgba(0,0,0,.3); }
+  .cw-cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; }
+  lyte-drop-box { display: block; position: absolute; background: #fff; border: 1px solid #999; }
+  .skl-tag-footer { position: fixed; inset: 0 0 auto 0; height: 100vh; background: rgba(255,255,255,.9); }
+</style>
+</head>
+<body>
+<div id="career-website-main">
+  <h1>Placeholder Role</h1>
+  <lyte-button id="detail-page-applybtn"><button type="button" class="lyte-button"><lyte-yield yield-name="text">I'm interested</lyte-yield></button></lyte-button>
+</div>
+
+<portal-manual-apply class="hidden">
+<portal-easy-resume-component>
+  <h2>Autofill Application</h2>
+  <lyte-fileupload lt-prop-param-name="RESUME"><input class="fileuploadInput" type="file" name="rec-easyresume_file"><div class="lyteFileUpdList"></div></lyte-fileupload>
+</portal-easy-resume-component>
+<form>
+<rec-form-component webformid="100000000000000001">
+  <h2 class="cw-section-title">Basic Info</h2>
+  <crux-picklist-component id="rec-form_100000000000000011">
+    <template id="rec-form_100000000000000011"></template>
+    <lyte-dropdown id="100000000000000011" lt-prop-type="single">
+      <div class="lyteDummyEventContainer"><lyte-drop-button><span class="lyteDropPlaceholderNormal">-None-</span></lyte-drop-button></div>
+    </lyte-dropdown>
+  </crux-picklist-component>
+  <crux-text-component id="rec-form_100000000000000010"><lyte-input id="100000000000000010"><div class="lyteField"><input type="text" maxlength="125" name="rec-form_100000000000000010"></div></lyte-input></crux-text-component>
+  <crux-text-component id="rec-form_100000000000000012"><lyte-input id="100000000000000012"><div class="lyteField"><input type="text" maxlength="125" name="rec-form_100000000000000012"></div></lyte-input></crux-text-component>
+  <crux-email-component id="rec-form_100000000000000013"><lyte-input id="100000000000000013"><div class="lyteField"><input type="text" maxlength="255" name="rec-form_100000000000000013"></div></lyte-input></crux-email-component>
+  <crux-phone-component id="rec-form_100000000000000014" selected-value="FR">
+    <div class="cxDropdownInputGroup">
+      <lyte-dropdown lt-prop-selected="FR" data-box="phone">
+        <div class="lyteDummyEventContainer"><lyte-drop-button><span class="zrc-flag zrc-flag-fr"></span><span class="flag-drop-code">(+33)</span></lyte-drop-button></div>
+      </lyte-dropdown>
+      <lyte-input id="rec-form_100000000000000014_input"><div class="lyteField"><input type="text" maxlength="30" name="rec-form_100000000000000014"></div></lyte-input>
+    </div>
+  </crux-phone-component>
+  <crux-date-component id="rec-form_100000000000000015">
+    <lyte-input id="100000000000000015" lt-prop-type="date" lt-prop-format="MM/DD/YYYY"><div class="lyteField"><input type="text" name="rec-form_100000000000000015" placeholder="MM/DD/YYYY"></div></lyte-input>
+  </crux-date-component>
+  <crux-picklist-component id="rec-form_100000000000000016">
+    <lyte-dropdown id="100000000000000016" lt-prop-type="multisearch">
+      <div class="lyteDummyEventContainer"><lyte-drop-button><ul class="lyteMultipleSelect"><li class="lyteMultiselectInput"><input type="text"></li></ul></lyte-drop-button></div>
+    </lyte-dropdown>
+  </crux-picklist-component>
+
+  <h2 class="cw-section-title">Professional Details</h2>
+  <rec-skills-component id="rec-form_100000000000000018">
+    <skills-tag><ul class="skl-selected-skill"><li><lyte-input><div class="lyteField"><input type="text" id="addSkills" class="skillset-input" placeholder="Search and add skills"></div></lyte-input></li></ul></skills-tag>
+  </rec-skills-component>
+  <crux-number-component id="rec-form_100000000000000019"><lyte-input id="100000000000000019"><div class="lyteField"><input type="text" maxlength="16" name="rec-form_100000000000000019"></div></lyte-input></crux-number-component>
+  <crux-picklist-component id="rec-form_100000000000000020">
+    <lyte-dropdown id="100000000000000020" lt-prop-type="single">
+      <div class="lyteDummyEventContainer"><lyte-drop-button><span class="lyteDropPlaceholderNormal">-None-</span></lyte-drop-button></div>
+    </lyte-dropdown>
+  </crux-picklist-component>
+  <div class="crc-form-row hidden" data-shown-by="100000000000000020" data-unless="No Batch">
+    <crux-website-component id="rec-form_100000000000000021"><lyte-input id="100000000000000021"><div class="lyteField"><input type="text" maxlength="255" name="rec-form_100000000000000021"></div></lyte-input></crux-website-component>
+  </div>
+  <crux-text-area-component id="rec-form_100000000000000022"><lyte-input id="100000000000000022"><div class="lyteField"><textarea maxlength="32000" name="rec-form_100000000000000022"></textarea></div></lyte-input></crux-text-area-component>
+
+  <h2 class="cw-section-title">Experience Details</h2>
+  <rec-tabular-component id="rec-form_100000000000000002_100000000000000030">
+    <div class="crc-form-tabularblock hidden">
+      <crux-text-component id="100000000000000031_1"><lyte-input id="100000000000000031_1_tab"><div class="lyteField"><input type="text" maxlength="255" name="100000000000000031_1"></div></lyte-input></crux-text-component>
+      <rec-month-range-component id="100000000000000032_1">
+        <rec-month-component id="100000000000000032_1_from">
+          <rec-dropdown id="100000000000000032_1_from_month"><lyte-dropdown data-box="month"><div class="lyteDummyEventContainer"><lyte-drop-button><span class="lyteDropdownLabel">Month</span></lyte-drop-button></div></lyte-dropdown></rec-dropdown>
+          <rec-dropdown id="100000000000000032_1_from_year"><lyte-dropdown data-box="year"><div class="lyteDummyEventContainer"><lyte-drop-button><span class="lyteDropdownLabel">Year</span></lyte-drop-button></div></lyte-dropdown></rec-dropdown>
+        </rec-month-component>
+        <label class="crc-form-monthto">To</label>
+        <rec-month-component id="100000000000000032_1_to">
+          <rec-dropdown id="100000000000000032_1_to_month"><lyte-dropdown data-box="month"><div class="lyteDummyEventContainer"><lyte-drop-button><span class="lyteDropdownLabel">Month</span></lyte-drop-button></div></lyte-dropdown></rec-dropdown>
+          <rec-dropdown id="100000000000000032_1_to_year"><lyte-dropdown data-box="year"><div class="lyteDummyEventContainer"><lyte-drop-button><span class="lyteDropdownLabel">Year</span></lyte-drop-button></div></lyte-dropdown></rec-dropdown>
+        </rec-month-component>
+      </rec-month-range-component>
+      <crux-boolean-component id="100000000000000033_1">
+        <lyte-checkbox id="100000000000000033_1_tab"><label class="lyteCheckbox"><input type="checkbox" name="100000000000000033_1"><span class="lyteCheckBoxDefault"></span></label></lyte-checkbox>
+      </crux-boolean-component>
+    </div>
+    <button id="crc-tabular-add-btn-100000000000000002_100000000000000030" type="button" class="tabular-group-add">Add</button>
+  </rec-tabular-component>
+
+  <h2 class="cw-section-title">Attachment Information</h2>
+  <rec-file-upload-component>
+    <lyte-fileupload lt-prop-param-name="RESUME"><input class="fileuploadInput" type="file" name="rec-form_100000000000000040_file"><div class="lyteFileUpdList"></div></lyte-fileupload>
+  </rec-file-upload-component>
+  <rec-file-upload-component>
+    <lyte-fileupload lt-prop-param-name="$photo_id"><input class="fileuploadInput" type="file" name="rec-form_111222333443_file"><div class="lyteFileUpdList"></div></lyte-fileupload>
+  </rec-file-upload-component>
+
+  <h2 class="cw-section-title">Questionnaire</h2>
+  <crux-text-component id="rec-form_100000000000000050"><lyte-input id="100000000000000050"><div class="lyteField"><input type="text" name="rec-form_100000000000000050"></div></lyte-input></crux-text-component>
+  <rec-multi-radio-component id="rec-form_100000000000000051"><div class="crc-multi-radio">
+    <lyte-radiobutton><label class="lyteRadioBtn"><input type="radio" name="rec-form_100000000000000051" value="100000000000000052" class="lyteHide"><span class="lyteRadioLabel"> Yes </span></label></lyte-radiobutton>
+    <lyte-radiobutton><label class="lyteRadioBtn"><input type="radio" name="rec-form_100000000000000051" value="100000000000000053" class="lyteHide"><span class="lyteRadioLabel"> No </span></label></lyte-radiobutton>
+  </div></rec-multi-radio-component>
+  <crux-picklist-component id="rec-form_100000000000000054">
+    <lyte-dropdown id="100000000000000054" lt-prop-type="single">
+      <div class="lyteDummyEventContainer"><lyte-drop-button><span class="lyteDropPlaceholderNormal">None</span></lyte-drop-button></div>
+    </lyte-dropdown>
+  </crux-picklist-component>
+
+  <h2 class="cw-section-title">CAPTCHA</h2>
+  <lyte-input class="crc-captcha"><input type="text" maxlength="10" placeholder="Type below image text"></lyte-input>
+</rec-form-component>
+<lyte-button id="cw-submit-btn"><button type="submit" class="lyte-button">Submit Application</button></lyte-button>
+</form>
+</portal-manual-apply>
+
+<career-cookie-consent>
+  <div class="cw-cookie-freeze-layer"></div>
+  <div class="cw-cookie-banner" role="dialog">
+    <lyte-button><button type="button" class="lyte-button cookie-accept-btn">Accept all</button></lyte-button>
+    <lyte-button><button type="button" class="lyte-button cookie-decline-btn">Decline non-essential</button></lyte-button>
+  </div>
+</career-cookie-consent>
+
+<script>
+// Each dropdown's list, rendered at the end of the page as Lyte renders it once opened.
+const LISTS = {
+  "100000000000000011": ["-None-", "Mr.", "Ms."],
+  "100000000000000016": ["English", "French", "Spanish"],
+  "100000000000000020": ["-None-", "No Batch", "Batch 1"],
+  "100000000000000054": ["Immediate", "30 days"],
+  month: ["-None-", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+  year: ["-None-", "2026", "2025", "2024", "2021", "2020", "2019"],
+};
+const COUNTRIES = [["FR", "France", "+33"], ["US", "United States", "+1"], ["CA", "Canada", "+1"], ["GB", "United Kingdom", "+44"]];
+
+function boxFor(dropdown) {
+  if (dropdown._box) return dropdown._box;
+  const box = document.createElement("lyte-drop-box");
+  box.className = "cxDropbox lyteDropdownHidden";
+  const body = document.createElement("lyte-drop-body");
+  const kind = dropdown.dataset.box;
+  if (kind === "phone") {
+    body.className = `countryListBody parentscope_${dropdown.closest("crux-phone-component").id}_input`;
+    for (const [code, name, dial] of COUNTRIES) {
+      body.insertAdjacentHTML("beforeend", `<lyte-drop-item data-value="${code}" class="countryListItem"><div class="rec-adv-mobile-items"><span class="lang-cn-name">${name}</span><span class="zrc-cc">${dial}</span></div></lyte-drop-item>`);
+    }
+  } else if (kind) {
+    body.id = `cxdby-${dropdown.closest("rec-dropdown").id}`;
+    LISTS[kind].forEach((v, i) => body.insertAdjacentHTML("beforeend", `<lyte-drop-item data-value="${i}"> ${v} </lyte-drop-item>`));
+  } else {
+    body.className = `parentscope_${dropdown.id}_Field`;
+    for (const v of LISTS[dropdown.id]) body.insertAdjacentHTML("beforeend", `<lyte-drop-item class="picklist_values"> ${v} </lyte-drop-item>`);
+  }
+  box.appendChild(body);
+  document.body.appendChild(box);
+  box.addEventListener("click", e => pick(dropdown, box, e.target.closest("lyte-drop-item")));
+  return dropdown._box = box;
+}
+
+function pick(dropdown, box, item) {
+  if (!item) return;
+  [...item.parentElement.children].forEach(i => i.removeAttribute("selected"));
+  item.setAttribute("selected", "true");
+  const button = dropdown.querySelector("lyte-drop-button");
+  const value = item.textContent.trim();
+  if (dropdown.dataset.box === "phone") {
+    button.querySelector(".flag-drop-code").textContent = `(${item.querySelector(".zrc-cc").textContent})`;
+  } else if (dropdown.getAttribute("lt-prop-type") === "multisearch") {
+    button.querySelector("ul").insertAdjacentHTML("afterbegin", `<li data-value="${value}"><span class="lyteMultiselectLabel">${value}</span></li>`);
+  } else {
+    button.innerHTML = value === "-None-" ? '<span class="lyteDropPlaceholderNormal">-None-</span>' : `<span class="lyteDropdownLabel">${value}</span>`;
+  }
+  box.classList.add("lyteDropdownHidden");
+  const shown = document.querySelector(`[data-shown-by="${dropdown.id}"]`);
+  if (shown) shown.classList.toggle("hidden", value === shown.dataset.unless || value === "-None-");
+}
+
+document.addEventListener("click", e => {
+  const opener = e.target.closest(".lyteDummyEventContainer");
+  if (opener) {
+    const dropdown = opener.closest("lyte-dropdown");
+    const box = boxFor(dropdown);
+    box.classList.toggle("lyteDropdownHidden");
+    const r = opener.getBoundingClientRect();
+    box.style.top = `${r.bottom + window.scrollY}px`;
+    box.style.left = `${r.left}px`;
+  }
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  document.querySelectorAll("lyte-drop-box").forEach(b => b.classList.add("lyteDropdownHidden"));
+  document.querySelectorAll(".skl-tag-footer").forEach(p => p.remove());
+});
+
+document.querySelector(".cookie-decline-btn").addEventListener("click", () => document.querySelector(".cw-cookie-banner").parentElement.innerHTML = "");
+document.querySelector("#detail-page-applybtn button").addEventListener("click", () => {
+  document.querySelector("#career-website-main").classList.add("hidden");
+  document.querySelector("portal-manual-apply").classList.remove("hidden");
+});
+document.querySelector(".tabular-group-add").addEventListener("click", e => {
+  e.target.previousElementSibling.classList.remove("hidden");
+});
+document.querySelectorAll("input[type=file]").forEach(input => input.addEventListener("change", () => {
+  input.nextElementSibling.innerHTML = [...input.files].map(f => `<div class="lyteFileUpdListFile"><span class="lyteFileUpdFileName">${f.name}</span></div>`).join("");
+}));
+// A resume chosen in the autofill area is parsed at once, and what the parse finds overwrites
+// the form.
+document.querySelector("input[name=rec-easyresume_file]").addEventListener("change", () => {
+  document.querySelector("[name=rec-form_100000000000000010]").value = "Parsed";
+  fetch("/recruit/v2/public/parseresume?pagename=Careers", {method: "POST"});
+});
+// Enter takes the first suggestion, looked up a moment after typing: a skill becomes a tag,
+// the name shortened, and asks for its proficiency in a popover.
+let suggested = 0;
+document.querySelector("#addSkills").addEventListener("input", () => {
+  suggested = 0;
+  setTimeout(() => suggested = 1, 500);
+});
+document.querySelector("#addSkills").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  if (!suggested) return;
+  const name = e.target.value;
+  const short = name.length > 25 ? name.slice(0, 25) + "..." : name;
+  e.target.closest("li").insertAdjacentHTML("beforebegin", `<li class="skl-selected-skill-li"><span aria-label="${name}">${short}</span><button type="button" class="skl-close-icon" aria-label="Remove skill : ${name}"></button></li>`);
+  e.target.value = "";
+  document.body.insertAdjacentHTML("beforeend", '<div class="skl-tag-footer">Master Intermediate Beginner</div>');
+});
+document.querySelector("form").addEventListener("submit", e => {
+  e.preventDefault();
+  fetch("/recruit/v2/public/Job_Openings/1234567/apply/100000000000000001?pagename=Careers", {method: "POST", body: new FormData(e.target)});
+});
+</script>
+</body>
+</html>

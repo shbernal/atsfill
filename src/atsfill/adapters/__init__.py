@@ -16,6 +16,7 @@ from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.workable import Workable
 from atsfill.adapters.wttj import WelcomeToTheJungle
+from atsfill.adapters.zohorecruit import ZohoRecruit
 from atsfill.core.adapter import Adapter
 
 
@@ -39,5 +40,6 @@ def adapters() -> list[Adapter]:
         Recruitee(),
         Breezy(),
         BambooHR(),
+        ZohoRecruit(),
         Phenom(),  # last: it claims a URL by its path alone
     ]

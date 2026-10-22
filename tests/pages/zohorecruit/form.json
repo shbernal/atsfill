@@ -1,0 +1,111 @@
+{
+  "code": "success",
+  "meta": {
+    "layout_rules": [
+      {
+        "active": true,
+        "primary_field": {"api_name": "Batch", "id": "100000000000000020"},
+        "queries": [
+          {
+            "criteria": {"field": "Batch", "comparator": "not_equal", "value": "No Batch"},
+            "actions": [
+              {"type": "Show_Fields", "fields": [{"api_name": "Certificate_Link", "id": "100000000000000021"}]}
+            ]
+          }
+        ]
+      }
+    ],
+    "apply_with_details": {"apply_with_login": {"status": false}},
+    "is_eeo_enabled": false,
+    "portal_user": {"is_loggedin": false}
+  },
+  "webforms": [
+    {
+      "id": "100000000000000001",
+      "name": "Candidate application form",
+      "layout": {"name": "Standard", "id": "100000000000000002"},
+      "mandate_assessment": true,
+      "submit_name": "Submit Application",
+      "sections": [
+        {
+          "display_label": "Basic Info", "sequence_number": 1, "system_name": "Basic Info", "id": "1", "istabular": false,
+          "fields": [
+            {"api_name": "First_Name", "field_label": "First Name", "data_type": "text", "ui_type": 27, "length": 125, "required": false, "visible": true, "id": "100000000000000010"},
+            {"api_name": "Salutation", "field_label": "Salutation", "data_type": "picklist", "ui_type": 2, "length": 25, "required": false, "visible": true, "id": "100000000000000011",
+             "pick_list_values": [
+               {"display_value": "-None-", "actual_value": "-None-"},
+               {"display_value": "Mr.", "actual_value": "Mr."},
+               {"display_value": "Ms.", "actual_value": "Ms."}
+             ]},
+            {"api_name": "Last_Name", "field_label": "Last Name", "data_type": "text", "ui_type": 127, "length": 125, "required": true, "visible": true, "id": "100000000000000012"},
+            {"api_name": "Email", "field_label": "Email", "data_type": "email", "ui_type": 25, "length": 255, "required": true, "visible": true, "id": "100000000000000013"},
+            {"api_name": "Mobile", "field_label": "Mobile", "data_type": "phone", "ui_type": 33, "length": 30, "required": true, "visible": true, "id": "100000000000000014"},
+            {"api_name": "Date_of_Birth", "field_label": "Date of Birth", "data_type": "date", "ui_type": 24, "required": false, "visible": true, "id": "100000000000000015"},
+            {"api_name": "Languages", "field_label": "Languages", "data_type": "multipicklist", "ui_type": 100, "required": false, "visible": true, "id": "100000000000000016",
+             "pick_list_values": [
+               {"display_value": "English", "actual_value": "English"},
+               {"display_value": "French", "actual_value": "French"},
+               {"display_value": "Spanish", "actual_value": "Spanish"}
+             ]},
+            {"api_name": "Hidden_Score", "field_label": "Hidden Score", "data_type": "text", "ui_type": 1, "length": 50, "required": false, "visible": false, "id": "100000000000000017"}
+          ]
+        },
+        {
+          "display_label": "Professional Details", "sequence_number": 3, "system_name": "Professional Details", "id": "3", "istabular": false,
+          "fields": [
+            {"api_name": "Skill_Set", "field_label": "Skill Set", "data_type": "textarea", "ui_type": 600, "length": 2000, "required": false, "visible": true, "id": "100000000000000018"},
+            {"api_name": "Experience_in_Years", "field_label": "Experience in Years", "data_type": "double", "ui_type": 38, "length": 16, "required": false, "visible": true, "id": "100000000000000019"},
+            {"api_name": "Batch", "field_label": "Batch", "data_type": "picklist", "ui_type": 2, "required": true, "visible": true, "id": "100000000000000020",
+             "pick_list_values": [
+               {"display_value": "-None-", "actual_value": "-None-"},
+               {"display_value": "No Batch", "actual_value": "No Batch"},
+               {"display_value": "Batch 1", "actual_value": "Batch 1"}
+             ]},
+            {"api_name": "Certificate_Link", "field_label": "Certificate Link", "data_type": "website", "ui_type": 21, "length": 255, "required": true, "visible": true, "id": "100000000000000021"},
+            {"api_name": "Additional_Info", "field_label": "Additional information", "data_type": "textarea", "ui_type": 110, "length": 32000, "required": false, "visible": true, "id": "100000000000000022"}
+          ]
+        },
+        {
+          "display_label": "Experience Details", "sequence_number": 7, "api_name": "Experience_Details", "system_name": "Experience Details", "id": "100000000000000030", "tabular_row_limit": 10, "istabular": true,
+          "fields": [
+            {"api_name": "Experience_Details", "field_label": "Experience Details", "data_type": "tabular", "ui_type": 6604, "visible": true, "id": "100000000000000030",
+             "fields": [
+               {"api_name": "Company", "field_label": "Company", "data_type": "text", "ui_type": 1, "length": 255, "required": false, "visible": true, "sequence_number": 1, "id": "100000000000000031"},
+               {"api_name": "Work_Duration", "field_label": "Work Duration", "data_type": "monthrange", "ui_type": 6607, "required": false, "visible": true, "sequence_number": 2, "id": "100000000000000032"},
+               {"api_name": "I_currently_work_here", "field_label": "I currently work here", "data_type": "boolean", "ui_type": 301, "required": false, "visible": true, "sequence_number": 3, "id": "100000000000000033"}
+             ]}
+          ]
+        },
+        {
+          "display_label": "Attachment Information", "sequence_number": 6601, "system_name": "Attachment Information", "id": 6601, "isattachment": true, "istabular": false, "presence": false,
+          "attachmenttypes": [
+            {"api_name": "RESUME", "field_label": "Resume", "data_type": "file", "ui_type": 8899, "required": true, "id": "100000000000000040",
+             "$accept": "application/pdf,application/msword,pdf,doc,docx,odt,rtf", "$limit": "10485760", "$instant": false},
+            {"api_name": "$photo_id", "field_label": "Photo", "data_type": "file", "ui_type": 8899, "required": false, "id": "111222333443",
+             "$accept": "image/png,image/jpeg,jpeg,jpg,png,gif", "$limit": "10485760", "$instant": false}
+          ]
+        },
+        {
+          "display_label": "CAPTCHA", "sequence_number": 7001, "api_name": "CAPTCHA", "system_name": "CAPTCHA", "id": "7001", "istabular": false,
+          "fields": [
+            {"api_name": "$Captcha", "field_label": "CAPTCHA", "data_type": "captcha", "ui_type": 222111, "length": 10, "required": true, "visible": true, "id": "444333222111"}
+          ]
+        },
+        {
+          "display_label": "Consent Preference", "sequence_number": 7000, "api_name": "$Consent_Preference", "system_name": "$Consent_Preference", "id": "7000", "isVisible": false, "istabular": false,
+          "fields": [
+            {"api_name": "$Consent_Preference", "field_label": "Consent Preference", "data_type": "gdpr", "ui_type": 111000, "length": 10, "required": true, "visible": true, "id": "444333222111000"}
+          ]
+        }
+      ],
+      "captcha_info": {"cipher": "0000", "url": "/recruit/GenerateCAPTCHA"}
+    }
+  ],
+  "Assessments": {
+    "questions": [
+      {"id": "100000000000000050", "type": 1, "question": "How many years of experience do you have?\n", "ismandatory": true, "options": [], "sectionname": "Questionnaire"},
+      {"id": "100000000000000051", "type": 3, "question": "Are you able to work on site?", "ismandatory": true, "options": [{"id": "100000000000000052", "value": "Yes"}, {"id": "100000000000000053", "value": "No"}], "sectionname": "Questionnaire"},
+      {"id": "100000000000000054", "type": 6, "question": "How soon can you join?", "ismandatory": true, "options": [{"id": "100000000000000055", "value": "Immediate"}, {"id": "100000000000000056", "value": "30 days"}], "sectionname": "Questionnaire"}
+    ]
+  }
+}
