@@ -3,6 +3,7 @@ import threading
 from collections.abc import Generator
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import unquote
 
 import pytest
 
@@ -10,9 +11,15 @@ PAGES = Path(__file__).parent / "pages"
 
 
 class Pages(SimpleHTTPRequestHandler):
-    """tests/pages, and `/me`: 200 with the cookie login.html sets, 401 without."""
+    """tests/pages; `/me`: 200 with the cookie login.html sets, 401 without; `/go/<path>`: a
+    301 to `/<path>`, unquoted."""
 
     def do_GET(self) -> None:
+        if self.path.startswith("/go/"):
+            self.send_response(301)
+            self.send_header("Location", unquote(self.path.removeprefix("/go")))
+            self.send_header("Content-Length", "0")
+            return self.end_headers()
         if self.path != "/me":
             return super().do_GET()
         signed_in = "session=ok" in (self.headers.get("Cookie") or "")
