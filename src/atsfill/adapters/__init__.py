@@ -4,6 +4,7 @@ from atsfill.adapters.breezy import Breezy
 from atsfill.adapters.dayforce import Dayforce
 from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.adapters.hireology import Hireology
+from atsfill.adapters.hiringthing import HiringThing
 from atsfill.adapters.jazzhr import JazzHR
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
@@ -47,5 +48,6 @@ def adapters() -> list[Adapter]:
         Personio(),
         Rippling(),
         Pinpoint(),
+        HiringThing(),
         Phenom(),  # last: it claims a URL by its path alone
     ]

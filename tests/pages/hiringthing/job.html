@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Role - Acme</title>
+<style>
+  .cookie-banner { position: fixed; bottom: 0; left: 0; right: 0; height: 200px; background: #eee; z-index: 10; }
+  .Select, .Select-control { position: relative; }
+  .Select-placeholder { position: absolute; inset: 0; }
+  .Select-input input { position: relative; z-index: 1; }
+  .dropzone { border: 1px dashed; padding: 8px; }
+  .multi-option input { opacity: 0.01; }
+</style>
+</head>
+<body>
+<!-- One example of each rendering in docs/adapters/hiringthing.md. The real page renders the form
+     with React from the props below; here plain scripts stand in for its components. -->
+<h1>Role</h1>
+<div data-react-class="HiringThing.Components.ApplyButtonGroup" data-react-props='{"jobObj": {"table": {"id": 1234567, "questions": [{"table": {"id": 1001, "option_type": "dateq", "question": "What date can you start?", "required?": true, "options": []}}, {"table": {"id": 1005, "option_type": "employmentq", "question": "Please enter your employment history:", "required?": true, "options": []}}]}}}' class="apply-button-group"></div>
+<div data-react-class="HiringThing.Components.CookieBanner" data-react-props="{}"><div class="cookie-banner">We use cookies. <button type="button">Accept</button></div></div>
+
+<template id="application">
+<form class="ob vertical" id="job-application-form">
+  <h3>Contact Details</h3>
+  <label for="user.first_name" id="user.first_name_label">First Name (required)</label>
+  <input id="user.first_name" name="user.first_name" type="text" value="">
+  <label for="user.email" id="user.email_label">Email Address (required)</label>
+  <input id="user.email" name="user.email" type="text" value="">
+  <label id="user.phone_label">Phone (required)</label>
+  <select name="user.phoneCountry" aria-label="Phone number country"><option value="ZZ">International</option><option value="US" selected>United States</option></select>
+  <input id="user.phone" name="user.phone" type="tel" value="+1">
+  <div id="state-slot">
+    <!-- a plain input until the state list loads, then a react-select -->
+    <label for="user.state" id="user.state_label">State/Province: (required)</label>
+    <input id="user.state" name="user.state" type="text" value="">
+  </div>
+  <label for="user.country" id="user.country_label">Country: (required)</label>
+  <div class="Select" data-options="Canada|United States|United States Minor Outlying Islands"><input name="user.country" type="hidden" value="US"><div class="Select-control"><div class="Select-value"><span class="Select-value-label">United States</span></div><div class="Select-input"><input id="user.country" role="combobox" value=""></div></div></div>
+  <label class="form-group-label">Opt-In Text Messaging</label>
+  <label><input type="checkbox" name="user.contact_preference" id="user.contact_preference" value="">I agree to receive text message updates about my application</label>
+  <h3>Links and Uploads</h3>
+  <label for="user.linkedin_url" id="user.linkedin_url_label">LinkedIn URL </label>
+  <input id="user.linkedin_url" name="user.linkedin_url" type="text" value="">
+  <div class="ob form-group"><label id="files.Resume.file_label">Resume: (Word/PDF) <span class="label-error"></span></label>
+    <div id="files.Resume" class="form-field-input file-field-input file-widget"><div class="filepicker dropzone dz-clickable"><div class="dz-default dz-message"><span>Click or drag files here to upload and attach.</span></div></div></div></div>
+  <div class="ob form-group"><label id="files.Other.file_label">Any Additional Files: (Letters, work samples etc)</label>
+    <div id="files.Other" class="form-field-input file-field-input file-widget"><div class="filepicker dropzone dz-clickable"><div class="dz-default dz-message"><span>Click or drag files here to upload and attach.</span></div></div></div></div>
+  <h3>Additional Information</h3>
+  <label for="job_assessment.question_1001.response" class="form-field-label datePicker-field-label" id="job_assessment.question_1001.response_label">What date can you start? (required)</label>
+  <input type="text" id="job_assessment.question_1001.response" name="job_assessment.question_1001.response" class="date" value="">
+  <button type="button" aria-label="icon button date_range">date_range</button>
+  <label for="job_assessment.question_1002.response" id="job_assessment.question_1002.response_label">Please describe your experience:</label>
+  <textarea name="job_assessment.question_1002.response" id="job_assessment.question_1002.response"></textarea>
+  <label class="form-field-label yesno-field-label" id="job_assessment.question_1003.response_label">Are you legally authorized to work in the United States? (required)</label>
+  <label class="multi-option radio-option-label"><label><input name="job_assessment.question_1003.response" type="radio" aria-label="Yes" value="Yes"></label><span>Yes</span></label>
+  <label class="multi-option radio-option-label"><label><input name="job_assessment.question_1003.response" type="radio" aria-label="No" value="No"></label><span>No</span></label>
+  <label for="job_assessment.question_1004.response" class="form-field-label multi-field-label" id="job_assessment.question_1004.response_label">Enter the days of the week that you are able to work (required)</label>
+  <label class="multi-option checkbox-option-label"><label><input type="checkbox" name="job_assessment.question_1004.response" id="job_assessment.question_1004.response" value=""></label><span>Monday</span></label>
+  <label class="multi-option checkbox-option-label"><label><input type="checkbox" name="job_assessment.question_1004.response" id="job_assessment.question_1004.response" value=""></label><span>Tuesday</span></label>
+  <label class="multi-option checkbox-option-label"><label><input type="checkbox" name="job_assessment.question_1004.response" id="job_assessment.question_1004.response" value=""></label><span>None of these</span></label>
+  <label class="multi-option checkbox-option-label"><label><input type="checkbox" name="job_assessment.question_1004.response" id="job_assessment.question_1004.response" value=""></label><span>No</span></label>
+  <p>Please enter your employment history:</p>
+  <label for="job_assessment.question_1005.response.0.name" id="job_assessment.question_1005.response.0.name_label">Company Name (required)</label>
+  <input id="job_assessment.question_1005.response.0.name" name="job_assessment.question_1005.response.0.name" type="text" value="">
+  <label id="job_assessment.question_1005.response.0.phone_label">Phone</label>
+  <select name="job_assessment.question_1005.response.0.phoneCountry" aria-label="Phone number country"><option value="ZZ">International</option></select>
+  <input id="job_assessment.question_1005.response.0.phone" name="job_assessment.question_1005.response.0.phone" type="tel" value="">
+  <label for="job_assessment.question_1005.response.0.st_date" class="form-field-label datePicker-field-label" id="job_assessment.question_1005.response.0.st_date_label">Start</label>
+  <input type="text" id="job_assessment.question_1005.response.0.st_date" name="job_assessment.question_1005.response.0.st_date" class="date" value="">
+  <button type="button" aria-label="Add Another Position icon button add_circle_outline">Add Another Position</button>
+  <input id="app.where_from" name="app.where_from" type="hidden" value="">
+  <h3>Disclosure Statement</h3>
+  <label><input type="checkbox" name="disclosure_agree" id="disclosure_agree" value="">I confirm that I have read, understand and agree to the above statement.</label>
+  <label><input type="checkbox" name="subscribe" id="subscribe" value="">Subscribe! Please notify me of new opportunities as they are posted.</label>
+  <button class="ob button submit-app-button" type="submit">Submit Application</button>
+</form>
+</template>
+
+<script>
+  // The apply button renders after the page loads, as React's does.
+  setTimeout(() => {
+    const group = document.querySelector(".apply-button-group");
+    group.innerHTML = '<button class="ob button job-apply-button" type="button">Apply for this position</button>';
+    group.querySelector("button").addEventListener("click", open);
+  }, 300);
+
+  function open() {
+    const group = document.querySelector(".apply-button-group");
+    group.appendChild(document.getElementById("application").content.cloneNode(true));
+    const form = document.getElementById("job-application-form");
+    form.querySelectorAll(".Select").forEach(select);
+    form.querySelectorAll(".dropzone").forEach(dropzone);
+    form.querySelectorAll("input.date").forEach(date);
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      fetch("/client_api/apply", {method: "POST", body: new FormData(form)});
+    });
+    fetch("/regions?parent_region=US").then(r => r.json()).then(regions => {
+      document.getElementById("state-slot").innerHTML =
+        '<label for="user.state" id="user.state_label">State/Province: (required)</label>' +
+        `<div class="Select" data-options="${regions.join("|")}"><div class="Select-control">` +
+        '<div class="Select-placeholder"></div><div class="Select-input">' +
+        '<input id="user.state" role="combobox" value=""></div></div></div>';
+      select(document.querySelector("#state-slot .Select"));
+    });
+  }
+
+  // A react-select: typing filters a menu of options; clicking one shows it as the value.
+  function select(root) {
+    const input = root.querySelector("input[role=combobox]");
+    const options = root.dataset.options.split("|");
+    const menu = () => root.querySelector(".Select-menu-outer");
+    const show = query => {
+      menu()?.remove();
+      const shown = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
+      const outer = document.createElement("div");
+      outer.className = "Select-menu-outer";
+      outer.innerHTML = shown.length
+        ? shown.map(o => `<div class="Select-option" role="option">${o}</div>`).join("")
+        : '<div class="Select-noresults">No results found</div>';
+      outer.querySelectorAll(".Select-option").forEach(o => o.addEventListener("mousedown", e => {
+        e.preventDefault();
+        let value = root.querySelector(".Select-value");
+        if (!value) {
+          value = document.createElement("div");
+          value.className = "Select-value";
+          value.innerHTML = '<span class="Select-value-label"></span>';
+          root.querySelector(".Select-control").prepend(value);
+        }
+        value.querySelector(".Select-value-label").textContent = o.textContent;
+        root.querySelector(".Select-placeholder")?.remove();
+        input.value = "";
+        menu()?.remove();
+      }));
+      root.appendChild(outer);
+    };
+    input.addEventListener("input", () => show(input.value));
+    input.addEventListener("keydown", e => {
+      if (e.key === "ArrowDown") show(input.value);
+      if (e.key === "Escape") menu()?.remove();
+    });
+  }
+
+  // A Dropzone area: a click opens a hidden file input on the body; a file is uploaded at once.
+  function dropzone(zone) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.className = "dz-hidden-input";
+    input.style.cssText = "visibility: hidden; position: absolute; height: 0; width: 0;";
+    document.body.appendChild(input);
+    zone.addEventListener("click", () => input.click());
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      const body = new FormData();
+      body.append("file", file);
+      const preview = document.createElement("div");
+      preview.className = "dz-preview dz-file-preview dz-processing";
+      preview.innerHTML = `<span class="dz-filename" data-dz-name>${file.name}</span>`;
+      zone.appendChild(preview);
+      await fetch("/client_api/add_file", {method: "POST", body});
+      preview.classList.add("dz-complete");
+    });
+  }
+
+  // A date picker's text input, MM/DD/YYYY: it keeps only what is typed.
+  function date(input) {
+    input.addEventListener("input", () => { input.value = input.value.replace(/[^0-9/]/g, ""); });
+  }
+</script>
+</body>
+</html>
