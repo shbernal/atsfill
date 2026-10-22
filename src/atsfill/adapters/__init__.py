@@ -2,6 +2,7 @@ from atsfill.adapters.ashby import Ashby
 from atsfill.adapters.bamboohr import BambooHR
 from atsfill.adapters.breezy import Breezy
 from atsfill.adapters.dayforce import Dayforce
+from atsfill.adapters.eightfold import Eightfold
 from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.adapters.hireology import Hireology
 from atsfill.adapters.hiringthing import HiringThing
@@ -49,5 +50,6 @@ def adapters() -> list[Adapter]:
         Rippling(),
         Pinpoint(),
         HiringThing(),
+        Eightfold(),
         Phenom(),  # last: it claims a URL by its path alone
     ]

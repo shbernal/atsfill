@@ -37,7 +37,7 @@ ANSWER_NO = re.compile(
 PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
 # A field's label that says it is asked only after another's answer.
 ASKED_WHEN = re.compile(
-    r"""\(asked when (["'])(?P<trigger>.+?)\1 is (?P<negated>not )?"?(?P<value>.+?)"?\)$"""
+    r"""\(asked when (["'])(?P<trigger>.+)\1 is (?P<negated>not )?"?(?P<value>.+?)"?\)$"""
 )
 BY_LABEL = [
     (re.compile(r"MM/YYYY"), "01/2020"),
@@ -158,10 +158,12 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
             return _text(field)
 
 
-def _asked(field: Field, given: dict[str, Answer]) -> bool:
+def _asked(field: Field, given: dict[str, Answer], hidden: set[str]) -> bool:
     """Whether the page shows the field, given the answers so far, when its label says it is
-    asked only after another field's answer."""
+    asked only after another field's answer: never after a field the answers keep hidden."""
     match = ASKED_WHEN.search(field.label)
+    if match and match["trigger"] in hidden:
+        return False
     if not match or match["trigger"] not in given:
         return True
     picked = given[match["trigger"]]
@@ -174,9 +176,12 @@ def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
     prefilled to the account, a résumé aside, a field its own answers keep hidden, and one
     atsfill cannot fill."""
-    out, by_label = {}, {}
+    out, by_label, hidden = {}, {}, set()
     for f in fields:
-        if f.unfillable or (a := answer(f, cv, picture)) is None or not _asked(f, by_label):
+        if not _asked(f, by_label, hidden):
+            hidden.add(f.label)
+            continue
+        if f.unfillable or (a := answer(f, cv, picture)) is None:
             continue
         by_label[f.label] = a
         if not (f.prefilled and f.type is not FieldType.FILE):
