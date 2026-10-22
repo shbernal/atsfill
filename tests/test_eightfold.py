@@ -100,6 +100,7 @@ def test_read_form(page):
     )
     assert not by_id["Q_EVENTS"].required
     assert by_id["app_Summary"].label == "Tell us about yourself"
+    assert by_id["1443109865728"].label == "What's your overall experience? (a number)"
     assert by_id["636668-1"].options == ["Yes", "No"]
     assert by_id["q_todayDate"].type is FieldType.DATE
     assert by_id[signature].type is FieldType.MULTI_CHOICE

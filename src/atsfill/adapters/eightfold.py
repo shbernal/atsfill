@@ -347,6 +347,8 @@ def _label(q: dict[str, Any], by_id: dict[str, dict[str, Any]], depth: int = 0) 
     """The question's text; one some of a parent's answers render says so, naming the first
     parent by its own label, so that a parent asked for other answers names it apart."""
     label = _plain(q.get("label") or "")
+    if (q.get("textOptions") or {}).get("type") == "number":  # a number input takes no text
+        label += " (a number)"
     first = (q.get("parentDependencies") or [{}])[0]
     if not first.get("values") or depth > MAX_DEPTH:
         return label

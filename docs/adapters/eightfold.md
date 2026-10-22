@@ -18,7 +18,7 @@ Each rendering, and in how many of the 13 employers whose forms were read it sho
 
 | Rendering | Field type | Forms |
 |---|---|---|
-| text input (`text`, `text-row`, `numeric`, `location_input`): name, email, address, links, custom text | `text` | 13 |
+| text input (`text`, `text-row`, `numeric`, `location_input`): name, email, address, links, custom text; a number input says `(a number)` | `text` | 13 |
 | resume (`resumeUpload`), behind the privacy dialog; accepted extensions from the API | `file` | 13 |
 | phone: a country code combobox (`🇺🇸 (+1) United States of America`) beside the number; the code picked by the number's dial code, the longest that fits, where several countries share it its main one | `phone` | 13 |
 | dropdown (`select`: `dropdown`, `dropdown-textbox`): a combobox whose listbox renders at the end of the page when opened | `choice` | 13 |
