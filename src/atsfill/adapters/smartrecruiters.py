@@ -23,6 +23,9 @@ ONECLICK = re.compile(r"^/oneclick-ui/company/([^/]+)/publication/([^/]+)")
 APPLY_LINK = "a[href*='/oneclick-ui/company/']"
 QUESTIONS = "sr-screening-questions-form"
 CONTAINER = f"{QUESTIONS} [data-test=question-container]"
+# The footer's buttons, named in the posting's language.
+NEXT = "[data-test=footer-next] button"
+SUBMIT = "[data-test=footer-submit] button"
 FORM_TIMEOUT_MS = 30_000
 COOKIE_TIMEOUT_MS = 5_000
 OPTION_TIMEOUT_MS = 10_000
@@ -194,7 +197,7 @@ class SmartRecruiters:
 
     def submit(self, page: Page) -> str | None:
         before = page.url
-        page.get_by_role("button", name="Submit", exact=True).first.click()
+        page.locator(SUBMIT).first.click()
         page.wait_for_url(lambda url: url != before, timeout=SUBMIT_TIMEOUT_MS)
         return page.url
 
@@ -351,7 +354,7 @@ def _fill_profile(page: Page, field_id: str, selector: str, answer: Answer) -> N
 def _next(page: Page) -> None:
     """Goes on to the questions page. Never Submit: a posting with no questions submits from
     the profile page. A click right after the last answer can go unheeded, so it is repeated."""
-    button = page.get_by_role("button", name="Next", exact=True)
+    button = page.locator(NEXT)
     for _ in range(NEXT_TRIES):
         if not button.count():
             return
