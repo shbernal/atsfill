@@ -9,7 +9,7 @@
      react-widgets dropdowns whose list opens on a click, and a last step that repeats earlier
      answers in elements with the same ids. -->
 <script>
-window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"text": "District of Columbia", "value": "DC"}, {"text": "Texas", "value": "TX"}], "referenceTypeOptions": [{"text": "", "value": "0"}, {"text": "Personal", "value": "1"}, {"text": "Professional", "value": "2"}], "genderOptions": [{"text": "", "value": "0"}, {"text": "Male", "value": "2"}, {"text": "Female", "value": "3"}, {"text": "I choose not to self-identify", "value": "1"}], "raceOptions": [{"text": "", "value": "0"}, {"text": "Two or More Races", "value": "7"}], "customJobApplication": {"requireResume": false, "referencesRequired": true, "referencesRequiredCount": 1, "desiredSalaryInputType": 2, "sections": [
+window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"text": "District of Columbia", "value": "DC"}, {"text": "Texas", "value": "TX"}], "referenceTypeOptions": [{"text": "", "value": "0"}, {"text": "Personal", "value": "1"}, {"text": "Professional", "value": "2"}], "desiredSalaryTypeOptions": [{"text": "", "value": "0"}, {"text": "Hourly", "value": "1"}, {"text": "Yearly", "value": "2"}], "genderOptions": [{"text": "", "value": "0"}, {"text": "Male", "value": "2"}, {"text": "Female", "value": "3"}, {"text": "I choose not to self-identify", "value": "1"}], "raceOptions": [{"text": "", "value": "0"}, {"text": "Two or More Races", "value": "7"}], "customJobApplication": {"requireResume": false, "referencesRequired": true, "referencesRequiredCount": 1, "desiredSalaryInputType": 1, "sections": [
  {"name": "info", "isIncluded": true, "isOneRequired": false, "fields": [
   {"name": "name", "displayName": "Name", "isIncluded": true, "isRequired": true, "values": []},
   {"name": "cellPhone", "displayName": "Mobile Number", "isIncluded": true, "isRequired": false, "values": []},
@@ -19,7 +19,7 @@ window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"te
   {"name": "state", "displayName": "State", "isIncluded": true, "isRequired": false, "values": []},
   {"name": "workedHereBefore", "displayName": "Have you worked with us before?", "isIncluded": true, "isRequired": true, "values": []},
   {"name": "howDidYouHear", "displayName": "How did you hear about us?", "isIncluded": true, "isRequired": false, "values": [{"value": "Online Job Board"}, {"value": "Other"}]},
-  {"name": "desiredSalary", "displayName": "Desired salary", "isIncluded": true, "isRequired": false, "values": []},
+  {"name": "desiredSalary", "displayName": "Desired salary", "isIncluded": true, "isRequired": true, "values": []},
   {"name": "skills", "displayName": "Skills", "isIncluded": true, "isRequired": false, "values": []},
   {"name": "uploadCoverLetter", "displayName": "Upload cover letter", "isIncluded": true, "isRequired": false, "values": []},
   {"name": "dateOfBirth", "displayName": "Date of birth", "isIncluded": true, "isRequired": false, "values": []}]},
@@ -79,7 +79,8 @@ window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"te
     <label><input name="info.howDidYouHearAboutUs" type="radio" value="Online Job Board"> Online Job Board</label>
     <label><input name="info.howDidYouHearAboutUs" type="radio" value="Other"> Other</label>
   </div>
-  <div class="form-group"><label>Desired Salary</label><input id="info.desiredSalaryDescription" type="text" value=""></div>
+  <div class="form-group form-required"><label>Desired Salary Type<span><em> (required)</em></span></label><div id="info.desiredSalaryType" role="combobox" class="rw-dropdownlist" data-options="--|Hourly|Yearly"><div class="rw-input">--</div></div></div>
+  <div class="form-group form-required"><label>Salary Range<span><em> (required)</em></span></label><input id="info.minimumDesiredSalary" type="text" value=""><input id="info.maximumDesiredSalary" type="text" value=""></div>
   <div class="react-tagsinput"><span></span><input type="text" class="react-tagsinput-input" id="info.skills" value=""></div>
   <div class="rounded-box"><label>Upload Cover Letter</label>
     <input accept=".doc,.docx,.pdf" id="btn-coverLetter" style="display: none;" type="file">
@@ -162,6 +163,8 @@ document.getElementById("info.skills").addEventListener("keydown", e => {
   e.target.value = "";
 });
 document.querySelector("[data-automation-id=btnNext]").addEventListener("click", () => {
+  // a required answer left empty keeps the step
+  if (document.querySelector("[id='info.desiredSalaryType'] .rw-input").textContent === "--") return;
   const first = document.getElementById("info.firstName").value;
   document.getElementById("step-1").remove();
   document.getElementById("review").innerHTML = `<p id="info.firstName">${first}</p>`;

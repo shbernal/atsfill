@@ -1,6 +1,6 @@
 # Paylocity
 
-Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/paylocity/apply.html](../../tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
+Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/paylocity/apply.html](../../tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
 
 ## Where the form is
 
@@ -31,7 +31,7 @@ Each rendering, and in how many of 60 postings' configurations it shows (2026-10
 | file: resume (`#btn-resume`, the modal's `#btn-forceResume`), cover letter, additional files; the name shows once uploaded | `file` | 60 |
 | entries: work history, education (one shown when the section `isOneRequired`), references (`referencesRequiredCount` shown when `referencesRequired`) | the entry's fields, index 0… | 19, 16, 35 required |
 | optional entry sections; their section-level certifications field still shows | left out | 35, 35 |
-| desired salary: one text (`desiredSalaryInputType` 2) or minimum and maximum (1) | `text` | 35 |
+| desired salary: one text (`desiredSalaryInputType` 2), or minimum and maximum (1) after a salary type dropdown (`info.desiredSalaryType`, Hourly or Yearly), required with the salary | `text`, the type `choice` | 35 |
 | screener: radios or checkboxes (`multiQuestionAnswer<id>_<n>`, labelled by `label[for]`), text (`screener-question-<n>-textarea`) | `choice`, `multi_choice`, `text` | 44 |
 | acknowledgement checkbox (`#applyAcknowledgement`), currently working here | `choice`, `Yes`/`No` | 60 |
 | felony, misdemeanor questions: shown only when `priorConviction` is on the form; supervisor fields only when `mayWeContact` is | `choice`, `text` | 15, 27 |

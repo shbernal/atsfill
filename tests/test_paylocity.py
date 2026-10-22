@@ -74,7 +74,9 @@ def test_read_form(opened):
         "info.priorEmploymentStartDate",
         "info.priorEmploymentEndDate",
         "info.howDidYouHearAboutUs",
-        "info.desiredSalaryDescription",
+        "info.desiredSalaryType",
+        "info.minimumDesiredSalary",
+        "info.maximumDesiredSalary",
         "info.skills",
         "coverLetter",
         "info.dateOfBirth",
@@ -102,6 +104,8 @@ def test_read_form(opened):
     assert prior.type is FieldType.DATE and not prior.required
     assert "is Yes" in prior.label
     assert fields["info.howDidYouHearAboutUs"].options == ["Online Job Board", "Other"]
+    salary_type = fields["info.desiredSalaryType"]
+    assert salary_type.required and salary_type.options == ["Hourly", "Yearly"]
     assert fields["txt-workHistory-startDate-0"].label == "Start Date (MM/YYYY)"
     assert fields["workHistory.currentlyWorkingHere.0"].options == ["No", "Yes"]
     assert fields["references.name.0"].label == "Reference 1: Name"
@@ -135,7 +139,9 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
         "info.priorEmploymentStartDate": "2019-02-03",
         "info.priorEmploymentEndDate": "2020-04-05",
         "info.howDidYouHearAboutUs": "Other",
-        "info.desiredSalaryDescription": "50000",
+        "info.desiredSalaryType": "Yearly",
+        "info.minimumDesiredSalary": "50000",
+        "info.maximumDesiredSalary": "60000",
         "info.skills": "Bookkeeping",
         "coverLetter": resume,
         "workHistory.companyName.0": "Acme",

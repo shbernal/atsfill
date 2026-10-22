@@ -100,6 +100,12 @@ INFO: dict[str, list[Spec]] = {
 }
 SALARY = {  # by desiredSalaryInputType
     1: [
+        Spec(
+            "info.desiredSalaryType",
+            "Desired Salary Type",
+            "dropdown",
+            options="desiredSalaryTypeOptions",
+        ),  # fmt: skip
         Spec("info.minimumDesiredSalary", "Desired Salary (minimum)", "text"),
         Spec("info.maximumDesiredSalary", "Desired Salary (maximum)", "text"),
     ],
