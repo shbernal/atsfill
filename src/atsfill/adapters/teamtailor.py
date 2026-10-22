@@ -1,8 +1,9 @@
 """Teamtailor (`<employer>.teamtailor.com` and career sites on the employer's domain), as
 docs/adapters/teamtailor.md observes.
 
-The form posts nothing before submit except the resume, which goes to Teamtailor's storage as
-soon as it is picked. The read-back is the form's `FormData`.
+The form posts nothing before submit except the files, which go to Teamtailor's storage as
+soon as they are picked. The read-back is the form's `FormData`, and for a video question the
+video Teamtailor holds under the id the form keeps.
 """
 
 import re
@@ -14,7 +15,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
-from atsfill.core.browser import Locator, Page
+from atsfill.core.browser import Locator, Page, Response
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 FORM = "#job-application-form"
@@ -23,11 +24,13 @@ FORM = "#job-application-form"
 QUESTION = ".question, [data-careersite--form-target=qualifyingAnswers]"
 LOCKED = "[data-careersite--form-target=formContentWrapper].cursor-not-allowed"
 LOCATION = "candidate[location][query]"
+VIDEO = "[data-controller~='questions--tt-video-answer']"
 CAREER_SITE = "a[href*='//www.teamtailor.com'], script[src*='teamtailor-cdn.com/assets/careersite']"
 JOB = re.compile(r"/jobs/(\d+)[^/]*")
 SUBMIT_TIMEOUT_MS = 90_000
 FOLLOW_UP_TIMEOUT_MS = 1_000
 UPLOAD_TIMEOUT_S = 60
+UPLOAD_TIMEOUT_MS = UPLOAD_TIMEOUT_S * 1000
 UPLOAD_POLL_MS = 500
 KEY_DELAY_MS = 30
 QUESTION_TYPES = {
@@ -109,13 +112,16 @@ _READ = """(form, QUESTION) => {
                  label: label(q.querySelector("legend, label")) + (when || ""),
                  required: qualifying || (!parent && q.dataset.questionMandatory === "true"),
                  asked: q.dataset.questionMandatory === "true",
+                 accept: kind === "video"
+                   ? q.querySelector("input[type=file]")?.accept.split(",").filter(Boolean) : null,
                  options: picks.length ? picks : menu.length ? menu : null});
   }
   return fields;
 }"""
 
 # What the form will send: each field's value, a choice as its option's text, a file as the
-# uploaded file's name, an address once a suggestion is picked.
+# uploaded file's name, an address once a suggestion is picked, a video question as the id of
+# the video it holds.
 _READ_BACK = """(form, QUESTION) => {
   const data = new FormData(form);
   const text = e => {
@@ -149,7 +155,9 @@ _READ_BACK = """(form, QUESTION) => {
     const id = `question:${q.querySelector("input[name$='[question_id]']")?.value}`;
     const checked = [...q.querySelectorAll("input:checked")];
     const named = q.querySelector("[name^='candidate[answers_attributes]']:not([type=hidden])");
-    if (q.querySelector("input[type=checkbox]")) out[id] = checked.map(text);
+    const video = q.querySelector("[name$='[picked_video_attributes][video_id]']");
+    if (video) out[id] = data.get(video.name);
+    else if (q.querySelector("input[type=checkbox]")) out[id] = checked.map(text);
     else if (q.querySelector("input[type=radio]")) out[id] = checked[0] ? text(checked[0]) : null;
     else if (named) out[id] = named.value;
   }
@@ -159,7 +167,7 @@ _READ_BACK = """(form, QUESTION) => {
 
 class Teamtailor:
     name = "teamtailor"
-    known_gaps = {"video_upload": Gap.RENDERING, "file_question": Gap.RENDERING}
+    known_gaps = {"file_question": Gap.RENDERING}
     side_effects = [
         SideEffect("upload", "hiring_system", "a picked file is stored by Teamtailor at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -170,6 +178,7 @@ class Teamtailor:
         self._qualifying: set[str] = set()
         self._follow_ups: dict[str, bool] = {}  # shown by an earlier answer: required once shown
         self._uploads: dict[str, str] = {}  # file field id: the answer's file name
+        self._videos: dict[str, tuple[str, str]] = {}  # video field id: its video id, its URL
 
     def detect(self, url: str, page: Page | None) -> bool:
         """A `*.teamtailor.com` job, or a job page with Teamtailor's "powered by" link or its
@@ -211,6 +220,7 @@ class Teamtailor:
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
+        self._videos = {}
         _decline_cookies(page)
         for field_id in [i for i in answers if i in self._qualifying]:
             self._fill(form, field_id, answers[field_id])
@@ -233,6 +243,9 @@ class Teamtailor:
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, QUESTION)
+        for field_id, (video_id, url) in self._videos.items():
+            if values.get(field_id) == video_id:  # the name Teamtailor holds the video under
+                values[field_id] = page.evaluate(_VIDEO, url)
         for field_id, name in self._uploads.items():
             if values.get(field_id) == _stored_name(name):
                 values[field_id] = name
@@ -246,6 +259,8 @@ class Teamtailor:
     def _fill(self, form: Locator, field_id: str, answer: Answer) -> None:
         page, field, host = form.page, self._fields[field_id], self._host(form, field_id)
         match field.type, answer:
+            case FieldType.FILE, str() if host.locator(VIDEO).count():
+                self._videos[field_id] = _upload_video(page, host, answer)
             case FieldType.FILE, str():
                 host.locator("input[type=file]").set_input_files(answer)
             case FieldType.CHOICE, str() if host.locator("input[type=checkbox]").count():
@@ -276,11 +291,8 @@ class Teamtailor:
     def _field(self, raw: dict[str, Any]) -> Field:
         field_id, label, required = raw["id"], raw["label"], raw["required"]
         match raw["kind"]:
-            case "video" if raw.get("question"):
-                gap = known_gap(
-                    self, "video_upload", f"{field_id} is a video, recorded or uploaded"
-                )
-                return Field(field_id, label, FieldType.FILE, required, unfillable=gap)
+            case "video" if raw.get("question"):  # a clip is uploaded, never recorded
+                return Field(field_id, label, FieldType.FILE, required, accept=raw.get("accept"))
             case "file" if raw.get("question"):
                 gap = known_gap(self, "file_question", f"{field_id} is a question's file drop zone")
                 return Field(field_id, label, FieldType.FILE, required, unfillable=gap)
@@ -323,7 +335,11 @@ class Teamtailor:
         deadline = time.monotonic() + UPLOAD_TIMEOUT_S
         while self._uploads and time.monotonic() < deadline:
             held = form.evaluate(_READ_BACK, QUESTION)
-            if all(held.get(i) == _stored_name(n) for i, n in self._uploads.items()):
+            stored = {
+                i: self._videos[i][0] if i in self._videos else _stored_name(n)
+                for i, n in self._uploads.items()
+            }
+            if all(held.get(i) == s for i, s in stored.items()):
                 return
             form.page.wait_for_timeout(UPLOAD_POLL_MS)
 
@@ -333,6 +349,29 @@ def _stored_name(name: str) -> str:
     characters than letters, digits, `.` and `-` one `_`."""
     ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     return re.sub(r"[^a-z0-9.\-]+", "_", ascii_name.lower())
+
+
+def _upload_video(page: Page, host: Locator, clip: str) -> tuple[str, str]:
+    """Uploads a clip through a video question's "Upload video" input, never its recorder.
+    Teamtailor stores it as a video and the form keeps the video's id; returns that id and the
+    URL the video is read back from."""
+
+    def created(response: Response) -> bool:
+        path = urlsplit(response.url).path
+        return response.request.method == "POST" and path.endswith("/videos")
+
+    try:
+        with page.expect_response(created, timeout=UPLOAD_TIMEOUT_MS) as response:
+            host.locator("input[type=file]").set_input_files(clip)
+    except browser.Timeout:
+        raise NotTaken(f"the video question took no video from {PurePath(clip).name!r}") from None
+    video = response.value.json()
+    return str(video["id"]), f"{response.value.url}/{video['sgid']}"
+
+
+# The file name Teamtailor holds a video under.
+_VIDEO = """url => fetch(url, {headers: {Accept: "application/json"}})
+  .then(r => r.ok ? r.json() : {}).then(v => v.file_file_name ?? null)"""
 
 
 def _decline_cookies(page: Page) -> None:

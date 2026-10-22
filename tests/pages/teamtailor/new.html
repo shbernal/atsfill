@@ -2,7 +2,8 @@
 <meta charset="utf-8">
 <!-- A Teamtailor application page as the adapter meets it: the cookie banner is a modal dialog
      that leaves the form inert, a qualifying question locks the rest of the form until it is
-     answered "Yes", files upload to storage and the form keeps their addresses, the address is
+     answered "Yes", files upload to storage and the form keeps their addresses, a clip for a
+     video question becomes a video and the form keeps its id, the address is
      kept only once a suggestion is picked, required labels carry an asterisk, a choice can be a
      dropdown over hidden inputs, and a multiple choice dropdown stays open over what follows. -->
 <style>
@@ -104,7 +105,13 @@
   <div class="question" data-question-mandatory="false" data-question-multiple-choice="false">
     <input type="hidden" name="candidate[answers_attributes][6][question_id]" value="107">
     <label>Présentez-vous en vidéo</label>
-    <input type="text" disabled name="candidate[answers_attributes][6][picked_video_attributes][video_attributes][file]">
+    <div data-controller="questions--tt-video-answer">
+      <button type="button">Autoriser l'accès</button>
+      <button type="button">Importer une vidéo</button>
+      <input type="file" class="hidden" accept=".mp4,.mov,.webm">
+    </div>
+    <input type="text" class="hidden" disabled name="candidate[answers_attributes][6][picked_video_attributes][video_attributes][file]">
+    <input type="text" class="hidden" disabled name="candidate[answers_attributes][6][picked_video_attributes][video_id]" id="video-id">
   </div>
   <div class="question" data-question-mandatory="false" data-question-multiple-choice="false">
     <input type="hidden" name="candidate[answers_attributes][7][question_id]" value="109">
@@ -148,6 +155,15 @@
   });
   upload("candidate_resume_remote_url", "candidate[resume_remote_url]");
   upload("candidate_file_remote_url", "candidate[uploads_attributes][1][file_remote_url]");
+  // A clip goes to storage, then becomes a video whose id the form keeps.
+  document.querySelector("[data-controller~='questions--tt-video-answer'] input[type=file]")
+    .addEventListener("change", async e => {
+      const file = e.target.files[0].name.normalize("NFKD").replace(/[^\x00-\x7f]/g, "")
+        .toLowerCase().replace(/[^a-z0-9.\-]+/g, "_");
+      const video = await fetch("/videos", {method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({video: {file: `https://videos.example/tmp/0f1e/${file}`}})}).then(r => r.json());
+      Object.assign(document.getElementById("video-id"), {value: video.id, disabled: false});
+    });
   document.getElementsByName("candidate[answers_attributes][9][boolean]").forEach(radio =>
     radio.onchange = () => document.querySelector("[data-careersite--form-target=formContentWrapper]")
       .classList.toggle("cursor-not-allowed", radio.value !== "true"));

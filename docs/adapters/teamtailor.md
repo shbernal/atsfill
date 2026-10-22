@@ -1,6 +1,6 @@
 # Teamtailor
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
 
 ## Where the form is
 
@@ -38,6 +38,7 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 | question `[date]` (`input[type=date]`) | `date` | 0, seen before |
 | qualifying question | `choice` | 1 |
 | follow-up question | as its kind, optional | 2 |
+| video question (`[picked_video_attributes]`), its "Upload video" input; recording is never used | `file`, a clip | 3, required on 2 |
 
 ## Filling
 
@@ -49,17 +50,17 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 - The phone field (intl-tel-input) takes an international number and keeps it as `+<digits>`.
 - In a dropdown choice the hidden radios still have labels: pick from the dropdown, not the hidden label. A multiple choice dropdown stays open after a pick, over the fields below it, so it is closed once its options are picked.
 - The address is typed key by key, and the first suggestion (`[role=option]`, its text in `data-description`) matching it is picked; only a pick fills `candidate[location][place_id]` and the city, country and coordinates beside it.
+- A video question offers to record a clip or to upload one; atsfill uploads the answer's file through its hidden `input[type=file]`, which takes the extensions in its `accept`. The page posts `/uploads/presigned_data` (`"type":"video"`), puts the clip on S3, then `POST /videos` with its storage address answers `{id, sgid}`. The form keeps the id in `[picked_video_attributes][video_id]`, enabled only then; `[video_attributes][file]` stays disabled. Teamtailor transcodes the clip and `GET /videos/<sgid>` gives it back with `file_file_name`, the stored name. A file the page rejects (its "not supported" message) posts no video: `answer_not_taken`.
 - A range question is set on its slider, `input[type=range]`.
 - A number question takes only a number; any other answer leaves it empty, a mismatch.
 
 ## Read-back and submit
 
-- Nothing reaches the employer before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
+- Nothing reaches the employer before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, for a video question the `file_file_name` Teamtailor gives back for the video id the form keeps, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
 - Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, the id a UUID, titled "Applied to <role>". An optional "Connect" step that follows is skipped.
 
 ## Known gaps
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `video_upload` | video question (`[picked_video_attributes]`): record, or upload a clip; the upload path is wanted | `unsupported_rendering` | 3, required on 2 |
 | `file_question` | file question: a drop zone inside a `.question` | `unsupported_rendering` | 0 |

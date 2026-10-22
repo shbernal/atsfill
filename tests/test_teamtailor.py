@@ -1,6 +1,7 @@
 """The Teamtailor adapter on tests/pages/teamtailor, served as an employer's career site."""
 
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
 
@@ -13,9 +14,22 @@ PAGE = Path(__file__).parent / "pages/teamtailor/new.html"
 JOB = "https://careers.example.com/fr/jobs/1234567-solution-engineer"
 
 
+VIDEO_ID, SGID = 4401, "c2dpZA--4401"
+videos: dict[str, str] = {}  # sgid: the stored clip's file name
+
+
 def serve(route) -> None:
-    if route.request.url.endswith("/applications/new"):
+    """The career site, and Teamtailor's videos: one created from the posted clip, read back
+    by its sgid under the name its storage address ends in."""
+    request, path = route.request, urlsplit(route.request.url).path
+    if path.endswith("/applications/new"):
         route.fulfill(path=PAGE)
+    elif path == "/videos" and request.method == "POST":
+        videos[SGID] = request.post_data_json["video"]["file"].rsplit("/", 1)[-1]
+        route.fulfill(json={"id": VIDEO_ID, "sgid": SGID})
+    elif path.startswith("/videos/"):
+        sgid = path.rsplit("/", 1)[-1]
+        route.fulfill(json={"id": VIDEO_ID, "file_file_name": videos[sgid]})
     else:
         route.fulfill(content_type="text/html", body="<a href='https://www.teamtailor.com/'></a>")
 
@@ -94,14 +108,17 @@ def test_read_form(opened):
     assert fields["question:106"].options == [str(n) for n in range(11)]
 
 
-def test_a_video_or_file_question_is_a_known_gap(opened):
+def test_a_file_question_is_a_known_gap(opened):
     unfillable = {f.id: f.unfillable for f in opened[1] if f.unfillable}
     assert unfillable == {
-        "question:107": "unsupported_rendering: video_upload: question:107 is a video, "
-        "recorded or uploaded",
         "question:109": "unsupported_rendering: file_question: question:109 is a question's "
         "file drop zone",
     }
+
+
+def test_a_video_question_takes_a_clip_file(opened):
+    video = next(f for f in opened[1] if f.id == "question:107")
+    assert (video.type, video.accept) == (FieldType.FILE, [".mp4", ".mov", ".webm"])
 
 
 def test_an_unknown_question_kind_is_unhandled():
@@ -110,7 +127,9 @@ def test_an_unknown_question_kind_is_unhandled():
     assert field.unfillable == "unhandled_rendering: question:1 is a Teamtailor signature question"
 
 
-def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume):
+def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume, tmp_path):
+    clip = tmp_path / "Présentation Ada.mp4"
+    clip.write_bytes(b"\x00\x00\x00\x1cftypisom")
     answers = {
         "candidate[first_name]": "Ada",
         "candidate[email]": "ada@example.com",
@@ -127,6 +146,7 @@ def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume):
         "question:106": "7",
         "question:103": ["Français", "Anglais"],
         "question:104": "2026-11-02",
+        "question:107": str(clip),
     }
     adapter, fields = opened
     adapter.fill(page, answers)
