@@ -564,6 +564,8 @@ def _entry_fields(
             fields.append(Field(field_id, label, FieldType.TEXT, required, unfillable=reason))
             continue
         options = NO_YES if kind == "boolean" else None
+        if kind == "gpa":  # a number box: it drops anything else when it loses focus
+            label += " (a number)"
         fields.append(Field(f"{prefix}.{key}", label, ENTRY_KINDS[kind], required, options))
     return fields
 
@@ -754,6 +756,8 @@ def _fill_control(page: Page, selector: str, field: Field, answer: Answer) -> No
             _pick(page, target, [value])
     else:
         target.fill(value)
+        if target.get_attribute("role") == "spinbutton":
+            target.blur()  # a number box keeps what it takes of the text once it loses focus
 
 
 def _pick_suggestion(page: Page, target: Locator, value: str) -> None:

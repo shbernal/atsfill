@@ -47,6 +47,11 @@
       <button type="button" test-id="add-workhistory-record">Add Employment History</button>
       <div id="work"></div>
     </section>
+    <section>
+      <h2 test-id="educationhistory-title">Education History</h2>
+      <button type="button" test-id="add-educationhistory-record">Add Education History</button>
+      <div id="education"></div>
+    </section>
   </div>
   <div id="questionnaire" class="hidden"></div>
   <div id="submit" class="hidden">
@@ -192,6 +197,21 @@ function workForm() {
   form.append(update);
 }
 
+// G.P.A. is a number box: it drops what is not a number when it loses focus.
+function educationForm() {
+  const e = ID + "educationHistory_0_", form = document.getElementById("education");
+  form.append(item("School", text(e + "schoolName", 60), "educationHistory_0_schoolName", true));
+  const gpa = el(`<input id="${e}gpa" role="spinbutton" class="ant-input-number-input">`);
+  gpa.addEventListener("blur", () => { const n = parseFloat(gpa.value); gpa.value = isNaN(n) ? "" : String(n); });
+  form.append(item("G.P.A.", gpa, "educationHistory_0_gpa", true));
+  const update = el(`<button type="submit">Update</button>`);
+  update.addEventListener("click", () => {
+    if (!gpa.value) return;  // a required G.P.A. left empty keeps the entry open
+    form.innerHTML = `<p>${document.getElementById(e + "schoolName").value}</p>`;
+  });
+  form.append(update);
+}
+
 // Questionnaire pages: each question's controls under ids that count the page's statements.
 const PAGES = [
   {title: "Screening", questions: [
@@ -257,6 +277,7 @@ document.querySelector("[test-id=application-next-step]").addEventListener("clic
   const button = e.target;
   if (step === 0 && document.getElementById(ID + "personalInfo_email")) return;  // an open section
   if (step === 0 && document.getElementById(ID + "workHistory_0_companyName")) return;
+  if (step === 0 && document.getElementById(ID + "educationHistory_0_schoolName")) return;
   if (step === 0 && document.getElementById(ID + "workHoursAvailability_sunday_isChecked")) return;
   // a follow-up left empty is required: its error shows under it, the step stays
   const empty = [...document.querySelectorAll("#questionnaire [id*=answerFollowup]")]
@@ -277,6 +298,7 @@ document.querySelector("[test-id=application-next-step]").addEventListener("clic
 });
 
 document.querySelector("[test-id=add-workhistory-record]").addEventListener("click", workForm);
+document.querySelector("[test-id=add-educationhistory-record]").addEventListener("click", educationForm);
 document.querySelector("[test-id=client-privacy-policy-modal-save-button]").addEventListener("click", () => {
   if (document.querySelector("[test-id=client-privacy-policy-modal-agree-checkbox]").checked) {
     document.getElementById("privacy").remove();
