@@ -12,6 +12,7 @@ from functools import partial
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
@@ -152,16 +153,17 @@ class Ashby:
                 case FieldType.CHOICE, str() if entry.locator("input[role=combobox]").count():
                     entry.locator("input[role=combobox]").fill(answer)
                     option = page.get_by_role("option", name=answer, exact=True)
-                    self._saved(page, option.click)
+                    self._saved(page, partial(browser.click, option))
                 case FieldType.CHOICE, str():
-                    self._saved(page, entry.get_by_text(answer, exact=True).click)
+                    self._saved(page, partial(browser.click, entry.get_by_text(answer, exact=True)))
                 case FieldType.MULTI_CHOICE, list():
                     for value in answer:
-                        self._saved(page, entry.get_by_text(value, exact=True).click)
+                        choice = entry.get_by_text(value, exact=True)
+                        self._saved(page, partial(browser.click, choice))
                 case FieldType.TYPEAHEAD, str():
                     entry.locator("input[role=combobox]").fill(answer)
                     option = page.get_by_role("option").filter(has_text=answer).first
-                    self._saved(page, option.click)
+                    self._saved(page, partial(browser.click, option))
                 case FieldType.FILE, str():
                     upload = entry.locator("input[type=file]")
                     self._saved(page, partial(upload.set_input_files, answer))
@@ -201,7 +203,7 @@ class Ashby:
             lambda r: _op(r).startswith("ApiSubmit") and _op(r).endswith("Action"),
             timeout=SUBMIT_TIMEOUT_MS,
         ) as submitted:
-            page.locator(".ashby-application-form-submit-button").click()
+            browser.click(page.locator(".ashby-application-form-submit-button"))
         response = submitted.value
         text = response.text()
         if "RECAPTCHA_SCORE_BELOW_THRESHOLD" in text or "spam" in text.lower():

@@ -186,3 +186,17 @@ def test_a_career_page_embedding_ashby(page):
     assert adapter.detect(page_url, page)
     assert adapter.posting(page_url) == URL
     page.unroute_all()
+
+
+def test_a_covered_submit_ends_covered(ashby, page):
+    adapter, _ = ashby
+    page.goto(URL)
+    adapter.read_form(page)
+    page.evaluate("""() => {
+        const cover = document.createElement("div");
+        cover.className = "cookie-banner";
+        cover.style.cssText = "position:fixed;inset:0;z-index:9999;background:#fff";
+        document.body.append(cover);
+    }""")
+    with pytest.raises(browser.Covered, match="cookie-banner"):
+        adapter.submit(page)
