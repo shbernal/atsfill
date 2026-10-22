@@ -16,6 +16,7 @@ Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last 
 
 - The form is a list of `apply-flow-block`s, the kind in the class of its child (`apply-flow-block--disqualification-questions`…). A required block's title has `apply-flow-block__title--required`.
 - A field is an innermost `.input-row`. Its id is its label's DOM id without the counter Oracle appends on each load: `labelText-lastName-14` is `lastName`, a question `labelText-300005169285088-8` is `300005169285088`; a row without a `labelText-` span uses its label's `for` (`country-12`, `city-33`). Required: `input-row__label--required`, or `aria-required`/`required` on the control.
+- A row whose control is none of the renderings below is listed as `unhandled_rendering`; a row with no control (text) or only a disabled one is not a field.
 - The email row in the form repeats the email step's address; it is read back as `email`.
 - Dropdowns are `input[role=combobox]` whose list (`[role=grid]` named by `aria-controls`) fills with `[role=gridcell]`s once clicked, and filters as one types. A dropdown still loading is a skeleton (`.cx-select--loading`) that loads only once scrolled into view. Most of the address block appears only after its country has loaded, in that country's format; the country is prefilled from the visitor's location.
 

@@ -27,7 +27,7 @@ Each rendering and on how many of 14 postings (2026-10-20):
 | profile | `spl-autocomplete` city search, required on 6 | `typeahead` | 14 |
 | profile | `spl-phone-field`: a country `spl-select` and a national number, required on 6 | `phone` | 14 |
 | profile | `spl-dropzone`, resume, required on 6 | `file` | 14 |
-| profile | avatar photo | not listed | 5 |
+| profile | `oc-avatar` photo, an image upload, optional | `file`, id `photo`, a known gap | 5 |
 | profile | Easy Apply: a parsing dropzone, LinkedIn, Indeed, SEEK | not used | 14 |
 | questions | `info`, text only | not listed | 5 |
 | questions | `text` in `spl-input` | `text` | 11 |
@@ -70,3 +70,4 @@ Each question renders as a `[data-test=question-container]` in `sr-screening-que
 | `entries` | profile Experience, Education: "Add" opens an entry sub-form (title, company, dates) | `unsupported_rendering` | 4 |
 | `attachments` | `files` question, additional attachments | `unsupported_rendering` | 2 |
 | `languages` | `languages` question, repeatable language and level | `unsupported_rendering` | 2 |
+| `photo` | profile photo (`oc-avatar`), an image upload | `unsupported_rendering` | 5 |

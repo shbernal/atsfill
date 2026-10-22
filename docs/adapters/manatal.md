@@ -35,6 +35,8 @@ Each rendering and on how many of 100 postings from 25 employers (2026-10-20, ov
 
 The options of a select, a radio or a checkbox list are read from the page, labels rather than values (`30 days`, not `30 00:00:00`). `read_api` takes them from the entries' `client_field_answer_choices`, the template's fixed lists (gender, notice period, years of experience) and the lists the page fetches apart (`/api/v1.0/nationalities/`, `languages/`, `clients/<client>/industries/`), labelled as the page labels them.
 
+A radio or checkbox list with an `Other` option opens a text box (`.custom-other-val-input`) under it once `Other` is picked; Apply sends that text in place of `Other`, and refuses an empty one on a required list. It is listed as `<id>.other`, optional, a known gap.
+
 A number input (`min="0"`) holds no text: an answer that is not a number is left out, reads back empty and the dry run refuses it.
 
 ## Filling
@@ -42,7 +44,7 @@ A number input (`min="0"`) holds no text: an answer that is not a number is left
 Nothing is saved before Apply: the app reads the inputs only when Apply is clicked, so `fill` sets inputs and `read_back` reads them as the app will.
 
 - Page globals are out of reach (Camoufox's isolated world), so select2 and flatpickr are not called: a multiple select gets its options selected and a `change` event, which select2 follows; a date is written into flatpickr's read-only input with a `change` event.
-- Radios and checkboxes are hidden behind styled marks, at times outside the viewport, and are clicked from the page's script when their state differs. An answer of `Other` asks for a text box atsfill does not fill.
+- Radios and checkboxes are hidden behind styled marks, at times outside the viewport, and are clicked from the page's script when their state differs.
 
 ## Read-back and submit
 
@@ -54,3 +56,4 @@ Nothing is saved before Apply: the app reads the inputs only when Apply is click
 | Gap | What | Code | Postings |
 |---|---|---|---|
 | `entries` | "Add Education" / "Add Experience" entry sub-form (`educations`, `experiences`) | `unsupported_rendering` | 1 |
+| `other` | the text box an answer of `Other` opens on a radio or checkbox list | `unsupported_rendering` | 1 of 25 (2026-10-22) |

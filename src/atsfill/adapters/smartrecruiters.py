@@ -61,6 +61,8 @@ PROFILE_TYPES = {
     "phone": FieldType.PHONE,
     "resume": FieldType.FILE,
 }
+# The profile's optional photo, an image upload beside the name.
+PHOTO = "oc-avatar input[type=file]"
 # Sections of the profile that take entries through their own sub-form.
 ENTRIES = ("oc-experience", "oc-education")
 # Screening question types: one field per entry of the question's `fields`.
@@ -111,6 +113,7 @@ class SmartRecruiters:
         "entries": Gap.RENDERING,
         "attachments": Gap.RENDERING,
         "languages": Gap.RENDERING,
+        "photo": Gap.RENDERING,
     }
     side_effects = [
         SideEffect(
@@ -150,6 +153,8 @@ class SmartRecruiters:
         self._questions = {q["id"]: q for q in screening.get("questions") or []}
         self._conditions = screening.get("conditionalConfigurations") or []
         fields = [f for f in (_profile_field(page, *row) for row in PROFILE) if f]
+        if photo := self._photo(page):
+            fields.append(photo)
         fields += [f for f in (self._entries(page, section) for section in ENTRIES) if f]
         for question in self._questions.values():
             fields += self._question_fields(question)
@@ -247,6 +252,15 @@ class SmartRecruiters:
             for i, e in zip(ids, entries, strict=True)
             if i in self._fields and not self._fields[i].unfillable
         ]
+
+    def _photo(self, page: Page) -> Field | None:
+        """The profile photo, shown: an image upload atsfill does not fill."""
+        upload = page.locator(PHOTO).first
+        if not upload.count():
+            return None
+        label = upload.get_attribute("aria-label") or "Photo"
+        gap = known_gap(self, "photo", "photo is a profile photo")
+        return Field("photo", label, FieldType.FILE, False, unfillable=gap)
 
     def _entries(self, page: Page, section: str) -> Field | None:
         """Experience or education, shown: entries added through a sub-form."""

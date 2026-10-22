@@ -65,7 +65,10 @@ def test_detect_and_posting():
 def test_read_form_lists_each_rendering(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
-    assert list(by_id) == [*(str(i) for i in range(1, 23)), "terms_and_condition"]
+    ids = [str(i) for i in range(1, 23)]
+    assert list(by_id) == [*ids[:18], "18.other", *ids[18:], "terms_and_condition"]
+    gap = "unsupported_rendering: other: 18.other is the text box an answer of Other opens"
+    assert (by_id["18.other"].unfillable, by_id["18.other"].required) == (gap, False)
     gap = "unsupported_rendering: entries: 22 is a list of educations"
     assert (by_id["22"].unfillable, by_id["22"].required) == (gap, False)
     assert by_id["3"].type is FieldType.PHONE

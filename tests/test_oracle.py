@@ -80,6 +80,7 @@ def test_read_form(opened):
         "3003",
         "3004",
         "3005",
+        "3006",
         "resume",
         "coverLetter",
         "siteLink-1",
@@ -93,6 +94,9 @@ def test_read_form(opened):
         "unsupported_rendering: entries: 'Education' needs entries added"
     )
     assert not fields["block:108"].required
+    assert fields["3006"].unfillable == (
+        "unhandled_rendering: 'Rate your English' has no control atsfill knows"
+    )
     assert fields["legalDisclaimer"].label == "I agree with the terms and conditions"
     assert fields["lastName"].required and fields["lastName"].max_length == 150
     assert fields["title"].options == ["Mr.", "Ms."]

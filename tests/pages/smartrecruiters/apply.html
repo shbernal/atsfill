@@ -46,6 +46,10 @@
 
 <main id="profile">
   <oc-personal-information>
+    <oc-avatar><div data-test="avatar"><spl-form-field><oc-file-upload-button>
+      <button type="button" data-test="avatar-browse" aria-label="Upload a profile photo"></button>
+      <input type="file" class="file-upload-input" accept=".jpeg,.jpg,.png" aria-label="Upload a profile photo">
+    </oc-file-upload-button></spl-form-field></div></oc-avatar>
     <spl-input id="first-name-input" label="First name" required><input id="first-name-input" type="text"></spl-input>
     <spl-input id="last-name-input" label="Last name" required><input id="last-name-input" type="text"></spl-input>
     <spl-input id="email-input" label="Email" required><input id="email-input" type="email"></spl-input>

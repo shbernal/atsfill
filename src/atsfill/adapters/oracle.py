@@ -65,6 +65,7 @@ _READ = """() => {
   const text = e => (e?.textContent || "").replace(/\\s+/g, " ").trim().replace(/\\s*\\*$/, "");
   const stable = s => s?.replace(/^labelText-/, "").replace(/-\\d+(-label)?$/, "");
   const shown = e => !!e.getClientRects().length;
+  const CONTROL = "input:not([type=hidden]), textarea, select, button, [role], [tabindex]";
   const fields = [];
   const add = f => { if (f.id && !fields.some(g => g.id === f.id)) fields.push(f); };
   for (const block of document.querySelectorAll("apply-flow-block")) {
@@ -139,7 +140,12 @@ _READ = """() => {
         field.kind = input.type === "email" ? "email" : "text";
         field.value = input.value;
         field.maxLength = input.maxLength > 0 ? input.maxLength : null;
-      } else continue;
+      } else if (input?.disabled || !row.querySelector(CONTROL)) {
+        continue;  // text, or a value the page sets
+      } else {
+        field.kind = "unhandled";
+        field.id ||= `${blockId}:${field.label}`;
+      }
       add(field);
     }
   }
@@ -373,6 +379,11 @@ class Oracle:
         if raw["kind"] == "tiles":
             gap = known_gap(self, "entries", f"{raw['label']!r} needs entries added")
             return Field(raw["id"], raw["label"], FieldType.TEXT, raw["required"], unfillable=gap)
+        if raw["kind"] == "unhandled":
+            unhandled = f"unhandled_rendering: {raw['label']!r} has no control atsfill knows"
+            return Field(
+                raw["id"], raw["label"], FieldType.TEXT, raw["required"], unfillable=unhandled
+            )
         if raw["kind"] == "email":
             self._kinds[EMAIL] = "email"
             return None

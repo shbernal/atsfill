@@ -61,6 +61,7 @@ def test_read_form_lists_both_pages(page):
         "website",
         "resume",
         "message",
+        "photo",
         "experience",
         "q-text",
         "q-radio",
@@ -91,7 +92,9 @@ def test_read_form_lists_both_pages(page):
         == "You declare that you have read the privacy notice of Acme."
     )
     assert by_id["consent.RECRUIT"].required and not by_id["consent.CRM"].required
+    assert by_id["photo"].label == "Upload a profile photo"
     assert {i: (f.unfillable, f.required) for i, f in by_id.items() if f.unfillable} == {
+        "photo": ("unsupported_rendering: photo: photo is a profile photo", False),
         "experience": ("unsupported_rendering: entries: experience is a list of entries", False),
         "q-files": ("unsupported_rendering: attachments: q-files is a list of attachments", False),
     }

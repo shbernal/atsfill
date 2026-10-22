@@ -34,6 +34,7 @@ LISTS: dict[str, tuple[str, Callable[[dict[str, Any]], str]]] = {
     "industries": ("clients/{client}/industries/", lambda n: n["name"]),
 }
 ENTRIES = ("educations", "experiences")  # a sub-form of entries
+OTHER = "Other"  # the radio or checkbox list option that opens a text box once picked
 SHORT = {"full_name", "email", "phone_number", "city", "address", "latest_degree",
          "latest_university", "current_company", "current_department", "current_position",
          "current_benefits", "expected_benefits", "skype", "contact"}  # fmt: skip
@@ -153,7 +154,7 @@ def _options(entry: dict[str, Any], client: str) -> list[str] | None:
 
 class Manatal:
     name = "manatal"
-    known_gaps = {"entries": Gap.RENDERING}
+    known_gaps = {"entries": Gap.RENDERING, "other": Gap.RENDERING}
     side_effects = [
         SideEffect("submit", "hiring_system", "the resume and attachments are uploaded"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -271,10 +272,14 @@ class Manatal:
         terms: bool,
         options: Callable[[dict[str, Any]], list[str] | None],
     ) -> list[Field]:
-        fields = [
-            self._entries_field(e) if _kind(e) == "entries" else _field(e, options(e))
-            for e in entries
-        ]
+        fields = []
+        for entry in entries:
+            if _kind(entry) == "entries":
+                fields.append(self._entries_field(entry))
+                continue
+            fields.append(field := _field(entry, options(entry)))
+            if _kind(entry) in ("radio", "checkbox") and OTHER in (field.options or []):
+                fields.append(self._other_field(field))
         if terms:
             fields.append(Field(TERMS, TERMS_LABEL, FieldType.CHOICE, True, YES_NO))
         return fields
@@ -286,6 +291,12 @@ class Manatal:
         return Field(
             fid, entry["label"], FieldType.TEXT, bool(entry["is_required"]), unfillable=gap
         )
+
+    def _other_field(self, field: Field) -> Field:
+        """The text box an answer of Other opens, asked only then."""
+        fid = f"{field.id}.other"
+        gap = known_gap(self, "other", f"{fid} is the text box an answer of {OTHER} opens")
+        return Field(fid, f"{field.label}: {OTHER}", FieldType.TEXT, False, unfillable=gap)
 
     @staticmethod
     def _shown(page: Page, entry: dict[str, Any]) -> list[str] | None:
