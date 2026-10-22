@@ -20,8 +20,8 @@
 </div>
 <script>
 const NATIONALITIES = [[236, "American (United States)"], [75, "French (France)"], [196, "Singaporean (Singapore)"]];
-const CURRENCIES = [[1, "Singapore dollar"], [2, "Euro"]];
-const FREQUENCIES = [["month", "Monthly"], ["year", "Yearly"]];
+const CURRENCIES = [[1067, "Barbados dollar"], [3, "Euro"], [6, "Singapore dollar"]];
+const FREQUENCIES = [["hour", "Hourly"], ["day", "Daily"], ["week", "Weekly"], ["month", "Monthly"], ["year", "Yearly"]];
 const NOTICE = [["0", "Immediately"], ...[10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120].map(d => [`${d} 00:00:00`, `${d} days`]), ["121 00:00:00", "120+ days"]];
 const YEARS = [[0, "No experience"], ...Array.from({length: 20}, (_, i) => [i + 1, `${i + 1}+ year`])];
 
@@ -45,8 +45,9 @@ function render(f) {
   if (f.field_type === "social_media") return text();
   if (slug === "expected_salary" || slug === "current_salary") {
     const prefix = slug.split("_")[0];
-    return text("number") + select({id: ""}, CURRENCIES).replace('id="field"', `id="${prefix}_currency"`)
-      + select({id: ""}, FREQUENCIES).replace('id="field"', `id="${prefix}_frequency"`);
+    // No placeholder: the first currency and the first frequency stay selected until changed.
+    return text("number") + select(f, []).replace(`id="field${f.id}"`, `id="${prefix}_currency"`)
+      + select(f, FREQUENCIES).replace(`id="field${f.id}"`, `id="${prefix}_frequency"`);
   }
   if (f.field_type === "candidate_field") {
     if (slug === "gender") return select(f, [["male", "Male"], ["female", "Female"], ["other", "Other"]]);
@@ -74,9 +75,11 @@ fetch(`https://www.careers-page.com/api/v1.0/jobs/${selectedJobId}/application-f
     render(f) + "</div>").join("") +
     `<input type="checkbox" name="terms_and_condition" value="checked"> I agree to the terms and conditions & privacy policy
      <button type="submit" id="submit-id-submit">Apply</button>`;
-  setTimeout(() => {  // the nationalities come in a request of their own
+  setTimeout(() => {  // the nationalities and currencies come in requests of their own
     document.getElementById("field12").innerHTML = NATIONALITIES.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
     for (const el of document.querySelectorAll(".multiselect")) el.classList.add("select2-hidden-accessible");
+    for (const el of document.querySelectorAll("#expected_currency, #current_currency"))
+      el.innerHTML = CURRENCIES.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
   }, 300);
   form.addEventListener("change", e => {
     const other = form.querySelector(`input[name="${e.target.name}"][value="Other"]`);
