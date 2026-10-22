@@ -30,7 +30,10 @@ const select = (f, options, placeholder, multiple) =>
   (placeholder ? `<option value="">${placeholder}</option>` : "") +
   options.map(([v, t]) => `<option value="${v}">${t}</option>`).join("") + "</select>";
 const choices = (f, type) => "<ul>" + f.client_field_answer_choices.map((a, i) =>
-  `<li><label class="${type}container"> ${a}<input type="${type === "check" ? "checkbox" : type}" id="${f.id}${i}" name="${f.id}" value="${a}"></label></li>`).join("") + "</ul>";
+  `<li><label class="${type}container"> ${a}<input type="${type === "check" ? "checkbox" : type}" id="${f.id}${i}" name="${f.id}" value="${a}"></label>` +
+  // An answer of Other opens a text box, sent in its place.
+  (a === "Other" ? `<div hidden><input type="text" class="form-control custom-other-val-input"></div>` : "") +
+  "</li>").join("") + "</ul>";
 const pair = pairs => pairs.map(p => [p, p]);
 
 function render(f) {
@@ -75,6 +78,11 @@ fetch(`https://www.careers-page.com/api/v1.0/jobs/${selectedJobId}/application-f
     document.getElementById("field12").innerHTML = NATIONALITIES.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
     for (const el of document.querySelectorAll(".multiselect")) el.classList.add("select2-hidden-accessible");
   }, 300);
+  form.addEventListener("change", e => {
+    const other = form.querySelector(`input[name="${e.target.name}"][value="Other"]`);
+    const box = other?.closest("li").querySelector(".custom-other-val-input");
+    if (box) box.parentElement.hidden = !other.checked;
+  });
   form.addEventListener("submit", e => {
     e.preventDefault();
     fetch(`https://www.careers-page.com/api/v1.0/jobs/${selectedJobId}/application-form/`, {method: "POST", body: "{}"})
