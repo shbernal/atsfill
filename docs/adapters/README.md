@@ -29,7 +29,7 @@ The registry covers 90.1% of postings.
 | personio | ats | 0.4% | none | hosted |  | [dry_run_verified](personio.md) |
 | eightfold | ats | 0.4% | none | hosted |  | mapped |
 | pinpoint | ats | 0.4% | none | hosted |  | [dry_run_verified](pinpoint.md) |
-| hiringthing | ats | 0.3% | none | hosted |  | [mapped](hiringthing.md) |
+| hiringthing | ats | 0.3% | none | hosted |  | [dry_run_verified](hiringthing.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [send_verified](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | mapped |
 | successfactors | ats | 3.5% | to_read | hosted |  | mapped |
