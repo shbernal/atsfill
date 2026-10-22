@@ -8,9 +8,13 @@ On PASS it records `dry_run_verified` in the registry; `--broken` records `send_
 0012). Either is its own commit, so the commit it names is the code's. `--cause` alone settles
 the recorded break's cause and keeps the rest of it, its commit too. Never sends. Employers
 and postings are printed as hashes, so the output can go in a public pull request.
+
+The checks cover the system's files; the whole suite runs in CI, whose check every merge
+requires. A survey row counts when its commit's code is the current commit's.
 """
 
 import argparse
+import functools
 import hashlib
 import json
 import re
@@ -34,8 +38,11 @@ GENERATED = [REGISTRY, ROOT / "docs/adapters/README.md", ROOT / "README.md"]
 EMPLOYERS = 5
 # A skipped posting (ADR 0013): a fact about the posting or out of scope, not the adapter's job
 SKIPPED = ("posting_gone", "external_step", "out_of_scope")
+# The system's tests and the ones every adapter meets; the whole suite is CI's
+TESTS = ["tests/test_{system}.py", "tests/test_known_gaps.py", "tests/test_registry.py"]
+# What a dry run exercises: a row at another commit counts when none of it changed since
+CODE = ["src/atsfill", ":!src/atsfill/registry.toml"]
 CHECKS = [
-    ["uv", "run", "pytest", "-q"],
     ["uv", "run", "ruff", "check"],
     ["uv", "run", "ruff", "format", "--check"],
     ["uv", "run", "ty", "check"],
@@ -51,15 +58,25 @@ def line(ok: bool, criterion: str, detail: str = "") -> None:
     print(f"{'ok  ' if ok else 'FAIL'}  {criterion}" + (f": {detail}" if detail else ""))
 
 
-def rows(paths: list[Path], commit: str | None = None) -> list[dict]:
-    """The latest survey row of each URL in these files, of that commit if one is given."""
+def rows(paths: list[Path], head: str | None = None) -> list[dict]:
+    """The latest survey row of each URL in these files, of code the same as `head`'s if one
+    is given."""
     latest: dict[str, dict] = {}
     for path in paths:
         for text in path.read_text().splitlines() if path.exists() else []:
             row = json.loads(text)
-            if commit is None or row.get("commit") == commit:
+            if head is None or same_code(row.get("commit"), head):
                 latest[row["url"]] = row
     return list(latest.values())
+
+
+@functools.cache
+def same_code(commit: str | None, head: str) -> bool:
+    """Whether `commit` runs the code `head` does: nothing a dry run exercises differs."""
+    if commit is None:
+        return False
+    diff = ["git", "diff", "--quiet", commit, head, "--", *CODE]
+    return commit == head or subprocess.run(diff, capture_output=True, cwd=ROOT).returncode == 0
 
 
 def parity(adapter: ReadsOverHttp, url: str, data: Path) -> str | None:
@@ -158,7 +175,8 @@ def main() -> None:
     doc = ROOT / "docs/adapters" / f"{name}.md"
     line(doc.exists(), "adapter doc", str(doc.relative_to(ROOT)))
 
-    for command in CHECKS:
+    tests = [t for t in (t.format(system=name) for t in TESTS) if (ROOT / t).exists()]
+    for command in [*CHECKS, ["uv", "run", "pytest", "-q", *tests]]:
         run = subprocess.run(command, capture_output=True, text=True, cwd=ROOT)
         tail = (run.stdout + run.stderr).strip().splitlines()[-1:] or [""]
         line(run.returncode == 0, " ".join(command[2:]), tail[0])
