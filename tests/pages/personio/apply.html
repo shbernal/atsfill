@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Apply - Acme</title></head>
+<body>
+<!-- The page's labels and the standard fields' option texts are in the career site's language;
+     the form API's are in English. A select's option values are the API's keys. -->
+<h1>Deine Bewerbung!</h1>
+<form>
+  <fieldset>
+    <div role="group" aria-labelledby="name-group-label">
+      <span id="name-group-label">Name<span aria-hidden="true">*</span><span class="sr-only"> (erforderlich)</span></span>
+      <label for="field-first_name">Vorname</label>
+      <input id="field-first_name" type="text" maxlength="255" name="first_name" value="">
+      <label for="field-last_name">Nachname</label>
+      <input id="field-last_name" type="text" maxlength="255" name="last_name" value="">
+    </div>
+    <label for="field-email">E-Mail<span aria-hidden="true">*</span></label>
+    <input id="field-email" type="email" maxlength="255" name="email" value="">
+    <label for="field-phone">Telefon</label>
+    <input id="field-phone" type="text" maxlength="255" placeholder="+49 176 123 4455" name="phone" value="">
+    <label for="field-available_from">Verfügbar ab<span aria-hidden="true">*</span></label>
+    <input id="field-available_from" type="text" maxlength="255" name="available_from" value="">
+    <label for="field-gender">Geschlecht</label>
+    <select name="gender" id="field-gender">
+      <option value="" selected>Bitte auswählen</option>
+      <option value="male">Männlich</option>
+      <option value="female">Weiblich</option>
+      <option value="diverse">Divers</option>
+      <option value="undefined">Unbestimmt</option>
+    </select>
+    <label for="field-birthday">Geburtsdatum</label>
+    <input id="field-birthday" type="date" maxlength="255" name="birthday" value="">
+    <label for="field-custom_attribute_1001">LinkedIn-Profil</label>
+    <input id="field-custom_attribute_1001" type="text" maxlength="5000" name="custom_attribute_1001" value="">
+    <label for="field-custom_attribute_1002">Are you authorized to work in Germany?<span aria-hidden="true">*</span></label>
+    <select name="custom_attribute_1002" id="field-custom_attribute_1002">
+      <option value="" selected>Bitte auswählen</option>
+      <option value="custom_option_2001">Yes</option>
+      <option value="custom_option_2002">No</option>
+    </select>
+    <label for="field-custom_attribute_1003">Frühester Starttermin</label>
+    <input id="field-custom_attribute_1003" type="date" maxlength="5000" name="custom_attribute_1003" value="">
+
+    <h3>Dokumente</h3>
+    <div role="group" aria-labelledby="doc-label-cv">
+      <div id="doc-label-cv">Lebenslauf<span aria-hidden="true">*</span></div>
+      <div class="document-input-wrapper">
+        <button type="button">Datei hinzufügen</button>
+        <input id="doc-input-cv" type="file" multiple hidden accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.txt,.odt,.rtf" name="documents.cv">
+      </div>
+    </div>
+    <div role="group" aria-labelledby="doc-label-cover-letter">
+      <div id="doc-label-cover-letter">Anschreiben<span> (Optional)</span></div>
+      <div class="document-input-wrapper">
+        <button type="button">Datei hinzufügen</button>
+        <input id="doc-input-cover-letter" type="file" multiple hidden accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.txt,.odt,.rtf" name="documents.cover-letter">
+      </div>
+    </div>
+    <button type="submit" disabled>Bewerbung senden</button>
+  </fieldset>
+</form>
+<script>
+  // A document is posted to Personio once attached; the input is cleared and its name shown
+  // as a pill in the category.
+  for (const input of document.querySelectorAll("input[type=file]")) {
+    input.addEventListener("change", async () => {
+      const files = [...input.files];
+      for (const file of files) {
+        const body = new FormData();
+        body.append("file", file);
+        await fetch("/api/v1/documents", {method: "POST", body});
+        const wrapper = input.closest(".document-input-wrapper");
+        let list = wrapper.querySelector("[role=list]");
+        if (!list) {
+          list = document.createElement("div");
+          list.setAttribute("role", "list");
+          wrapper.prepend(list);
+        }
+        const pill = document.createElement("div");
+        pill.setAttribute("role", "listitem");
+        pill.innerHTML = `<span></span><button type="button" aria-label="Remove">×</button>`;
+        pill.querySelector("span").textContent = file.name;
+        list.append(pill);
+      }
+      input.value = "";
+    });
+  }
+  // Turnstile clears the visitor a moment after load and enables the submit.
+  setTimeout(() => { document.querySelector("button[type=submit]").disabled = false; }, 300);
+  document.querySelector("form").addEventListener("submit", async event => {
+    event.preventDefault();
+    await fetch("/api/v1/jobs/1234567/application", {method: "POST", body: "{}"});
+  });
+</script>
+</body>
+</html>

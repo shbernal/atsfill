@@ -27,7 +27,7 @@ The registry covers 90.1% of postings.
 | applicantpro | ats | 0.6% | none | hosted |  | mapped |
 | rippling | ats | 0.5% | none | hosted |  | mapped |
 | isolvedhire | ats | 0.5% | none | hosted |  | mapped |
-| personio | ats | 0.4% | none | hosted |  | mapped |
+| personio | ats | 0.4% | none | hosted |  | [mapped](personio.md) |
 | eightfold | ats | 0.4% | none | hosted |  | mapped |
 | pinpoint | ats | 0.4% | none | hosted |  | mapped |
 | hiringthing | ats | 0.3% | none | hosted |  | mapped |
