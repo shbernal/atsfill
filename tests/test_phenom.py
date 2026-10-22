@@ -208,6 +208,26 @@ def test_an_apply_link_to_another_system_is_unsupported(page):
         page.unroute(JOB)
 
 
+def test_a_closed_posting_is_gone(page):
+    gone = JOB.replace("1001", "1002")
+
+    def closed(route):
+        route.fulfill(status=404, content_type="text/html", body=(PAGES / "404.html").read_bytes())
+
+    def at_gone(url: str) -> bool:
+        return "ACMEUS1002" in url
+
+    page.route(at_gone, closed)
+    try:
+        page.goto(gone)
+        adapter = Phenom()
+        assert adapter.detect(page.url, page)
+        with pytest.raises(Unsupported, match="posting_gone"):
+            adapter.read_form(page)
+    finally:
+        page.unroute(at_gone)
+
+
 def test_a_first_step_other_than_the_form_is_a_known_gap(page, monkeypatch):
     monkeypatch.setattr(phenom, "FORM_TIMEOUT_MS", 500)
     body = "<script>history.replaceState({}, '', location.href + '&stepname=login')</script>"
