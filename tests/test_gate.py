@@ -51,3 +51,17 @@ def test_a_cause_alone_needs_a_recorded_break(recorded, monkeypatch):
     with pytest.raises(SystemExit, match="--cause"):
         gate.main()
     assert made == []
+
+
+def test_a_row_counts_at_a_commit_with_the_same_code(monkeypatch):
+    changed = {"same": False, "other": True}
+    monkeypatch.setattr(
+        gate.subprocess,
+        "run",
+        lambda cmd, **_: type("Run", (), {"returncode": int(changed[cmd[3]])}),
+    )
+    gate.same_code.cache_clear()
+    assert gate.same_code("head", "head")
+    assert gate.same_code("same", "head")
+    assert not gate.same_code("other", "head")
+    assert not gate.same_code(None, "head")

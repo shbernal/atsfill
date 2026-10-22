@@ -37,7 +37,7 @@ Tests run in one process by default. The whole suite in parallel, as CI runs it,
 - the [freehire CLI](https://github.com/strelov1/freehire-cli): `mise use -g github:strelov1/freehire-cli`;
 - the `freehire-search` skill, committed under `.agents/` and `.claude/skills/`; to reinstall it: `npx skills add shbernal/skills --skill freehire-search -a claude-code -a codex -y`.
 
-`uv run python -m scripts.gate <system> [--fresh]` says whether an adapter is done: the fixture page and doc, the checks, a dry run `ready` on five employers at the current commit, `read_api` parity. On PASS it commits `dry_run_verified` to the registry; `--broken "<reason>" --cause <cause>` commits `send_broken` ([ADR 0012](docs/adr/0012-systems-registry.md)). Its output names no employer or posting, so it can go in a pull request.
+`uv run python -m scripts.gate <system> [--fresh]` says whether an adapter is done: the fixture page and doc, lint, types and the system's tests (the whole suite is CI's), a dry run `ready` on five employers at the current code (a commit to docs, tests or the registry keeps it), `read_api` parity. On PASS it commits `dry_run_verified` to the registry; `--broken "<reason>" --cause <cause>` commits `send_broken` ([ADR 0012](docs/adr/0012-systems-registry.md)). Its output names no employer or posting, so it can go in a pull request.
 
 The survey and the adapter gate take `--session ADAPTER=PATH` for a system that needs an account: the dry runs fill under that account. The target is a dedicated test account per system, never a personal one.
 

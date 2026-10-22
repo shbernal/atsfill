@@ -192,7 +192,7 @@ The committed fictional user whose answers are derived from each form's own fiel
 A hand-made HTML page that reproduces one hiring system's renderings for the committed tests.
 
 **Adapter gate**:
-`scripts.gate`, an adapter's definition of done: fixture page, adapter doc, tests, and dry runs `ready` on employers outside the round's sample.
+`scripts.gate`, an adapter's definition of done: fixture page, adapter doc, the system's tests, and dry runs `ready` on employers outside the round's sample.
 _Avoid_: gate, done check
 
 **Sample**:
