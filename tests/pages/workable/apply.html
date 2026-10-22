@@ -178,23 +178,37 @@
       }
     });
   });
-  // A photo shows a crop dialog, then its preview; attaching the resume empties the photo.
+  // A file shows its name and an abort button while it uploads, then a delete button; a photo
+  // shows a crop dialog first, then its preview. Attaching a file empties one still uploading,
+  // and attaching the resume empties the photo.
+  const upload = section => {
+    section.insertAdjacentHTML("beforeend", `<button data-action="abort" type="button"></button>`);
+    setTimeout(() => section.querySelector("[data-action=abort]")
+      ?.setAttribute("data-action", "delete"), 500);
+  };
+  const uploading = () => document.querySelectorAll("[data-action=abort]")
+    .forEach(abort => abort.closest("section").remove());
   document.querySelectorAll("input[type=file]").forEach(input => {
     const zone = input.closest("[data-role=dropzone]");
     input.onchange = () => {
+      uploading();
       zone.querySelector("section")?.remove();
       if (input.dataset.ui === "resume") $("[data-ui=avatar]").closest("[data-role=dropzone]")
         .querySelector("section")?.remove();
       if (input.dataset.ui !== "avatar") {
         zone.insertAdjacentHTML("afterbegin",
           `<section><div data-id="filename"><span>${input.files[0].name}</span></div></section>`);
+        upload(zone.querySelector("section"));
         return;
       }
       const name = input.files[0].name;
       zone.insertAdjacentHTML("afterbegin", `<section><div data-role="preview"><img alt="${name}"></div></section>`);
       document.body.insertAdjacentHTML("beforeend", `<dialog role="dialog" open>
         <button data-ui="crop-image" type="button">Upload</button></dialog>`);
-      $("[data-ui=crop-image]").onclick = () => $("dialog[role=dialog]").remove();
+      $("[data-ui=crop-image]").onclick = () => {
+        $("dialog[role=dialog]").remove();
+        upload(zone.querySelector("section"));
+      };
     };
   });
   const tel = $("#input_phone");
