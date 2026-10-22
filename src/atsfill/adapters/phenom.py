@@ -311,6 +311,7 @@ class Phenom:
             return None
 
     def read_form(self, page: Page) -> list[Field]:
+        _check_open(page)
         self._apply = _apply_url(page)
         self._open(page)
         try:
@@ -379,6 +380,7 @@ class Phenom:
             page.evaluate("() => { localStorage.clear(); sessionStorage.clear(); }")
         if fresh or not page.url.startswith(self._apply):
             page.goto(self._apply, wait_until="domcontentloaded")
+        _check_open(page)
         try:
             page.locator(f"{FORM} {NEXT}, {FORM} button[type=submit]").first.wait_for(
                 state="attached", timeout=FORM_TIMEOUT_MS
@@ -421,17 +423,25 @@ def get(obj: Any, path: str) -> Any:
 
 def _phapp_of(html: str) -> dict[str, Any]:
     """The apply page's `phApp`, from the object literals its scripts assign."""
-
-    def literal(marker: str) -> Any:
-        at = html.find(marker)
-        if at < 0:
-            raise ValueError(f"no {marker.strip()} on the page")
-        return json.JSONDecoder().raw_decode(html, at + len(marker))[0]
-
-    ph = literal("var phApp = phApp || ")
-    ph["ddo"] = literal("phApp.ddo = ")
-    ph["sessionParams"] = literal("phApp.sessionParams = ")
+    ph = _literal(html, "var phApp = phApp || ")
+    ph["ddo"] = _literal(html, "phApp.ddo = ")
+    ph["sessionParams"] = _literal(html, "phApp.sessionParams = ")
     return ph
+
+
+def _literal(html: str, marker: str) -> Any:
+    at = html.find(marker)
+    if at < 0:
+        raise ValueError(f"no {marker.strip()} on the page")
+    return json.JSONDecoder().raw_decode(html, at + len(marker))[0]
+
+
+def _check_open(page: Page) -> None:
+    """Raises `posting_gone` on Phenom's page for a closed posting, which a closed job's URL
+    and its wizard's both serve."""
+    with suppress(ValueError):
+        if _literal(page.content(), "var phApp = phApp || ").get("pageName") == "404":
+            raise Unsupported("posting_gone: the careers site answers its 404 page")
 
 
 def _read(
