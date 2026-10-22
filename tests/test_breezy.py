@@ -76,7 +76,7 @@ def test_read_form_opens_the_application(page):
         *(f"section_222_question_{n}" for n in range(3)),
         *(REFERENCE.format(n, part) for n in (1, 2)
           for part in ("name", "email_address", "phone_number", "type")),
-        "video_27",
+        "section_222_question_4",
         "race_ethnicity",
         "eeoc.veteran_status",
         "gdprAgreement",
@@ -162,10 +162,19 @@ def test_a_step_breezy_keeps_stops_the_fill(page):
 
 def test_a_video_question_is_out_of_scope(page):
     page.goto(APPLY)
-    page.locator(".video .required").evaluate("e => e.classList.remove('ng-hide')")
+    page.locator(".video-response .required").evaluate("e => e.classList.remove('ng-hide')")
     video = next(f for f in Breezy().read_form(page) if f.unfillable)
     assert (video.label, video.required) == ("Introduce yourself on video", True)
     assert video.unfillable == f"out_of_scope: {video.id} is a video recorded live"
+
+
+def test_a_video_question_keeps_its_id_when_a_field_is_added_before_it(page):
+    page.goto(APPLY)
+    video = next(f.id for f in Breezy().read_form(page) if f.unfillable)
+    page.locator("[name=cSummary]").evaluate(
+        "e => e.insertAdjacentHTML('afterend', '<input type=text name=cExtra>')"
+    )
+    assert next(f.id for f in Breezy().read_form(page) if f.unfillable) == video
 
 
 def test_a_posting_gone(page):

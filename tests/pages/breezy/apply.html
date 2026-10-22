@@ -175,10 +175,11 @@
      </li>
     </ul>
    </div></li>
-   <li class="question"><div class="video">
-    <h3><span>Introduce yourself on video</span>
-        <span class="required ng-hide" title="Required">*</span></h3>
-    <div class="ziggeo"><input type="file"></div>
+   <li class="question"><div ng-if="question.type.id == &quot;video&quot;" class="video-response">
+    <h3>Introduce yourself on video<span title="Required" class="required ng-hide">*</span></h3>
+    <ziggeo ziggeo-id="222:4" ziggeo-limit="120"><ba-ziggeorecorder>
+     <input type="file" class="ba-videorecorder-chooser-file" accept="video/*" style="display: none;">
+    </ba-ziggeorecorder></ziggeo>
    </div></li>
   </ul></div>
  </div>

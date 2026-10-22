@@ -1,6 +1,6 @@
 # Breezy HR
 
-Observed on live postings, last on 2026-10-21. The fixture page is [tests/pages/breezy/apply.html](../../tests/pages/breezy/apply.html), served as a position's application page in `tests/test_breezy.py`: one example of each rendering below.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/breezy/apply.html](../../tests/pages/breezy/apply.html), served as a position's application page in `tests/test_breezy.py`: one example of each rendering below.
 
 ## Where the form is
 
@@ -36,7 +36,7 @@ Each rendering, and on how many of 200 postings from 115 employers (2026-10-21):
 | `gdprAgreement`, `ccpaAgreement`: checkbox, required | `choice` `Yes`/`No` | 8, 16 |
 | a questionnaire of more than one section: the form goes in steps (`[data-section]`), Continue checks a step's required answers before showing the next | | 12 |
 
-Out of scope here: a video recorded live (Ziggeo), see ADR 0014.
+Out of scope here: a video recorded live (a Ziggeo widget, `<ziggeo ziggeo-id="<section>:<n>">`, no named control), see ADR 0014. Its id is `section_<section>_question_<n>` from `ziggeo-id`, as Breezy names the section's other questions.
 
 Breezy can send a step to another on an answer (`next_section` actions); not seen on the page's data, so a step skipped that way leaves its answers unfilled and the read-back shows it.
 

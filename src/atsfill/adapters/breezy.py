@@ -95,7 +95,8 @@ ENTRIES = {
 }
 
 # The fields in page order, one per control name, with its heading's text and how it renders;
-# a live video question is kept as the kind `video`.
+# a live video question is kept as the kind `video`, its id the question's as Breezy names it
+# for its widget (`ziggeo-id`, `<section>:<n>`).
 _READ = """form => {
   const text = el => {
     if (!el) return "";
@@ -139,8 +140,10 @@ _READ = """form => {
         }
       });
     } else if (!q.querySelector("[name^='section_']") &&
-               q.querySelector("input[type=file], .ziggeo, [ng-if*='video']")) {
-      add({id: `video_${found.size}`, label: text(h), kind: "video", required: starred(h)});
+               q.querySelector("input[type=file], ziggeo, [ng-if*='video']")) {
+      const [s, n] = (q.querySelector("ziggeo")?.getAttribute("ziggeo-id") ?? "").split(":");
+      const id = n === undefined ? `video_${text(h)}` : `section_${s}_question_${n}`;
+      add({id, label: text(h), kind: "video", required: starred(h)});
     } else return false;
     done.add(q);
     return true;
