@@ -17,6 +17,7 @@ GONE = "https://ats.rippling.com/acme/jobs/9f8e7d6c-5b4a-4321-8fed-cba987654321"
 PAGE = (PAGES / "apply.html").read_text()
 DATA_JSON = json.loads(match[1]) if (match := DATA.search(PAGE)) else {}
 Q = "customQuestions.g1."
+RERENDERS, RERENDER_MS = 60, 5
 CLOSED = (
     '<html><script id="__NEXT_DATA__" type="application/json">'
     '{"props": {"pageProps": {"apiData": {}}}}</script><h1>Job not found</h1></html>'
@@ -159,6 +160,17 @@ def test_the_persona_dry_run_reads_back(page, tmp_path):
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
+
+
+def test_a_place_is_picked_from_the_settled_suggestions(page):
+    adapter, _ = opened(page)
+    page.evaluate(  # each key's suggestions render again a few times, as a live list does
+        f"""() => {{ const render = open;
+        open = (...list) => {{ for (let n = 0; n <= {RERENDERS}; n++)
+          setTimeout(() => render(...list), n * {RERENDER_MS}); }}; }}"""
+    )
+    adapter.fill(page, {"location": "London"})
+    assert adapter.read_back(page)["location"] == "London, UK"
 
 
 def test_a_posting_gone(page):

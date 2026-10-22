@@ -34,6 +34,7 @@ PARSE_TIMEOUT_MS = 30_000
 UPLOAD_TIMEOUT_MS = 60_000
 NOTICE_TIMEOUT_MS = 15_000
 OPTIONS_TIMEOUT_MS = 10_000
+PLACES_QUIET_MS = 500  # how long the place suggestions stay unchanged before one is picked
 SUBMIT_TIMEOUT_MS = 90_000
 DIAL_CODES = (3, 2, 1)  # the lengths a dial code can have, longest tried first
 FILE_TYPES = [".doc", ".docx", ".pdf"]
@@ -106,6 +107,22 @@ SMS = (
         "No - I do not consent to receiving text messages",
     ],
 )
+
+# Resolves true once no suggestion list has changed for `quiet` ms, false after `limit` ms.
+_QUIET = """([quiet, limit]) => new Promise(done => {
+    let timer;
+    const end = (settled) => { observer.disconnect(); clearTimeout(timer); clearTimeout(cap);
+        done(settled); };
+    const wait = () => { clearTimeout(timer); timer = setTimeout(() => end(true), quiet); };
+    const list = n => n.nodeType === 1
+        && (n.matches("[role=listbox]") || n.querySelector("[role=listbox]"));
+    const listed = m => (m.target.nodeType === 1 ? m.target : m.target.parentElement)
+        ?.closest("[role=listbox]") || [...m.addedNodes, ...m.removedNodes].some(list);
+    const observer = new MutationObserver(ms => { if (ms.some(listed)) wait(); });
+    observer.observe(document.body, {childList: true, subtree: true, characterData: true});
+    const cap = setTimeout(() => end(false), limit);
+    wait();
+})"""
 
 # The field's control and what it shows, by its rendering: the first element carrying the
 # field's `data-testid`, or the second for an "Other" answer's text box.
@@ -421,7 +438,8 @@ def _phone(page: Page, value: str) -> None:
 
 
 def _place(page: Page, value: str) -> None:
-    """Types the place and picks the first suggestion."""
+    """Types the place and picks the first suggestion once the list has settled: each key
+    typed renders its own suggestions a moment later, replacing the ones shown."""
     box = page.locator("[data-testid=location] input")
     box.fill("")
     box.press_sequentially(value)
@@ -430,6 +448,8 @@ def _place(page: Page, value: str) -> None:
         option.first.wait_for(timeout=OPTIONS_TIMEOUT_MS)
     except Timeout:
         raise NotTaken(f"location: no place suggested for {value!r}") from None
+    if not page.evaluate(_QUIET, [PLACES_QUIET_MS, OPTIONS_TIMEOUT_MS]):
+        raise NotTaken(f"location: the places suggested for {value!r} kept changing")
     _click(option.first)
 
 
