@@ -350,6 +350,7 @@ account = "none"
 hosting = ["hosted"]
 adapter = "eightfold"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "24e163f" }
 
 [startupjobs]
 kind = "aggregator"
