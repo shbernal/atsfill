@@ -129,6 +129,7 @@ CONTACT = ("workHistory.mayWeContactSupervisor.0", "Yes")
 GRADUATED = ("educationHistory.didYouGraduate.0", "Yes")
 WORK: dict[str, list[Spec]] = {
     "companyName": [Spec("workHistory.companyName.0", "Company Name", "text")],
+    "companyWebsite": [Spec("workHistory.companyUrl.0", "Company Website", "text")],
     "position": [Spec("workHistory.position.0", "Position", "text")],
     "companyPhone": [Spec("workHistory.companyPhone.0", "Company Phone Number", "phone")],
     "responsibilities": [Spec("workHistory.responsibilities.0", "Responsibilities", "text")],
@@ -189,6 +190,15 @@ EDUCATION: dict[str, list[Spec]] = {
             False,
             "degreeOptions",
             GRADUATED,
+        )
+    ],  # fmt: skip
+    "graduationDate": [
+        Spec(
+            "txt-educationHistory-graduationDate-0",
+            "Graduation Date (MM/YYYY)",
+            "month",
+            False,
+            when=GRADUATED,
         )
     ],  # fmt: skip
     "schoolType": [

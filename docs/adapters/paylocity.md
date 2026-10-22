@@ -19,14 +19,14 @@ Each rendering, and in how many of 60 postings' configurations it shows (2026-10
 
 | Rendering | Field type | Postings |
 |---|---|---|
-| `input`, `textarea` by id (name, email, LinkedIn, referred by…) | `text` | 60 |
+| `input`, `textarea` by id (name, email, LinkedIn, referred by, company website…) | `text` | 60 |
 | mobile, home, company, reference phones: plain text inputs | `phone` | 60 |
 | react-widgets dropdown (`.rw-dropdownlist`, list `[id=<id>__listbox] [role=option]` once clicked): Yes/No questions (the SMS consent's Yes reads `Yes*`), school type, degree, EEO, reference type, years known | `choice` | 60 |
 | address block (`public-site-address-*`, a work entry's `public-candidate-work-history-address-0-*`): line 1 is a suggestion combobox that drops keys while it loads, county, city, zip, line 2 | `text` | 60 |
 | state in the address block: a `pcty-input-select` listing codes (`[role=listitem][title=DC]`) | `choice`, the code | 60 |
 | radio group by `name` (how did you hear) | `choice` | 54 |
 | date (`info.dateAvailableToStart`, prior employment dates): a native date input, `MM/DD/YYYY` typed | `date` | 43 |
-| month (`txt-workHistory-startDate-0`, end date): `MM/YYYY` typed | `text`, label `(MM/YYYY)` | 53 |
+| month (`txt-workHistory-startDate-0`, end date, `txt-educationHistory-graduationDate-0` once graduated): `MM/YYYY` typed | `text`, label `(MM/YYYY)` | 53 |
 | tags input (`.react-tagsinput`, Enter adds one): skills, certifications | `text`, one tag | 45 |
 | file: resume (`#btn-resume`, the modal's `#btn-forceResume`), cover letter, additional files; the name shows once uploaded | `file` | 60 |
 | entries: work history, education (one shown when the section `isOneRequired`), references (`referencesRequiredCount` shown when `referencesRequired`) | the entry's fields, index 0… | 19, 16, 35 required |

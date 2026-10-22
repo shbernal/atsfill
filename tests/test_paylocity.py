@@ -81,6 +81,7 @@ def test_read_form(opened):
         "coverLetter",
         "info.dateOfBirth",
         "workHistory.companyName.0",
+        "workHistory.companyUrl.0",
         "txt-workHistory-startDate-0",
         "txt-workHistory-endDate-0",
         "workHistory.currentlyWorkingHere.0",
@@ -145,6 +146,7 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
         "info.skills": "Bookkeeping",
         "coverLetter": resume,
         "workHistory.companyName.0": "Acme",
+        "workHistory.companyUrl.0": "https://acme.example",
         "txt-workHistory-startDate-0": "01/2020",
         "txt-workHistory-endDate-0": "03/2022",
         "workHistory.currentlyWorkingHere.0": "No",
@@ -180,3 +182,19 @@ def test_a_known_gap_and_an_unknown_field_are_listed_unfillable():
         ),
         "screener.501": "unhandled_rendering: screener.501 is a rating screener question",
     }
+
+
+def test_a_graduation_date_is_a_month_asked_once_graduated():
+    data = paylocity._page_data(PAGE.read_text())
+    education = data["customJobApplication"]["sections"][2]
+    school = education["fields"][0]
+    education["isOneRequired"] = True
+    education["fields"] += [
+        {**school, "name": "didYouGraduate", "displayName": "Did you graduate?"},
+        {**school, "name": "graduationDate", "displayName": "Graduation date"},
+    ]
+    fields = {f.id: f for f, _ in paylocity._form(data)}
+    graduated = fields["txt-educationHistory-graduationDate-0"]
+    assert graduated.type is FieldType.TEXT and not graduated.required
+    assert not graduated.unfillable
+    assert graduated.label == "Graduation Date (MM/YYYY) (asked when 'Did you Graduate?' is Yes)"

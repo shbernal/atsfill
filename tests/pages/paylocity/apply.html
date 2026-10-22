@@ -25,6 +25,7 @@ window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"te
   {"name": "dateOfBirth", "displayName": "Date of birth", "isIncluded": true, "isRequired": false, "values": []}]},
  {"name": "workHistory", "isIncluded": true, "isOneRequired": true, "fields": [
   {"name": "companyName", "displayName": "Company name", "isIncluded": true, "isRequired": true, "values": []},
+  {"name": "companyWebsite", "displayName": "Company website", "isIncluded": true, "isRequired": false, "values": []},
   {"name": "startEndDate", "displayName": "Start & end date", "isIncluded": true, "isRequired": true, "values": []},
   {"name": "currentlyWorkingHere", "displayName": "Currently working here?", "isIncluded": true, "isRequired": false, "values": []}]},
  {"name": "educationHistory", "isIncluded": true, "isOneRequired": false, "fields": [
@@ -88,6 +89,7 @@ window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"te
   </div>
   <div id="pcty-wr-apply-workhistory">
     <input id="workHistory.companyName.0" type="text" value="">
+    <input data-automation-id="workHistoryCompanyUrl0" id="workHistory.companyUrl.0" type="text" value="">
     <input id="txt-workHistory-startDate-0" placeholder="MM/YYYY" type="text" value="">
     <input id="txt-workHistory-endDate-0" placeholder="MM/YYYY" type="text" value="">
     <input id="workHistory.currentlyWorkingHere.0" type="checkbox">
