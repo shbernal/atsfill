@@ -1,0 +1,279 @@
+<!doctype html>
+<!-- A Rippling apply page: its form data in __NEXT_DATA__, and one example of each rendering in
+     docs/adapters/rippling.md in the page's markup, with a few lines of script that act as
+     Rippling's components do. -->
+<html>
+<head>
+<meta charset="utf-8"><title>Application: Placeholder Role</title>
+<style>
+  body { font-family: sans-serif; margin: 0 0 400px; }
+  main { width: 540px; margin: 0 auto; }
+  [data-testid=field] { margin: 18px 0; }
+  [role=listbox] { border: 1px solid #999; margin: 0; padding: 0; list-style: none; background: #fff; }
+  [role=option] { padding: 4px; cursor: pointer; }
+  [role=radio], [role=checkbox] { cursor: pointer; padding: 2px; }
+  [aria-checked=true] { font-weight: bold; }
+  [hidden] { display: none !important; }
+  .bar { position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: #eee; z-index: 10; }
+  #transcend-consent-manager { position: fixed; z-index: 2147483647; bottom: 0; left: 0; right: 0; height: 260px; background: #fff; border-top: 1px solid #000; }
+  .notice { position: fixed; top: 300px; left: 0; right: 0; height: 200px; background: #cfc; z-index: 20; }
+</style>
+<script id="__NEXT_DATA__" type="application/json">
+{"props": {"pageProps": {"apiData": {
+  "cloudflareEnvConfig": {},
+  "microphoneStatusEnabled": true,
+  "rejectEmptyRecordings": true,
+  "showCc305Form": false,
+  "videoScreeningQuestions": [],
+  "jobPost": {
+    "uuid": "0b6a3f8e-1c2d-4e5f-8a9b-0c1d2e3f4a5b",
+    "name": "Placeholder Role",
+    "eeocQuestionnaireEnabled": true,
+    "eeocQuestionnaireEnabledForJobPost": true,
+    "companyName": "Acme",
+    "activeJobApplication": {
+      "basicQuestions": [
+        {"oid": "first_name", "fieldType": "SHORT_ANSWER", "title": "First name", "required": true},
+        {"oid": "last_name", "fieldType": "SHORT_ANSWER", "title": "Last name", "required": true},
+        {"oid": "email", "fieldType": "SHORT_ANSWER", "title": "Email", "required": true},
+        {"oid": "pronouns", "fieldType": "PRONOUN", "title": "Pronouns", "required": false},
+        {"oid": "phone_number", "fieldType": "PHONE_NUMBER", "title": "Phone number", "required": true},
+        {"oid": "location", "fieldType": "SHORT_ANSWER", "title": "Location", "required": true},
+        {"oid": "linkedin_link", "fieldType": "SHORT_ANSWER", "title": "LinkedIn link", "required": false},
+        {"oid": "resume", "fieldType": "FILE", "title": "Resume", "required": true},
+        {"oid": "cover_letter", "fieldType": "FILE", "title": "Cover letter", "required": false}
+      ],
+      "additionalQuestions": [{"id": "g1", "name": "Questions", "form": {
+        "sections": [], "skipLogic": [], "deletedQuestions": [],
+        "questions": [
+          {"uniqueKey": "salary", "title": "What is your salary expectation?", "questionType": "SHORT_ANSWER", "dataType": "Text", "isRequired": true, "maxChars": 15, "strChoices": [], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": false},
+          {"uniqueKey": "why", "title": "Why this role?", "questionType": "LONG_ANSWER", "dataType": "Text", "isRequired": false, "strChoices": [], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": false},
+          {"uniqueKey": "start", "title": "What date are you available to start?", "questionType": "DATE", "dataType": "Date", "isRequired": true, "strChoices": [], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": false},
+          {"uniqueKey": "degree", "title": "Highest level of education", "questionType": "SINGLE_SELECT_DROPDOWN", "dataType": "enum", "isRequired": true, "strChoices": ["High School", "Bachelor's degree"], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": true},
+          {"uniqueKey": "source", "title": "How did you hear about us?", "questionType": "SINGLE_SELECT_RADIO", "dataType": "enum", "isRequired": true, "strChoices": ["Job board", "Referral"], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": true, "allowComments": false},
+          {"uniqueKey": "authorized", "title": "Are you authorized to work in the United States?", "questionType": "KNOCKOUT", "dataType": "select", "isRequired": true, "strChoices": ["Yes", "No"], "intChoices": [], "isMultiSelectEnabled": true, "isOtherEnabled": false, "allowComments": false},
+          {"uniqueKey": "shifts", "title": "Which shifts can you work?", "questionType": "MULTI_SELECT_CHECKBOX", "dataType": "select", "isRequired": true, "strChoices": ["Weekdays", "Weekends"], "intChoices": [], "isMultiSelectEnabled": true, "isOtherEnabled": false, "allowComments": false},
+          {"uniqueKey": "travel", "title": "Are you comfortable travelling?", "questionType": "YES_NO_SCALE_4", "dataType": "Number", "isRequired": false, "strChoices": [], "intChoices": [1, 2, 3, 4], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": false},
+          {"uniqueKey": "licence", "title": "Please upload your licence.", "questionType": "DOCUMENT_UPLOAD", "dataType": "enum", "isRequired": false, "strChoices": [], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": false}
+        ]}}]
+    }
+  }
+}}}, "page": "/[jobBoardSlug]/jobs/[jobId]/apply"}
+</script>
+</head>
+<body>
+<main>
+<h1>Application: Placeholder Role</h1>
+
+<div data-testid="field"><span>Résumé</span><span>*</span>
+  <label data-testid="resume"><input accept=".doc,.docx,.pdf" data-testid="input-resume" type="file"><div class="chips"></div></label>
+</div>
+<div data-testid="field"><span>First name</span><span>*</span>
+  <div data-testid="first_name"><input data-input="first_name" data-testid="input-first_name" value=""></div>
+</div>
+<div data-testid="field"><span>Last name</span><span>*</span>
+  <div data-testid="last_name"><input data-input="last_name" data-testid="input-last_name" value=""></div>
+</div>
+<div data-testid="field"><span>Email</span><span>*</span>
+  <div data-testid="email"><input data-input="email" data-testid="input-email" value=""></div>
+</div>
+<div data-testid="field"><span>Pronouns</span>
+  <div data-testid="pronouns_strategy"><div data-testid="select-controller"><div data-testid="select-search-input">
+    <input data-testid="input-select-search-input" role="combobox" aria-haspopup="listbox" placeholder="Search" value=""
+      data-options='["She/her/hers", "He/him/his", "They/them/theirs", "She/her/hers, they/them/theirs", "He/him/his, they/them/theirs", "Just use my name", "Enter my pronouns"]'>
+  </div></div></div>
+</div>
+<div data-testid="field"><span>Phone number</span><span>*</span>
+  <div data-testid="phone_number-code"><div data-testid="select-controller"><div data-testid="select-search-input">
+    <input data-testid="input-select-search-input" role="combobox" aria-haspopup="listbox" placeholder="Search" value="+1 US"
+      data-options='["+1 CA - Canada", "+1 US - United States", "+33 FR - France", "+44 GB - United Kingdom", "+44 JE - Jersey", "+353 IE - Ireland"]'>
+  </div></div></div>
+  <div data-testid="phone_number"><input data-input="phone_number" data-testid="input-phone_number" inputmode="tel" value=""></div>
+</div>
+<div data-testid="field"><span>Location</span><span>*</span>
+  <div data-testid="location"><input data-testid="input-undefined" aria-autocomplete="list" aria-haspopup="listbox" value="" class="place"></div>
+  <input data-input="externalPlaceId" data-testid="input-externalPlaceId" type="hidden" value="">
+</div>
+<div data-testid="field"><span>LinkedIn link</span>
+  <div data-testid="linkedin_link"><input data-input="linkedin_link" data-testid="input-linkedin_link" value=""></div>
+</div>
+<div data-testid="field"><span>Cover letter</span>
+  <label data-testid="cover_letter"><input accept=".doc,.docx,.pdf" data-testid="input-cover_letter" type="file"><div class="chips"></div></label>
+</div>
+
+<div><p>What is your salary expectation?</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.salary"><input data-input="customQuestions.g1.salary" data-testid="input-customQuestions.g1.salary" value=""></div></div>
+</div>
+<div><p>Why this role?</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.why"><textarea maxlength="10000"></textarea></div></div>
+</div>
+<div><p>What date are you available to start?</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.start"><div data-title="Date">
+    <div data-testid="month"><input data-input="month" maxlength="2" placeholder="MM" role="spinbutton" value=""></div><p>/</p>
+    <div data-testid="day"><input data-input="day" maxlength="2" placeholder="DD" role="spinbutton" value=""></div><p>/</p>
+    <div data-testid="year"><input data-input="year" maxlength="4" placeholder="YYYY" role="spinbutton" value=""></div>
+  </div></div></div>
+</div>
+<div><p>Highest level of education</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.degree"><div data-testid="select-controller">
+    <div role="combobox" aria-haspopup="listbox" aria-label="Select" tabindex="0" data-options='["High School", "Bachelor&apos;s degree"]'><p>Select</p></div>
+  </div></div></div>
+  <div><button data-testid="Add comment" type="button" data-comment="customQuestions.g1.degree_comment">Add comment</button></div>
+</div>
+<div><p>How did you hear about us?</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.source" role="radiogroup">
+    <div data-testid="radio-label-customQuestions.g1.source" data-value="Job board" role="radio" aria-checked="false"><input type="radio" value="Job board"><div><p>Job board</p></div></div>
+    <div data-testid="radio-label-customQuestions.g1.source" data-value="Referral" role="radio" aria-checked="false"><input type="radio" value="Referral"><div><p>Referral</p></div></div>
+    <div data-testid="radio-label-customQuestions.g1.source" data-value="OTHER" role="radio" aria-checked="false"><input type="radio" value="OTHER"><div><p>Other</p></div></div>
+  </div></div>
+  <div data-testid="field" hidden data-other="customQuestions.g1.source"><span>Other</span><span>*</span>
+    <div data-testid="customQuestions.g1.source"><input data-testid="input-customQuestions.g1.source" placeholder="Other" value=""></div>
+  </div>
+  <div><button data-testid="Clear selection" type="button">Clear selection</button></div>
+</div>
+<div><p>Are you authorized to work in the United States?</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.authorized"><div data-testid="select-controller">
+    <div role="combobox" aria-haspopup="listbox" aria-label="Select" tabindex="0" data-options='["Yes", "No"]'><p>Select</p></div>
+  </div></div></div>
+</div>
+<div><p>Which shifts can you work?</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.shifts" role="group">
+    <div data-value="Weekdays" role="checkbox" aria-checked="false"><input type="checkbox" value="Weekdays"><div><p>Weekdays</p></div></div>
+    <div data-value="Weekends" role="checkbox" aria-checked="false"><input type="checkbox" value="Weekends"><div><p>Weekends</p></div></div>
+  </div></div>
+</div>
+<div><p>Are you comfortable travelling?</p>
+  <div data-testid="field"><div data-testid="customQuestions.g1.travel" role="radiogroup">
+    <div data-value="1" role="radio" aria-label="Strong No" aria-checked="false"><p>Strong No</p></div>
+    <div data-value="2" role="radio" aria-label="No" aria-checked="false"><p>No</p></div>
+    <div data-value="3" role="radio" aria-label="Yes" aria-checked="false"><p>Yes</p></div>
+    <div data-value="4" role="radio" aria-label="Strong Yes" aria-checked="false"><p>Strong Yes</p></div>
+  </div></div>
+</div>
+<div><p>Please upload your licence.</p>
+  <div data-testid="field"><label data-testid="customQuestions.g1.licence"><input accept="*" data-testid="input-customQuestions.g1.licence" type="file"><div class="chips"></div></label></div>
+</div>
+
+<div data-testid="field"><span>Gender</span>
+  <div data-testid="eeoc.gender"><div data-testid="select-controller">
+    <div role="combobox" aria-haspopup="listbox" aria-label="Select..." tabindex="0" data-options='["Male", "Female", "Non-binary", "Choose not to disclose"]'><p>Select...</p></div>
+  </div></div>
+</div>
+<div data-testid="field"><span>Please identify your race</span>
+  <div data-testid="eeoc.race"><div data-testid="select-controller"><div data-testid="select-search-input">
+    <input data-testid="input-select-search-input" role="combobox" aria-haspopup="listbox" placeholder="Select..." value=""
+      data-options='["American Indian or Alaskan Native", "Asian", "Black or African American", "Middle Eastern or North African", "White", "Native Hawaiian or other Pacific Islander", "Two or more races", "Choose not to disclose"]'>
+  </div></div></div>
+</div>
+<div data-testid="field"><span>Are you Hispanic/Latino?</span>
+  <div data-testid="eeoc.hispanicOrLatino"><div data-testid="select-controller">
+    <div role="combobox" aria-haspopup="listbox" aria-label="Select..." tabindex="0" data-options='["Yes", "No", "Choose not to disclose"]'><p>Select...</p></div>
+  </div></div>
+</div>
+<div data-testid="field"><span>Veteran Status</span>
+  <div data-testid="eeoc.veteranStatus"><div data-testid="select-controller">
+    <div role="combobox" aria-haspopup="listbox" aria-label="Select..." tabindex="0" data-options='["I am not a protected veteran", "I identify as one or more of the classifications of a protected veteran", "Choose not to disclose"]'><p>Select...</p></div>
+  </div></div>
+</div>
+<div><p>Check Yes or No to indicate your agreement to receive text message updates from Acme.</p>
+  <div data-testid="field"><div data-testid="sms_opt_in" role="radiogroup">
+    <div data-testid="radio-label-sms_opt_in" data-value="true" role="radio" aria-checked="false"><input type="radio" value="true"><div><p>Yes - I consent to receiving text messages</p></div></div>
+    <div data-testid="radio-label-sms_opt_in" data-value="false" role="radio" aria-checked="false"><input type="radio" value="false"><div><p>No - I do not consent to receiving text messages</p></div></div>
+  </div></div>
+</div>
+<input data-input="aiOptOut" data-testid="input-aiOptOut" type="hidden" value="false">
+</main>
+<div class="bar"><button data-testid="Apply" type="submit">Apply</button></div>
+<div id="transcend-consent-manager"></div>
+
+<script>
+const job = location.pathname.replace(/\/apply$/, "");
+const board = job.split("/")[1];
+const list = document.createElement("ul");
+list.setAttribute("role", "listbox");
+list.hidden = true;
+document.body.append(list);
+let owner = null;
+
+function open(box, options, pick) {
+  owner = box;
+  list.replaceChildren(...options.map(text => {
+    const li = document.createElement("li");
+    li.setAttribute("role", "option");
+    li.innerHTML = `<div><p></p></div>`;
+    li.querySelector("p").textContent = text;
+    li.onclick = () => { pick(text); list.hidden = true; owner = null; };
+    return li;
+  }));
+  const r = box.getBoundingClientRect();
+  Object.assign(list.style, {position: "absolute", left: `${r.left + scrollX}px`, top: `${r.bottom + scrollY}px`, width: `${r.width}px`, zIndex: 5});
+  list.hidden = options.length === 0;
+}
+
+document.addEventListener("keydown", e => { if (e.key === "Escape") list.hidden = true; });
+
+// A dropdown: its text becomes the option's.
+for (const box of document.querySelectorAll("div[role=combobox]")) {
+  box.onclick = () => open(box, JSON.parse(box.dataset.options), text => { box.textContent = text; });
+}
+// A search input: the options its text holds; a dial code keeps its first part.
+for (const box of document.querySelectorAll("input[role=combobox]")) {
+  const all = JSON.parse(box.dataset.options);
+  const dial = box.closest("[data-testid='phone_number-code']");
+  const pick = text => { box.value = dial ? text.split(" ")[0] : text; };
+  box.onclick = () => open(box, all, pick);
+  box.oninput = () => open(box, all.filter(o => o.toLowerCase().includes(box.value.toLowerCase())), pick);
+}
+// The place typeahead: suggestions after a moment.
+const place = document.querySelector(".place");
+place.oninput = () => setTimeout(() => {
+  if (!place.value) return;
+  open(place, [`${place.value}, UK`, `${place.value}, ON, Canada`], text => {
+    place.value = text;
+    document.querySelector("[data-testid=input-externalPlaceId]").value = "place-1";
+  });
+}, 200);
+// Radios, an "Other" one showing its text box.
+for (const group of document.querySelectorAll("[role=radiogroup]")) {
+  for (const radio of group.querySelectorAll("[role=radio]")) {
+    radio.onclick = () => {
+      group.querySelectorAll("[role=radio]").forEach(r => r.setAttribute("aria-checked", r === radio));
+      const other = document.querySelector(`[data-other='${group.dataset.testid}']`);
+      if (other) other.hidden = radio.dataset.value !== "OTHER";
+    };
+  }
+}
+for (const box of document.querySelectorAll("[role=checkbox]")) {
+  box.onclick = () => box.setAttribute("aria-checked", box.getAttribute("aria-checked") !== "true");
+}
+// "Add comment" gives way to the comment's text area.
+for (const button of document.querySelectorAll("[data-testid='Add comment']")) {
+  button.onclick = () => {
+    const div = document.createElement("div");
+    div.innerHTML = `<div data-testid="field"><div data-testid="${button.dataset.comment}"><textarea placeholder="Additional comment... (optional)"></textarea></div></div>`;
+    button.replaceWith(div);
+  };
+}
+// A file is uploaded, then shown as a chip; the résumé is parsed and fills the first name.
+for (const input of document.querySelectorAll("input[type=file]")) {
+  input.onchange = async () => {
+    const name = input.files[0].name;
+    await fetch("/api/v1/utility/file_upload_url");
+    input.parentElement.querySelector(".chips").innerHTML =
+      `<div data-testid="chip"><div role="button"><div id="chip-1-content"><div></div></div></div></div>`;
+    input.parentElement.querySelector("[id$=-content] div").textContent = name;
+    if (input.dataset.testid !== "input-resume") return;
+    await fetch(`/api/v1/board/${board}/jobs/${job.split("/")[3]}/parse_resume`, {method: "POST", body: "{}"});
+    document.querySelector("[data-testid=input-first_name]").value = "Parsed";
+    const notice = document.createElement("div");
+    notice.className = "notice";
+    notice.textContent = "Résumé parsing was successful.";
+    document.body.append(notice);
+    setTimeout(() => notice.remove(), 1500);
+  };
+}
+document.querySelector("[data-testid=Apply]").onclick = () =>
+  fetch(`/api/v1/board/${board}/jobs/${job.split("/")[3]}/apply`, {method: "POST", body: "{}"});
+</script>
+</body>
+</html>
