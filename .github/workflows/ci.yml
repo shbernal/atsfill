@@ -64,7 +64,23 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: commit-check/commit-check-action@v2.18.0
-        with:
-          message: true
-          branch: false
+      - uses: astral-sh/setup-uv@v10.3.0
+      # The commit-check CLI pinned in uv.lock, run on each commit of a pull request, or
+      # on the commit a push lands. Not commit-check-action: it looks up its own
+      # attestation on GitHub's API, whose outages failed this job (#85).
+      - name: Check commit messages against .github/cchk.toml
+        env:
+          RANGE: ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            shas=$(git rev-list --reverse "$RANGE")
+          else
+            shas=$(git rev-parse HEAD)
+          fi
+          failed=0
+          for sha in $shas; do
+            git log -1 --format='%h %s' "$sha"
+            git log -1 --format=%B "$sha" \
+              | uv run --locked --only-group commit-check commit-check --message || failed=1
+          done
+          exit "$failed"
