@@ -1,0 +1,47 @@
+{
+  "status": 200,
+  "data": {
+    "isMultistageApplication": false,
+    "fields": [
+      {
+        "title": "Position Location(s)",
+        "questions": [
+          {"questionId": "position_location_instruction", "type": "instruction", "label": "For each position, select the location you want to apply for.", "required": false},
+          {"questionId": "position_location_1234567", "type": "positionLocation", "configType": "multi_value", "label": "Preferred location for Placeholder Role", "required": true, "selectOptions": {"choices": [{"label": "Springfield,United States", "value": "Springfield,United States"}, {"label": "Shelbyville,United States", "value": "Shelbyville,United States"}]}, "answers": "Springfield,United States"}
+        ]
+      },
+      {
+        "title": "Resume",
+        "questions": [
+          {"questionId": "resume", "label": "Upload your resume", "required": true, "type": "resumeUpload", "resumeOptions": {"acceptedFileTypes": [".pdf", ".doc", ".docx"]}}
+        ]
+      },
+      {
+        "title": "Contact Information",
+        "questions": [
+          {"questionId": "firstname", "configType": "text", "type": "text", "label": "First Name", "required": true},
+          {"questionId": "email", "configType": "text", "type": "text", "label": "Email", "required": true},
+          {"questionId": "phone", "configType": "phone", "type": "phone", "label": "Phone", "required": false},
+          {"questionId": "country", "configType": "dropdown", "type": "select", "label": "Country", "required": true, "hasDependents": true, "selectOptions": {"choices": [{"label": "Canada", "value": "CA"}, {"label": "United States", "value": "US"}]}},
+          {"questionId": "state", "configType": "dropdown", "type": "select", "label": "State", "required": true, "parentDependencies": [{"questionId": "country", "values": []}], "selectOptions": {"choices": null, "apiEndpoint": "/api/application/v2/location/options?domain=acme.com"}}
+        ]
+      },
+      {
+        "title": null,
+        "questions": [
+          {"questionId": "my_information_header", "configType": "instruction", "type": "instruction", "label": "<h1>My Information</h1>", "required": false},
+          {"questionId": "Q_HEAR_ABOUT_US", "configType": "dropdown", "type": "select", "label": "How did you hear about us?", "required": true, "hasDependents": true, "selectOptions": {"choices": [{"label": "Events", "value": "Events"}, {"label": "Job Board", "value": "Job Board"}]}},
+          {"questionId": "Q_EVENTS", "configType": "radio", "type": "radio", "label": "Which event?", "required": true, "parentDependencies": [{"questionId": "Q_HEAR_ABOUT_US", "values": ["Events"]}], "radioOptions": {"choices": [{"label": "Conference", "value": "SOURCE-1"}, {"label": "Career Fair", "value": "SOURCE-2"}]}},
+          {"questionId": "app_Summary", "configType": "text-row", "type": "text", "label": "<div><span>Tell us about yourself</span></div>", "required": false},
+          {"questionId": 1443109865728, "configType": "numeric", "type": "text", "label": "What's your overall experience?", "required": true, "textOptions": {"type": "number"}},
+          {"questionId": "636668-1", "configType": "choice", "type": "radio", "label": "Do you have legal work authorization?", "required": true, "radioOptions": {"choices": [{"label": "Yes", "value": "0.0"}, {"label": "No", "value": "1.0"}]}},
+          {"questionId": "q_relocate", "configType": "dropdown", "type": "select", "label": "Are you willing to relocate?", "required": false, "selectOptions": {"choices": [{"label": "Yes", "value": "Yes"}, {"label": "No", "value": "No"}]}},
+          {"questionId": "q_todayDate", "configType": "date", "type": "date", "label": "Date of Acknowledgement", "required": true, "dateOptions": {"today": false, "fallbackFormat": "MM/DD/YYYY"}},
+          {"questionId": "coverletter", "configType": "file-input", "type": "fileUpload", "label": "Cover Letter", "fileUploadOptions": {"maxFiles": 1, "fileFormats": ".pdf, .doc, .docx"}},
+          {"questionId": "I accept the <a href=https://example.com>privacy notice</a>", "questionIdGenerated": true, "configType": "checkbox", "type": "checkbox", "label": "I accept the <a href=https://example.com>privacy notice</a>", "required": true, "checkboxOptions": {"choices": [{"label": "I accept", "value": "accept"}]}},
+          {"questionId": "q_signature", "configType": "signature", "type": "signature", "label": "Signature", "required": false}
+        ]
+      }
+    ]
+  }
+}

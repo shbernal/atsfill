@@ -1,0 +1,241 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="_csrf" content="csrf-token-placeholder">
+<title>Submit application for Placeholder Role</title>
+<script>window._EF_GROUP_ID = "acme.com";</script>
+<style>
+  [role=listbox], [data-testid=picker-dialog], [role=dialog] { border: 1px solid #888; background: #fff; }
+  .hidden { display: none; }
+  #banner { position: fixed; bottom: 0; left: 0; right: 0; height: 40%; background: #333; }
+</style>
+</head>
+<body>
+<!-- Eightfold's apply page, reduced: each question's control under its label, with an error line
+     whose id is the control's id and `_error`; dropdowns are comboboxes whose listbox renders
+     when opened; the resume asks to agree to a privacy dialog before it uploads. -->
+<form onsubmit="return false">
+
+<section><fieldset data-form-section-id="Position Location(s)">
+  <div class="field">
+    <label id="Position_Location_s__position_location_1234567_label" for="Position_Location_s__position_location_1234567">Preferred location for Placeholder Role</label>
+    <div id="Position_Location_s__position_location_1234567" data-test-id="Position_Location_s__position_location_1234567">
+      <div class="pills"><div id="selectPilllist-1-option-0"><span>Springfield,United States</span><button type="button" aria-label="Remove Springfield,United States">x</button></div></div>
+      <input role="combobox" readonly aria-controls="list-pl" data-options="Springfield,United States|Shelbyville,United States" data-pills="1">
+    </div>
+    <div id="Position_Location_s__position_location_1234567_error"></div>
+  </div>
+</fieldset></section>
+
+<section><fieldset data-form-section-id="Resume">
+  <div class="field">
+    <label id="Resume_resume_label" for="Resume_resume">Upload your resume</label>
+    <div><span><input type="file" style="display: none;" accept=".pdf,.doc,.docx" data-resume="1"><button type="button">Select file</button></span><ul></ul></div>
+    <div id="Resume_resume_error"></div>
+  </div>
+</fieldset></section>
+
+<section><fieldset data-form-section-id="Contact Information">
+  <div class="field">
+    <label id="Contact_Information_firstname_label" for="Contact_Information_firstname">First Name</label>
+    <input data-test-id="Contact_Information_firstname" id="Contact_Information_firstname" value="">
+    <div id="Contact_Information_firstname_error"></div>
+  </div>
+  <div class="field">
+    <label id="Contact_Information_email_label" for="Contact_Information_email">Email</label>
+    <input data-test-id="Contact_Information_email" id="Contact_Information_email" value="">
+    <div id="Contact_Information_email_error"></div>
+  </div>
+  <div class="field"><fieldset>
+    <legend id="Contact_Information_phone_legend">Phone</legend>
+    <div id="Contact_Information_phone-country-code"><input role="combobox" aria-label="Country code" aria-controls="list-cc" placeholder="Select country code"
+      data-options="🇨🇦 (+1) Canada|🇫🇷 (+33) France|🇬🇬 (+44 1481) Guernsey|🇬🇧 (+44) United Kingdom|🇺🇸 (+1) United States of America"></div>
+    <input data-test-id="Contact_Information_phone" id="Contact_Information_phone" placeholder="Phone Number" value="">
+    <div id="Contact_Information_phone_error"></div>
+  </fieldset></div>
+  <div class="field">
+    <label id="Contact_Information_country_label" for="Contact_Information_country">Country</label>
+    <div id="Contact_Information_country" data-test-id="Contact_Information_country"><input role="combobox" aria-controls="list-country" placeholder="Select" data-options="Canada|United States" data-shows="state"></div>
+    <div id="Contact_Information_country_error"></div>
+  </div>
+  <div class="field">
+    <label id="Contact_Information_state_label" for="Contact_Information_state">State</label>
+    <div id="Contact_Information_state" data-test-id="Contact_Information_state"><input role="combobox" aria-controls="list-state" placeholder="Select" data-options=""></div>
+    <div id="Contact_Information_state_error"></div>
+  </div>
+</fieldset></section>
+
+<section><fieldset data-form-section-id="Application questions">
+  <div class="field">
+    <label id="Application_questions_Q_HEAR_ABOUT_US_label" for="Application_questions_Q_HEAR_ABOUT_US">How did you hear about us?</label>
+    <div id="Application_questions_Q_HEAR_ABOUT_US" data-test-id="Application_questions_Q_HEAR_ABOUT_US"><input role="combobox" aria-controls="list-hear" placeholder="Select" data-options="Events|Job Board" data-shows="events"></div>
+    <div id="Application_questions_Q_HEAR_ABOUT_US_error"></div>
+  </div>
+  <div id="events"></div>
+  <div class="field">
+    <label id="Application_questions_app_Summary_label" for="Application_questions_app_Summary">Tell us about yourself</label>
+    <textarea data-test-id="Application_questions_app_Summary" id="Application_questions_app_Summary"></textarea>
+    <div id="Application_questions_app_Summary_error"></div>
+  </div>
+  <div class="field">
+    <label id="Application_questions_1443109865728_label" for="Application_questions_1443109865728">What's your overall experience?</label>
+    <input type="number" data-test-id="Application_questions_1443109865728" id="Application_questions_1443109865728" value="">
+    <div id="Application_questions_1443109865728_error"></div>
+  </div>
+  <div class="field">
+    <label id="Application_questions_636668_1_label">Do you have legal work authorization?</label>
+    <div role="radiogroup" id="Application_questions_636668_1" data-test-id="Application_questions_636668_1">
+      <input id="Application_questions_636668_1-0.0" name="Application_questions_636668_1" type="radio" value="0.0"><label for="Application_questions_636668_1-0.0">Yes</label>
+      <input id="Application_questions_636668_1-1.0" name="Application_questions_636668_1" type="radio" value="1.0"><label for="Application_questions_636668_1-1.0">No</label>
+    </div>
+    <div id="Application_questions_636668_1_error"></div>
+  </div>
+  <div class="field">
+    <label id="Application_questions_q_relocate_label" for="Application_questions_q_relocate">Are you willing to relocate?</label>
+    <div id="Application_questions_q_relocate" data-test-id="Application_questions_q_relocate"><input role="combobox" aria-controls="list-relocate" placeholder="Select" data-options="Yes|No"></div>
+    <div id="Application_questions_q_relocate_error"></div>
+  </div>
+  <div class="field">
+    <label id="Application_questions_q_todayDate_label" for="Application_questions_q_todayDate">Date of Acknowledgement</label>
+    <input role="combobox" aria-haspopup="dialog" readonly id="Application_questions_q_todayDate" data-test-id="Application_questions_q_todayDate" placeholder="Select date" value="">
+    <div id="Application_questions_q_todayDate_error"></div>
+  </div>
+  <div class="field">
+    <label id="Application_questions_coverletter_label" for="Application_questions_coverletter">Cover Letter</label>
+    <div><span><input type="file" style="display: none;" accept=".pdf, .doc, .docx"><button type="button">Select files</button></span><ul></ul></div>
+    <div id="Application_questions_coverletter_error"></div>
+  </div>
+  <div class="field">
+    <legend id="Application_questions_I_accept_the__a_href_https___example_com_privacy_notice__a__legend">I accept the <a href="https://example.com">privacy notice</a></legend>
+    <div id="Application_questions_I_accept_the__a_href_https___example_com_privacy_notice__a_">
+      <input id="consent-0" type="checkbox" value="I accept"><label for="consent-0"><span>I accept</span></label>
+    </div>
+    <div id="Application_questions_I_accept_the__a_href_https___example_com_privacy_notice__a__error"></div>
+  </div>
+</fieldset></section>
+</form>
+
+<div><input id="save-answers" type="checkbox" checked><label for="save-answers">Save my answers for future applications</label></div>
+<button type="button" data-test-id="submitApplicationButton" id="submit">Submit</button>
+
+<div role="dialog" aria-modal="true" id="privacy" class="hidden">
+  <p>When you upload your resume, we provide job recommendations to you.</p>
+  <button data-test-id="cancel-upload-resume" id="cancelUploadResume">Cancel</button>
+  <button data-test-id="confirm-upload-resume" id="confirmUploadResume">I Agree</button>
+</div>
+
+<div id="banner"><button id="onetrust-reject-all-handler">Reject All</button></div>
+
+<template id="events-field">
+  <div class="field">
+    <label id="Application_questions_Q_EVENTS_label">Which event?</label>
+    <div role="radiogroup" id="Application_questions_Q_EVENTS">
+      <input id="Application_questions_Q_EVENTS-SOURCE-1" name="Application_questions_Q_EVENTS" type="radio" value="SOURCE-1"><label for="Application_questions_Q_EVENTS-SOURCE-1">Conference</label>
+      <input id="Application_questions_Q_EVENTS-SOURCE-2" name="Application_questions_Q_EVENTS" type="radio" value="SOURCE-2"><label for="Application_questions_Q_EVENTS-SOURCE-2">Career Fair</label>
+    </div>
+    <div id="Application_questions_Q_EVENTS_error"></div>
+  </div>
+</template>
+
+<script>
+const STATES = {"Canada": ["Ontario", "Quebec"], "United States": ["District of Columbia", "Ohio"]};
+document.getElementById("onetrust-reject-all-handler").onclick = () => document.getElementById("banner").remove();
+
+// A combobox renders its listbox at the end of the page when clicked; an option sets its value.
+function open(combo) {
+  document.querySelectorAll("[role=listbox]").forEach(l => l.remove());
+  const list = document.createElement("ul");
+  list.setAttribute("role", "listbox");
+  list.id = combo.getAttribute("aria-controls");
+  for (const text of combo.dataset.options.split("|").filter(Boolean)) {
+    const li = document.createElement("li");
+    const option = document.createElement("button");
+    option.type = "button";
+    option.setAttribute("role", "option");
+    option.title = text;
+    option.innerHTML = `<span>${text}</span>`;
+    option.onclick = () => { pick(combo, text); list.remove(); };
+    li.append(option);
+    list.append(li);
+  }
+  document.body.append(list);
+}
+function pick(combo, text) {
+  if (combo.dataset.pills) {
+    const pills = combo.parentElement.querySelector(".pills");
+    const pill = document.createElement("div");
+    pill.id = `selectPilllist-1-option-${pills.children.length}`;
+    pill.innerHTML = `<span>${text}</span><button type="button">x</button>`;
+    pills.append(pill);
+    return;
+  }
+  combo.value = text;
+  if (combo.dataset.shows === "state") {  // the state's options load for the country picked
+    document.querySelector("#Contact_Information_state input").dataset.options = STATES[text].join("|");
+  } else if (combo.dataset.shows === "events") {
+    const holder = document.getElementById("events");
+    holder.innerHTML = text === "Events" ? document.getElementById("events-field").innerHTML : "";
+  }
+}
+document.addEventListener("click", e => {
+  const combo = e.target.closest("input[role=combobox]:not([aria-haspopup])");
+  if (combo) open(combo);
+  const remove = e.target.closest(".pills button");
+  if (remove) remove.parentElement.remove();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") document.querySelectorAll("[role=listbox]").forEach(l => l.remove());
+});
+
+// A file input lists what it holds; the resume waits for the privacy dialog's agreement.
+for (const input of document.querySelectorAll("input[type=file]")) {
+  input.parentElement.querySelector("button").onclick = () => input.click();
+  input.onchange = () => {
+    const name = input.files[0]?.name;
+    const list = input.closest("div").querySelector("ul");
+    const show = () => { list.innerHTML = `<li><span title="${name}">${name}</span></li>`; };
+    if (!input.dataset.resume) return show();
+    const dialog = document.getElementById("privacy");
+    dialog.classList.remove("hidden");
+    document.getElementById("confirmUploadResume").onclick = () => {
+      dialog.classList.add("hidden");
+      fetch("/api/application/v2/resume_upload?user_mode=logged_out_candidate", {method: "POST"}).then(show);
+    };
+    document.getElementById("cancelUploadResume").onclick = () => dialog.classList.add("hidden");
+  };
+}
+
+// The date picker: a month of cells titled by ISO date, paged by month.
+const dateInput = document.getElementById("Application_questions_q_todayDate");
+let shown = new Date();
+function picker() {
+  document.querySelectorAll("[data-testid=picker-dialog]").forEach(p => p.remove());
+  const dialog = document.createElement("div");
+  dialog.setAttribute("data-testid", "picker-dialog");
+  dialog.setAttribute("role", "dialog");
+  const y = shown.getFullYear(), m = shown.getMonth();
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  let cells = "";
+  for (let d = 1; d <= new Date(y, m + 1, 0).getDate(); d++) {
+    cells += `<td role="gridcell" title="${iso(new Date(y, m, d))}"><div role="button">${d}</div></td>`;
+  }
+  dialog.innerHTML = `<button data-testid="picker-header-prev-btn">&lt;</button>
+    <button data-testid="picker-header-next-btn">&gt;</button><table role="grid"><tr>${cells}</tr></table>`;
+  dialog.querySelector("[data-testid=picker-header-prev-btn]").onclick = () => { shown = new Date(y, m - 1, 1); picker(); };
+  dialog.querySelector("[data-testid=picker-header-next-btn]").onclick = () => { shown = new Date(y, m + 1, 1); picker(); };
+  for (const cell of dialog.querySelectorAll("td")) {
+    cell.onclick = () => {
+      const [yy, mm, dd] = cell.title.split("-");
+      dateInput.value = `${mm}/${dd}/${yy}`;
+      dialog.remove();
+    };
+  }
+  document.body.append(dialog);
+}
+dateInput.onclick = picker;
+
+document.getElementById("submit").onclick = () => fetch("/api/application/v2/apply?user_mode=logged_out_candidate", {method: "POST"});
+</script>
+</body>
+</html>
