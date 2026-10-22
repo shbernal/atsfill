@@ -149,6 +149,8 @@ class Ashby:
                 case FieldType.TEXT | FieldType.DATE | FieldType.PHONE, str():
                     box = entry.locator("input, textarea").first
                     box.fill(answer)
+                    if fields[field_id].type is FieldType.DATE:
+                        box.press("Escape")  # its picker stays open over the next field
                     self._saved(page, box.blur)
                 case FieldType.CHOICE, str() if entry.locator("input[role=combobox]").count():
                     entry.locator("input[role=combobox]").fill(answer)

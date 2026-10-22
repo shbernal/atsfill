@@ -41,7 +41,7 @@ Survey forms come after the application form on the same page, on about half the
 - Radio, checkbox and yes/no inputs are hidden: click the option's text.
 - A combobox select saves only a picked option. Typing lists every option containing the text, so the pick is by exact name.
 - The location combobox saves only a picked suggestion.
-- The date field parses every keystroke, so typing it a character at a time saves a wrong year; filling it in one go works. It reads `11/02/2026` as month/day and saves `2026-11-02`, so date answers are ISO.
+- The date field parses every keystroke, so typing it a character at a time saves a wrong year; filling it in one go works. It reads `11/02/2026` as month/day and saves `2026-11-02`, so date answers are ISO. Its picker stays open after the field loses focus and covers the field below it until Escape.
 
 ## Submitting
 
