@@ -12,7 +12,7 @@ Pinpoint's career sites, observed on live postings, last on 2026-10-22. The fixt
 
 ## Reading the form
 
-A field's id is its control's attribute (`first_name`, `phone`, `cv`, `country`), `question_<question id>` for a custom question, and `equality_monitoring_<name>` for a diversity question. A label is the control's `label[for]`, a question's title, or a document's label block; a required one carries `required` or the `--required` label class. A question shown only after an earlier answer (`conditionalQuestionParentQuestionId`, `equals` or `not_equals` an option, `true` or `false` for a yes/no) is optional, its label ending `(asked when "<earlier question>" is <option>)`. A control or a question component outside the table below is `unhandled_rendering`.
+A field's id is its control's attribute (`first_name`, `phone`, `cv`, `country`), `question_<question id>` for a custom question, and `equality_monitoring_<name>` for a diversity question. A label is the control's `label[for]`, a question's title, or a document's label block; a required one carries `required` or the `--required` label class. A question shown only after an earlier answer (`conditionalQuestionParentQuestionId`, `equals` or `not_equals` an option, `true` or `false` for a yes/no) is optional, its label ending `(asked when "<earlier question>" is <option>)`. An option is its label with runs of whitespace as one space: some labels end in a space. A control or a question component outside the table below is `unhandled_rendering`.
 
 Each rendering, and in how many of 35 postings it shows (2026-10-22):
 
@@ -37,7 +37,7 @@ The address lines are listed once each with both layouts' labels: `address1` (Ad
 
 ## Filling
 
-- A text input is filled. A react-select is opened and the option that is the answer clicked; a state is typed first to narrow the list. No such option is `NotTaken`.
+- A text input is filled. A react-select is opened and the option that is the answer clicked; a state is typed first to narrow the list. No such option is `NotTaken`. A multi-select's menu stays open over the fields below it, and is closed with Escape.
 - A yes/no is the click on its option's label, the consent the checkbox set to the answer.
 - A date is its day, month and year selects; a year the select lacks is `NotTaken`.
 - A document is attached to its component's file input and waited for until its name shows as a tag.

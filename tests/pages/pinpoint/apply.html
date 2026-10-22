@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <title>Apply - Product Designer - Acme</title>
 <style>
-  .react-select__menu { border: 1px solid #ccc; }
+  .react-select { position: relative; }
+  .react-select__menu { border: 1px solid #ccc; position: absolute; z-index: 1; width: 100%; background: #fff; }
   .react-select__option { padding: 4px; cursor: pointer; }
   input[type=file] { opacity: 0.01; position: absolute; }
 </style>
@@ -88,7 +89,7 @@
   <legend class="external-form__legend">Diversity and Inclusion</legend>
   <label for="application_form_equality_monitoring_gender" class="external-form__label">Gender</label>
   <div id="External::Jobs::Equalitymonitoring::Tsselect-react-component-15"></div>
-  <script type="application/json" class="js-react-on-rails-component" data-component-name="External::Jobs::Equalitymonitoring::Tsselect" data-dom-id="External::Jobs::Equalitymonitoring::Tsselect-react-component-15">{"name":"application_form[equality_monitoring_options][]","id":"application_form_equality_monitoring_Gender","inputId":"application_form_equality_monitoring_gender","options":[{"value":11,"label":"Male"},{"value":12,"label":"Female"},{"value":13,"label":"Prefer Not To Say"}],"defaultValue":null,"required":false,"placeholder":"Select..."}</script>
+  <script type="application/json" class="js-react-on-rails-component" data-component-name="External::Jobs::Equalitymonitoring::Tsselect" data-dom-id="External::Jobs::Equalitymonitoring::Tsselect-react-component-15">{"name":"application_form[equality_monitoring_options][]","id":"application_form_equality_monitoring_Gender","inputId":"application_form_equality_monitoring_gender","options":[{"value":11,"label":"Male"},{"value":12,"label":"Female"},{"value":13,"label":"Prefer Not To Say "}],"defaultValue":null,"required":false,"placeholder":"Select..."}</script>
 </fieldset>
 <fieldset class="external-form__fieldset">
   <input name="application[process_information]" type="hidden" value="0" />
@@ -143,6 +144,7 @@
     };
     control.addEventListener("click", () => menu ? close() : open());
     input.addEventListener("input", () => open(input.value));
+    input.addEventListener("keydown", e => e.key === "Escape" && close());
     return box;
   }
 

@@ -47,13 +47,14 @@ VOID = {"input", "br", "img", "hr", "meta", "link", "source", "wbr", "col", "are
 
 # What each field holds, by how it renders: a control's value, a react-select's shown value(s),
 # a radio's label, a date's three selects, a document's uploaded names.
-_READ_BACK = """(form, specs) => {
+_READ_BACK = r"""(form, specs) => {
+  const text = e => e ? e.textContent.replace(/\s+/g, " ").trim() : null;
   const root = s => s.root ? form.querySelector(`[id="${s.root}"]`) : form;
   const control = s => root(s)?.querySelector(`[name="${s.name}"]:not([type=hidden])`);
   const shown = box => {
     const multi = [...(box?.querySelectorAll(".react-select__multi-value__label") ?? [])];
-    if (multi.length) return multi.map(e => e.textContent.trim());
-    return box?.querySelector(".react-select__single-value")?.textContent.trim() ?? null;
+    if (multi.length) return multi.map(text);
+    return text(box?.querySelector(".react-select__single-value"));
   };
   const out = {};
   for (const s of specs) {
@@ -65,7 +66,7 @@ _READ_BACK = """(form, specs) => {
       out[s.id] = control(s) ? (control(s).checked ? "Yes" : "No") : null;
     else if (s.kind === "radio") {
       const on = root(s)?.querySelector(`input[name="${s.name}"]:checked`);
-      out[s.id] = on ? form.querySelector(`label[for="${on.id}"]`)?.textContent.trim() : null;
+      out[s.id] = on ? text(form.querySelector(`label[for="${on.id}"]`)) : null;
     } else if (s.kind === "react" || s.kind === "state") {
       const hidden = s.name && root(s)?.querySelector(`input[type=hidden][name="${s.name}"]`);
       out[s.id] = shown(s.name ? hidden?.closest(".react-select") : root(s));
@@ -75,7 +76,7 @@ _READ_BACK = """(form, specs) => {
       out[s.id] = y && m && d ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : null;
     } else if (s.kind === "file") {
       const names = [...(root(s)?.querySelectorAll(".bp3-tag a.link") ?? [])];
-      out[s.id] = names.length ? names[names.length - 1].textContent.trim() : null;
+      out[s.id] = text(names[names.length - 1]);
     }
   }
   return out;
@@ -174,6 +175,8 @@ class Pinpoint:
                         box = root.locator(f'.react-select:has(input[name="{spec.name}"])')
                     for value in values:
                         _pick(box, value)
+                    if box.locator(".react-select__option").count():  # a multi-select's menu
+                        box.locator("input[role=combobox]").press("Escape")
                 case "date":
                     day = date.fromisoformat(values[0])
                     for n, part in ((1, day.year), (2, day.month), (3, day.day)):
@@ -249,7 +252,8 @@ def _pick(box: Locator, value: str, typed: bool = False) -> None:
         box.locator(".react-select__control").click()
     if typed:
         box.locator("input.react-select__input").press_sequentially(value)
-    option = options.filter(has_text=re.compile(rf"^\s*{re.escape(value)}\s*$")).first
+    words = r"\s+".join(re.escape(w) for w in value.split())
+    option = options.filter(has_text=re.compile(rf"^\s*{words}\s*$")).first
     try:
         option.wait_for(timeout=OPTION_TIMEOUT_MS)
     except Timeout:
@@ -338,6 +342,11 @@ def _key(name: str) -> str:
     return re.findall(r"\w+", re.sub(r"\(\di\)", "", name))[-1]
 
 
+def _text(label: object) -> str:
+    """A label with its runs of whitespace as one space, trimmed."""
+    return " ".join(str(label).split())
+
+
 def _accept(extensions: list[str] | None) -> list[str] | None:
     return [f".{e}" for e in extensions] if extensions else None
 
@@ -415,7 +424,7 @@ def _component(
         ]
     if name.endswith("Equalitymonitoring::Tsselect"):
         field_id = props["inputId"].removeprefix("application_form_")
-        options = [o["label"] for o in props.get("options", [])]
+        options = [_text(o["label"]) for o in props.get("options", [])]
         label = labels.get(props["inputId"], field_id)
         spec = _Spec("react", None, root)
         return [
@@ -462,7 +471,7 @@ def _component(
             dict(zip(options, ("true", "false"), strict=True)),
         )
     elif short in ("Singleselect", "Multiselect"):
-        options = [o["label"] for o in props.get("options", [])]
+        options = [_text(o["label"]) for o in props.get("options", [])]
         field_type = FieldType.CHOICE if short == "Singleselect" else FieldType.MULTI_CHOICE
         spec = _Spec("react", None, root)
     elif short == "Dateselect":
@@ -509,8 +518,8 @@ def _address(props: dict, root: str | None) -> list[tuple[Field, _Spec]]:
     names, words = props["fieldNames"], props.get("translations", {})
     country = words.get("country", "Country")
     us, not_us = (f' (asked when "{country}" is {n}{US})' for n in ("", "not "))
-    countries = [o["label"] for o in props.get("countryOptions", [])]
-    states = [o["label"] for o in props.get("stateOptions", [])]
+    countries = [_text(o["label"]) for o in props.get("countryOptions", [])]
+    states = [_text(o["label"]) for o in props.get("stateOptions", [])]
     line1 = f"{words.get('addressOne', 'Address Line 1')} ({words.get('streetAddress')})"
     postcode = f"{words.get('postcode', 'Postcode')} ({words.get('zipcode')})"
     rows = [  # id, label, type, required, options, kind, name
