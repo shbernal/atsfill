@@ -5,6 +5,7 @@ Nothing but an attached file reaches Greenhouse before submit, so the read-back 
 input values, the shown value of each select, the phone's dial code, the attached file's name.
 """
 
+import itertools
 import json
 import re
 import time
@@ -21,6 +22,10 @@ from atsfill.core.results import Answer, Field, FieldType, SideEffect
 HOSTS = re.compile(r"^(job-boards|boards)(\.eu)?\.greenhouse\.io$")
 FORM = "#application-form"
 API = "https://boards-api.greenhouse.io/v1/boards/{board}/jobs/{job}?questions=true"
+# An education row's selects (`school--0`, …) and the endpoint listing their options a hundred
+# per page: the opened menu shows only the first page.
+EDUCATION = re.compile(r"^(school|degree|discipline)--\d+$")
+EDUCATION_API = "https://boards-api.greenhouse.io/v1/boards/{board}/education/{kind}s?page={page}"
 EMBED = "https://job-boards.greenhouse.io/embed/job_app"
 EMBED_TIMEOUT_MS = 15_000
 OPTIONS_TIMEOUT_MS = 3_000
@@ -130,6 +135,7 @@ class Greenhouse:
         self._fields: dict[str, Field] = {}
         self._kinds: dict[str, str] = {}  # how the page renders each field
         self._embed: str | None = None  # the job_app URL an employer page embeds
+        self._education_options: dict[str, list[str] | None] = {}  # by school, degree, discipline
 
     def detect(self, url: str, page: Page | None) -> bool:
         """A board URL, or an employer page whose `#grnhse_iframe` embeds a job application."""
@@ -162,11 +168,7 @@ class Greenhouse:
         if found is None:
             return None
         try:
-            request = urllib.request.Request(
-                API.format(board=found[0], job=found[1]), headers={"User-Agent": "atsfill"}
-            )
-            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
-                return _api_fields(json.load(response))
+            return _api_fields(_get_json(API.format(board=found[0], job=found[1])))
         except OSError, ValueError, KeyError, TypeError:
             return None
 
@@ -236,7 +238,7 @@ class Greenhouse:
             case "checkboxes":
                 field_type = FieldType.MULTI_CHOICE
             case "select" | "multi":
-                options = self._options(page, raw["id"])
+                options = self._education(page, raw["id"]) or self._options(page, raw["id"])
                 if options is None:
                     field_type = FieldType.TYPEAHEAD
                 else:
@@ -255,6 +257,17 @@ class Greenhouse:
             raw.get("maxLength"),
             raw.get("accept"),
         )
+
+    def _education(self, page: Page, field_id: str) -> list[str] | None:
+        """An education select's options, every page of them, read once per kind; None for
+        another field or when the endpoint does not answer."""
+        found = _board_job(page.url)
+        if not (found and (match := EDUCATION.match(field_id))):
+            return None
+        kind = match[1]
+        if kind not in self._education_options:
+            self._education_options[kind] = _education_options(found[0], kind)
+        return self._education_options[kind]
 
     def _options(self, page: Page, field_id: str) -> list[str] | None:
         """A select's options, from opening it; None for one that suggests as you type."""
@@ -302,6 +315,26 @@ def _board_job(url: str) -> tuple[str, str] | None:
     return None
 
 
+def _get_json(url: str) -> Any:
+    request = urllib.request.Request(url, headers={"User-Agent": "atsfill"})
+    with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
+        return json.load(response)
+
+
+def _education_options(board: str, kind: str) -> list[str] | None:
+    """Every option the board's education endpoint lists for `kind`, page after page."""
+    options: list[str] = []
+    try:
+        for number in itertools.count(1):
+            body = _get_json(EDUCATION_API.format(board=board, kind=kind, page=number))
+            options += [item["text"] for item in body["items"]]
+            if not body["items"] or len(options) >= body["meta"]["total_count"]:
+                return options or None
+    except OSError, ValueError, KeyError, TypeError:
+        return None
+    return None
+
+
 def _api_fields(job: dict[str, Any]) -> list[Field] | None:
     if any(job.get(k) for k in UNMAPPED) or any(
         c.get("requires_consent") or c.get("requires_processing_consent")
@@ -336,17 +369,23 @@ def _exact(value: str) -> re.Pattern[str]:
 
 
 def _select(page: Page, field_id: str, value: str, suggested: bool) -> None:
-    """Types into a react-select and picks the option: hovered then Enter, which every select
-    takes. A suggestion list takes its first suggestion. No option leaves the select empty."""
+    """Types into a react-select and picks the option: focused with the arrow keys then Enter,
+    which every select takes (a hover does not move the focus once typed). A suggestion list
+    takes its first suggestion. No option leaves the select empty."""
     box = page.locator(_by_id(field_id))
     box.click()
     box.press_sequentially(value, delay=KEY_DELAY_MS)
-    menu = page.locator(f"{_by_id(f'react-select-{field_id}-listbox')} [role=option]")
+    listbox = _by_id(f"react-select-{field_id}-listbox")
+    menu = page.locator(f"{listbox} [role=option]")
     option = menu.first if suggested else menu.filter(has_text=_exact(value)).first
     try:
         option.wait_for(timeout=ANSWER_TIMEOUT_MS)
     except Timeout:
         box.press("Escape")
         return
-    option.hover()
+    focused = page.locator(f"{listbox} .select__option--is-focused")
+    for _ in range(menu.count()):
+        if suggested or any(_exact(value).match(t) for t in focused.all_inner_texts()):
+            break
+        box.press("ArrowDown")
     box.press("Enter")
