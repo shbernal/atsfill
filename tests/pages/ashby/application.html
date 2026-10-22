@@ -3,8 +3,13 @@
 <!-- Ashby's application page as the adapter meets it: every change is posted to
      ApiSetFormValue, a file goes through an upload handle and ApiSetFormValueToFile once its
      upload ends, radios and checkboxes hide behind their text, a long select and the location
-     save only a picked suggestion, and survey answers go to the survey's own render. -->
-<style>input[hidden] { display: none; }</style>
+     save only a picked suggestion, the date picker stays open over the next field until
+     Escape, and survey answers go to the survey's own render. -->
+<style>
+  input[hidden] { display: none; }
+  [data-field-path=start] { position: relative; }
+  .react-datepicker { position: absolute; top: 100%; left: 0; width: 300px; height: 200px; background: #fff; z-index: 1; }
+</style>
 <form>
   <fieldset data-field-path="_systemfield_name"><input data-form="application"></fieldset>
   <fieldset data-field-path="_systemfield_resume"><input type="file" data-form="application"></fieldset>
@@ -13,7 +18,10 @@
     <div id="suggestions"></div>
   </fieldset>
   <fieldset data-field-path="site"><input type="url" data-form="application"></fieldset>
-  <fieldset data-field-path="start"><input placeholder="Pick date..." data-form="application"></fieldset>
+  <fieldset data-field-path="start">
+    <input placeholder="Pick date..." data-form="application">
+    <div class="react-datepicker" hidden><div class="react-datepicker__day-name">Su</div></div>
+  </fieldset>
   <fieldset data-field-path="right">
     <label><input type="radio" name="right" value="true" hidden data-form="application"><span>Yes</span></label>
     <label><input type="radio" name="right" value="false" hidden data-form="application"><span>No</span></label>
@@ -58,6 +66,10 @@
     if (input.type === "radio") return save(form, path, input.value === "true" ? true : input.value === "false" ? false : input.value);
     save(form, path, input.value);
   }));
+  const date = document.querySelector("[data-field-path=start] input");
+  const picker = document.querySelector(".react-datepicker");
+  date.addEventListener("focus", () => { picker.hidden = false; });
+  date.addEventListener("keydown", event => { if (event.key === "Escape") picker.hidden = true; });
   const location_ = document.getElementById("location");
   location_.addEventListener("input", () => {
     const suggestions = document.getElementById("suggestions");
