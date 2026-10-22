@@ -16,7 +16,7 @@ HiringThing's career sites, observed on live postings, last on 2026-10-22. The f
 
 A field's id is its control's `name` (`user.first_name`, `job_assessment.question_<id>.response`, `job_assessment.question_<id>.response.0.<part>` for a history entry's part, `disclosure_agree`), a combobox's input id (`user.state`, `user.country`, `app.where_from`), or a file area's id (`files.Resume`). Its label is the element `<id>_label`, a box's own label for a single box; ` (required)` at its end makes it required and is dropped. A history entry's parts are labelled with their question's text from the props. A control outside the table below is `unhandled_rendering`.
 
-Each rendering, and in how many of 384 postings' props it shows (2026-10-22, one posting per employer), the renderings checked on 17 rendered forms:
+Each rendering, and in how many of 384 postings' props it shows (2026-10-22, one posting per employer), the renderings checked on 20 forms dry-run:
 
 | Rendering | Field type | Postings |
 |---|---|---|
