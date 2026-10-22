@@ -17,6 +17,7 @@ WEBSITE = "https://example.com"
 SALARY = "50000"
 TEXT = "Placeholder answer for a dry run."
 CITY = "London"
+BIRTH_DATE = "1990-01-31"
 COUNTRY = "United States"
 COUNTRY_NAMES = (COUNTRY, "United States of America")  # the names a country list gives it
 REGION = "District of Columbia"  # the state of the persona's phone and zip code
@@ -132,6 +133,8 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
             return str(cv)
         case FieldType.PHONE:
             return PHONE
+        case FieldType.DATE if re.search(r"birth", field.label, re.IGNORECASE):
+            return BIRTH_DATE
         case FieldType.DATE:  # an end date after a start date; a past one in a history entry
             end = re.search(r"\bend|finish|until", field.label, re.IGNORECASE)
             if PAST_DATE.match(field.label) or re.search(
