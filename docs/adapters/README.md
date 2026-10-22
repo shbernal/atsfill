@@ -26,7 +26,6 @@ The registry covers 90.1% of postings.
 | recruitee | ats | 0.7% | none | hosted |  | [dry_run_verified](recruitee.md) |
 | applicantpro | ats | 0.6% | none | hosted |  | mapped |
 | rippling | ats | 0.5% | none | hosted |  | mapped |
-| isolvedhire | ats | 0.5% | none | hosted |  | mapped |
 | personio | ats | 0.4% | none | hosted |  | [dry_run_verified](personio.md) |
 | eightfold | ats | 0.4% | none | hosted |  | mapped |
 | pinpoint | ats | 0.4% | none | hosted |  | mapped |
@@ -42,6 +41,7 @@ The registry covers 90.1% of postings.
 | ukgready | ats | 0.9% | to_read | hosted |  | mapped |
 | adpmyjobs | ats | 0.8% | to_read | hosted |  | mapped |
 | hrmdirect | ats | 0.6% | to_read | hosted |  | mapped |
+| isolvedhire | ats | 0.5% | to_read | hosted |  | mapped |
 | jobstreet | board | 0.5% | to_read | hosted |  | mapped |
 | gupy | ats | 0.4% | to_read | hosted |  | mapped |
 | join | ats | 0.3% | to_read | hosted |  | mapped |
