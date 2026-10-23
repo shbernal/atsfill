@@ -58,6 +58,9 @@ BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compa
 BLOCKER = ADDONS_DIR / "UBO-annoyances"  # Camoufox's uBlock Origin, its annoyance lists on
 BLOCKER_LISTS = "annoyances"  # the group of uBlock Origin lists: cookie banners, pop-ups, widgets
 INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
+# A page holding a banner the lists hide: until they do, the blocker is still starting.
+PROBE = ("https://blocker.invalid/", '<div id="cookie-banner">probe</div>')
+BLOCKER_TIMEOUT_MS = 30_000  # its lists take seconds to compile on each launch, more under load
 
 
 class OutOfTime(Exception):
@@ -94,8 +97,9 @@ def install() -> int:
 
 
 def _build_blocker() -> None:
-    """Copies Camoufox's uBlock Origin to `BLOCKER` with its annoyance lists on and read from
-    disk: fetched by each launch, they would hold its first page for seconds."""
+    """Copies Camoufox's uBlock Origin to `BLOCKER` with only its annoyance lists on, read
+    from disk: fetched by each launch, they would hold its first page for seconds, and each
+    list on is compiled by each launch before the blocker starts."""
     ADDONS_DIR.mkdir(parents=True, exist_ok=True)
     with (ADDONS_DIR / f"{BLOCKER.name}.lock").open("w") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
@@ -106,6 +110,8 @@ def _build_blocker() -> None:
         entries = json.loads(assets.read_text())
         for key, entry in entries.items():
             if entry.get("group") != BLOCKER_LISTS:
+                if entry.get("content") == "filters":  # ads and trackers: compiled for nothing
+                    entry["off"] = True
                 continue
             urls = entry["contentURL"]
             urls = [urls] if isinstance(urls, str) else urls
@@ -185,7 +191,24 @@ def _launch(data_dir: Path, headless: bool) -> Generator[Browser]:
         i_know_what_im_doing=True,
     ) as browser:
         assert isinstance(browser, Browser)  # not a persistent context
+        _wait_for_blocker(browser)
         yield browser
+
+
+def _wait_for_blocker(browser: Browser) -> None:
+    """Returns once the blocker hides banners: until then a page shows them, and a fresh
+    browser starts on the posting itself."""
+    context = browser.new_context()
+    url, html = PROBE
+    context.route(url, lambda route: route.fulfill(content_type="text/html", body=html))
+    page = context.new_page()
+    page.goto(url)
+    try:
+        page.locator("#cookie-banner").wait_for(state="hidden", timeout=BLOCKER_TIMEOUT_MS)
+    except Timeout:
+        raise BrowserError("the blocker hid no banner: run `atsfill install-browser`") from None
+    finally:
+        context.close()
 
 
 @contextmanager
