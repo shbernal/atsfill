@@ -1,6 +1,6 @@
 # Paylocity
 
-Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/paylocity/apply.html](../../tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
+Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/paylocity/apply.html](../../tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
 
 ## Where the form is
 
@@ -9,7 +9,7 @@ Paylocity Recruiting's public apply page, observed on live postings, last on 202
 - The form is one page with Submit, or a wizard of steps (`Step 2 of 5`): candidate information, screener questions, references, EEO, then a last step with the conviction and work authorisation questions, the acknowledgement and Submit. Only the current step is in the page; the last step repeats earlier answers in `<p>`s with the controls' ids.
 - Next (`[data-automation-id=btnNext]`) posts the whole application to `ValidateApplication` (no id is assigned) and the address to an address check; nothing reaches the employer before Submit. Next stays on the step when an answer is refused.
 - A posting with `requireResume` opens a modal asking for a resume first (`#btn-forceResume`). Any resume is uploaded at once (`FileUpload?parse=true`) and parsed into the form; a resume Paylocity cannot parse leaves a banner and the form empty. On a page without the modal, the "Fill out application with my resume" box is unchecked before the upload.
-- OneTrust's cookie banner covers the bottom of the page; it is closed.
+- OneTrust's cookie banner would cover the bottom of the page; the blocker's lists hide it.
 
 ## Reading the form
 

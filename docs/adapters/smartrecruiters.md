@@ -1,6 +1,6 @@
 # SmartRecruiters
 
-Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/smartrecruiters/apply.html](../../tests/pages/smartrecruiters/apply.html), served behind a job page in `tests/test_smartrecruiters.py`.
+Observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/smartrecruiters/apply.html](../../tests/pages/smartrecruiters/apply.html), served behind a job page in `tests/test_smartrecruiters.py`.
 
 ## Where the form is
 
@@ -8,6 +8,7 @@ Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/
 - A job page with no One Click link is read as `posting_gone`.
 - The form's host answers 403 (Cloudflare) to anything but a browser, so there is no `read_api`. The public Posting API (`api.smartrecruiters.com/v1/companies/<employer>/postings/<id>`) answers but carries no questions.
 - The page loads DataDome's tag; it has not stopped a dry run.
+- OneTrust's cookie banner would cover the form; the blocker's lists hide it.
 
 ## Reading the form
 

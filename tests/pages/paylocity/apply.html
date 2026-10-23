@@ -8,6 +8,8 @@
      markup: the configuration in `window.pageData`, a wizard whose steps render one at a time,
      react-widgets dropdowns whose list opens on a click, and a last step that repeats earlier
      answers in elements with the same ids. -->
+<!-- OneTrust's banner, over the bottom of the page: the blocker hides it. -->
+<div id="onetrust-consent-sdk"><div id="onetrust-banner-sdk" style="position: fixed; bottom: 0; left: 0; right: 0; height: 50%; z-index: 10; background: #fff"><button class="onetrust-close-btn-handler">Close</button></div></div>
 <script>
 window.pageData = {"jobId": 1234, "requireResume": false, "statesOptions": [{"text": "District of Columbia", "value": "DC"}, {"text": "Texas", "value": "TX"}], "referenceTypeOptions": [{"text": "", "value": "0"}, {"text": "Personal", "value": "1"}, {"text": "Professional", "value": "2"}], "desiredSalaryTypeOptions": [{"text": "", "value": "0"}, {"text": "Hourly", "value": "1"}, {"text": "Yearly", "value": "2"}], "genderOptions": [{"text": "", "value": "0"}, {"text": "Male", "value": "2"}, {"text": "Female", "value": "3"}, {"text": "I choose not to self-identify", "value": "1"}], "raceOptions": [{"text": "", "value": "0"}, {"text": "Two or More Races", "value": "7"}], "customJobApplication": {"requireResume": false, "referencesRequired": true, "referencesRequiredCount": 1, "desiredSalaryInputType": 1, "sections": [
  {"name": "info", "isIncluded": true, "isOneRequired": false, "fields": [

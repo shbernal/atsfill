@@ -27,7 +27,6 @@ CONTAINER = f"{QUESTIONS} [data-test=question-container]"
 NEXT = "[data-test=footer-next] button"
 SUBMIT = "[data-test=footer-submit] button"
 FORM_TIMEOUT_MS = 30_000
-COOKIE_TIMEOUT_MS = 5_000
 OPTION_TIMEOUT_MS = 10_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
@@ -147,7 +146,6 @@ class SmartRecruiters:
             page.locator(PROFILE[0][1]).wait_for(timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
-        _decline_cookies(page)
         context = page.evaluate(_CONTEXT) or {}
         screening = context.get("screeningConfiguration") or {}
         self._questions = {q["id"]: q for q in screening.get("questions") or []}
@@ -170,7 +168,6 @@ class SmartRecruiters:
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        _decline_cookies(page)
         for field_id, selector, _ in PROFILE:
             if field_id in answers:
                 _fill_profile(page, field_id, selector, answers[field_id])
@@ -313,13 +310,6 @@ def _plain(text: str) -> str:
     """A label without its markdown: links keep their text, emphasis marks go."""
     text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)
     return re.sub(r"\s+", " ", text.replace("*", "")).strip()
-
-
-def _decline_cookies(page: Page) -> None:
-    reject = page.locator("#onetrust-reject-all-handler")
-    with suppress(Timeout):
-        reject.wait_for(state="visible", timeout=COOKIE_TIMEOUT_MS)
-        reject.click()
 
 
 def _profile_field(page: Page, field_id: str, selector: str, host: str) -> Field | None:

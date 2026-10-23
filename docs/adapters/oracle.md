@@ -1,6 +1,6 @@
 # Oracle
 
-Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last on 2026-10-20. The fixture pages are [tests/pages/oracle/](../../tests/pages/oracle/), served as an employer's site in `tests/test_oracle.py`: the email step, and one single-page form with one example of each rendering below.
+Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last on 2026-10-24. The fixture pages are [tests/pages/oracle/](../../tests/pages/oracle/), served as an employer's site in `tests/test_oracle.py`: the email step, and one single-page form with one example of each rendering below.
 
 ## Where the form is
 
@@ -43,7 +43,7 @@ Each rendering, and on how many of the 12 forms reached out of 15 postings (2026
 
 ## Filling
 
-- Some tenants show a cookie banner (`.cookie-consent`) over the form; it is declined when it covers a click.
+- Some tenants show a cookie banner (`.cookie-consent-modal`, buttons `.cookie-consent__button`) over the email step and the form; the blocker's lists do not hide it, so it is declined when it covers a click.
 - Every click checks what is on top: the app's loading spinner (`.app-loading-spinner`, always in the page, `visibility: hidden` when idle) comes over it while the app loads, and some tenants fix a header over the top of the page, so a covered target is brought to the middle of the window.
 - Text is filled, then the field blurred: Oracle's bindings take the value on change.
 - A dropdown answer is typed into it and its exact item clicked. Some lists search on part of an item only (a postal code list on its code): when typing the whole answer finds nothing, the item is looked for in the whole list. A phone number picks the longest country code its digits start with (the first country listed under that code) and types the rest; the number reads back as code and number.

@@ -31,7 +31,6 @@ SUBMIT = "[data-automation-id=btnSubmit]"
 STEP = "#appDetailDiv .type-bold.float-right"  # "Step 2 of 5"
 FORCED_RESUME = ".modal.in #btn-forceResume"
 FORM_TIMEOUT_MS = 30_000
-COOKIE_TIMEOUT_MS = 5_000
 STEP_TIMEOUT_MS = 20_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
@@ -354,7 +353,6 @@ class Paylocity:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         self._values = {}
         page.locator("form, #app").first.wait_for(timeout=FORM_TIMEOUT_MS)
-        _dismiss_cookies(page)
         if "resume" in answers:  # first: a parsed resume fills fields the answers then override
             _upload_resume(page, _one(answers["resume"]))
         while True:
@@ -522,13 +520,6 @@ def _present(page: Page, control: Control) -> bool:
         case _:
             target = _by_id(page, control.dom)
             return target.count() == 1 and target.is_visible()
-
-
-def _dismiss_cookies(page: Page) -> None:
-    close = page.locator("#onetrust-banner-sdk .onetrust-close-btn-handler")
-    with suppress(Timeout):
-        close.first.wait_for(state="visible", timeout=COOKIE_TIMEOUT_MS)
-        close.first.click()
 
 
 def _upload_resume(page: Page, path: str) -> None:

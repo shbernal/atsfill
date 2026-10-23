@@ -42,7 +42,8 @@
 <style>.hidden { display: none; } spl-select-option { display: block; }</style>
 </head>
 <body>
-<div id="onetrust-banner-sdk"><button id="onetrust-reject-all-handler" onclick="this.parentElement.remove()">Reject All</button></div>
+<!-- OneTrust's banner, over the form: the blocker hides it. -->
+<div id="onetrust-consent-sdk"><div id="onetrust-banner-sdk" style="position: fixed; inset: 0; z-index: 10; background: #fff"><button id="onetrust-reject-all-handler">Reject All</button></div></div>
 
 <main id="profile">
   <oc-personal-information>

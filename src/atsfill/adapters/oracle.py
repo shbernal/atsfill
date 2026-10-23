@@ -34,7 +34,7 @@ LOADING = ".app-loading-spinner, .cx-select--loading, .apply-flow-block .skeleto
 OTP_PAGE = ".apply-flow-pin-code-required"
 CAPTCHA = "iframe[src*='hcaptcha.com']"
 MANUALLY = ".quick-apply-flow__manually--link:visible"  # past an offer to import a profile
-COOKIES = ".cookie-consent button:visible"
+COOKIES = ".cookie-consent__button:visible"
 ATTACHED = ".attachment-upload-button__download, .misc-attachment-list__item-name"
 STEP_TIMEOUT_MS = 30_000
 LIST_TIMEOUT_MS = 3_000
