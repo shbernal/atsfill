@@ -1,4 +1,4 @@
-"""Stored sessions for the systems that need an account (ADR 0007)."""
+"""Stored sessions for the systems that need an account (ADRs 0007, 0015)."""
 
 import time
 from pathlib import Path
@@ -10,8 +10,8 @@ LOGIN_TIMEOUT_S = 600
 POLL_MS = 1000
 
 
-def session_file(data_dir: Path, adapter: str) -> Path:
-    return data_dir / "sessions" / f"{adapter}.json"
+def session_file(user_dir: Path, adapter: str) -> Path:
+    return user_dir / "sessions" / f"{adapter}.json"
 
 
 def state(adapter: NeedsAccount, session: Path) -> str:

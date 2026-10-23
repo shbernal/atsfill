@@ -3,6 +3,7 @@ from contextlib import contextmanager
 import pytest
 
 from atsfill import core
+from atsfill.cli import parser, run
 from atsfill.core import attempts, commands, registry
 from atsfill.core.adapter import Blocked, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
@@ -96,8 +97,8 @@ def test_no_adapter_is_unsupported(fake, config, server, data):
     assert result.reason and result.reason.startswith("no_adapter")
 
 
-def test_acknowledged_side_effects_are_left_out(fake, config, url, data):
-    config('ack_side_effects = ["all"]')
+def test_muted_side_effects_are_left_out(fake, config, url, data):
+    config('mute-side-effect-warnings = ["all"]')
     assert core.read(url, data_dir=data).side_effects == []
 
 
@@ -105,7 +106,7 @@ def test_fill_reads_every_answer_back(fake, config, url, answers, data):
     result = core.fill(url, answers, data_dir=data)
     assert result.status is Status.READY, result.reason
     assert [c.field_id for c in result.checks if c.match] == list(answers)
-    assert not (data / "attempts.jsonl").exists()
+    assert not (data / "users/default/attempts.jsonl").exists()
 
 
 def test_invalid_answers_refuse_before_filling(fake, config, url, answers, data):
@@ -207,7 +208,7 @@ def test_send_needs_the_adapter_in_the_config(fake, config, url, answers, data):
 
 
 def test_send_once_then_resend(fake, config, url, answers, data):
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     first = core.send(url, answers, data_dir=data)
     assert (first.status, first.evidence) == (Status.SUBMITTED, f"{url}?sent=1")
     again = core.send(url, answers, data_dir=data)
@@ -217,21 +218,21 @@ def test_send_once_then_resend(fake, config, url, answers, data):
 
 
 def test_a_refused_send_never_clicks(fake, config, url, answers, data):
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     fake.typo = True
     assert core.send(url, answers, data_dir=data).status is Status.REFUSED
-    assert attempts.last(data, url) is None
+    assert attempts.last(data / "users/default", url) is None
 
 
 def test_no_evidence_is_unknown(fake, config, url, answers, data):
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     fake.evidence = False
     result = core.send(url, answers, data_dir=data)
     assert (result.status, result.reason) == (Status.UNKNOWN, "no_evidence")
 
 
 def test_a_timeout_past_the_click_is_unknown_and_guards(fake, config, url, answers, data):
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     fake.submit_raises = Timeout("no response")
     result = core.send(url, answers, data_dir=data)
     assert result.status is Status.UNKNOWN
@@ -240,7 +241,7 @@ def test_a_timeout_past_the_click_is_unknown_and_guards(fake, config, url, answe
 
 
 def test_a_blocked_send_can_be_retried(fake, config, url, answers, data):
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     fake.submit_raises = Blocked("captcha_score")
     result = core.send(url, answers, data_dir=data)
     assert (result.status, result.reason) == (Status.BLOCKED, "captcha_score")
@@ -248,15 +249,61 @@ def test_a_blocked_send_can_be_retried(fake, config, url, answers, data):
     assert core.send(url, answers, data_dir=data).status is Status.SUBMITTED
 
 
-def test_status_lists_each_adapter(fake, config, data):
-    config('submit = ["fake"]\nack_side_effects = ["fake"]')
-    (state,) = core.status(data_dir=data).adapters
-    assert (state.name, state.submit_enabled, state.side_effects_acknowledged) == (
+def test_status_lists_each_adapter_per_user(fake, config, data):
+    config(
+        'submit-allowed = ["fake"]\nmute-side-effect-warnings = ["fake"]\n'
+        '[users.test]\nmute-side-effect-warnings = ["all"]'
+    )
+    report = core.status(data_dir=data)
+    (state,) = report.adapters
+    assert report.users == ["default", "test"]
+    assert (state.name, state.submit_allowed, state.side_effects_muted) == (
         "fake",
-        True,
-        True,
+        ["default"],
+        ["default", "test"],
     )
     assert state.side_effects == fake.side_effects
+
+
+def test_each_user_has_their_own_double_send_guard(fake, config, url, answers, data):
+    config('submit-allowed = ["fake"]\n[users.other]\nsubmit-allowed = ["fake"]')
+    assert core.send(url, answers, data_dir=data).status is Status.SUBMITTED
+    assert core.send(url, answers, user="other", data_dir=data).status is Status.SUBMITTED
+    assert attempts.last(data / "users/other", url) == Status.SUBMITTED
+
+
+def test_the_test_user_cannot_send_without_its_own_config(fake, config, url, answers, data):
+    config('submit-allowed = ["fake"]\n[users.test]\nmute-side-effect-warnings = ["all"]')
+    result = core.send(url, answers, user="test", data_dir=data)
+    assert (result.status, result.side_effects) == (Status.REFUSED, [])
+    assert result.reason and result.reason.startswith(
+        "submit_not_enabled: add fake to `submit-allowed` under [users.test]"
+    )
+
+
+@pytest.mark.parametrize(
+    "text, new",
+    [
+        ('submit = ["fake"]', "submit-allowed"),
+        ('[users.test]\nack_side_effects = ["all"]', "mute-side-effect-warnings"),
+    ],
+)
+def test_an_old_config_key_names_the_new_one(fake, config, data, capsys, text, new):
+    config(text)
+    assert run(parser().parse_args(["--data-dir", str(data), "status"])) == 2
+    assert f"is now `{new}`" in capsys.readouterr().err
+
+
+def test_a_data_directory_from_before_users_moves_to_the_default_user(fake, config, url, data):
+    data.mkdir()
+    (data / "sessions").mkdir()
+    (data / "sessions/fake.json").write_text("{}")
+    attempts.record(data, url, Status.SUBMITTED)
+    for _ in range(2):  # idempotent
+        assert core.status(data_dir=data).users == ["default"]
+    assert (data / "users/default/sessions/fake.json").exists()
+    assert attempts.last(data / "users/default", url) == Status.SUBMITTED
+    assert not (data / "sessions").exists() and not (data / "attempts.jsonl").exists()
 
 
 VERIFIED = registry.parse("""
@@ -269,7 +316,7 @@ send_verified = { date = 2026-10-18, version = "0.0.2", by = "user" }
 
 
 def test_a_send_warns_on_an_adapter_not_send_verified(fake, config, url, answers, data):
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     result = core.send(url, answers, data_dir=data)
     assert (result.status, result.warning) == (
         Status.SUBMITTED,
@@ -281,7 +328,7 @@ def test_a_send_verified_adapter_sends_without_warning(
     fake, config, url, answers, data, monkeypatch
 ):
     monkeypatch.setattr(registry, "sources", lambda: VERIFIED)
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     assert core.send(url, answers, data_dir=data).warning is None
     (state,) = core.status(data_dir=data).adapters
     assert (state.verified, state.verified_version) == ("send_verified", "0.0.2")
@@ -306,7 +353,7 @@ reason = "resume empty"
 def test_a_broken_send_warns_and_shows_in_status(fake, config, url, answers, data, monkeypatch):
     monkeypatch.setattr(registry, "sources", lambda: BROKEN)
     monkeypatch.setattr(commands, "version", lambda _: "0.0.2")
-    config('submit = ["fake"]')
+    config('submit-allowed = ["fake"]')
     broken = "send broken since 2026-10-19 (0.0.2), resume empty; last verified 2026-10-18 (0.0.1)"
     assert core.send(url, answers, data_dir=data).warning == f"send_broken: {broken}"
     (state,) = core.status(data_dir=data).adapters

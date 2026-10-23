@@ -46,10 +46,10 @@ def storage_state(path, value: str):
 def test_login_stores_the_session(account, data):
     report = core.login("fakeaccount", data_dir=data)
     assert (report.session, report.reason) == ("signed_in", None)
-    assert report.path == data / "sessions/fakeaccount.json"
+    assert report.path == data / "users/default/sessions/fakeaccount.json"
     assert report.path.stat().st_mode & 0o777 == 0o600
-    (state,) = core.status(data_dir=data).adapters
-    assert state.session == "signed_in"
+    (state,) = core.status(data_dir=data).sessions
+    assert (state.user, state.adapter, state.session) == ("default", "fakeaccount", "signed_in")
 
 
 def test_login_gives_up_when_nobody_signs_in(account, data, monkeypatch):
@@ -65,11 +65,11 @@ def test_login_needs_an_adapter_with_accounts(account, data):
 
 
 def test_status_and_logout(account, data, capsys):
-    session = data / "sessions/fakeaccount.json"
+    session = data / "users/default/sessions/fakeaccount.json"
     session.parent.mkdir(parents=True)
     storage_state(session, "expired")
     assert run(parser().parse_args(["--data-dir", str(data), "status"])) == 1
-    assert json.loads(capsys.readouterr().out)["adapters"][0]["session"] == "signed_out"
+    assert json.loads(capsys.readouterr().out)["sessions"][0]["session"] == "signed_out"
     assert core.logout("fakeaccount", data_dir=data).session == "missing"
     assert not session.exists()
     assert run(parser().parse_args(["--data-dir", str(data), "status"])) == 0

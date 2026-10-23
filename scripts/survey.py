@@ -157,11 +157,11 @@ def survey(
             page.wait_for_load_state("networkidle", timeout=IDLE_MS)
         found = probe(page, url, response)
         evidence = _evidence(page, response, key)
-    read = core.read(url, data_dir=data, sessions=sessions)
+    read = core.read(url, user=paths.TEST_USER, data_dir=data, sessions=sessions)
     result = read
     if read.status is Status.READY:
         answers = testuser.answers(read.fields, cv, cv.with_name("photo.png"))
-        result = core.fill(url, answers, data_dir=data, sessions=sessions)
+        result = core.fill(url, answers, user=paths.TEST_USER, data_dir=data, sessions=sessions)
     step = None
     if found.label == "block":
         step = "posting"

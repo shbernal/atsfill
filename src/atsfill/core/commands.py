@@ -30,18 +30,19 @@ def _detect(candidates: list[Adapter], url: str, page: Page | None = None) -> Ad
     return next((a for a in candidates if a.detect(url, page)), None)
 
 
-def _login_required(url: str, adapter: Adapter) -> Result:
-    reason = f"login_required: run `atsfill login {adapter.name}`"
+def _login_required(url: str, adapter: Adapter, user: str) -> Result:
+    by = "" if user == paths.DEFAULT_USER else f" --user {user}"
+    reason = f"login_required: run `atsfill login {adapter.name}{by}`"
     return Result(Status.BLOCKED, url, adapter.name, reason=reason)
 
 
 @contextmanager
 def _opened(
-    data: Path, url: str, sessions: Sessions | None, detected: list[str]
+    data: Path, user: str, url: str, sessions: Sessions | None, detected: list[str]
 ) -> Generator[tuple[Page, Adapter] | Result]:
     """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
     lands on, else by its page; or the result that ends the command first. An adapter that
-    needs an account gets its session, and only that adapter's (ADR 0007). The adapter's name
+    needs an account gets the user's session, and only that adapter's (ADR 0015). The adapter's name
     goes in `detected` once known. The adapters are fresh: none keeps state from another
     posting (a survey or the adapter gate runs many commands in one process)."""
     candidates = adapters()
@@ -50,9 +51,11 @@ def _opened(
         detected.append(adapter.name)
     session = None
     if isinstance(adapter, NeedsAccount):
-        session = (sessions or {}).get(adapter.name) or accounts.session_file(data, adapter.name)
+        session = (sessions or {}).get(adapter.name) or accounts.session_file(
+            paths.user_dir(data, user), adapter.name
+        )
         if not session.exists():
-            yield _login_required(url, adapter)
+            yield _login_required(url, adapter, user)
             return
     with open_page(data, session) as page:
         try:
@@ -71,13 +74,13 @@ def _opened(
         elif isinstance(adapter, NeedsAccount) and not (
             session and adapter.signed_in(page.request)
         ):
-            yield _login_required(url, adapter)
+            yield _login_required(url, adapter, user)
         else:
             yield page, adapter
 
 
-def _result(adapter: Adapter, url: str) -> Result:
-    shown = [] if paths.acknowledged(adapter.name) else adapter.side_effects
+def _result(adapter: Adapter, url: str, user: str) -> Result:
+    shown = [] if paths.muted(adapter.name, user) else adapter.side_effects
     return Result(Status.READY, url, adapter.name, side_effects=shown)
 
 
@@ -125,9 +128,9 @@ def _in_budget(url: str, command: Callable[[list[str]], Result]) -> Result:
         return Result(Status.UNSUPPORTED, url, (detected or [None])[-1], reason)
 
 
-def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) -> Result:
+def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], user: str) -> Result:
     """Fills and reads back; `ready` when every answer reads back as given."""
-    result = _result(adapter, url)
+    result = _result(adapter, url, user)
     with _stops(result):
         result.fields = adapter.read_form(page)
         if _unfillable(result):
@@ -142,12 +145,14 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer]) ->
     return result
 
 
-def _read_page(data: Path, url: str, sessions: Sessions | None, detected: list[str]) -> Result:
-    with _opened(data, url, sessions, detected) as opened:
+def _read_page(
+    data: Path, user: str, url: str, sessions: Sessions | None, detected: list[str]
+) -> Result:
+    with _opened(data, user, url, sessions, detected) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
-        result = _result(adapter, url)
+        result = _result(adapter, url, user)
         with _stops(result):
             result.fields = adapter.read_form(page)
             _unfillable(result)
@@ -156,6 +161,7 @@ def _read_page(data: Path, url: str, sessions: Sessions | None, detected: list[s
 
 def _form_command(
     data: Path,
+    user: str,
     url: str,
     answers: dict[str, Answer],
     sessions: Sessions | None,
@@ -163,23 +169,28 @@ def _form_command(
     resend: bool,
     detected: list[str],
 ) -> Result:
-    with _opened(data, url, sessions, detected) as opened:
+    mine = paths.user_dir(data, user)  # before the page takes the lock its first use needs
+    with _opened(data, user, url, sessions, detected) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
         posting = adapter.posting(page.url)  # past any redirect a link goes through
-        if send and not paths.submit_enabled(adapter.name):
-            reason = f"submit_not_enabled: add {adapter.name} to `submit` in {paths.config_file()}"
+        if send and not paths.submit_enabled(adapter.name, user):
+            where = "" if user == paths.DEFAULT_USER else f" under [users.{user}]"
+            reason = (
+                f"submit_not_enabled: add {adapter.name} to `submit-allowed`{where}"
+                f" in {paths.config_file()}"
+            )
             return Result(Status.REFUSED, url, adapter.name, reason=reason)
-        if send and not resend and attempts.blocks_send(data, posting):
-            last = attempts.last(data, posting)
+        if send and not resend and attempts.blocks_send(mine, posting):
+            last = attempts.last(mine, posting)
             reason = f"already_sent: last attempt ended {last}; pass --resend"
             return Result(Status.REFUSED, url, adapter.name, reason=reason)
-        result = _fill(page, adapter, url, answers)
+        result = _fill(page, adapter, url, answers, user)
         if not send or result.status is not Status.READY:
             return result
         result.warning = _unverified(adapter.name)
-        attempts.record(data, posting, attempts.PENDING, url=url)
+        attempts.record(mine, posting, attempts.PENDING, url=url)
         try:
             result.evidence = adapter.submit(page)
             if result.evidence:
@@ -192,35 +203,42 @@ def _form_command(
             result.status = Status.UNKNOWN
             result.reason = f"error_after_click: {type(e).__name__}: {e}"
         attempts.record(
-            data, posting, result.status, evidence=result.evidence, reason=result.reason
+            mine, posting, result.status, evidence=result.evidence, reason=result.reason
         )
         return result
 
 
-def read(url: str, *, data_dir: Path | None = None, sessions: Sessions | None = None) -> Result:
+def read(
+    url: str,
+    *,
+    user: str = paths.DEFAULT_USER,
+    data_dir: Path | None = None,
+    sessions: Sessions | None = None,
+) -> Result:
     """Lists the form's fields, over HTTP when an adapter can (ADR 0011), else from the page."""
     for adapter in adapters():
         if not isinstance(adapter, ReadsOverHttp):
             continue
         if (fields := adapter.read_api(url)) is not None:
-            result = _result(adapter, url)
+            result = _result(adapter, url, user)
             result.fields = fields
             _unfillable(result)
             return result
     data = paths.data_dir(data_dir)
-    return _in_budget(url, lambda seen: _read_page(data, url, sessions, seen))
+    return _in_budget(url, lambda seen: _read_page(data, user, url, sessions, seen))
 
 
 def fill(
     url: str,
     answers: dict[str, Answer],
     *,
+    user: str = paths.DEFAULT_USER,
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
     data = paths.data_dir(data_dir)
     return _in_budget(
-        url, lambda seen: _form_command(data, url, answers, sessions, False, False, seen)
+        url, lambda seen: _form_command(data, user, url, answers, sessions, False, False, seen)
     )
 
 
@@ -229,12 +247,13 @@ def send(
     answers: dict[str, Answer],
     *,
     resend: bool = False,
+    user: str = paths.DEFAULT_USER,
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
     data = paths.data_dir(data_dir)
     return _in_budget(
-        url, lambda seen: _form_command(data, url, answers, sessions, True, resend, seen)
+        url, lambda seen: _form_command(data, user, url, answers, sessions, True, resend, seen)
     )
 
 
@@ -250,22 +269,31 @@ def _unverified(adapter: str) -> str | None:
     return f"not_send_verified: {adapter} is {verification or 'not in the registry'}"
 
 
-def _session_state(adapter: Adapter, data: Path) -> str | None:
-    if not isinstance(adapter, NeedsAccount):
-        return None
-    return accounts.state(adapter, accounts.session_file(data, adapter.name))
+def _sessions(data: Path, users: list[str], candidates: list[Adapter]) -> list[SessionReport]:
+    """Every session a user stored, each asked of its system."""
+    rows = []
+    for user in users:
+        for adapter in candidates:
+            path = accounts.session_file(paths.user_dir(data, user), adapter.name)
+            if isinstance(adapter, NeedsAccount) and path.exists():
+                rows.append(SessionReport(user, adapter.name, accounts.state(adapter, path), path))
+    return rows
 
 
 def status(*, data_dir: Path | None = None) -> StatusReport:
-    """Also asks each system that needs an account about its stored session."""
+    """Also asks each system that needs an account about every stored session."""
     data = paths.data_dir(data_dir)
+    paths.user_dir(data, paths.DEFAULT_USER)  # moves a data directory from before users
+    users, candidates = paths.users(data), adapters()
     return StatusReport(
         version=version("atsfill"),
         data_dir=data,
         config=paths.config_file(),
         browser=browser.version(),
         browser_pinned=browser.BUILD,
-        adapters=[_adapter_status(a, data) for a in adapters()],
+        users=users,
+        adapters=[_adapter_status(a, users) for a in candidates],
+        sessions=_sessions(data, users, candidates),
     )
 
 
@@ -276,20 +304,19 @@ def _broken(source: registry.Source) -> str:
     return since + (f"; last verified {last.date} ({last.version})" if last else "")
 
 
-def _adapter_status(adapter: Adapter, data: Path) -> AdapterStatus:
+def _adapter_status(adapter: Adapter, users: list[str]) -> AdapterStatus:
     source = registry.for_adapter(adapter.name)
     verified = source.verification if source else None
     v = getattr(source, verified) if source and verified else None
     return AdapterStatus(
         adapter.name,
-        submit_enabled=paths.submit_enabled(adapter.name),
+        submit_allowed=[u for u in users if paths.submit_enabled(adapter.name, u)],
         side_effects=adapter.side_effects,
-        side_effects_acknowledged=paths.acknowledged(adapter.name),
+        side_effects_muted=[u for u in users if paths.muted(adapter.name, u)],
         verified=verified,
         verified_version=v.version if v else None,
         verified_release=registry.release(v.version, version("atsfill")) if v else None,
         send_broken=_broken(source) if source and source.send_broken else None,
-        session=_session_state(adapter, data),
     )
 
 
@@ -300,16 +327,21 @@ def _account(name: str) -> NeedsAccount:
     return adapter
 
 
-def login(adapter: str, *, data_dir: Path | None = None) -> SessionReport:
+def login(
+    adapter: str, *, user: str = paths.DEFAULT_USER, data_dir: Path | None = None
+) -> SessionReport:
     """Opens a window on the system's login page and stores the session once signed in."""
     account, data = _account(adapter), paths.data_dir(data_dir)
-    session = accounts.session_file(data, adapter)
+    session = accounts.session_file(paths.user_dir(data, user), adapter)
     reason = accounts.sign_in(account, data, session)
-    return SessionReport(adapter, "signed_in" if reason is None else "missing", session, reason)
+    state = "signed_in" if reason is None else "missing"
+    return SessionReport(user, adapter, state, session, reason)
 
 
-def logout(adapter: str, *, data_dir: Path | None = None) -> SessionReport:
+def logout(
+    adapter: str, *, user: str = paths.DEFAULT_USER, data_dir: Path | None = None
+) -> SessionReport:
     _account(adapter)
-    session = accounts.session_file(paths.data_dir(data_dir), adapter)
+    session = accounts.session_file(paths.user_dir(paths.data_dir(data_dir), user), adapter)
     session.unlink(missing_ok=True)
-    return SessionReport(adapter, "missing", session)
+    return SessionReport(user, adapter, "missing", session)

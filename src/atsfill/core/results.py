@@ -67,16 +67,24 @@ class Result:
 
 
 @dataclass
+class SessionReport:
+    user: str
+    adapter: str
+    session: str  # signed_in | signed_out | missing
+    path: Path
+    reason: str | None = None  # why a login stored nothing: window_closed | login_timeout
+
+
+@dataclass
 class AdapterStatus:
     name: str
-    submit_enabled: bool
+    submit_allowed: list[str]  # the users whose config lets it submit
     side_effects: list[SideEffect]
-    side_effects_acknowledged: bool
+    side_effects_muted: list[str]  # the users who muted them
     verified: str | None = None  # mapped | dry_run_verified | send_verified (ADR 0012)
     verified_version: str | None = None
     verified_release: str | None = None  # this_release | older | newer than the installed one
     send_broken: str | None = None  # since when and why, with the last verified send
-    session: str | None = None  # signed_in | signed_out | missing, for a system with accounts
 
 
 @dataclass
@@ -86,12 +94,6 @@ class StatusReport:
     config: Path
     browser: str  # the installed build
     browser_pinned: str
+    users: list[str]
     adapters: list[AdapterStatus]
-
-
-@dataclass
-class SessionReport:
-    adapter: str
-    session: str  # signed_in | missing
-    path: Path
-    reason: str | None = None  # why a login stored nothing: window_closed | login_timeout
+    sessions: list[SessionReport]  # every stored one, of every user
