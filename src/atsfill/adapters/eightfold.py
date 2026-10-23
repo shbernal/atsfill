@@ -32,25 +32,9 @@ QUESTIONS = "/api/application/v2/questions?pids={pid}&user_mode=logged_out_candi
 CSRF = re.compile(r'<meta name="_csrf" content="([^"]+)"')
 SUBMIT = "[data-test-id=submitApplicationButton]"
 AGREE = "#confirmUploadResume"  # the privacy dialog a resume upload opens
-COOKIES = [
-    "#onetrust-reject-all-handler",
-    "#truste-consent-required",
-    "#didomi-notice-disagree-button",
-]
-# An employer's own banner, declined by its button's name.
-BANNERS = ", ".join(
-    f"[{attribute}*={word} i]"
-    for word in ("cookie", "consent", "truste")
-    for attribute in ("id", "class")
-)
-DECLINE = re.compile(
-    r"^\s*((reject|decline|refuse|deny)( all)?( cookies)?|(required|necessary|essential) only)\s*$",
-    re.IGNORECASE,
-)
 PICKER = "[data-testid=picker-dialog]"
 MAX_DEPTH = 5  # the deepest chain of questions rendering one another that a label names"
 FORM_TIMEOUT_MS = 30_000
-COOKIE_TIMEOUT_MS = 5_000
 SHOWN_TIMEOUT_MS = 2_000
 OPTIONS_TIMEOUT_MS = 5_000
 UPLOAD_TIMEOUT_MS = 30_000
@@ -221,7 +205,6 @@ class Eightfold:
         if "status" in api:
             raise Unsupported(f"posting_gone: the questions API answered {api['status']}")
         self._controls = _form(json.loads(api["text"])["data"])
-        _decline_cookies(page)
         doms = page.evaluate(_DOM_IDS, [[c.field.id, c.ends] for c in self._controls])
         for control in self._controls:
             control.dom = doms.get(control.field.id)
@@ -239,7 +222,6 @@ class Eightfold:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         # the resume first: what its parse finds is written over the fields filled before it
         order = sorted(self._controls, key=lambda c: not c.resume)
-        _decline_cookies(page, 0)  # a banner shown since the read
         given: dict[str, Answer] = {}
         for control in order:
             if (answer := answers.get(control.field.id)) is None:
@@ -252,12 +234,7 @@ class Eightfold:
                 control.dom = _find(page, control)
                 if control.dom is None:
                     continue
-            try:
-                _fill(page, control, answer)
-            except browser.Covered:  # a banner that showed late
-                page.keyboard.press("Escape")
-                _decline_cookies(page)
-                _fill(page, control, answer)
+            _fill(page, control, answer)
             given[control.field.id] = answer
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -406,20 +383,6 @@ def _control(q: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> _Control:
     today = bool((q.get("dateOptions") or {}).get("today"))  # today's date, read-only
     question = Field(qid, label, TYPES[kind], required, options, accept=accept, prefilled=today)
     return _Control(question, kind, ends, parents, q.get("type") == "resumeUpload")
-
-
-def _decline_cookies(page: Page, wait_ms: int = COOKIE_TIMEOUT_MS) -> None:
-    """Declines the employer's cookie banner, which covers the form's lower half."""
-    decline = page.locator(", ".join(COOKIES)).or_(
-        page.locator(BANNERS).get_by_role("button", name=DECLINE)
-    )
-    if wait_ms:  # a timeout of 0 waits for ever
-        with suppress(Timeout):
-            decline.first.wait_for(timeout=wait_ms)
-    for button in decline.all():
-        if button.is_visible():
-            button.click()
-            return
 
 
 def _find(page: Page, control: _Control) -> str | None:

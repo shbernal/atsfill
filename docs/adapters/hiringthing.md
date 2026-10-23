@@ -10,7 +10,7 @@ HiringThing's career sites, observed on live postings, last on 2026-10-22. The f
 - A closed posting answers 404 and has no Apply button.
 - The country's state list is fetched from `/regions?parent_region=<country>` once the form shows; until it arrives the state is a plain input, so `read_form` waits for its combobox.
 - A file is posted to `/client_api/add_file` as soon as it is attached: it reaches HiringThing before the submit.
-- A cookie banner covers the bottom of the page. The adapter hides it without answering it.
+- A cookie banner (`.cookie-banner`) covers the bottom of the page; the blocker's lists hide it.
 
 ## Reading the form
 

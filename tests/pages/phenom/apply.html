@@ -295,8 +295,6 @@ document.querySelector(".resume-upload-wrapper input").addEventListener("change"
   document.getElementById("resume-name").textContent = e.target.files[0].name;
   render();
 });
-document.querySelectorAll("#cookie-banner button").forEach(b => b.addEventListener("click", () =>
-  document.getElementById("cookie-banner").remove()));
 render();
 </script>
 </body>

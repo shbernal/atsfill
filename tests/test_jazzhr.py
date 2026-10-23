@@ -30,7 +30,6 @@ def page(tmp_path_factory):
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
         mp.setattr("atsfill.adapters.jazzhr.FORM_TIMEOUT_MS", 1_000)
-        mp.setattr("atsfill.adapters.jazzhr.COOKIE_TIMEOUT_MS", 1_000)
         page.context.route("https://acme.applytojob.com/**", serve)
         yield page
 
