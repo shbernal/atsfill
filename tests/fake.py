@@ -130,3 +130,22 @@ class FakeSignIn(FakeAccount):
         if password != self.password:
             raise Refused("wrong_password")
         page.evaluate("document.cookie = 'session=ok; path=/'")
+
+
+class FakeSignUp(FakeSignIn):
+    """The same, whose accounts atsfill creates: `refuses` is the refusal a sign-up meets."""
+
+    side_effects = [
+        *FakeSignIn.side_effects,
+        SideEffect("sign_up", "hiring_system", "login --create creates an account"),
+    ]
+
+    def __init__(self, server: str) -> None:
+        super().__init__(server)
+        self.created: str | None = None  # the password the account was created with
+
+    def sign_up(self, page: Page, email: str, password: str) -> None:
+        if self.stops:
+            raise self.stops
+        self.created = password
+        page.evaluate("document.cookie = 'session=ok; path=/'")

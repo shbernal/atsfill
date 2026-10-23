@@ -8,9 +8,9 @@ from keyring.backends import fail
 from atsfill import core
 from atsfill.cli import parser, run
 from atsfill.core import commands, passwords
-from atsfill.core.adapter import Blocked
+from atsfill.core.adapter import Blocked, Refused
 from atsfill.core.results import Status
-from tests.fake import FakeSignIn
+from tests.fake import FakeSignIn, FakeSignUp
 
 PASSWORD = FakeSignIn.password
 EMAIL = "jane@example.com"
@@ -146,3 +146,72 @@ def test_a_signed_out_session_signs_in_again(account, config, data, server, tmp_
     result = core.fill(f"{server}/form.html?account", {"name": "Ada"}, data_dir=data)
     assert result.status is Status.READY, result.reason
     assert "session" in session.read_text()
+
+
+@pytest.fixture
+def creates(server, monkeypatch) -> FakeSignUp:
+    adapter = FakeSignUp(server)
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+    monkeypatch.setattr("atsfill.cli.adapters", lambda: [adapter])
+    return adapter
+
+
+def test_create_stores_the_password_before_the_click(creates, config, data, capsys, secret_store):
+    stored_first = []
+    sign_up = creates.sign_up
+
+    def watched(page, email, password):
+        stored_first.append(passwords.stored(data / "users/test", "fakeaccount", None) == password)
+        sign_up(page, email, password)
+
+    creates.sign_up = watched
+    code, report = login(data, capsys, "--user", "test", "--create", "--email", EMAIL)
+    assert (code, report["status"], report["password"]) == (0, "signed_in", "stored")
+    assert stored_first == [True]
+    assert creates.created and creates.created not in json.dumps(report)
+    assert len(creates.created) >= passwords.GENERATED_LENGTH
+    assert secret_store.passwords == {("atsfill", "test/fakeaccount"): creates.created}
+    assert run(parser().parse_args(["--data-dir", str(data), "status"])) == 0
+    assert creates.created not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "stop, status, kept",
+    [
+        (Refused("email_in_use"), "refused", False),
+        (Refused("email_domain_rejected"), "refused", False),
+        (Refused("password_rule: at most 16 characters"), "refused", False),
+        (Blocked("email_otp"), "blocked", True),
+        (Blocked("captcha"), "blocked", True),
+        (RuntimeError("after the click"), "unsupported", True),
+    ],
+)
+def test_create_keeps_the_password_while_the_account_may_exist(
+    creates, config, data, capsys, stop, status, kept
+):
+    creates.stops = stop
+    code, report = login(data, capsys, "--create", "--email", EMAIL)
+    assert (code, report["status"]) == (1, status)
+    assert report["password"] == ("stored" if kept else "deleted")
+    stored = passwords.stored(data / "users/default", "fakeaccount", None)
+    assert (stored is not None) == kept
+
+
+def test_a_verification_link_names_the_address_and_the_command(creates, config, data, capsys):
+    creates.stops = Blocked("email_link")
+    code, report = login(data, capsys, "--user", "test", "--create", "--email", EMAIL)
+    assert report["reason"] == (
+        f"email_link: click the link sent to {EMAIL}, then run "
+        "`atsfill login fakeaccount --user test`"
+    )
+    assert report["password"] == "stored"
+
+
+def test_create_needs_an_adapter_with_sign_up(account, config, data, capsys):
+    code, report = login(data, capsys, "--create", "--email", EMAIL)
+    assert (code, report["status"]) == (1, "unsupported")
+    assert report["reason"].startswith("no_sign_up")
+
+
+def test_sign_up_is_a_declared_side_effect(creates):
+    assert [e.step for e in creates.side_effects] == ["fill", "sign_up"]

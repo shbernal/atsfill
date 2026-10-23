@@ -3,7 +3,9 @@ or put in a reason or an exception."""
 
 import contextlib
 import json
+import secrets
 import shlex
+import string
 import subprocess
 from pathlib import Path
 
@@ -16,10 +18,21 @@ from atsfill.core import paths
 SERVICE = "atsfill"
 COMMAND_TIMEOUT_S = 60  # a password manager may wait for its unlock
 FILE = "passwords.json"  # in the user's directory, only without a secret store
+GENERATED_LENGTH = 24
+CLASSES = (string.ascii_lowercase, string.ascii_uppercase, string.digits, "!#%+-.:=?@_")
 
 
 class PasswordError(Exception):
     """A password source failed; the message never holds the password."""
+
+
+def generate() -> str:
+    """A password for an account atsfill creates: every class common rules ask for."""
+    alphabet = "".join(CLASSES)
+    while True:
+        password = "".join(secrets.choice(alphabet) for _ in range(GENERATED_LENGTH))
+        if all(any(c in chars for c in password) for chars in CLASSES):
+            return password
 
 
 def account_key(adapter: str, scope: str | None) -> str:

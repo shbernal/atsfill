@@ -6,7 +6,7 @@ import time
 from pathlib import Path
 
 from atsfill.core import browser
-from atsfill.core.adapter import NeedsAccount, SignsIn, Unsupported
+from atsfill.core.adapter import CreatesAccount, NeedsAccount, SignsIn, Unsupported
 from atsfill.core.browser import Page
 from atsfill.core.passwords import account_key
 
@@ -47,13 +47,23 @@ def remember(user_dir: Path, adapter: str, scope: str | None, address: str) -> N
 
 
 def sign_in(
-    page: Page, adapter: SignsIn, scope: str | None, address: str, password: str, session: Path
+    page: Page,
+    adapter: SignsIn,
+    scope: str | None,
+    address: str,
+    password: str,
+    session: Path,
+    create: bool = False,
 ) -> None:
-    """Signs in on the system's login page and stores the session. Raises what the adapter
-    raises, without the password in it."""
+    """Signs in, or creates the account, from the system's login page and stores the session.
+    Raises what the adapter raises, without the password in it."""
     page.goto(adapter.login_url(scope))
     try:
-        adapter.sign_in(page, address, password)
+        if create:
+            assert isinstance(adapter, CreatesAccount)
+            adapter.sign_up(page, address, password)
+        else:
+            adapter.sign_in(page, address, password)
     except Exception as e:
         if password in str(e):
             raise redacted(e, password) from None

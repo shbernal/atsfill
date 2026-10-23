@@ -9,7 +9,7 @@ A dry run is not invisible. Ashby saves each field to its servers as it is typed
 Each adapter declares its side effects:
 
 ```
-{ step: "load" | "fill" | "upload" | "submit",
+{ step: "load" | "fill" | "upload" | "submit" | "sign_up",
   reaches: "hiring_system" | "employer",
   effect: "each field change is saved to Ashby as typed" }
 ```

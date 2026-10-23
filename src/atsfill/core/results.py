@@ -48,7 +48,7 @@ class Check:
 
 @dataclass(frozen=True)
 class SideEffect:
-    step: str  # load | fill | upload | submit
+    step: str  # load | fill | upload | submit | sign_up
     reaches: str  # hiring_system | employer
     effect: str
 
@@ -75,6 +75,7 @@ class SessionReport:
     path: Path
     status: str | None = None  # a login's outcome: signed_in | refused | blocked | unsupported
     reason: str | None = None  # why a login stored nothing, `code` or `code: detail`
+    password: str | None = None  # after `--create`, the generated one: stored | deleted
 
 
 @dataclass

@@ -116,6 +116,17 @@ class SignsIn(NeedsAccount, Protocol):
 
 
 @runtime_checkable
+class CreatesAccount(SignsIn, Protocol):
+    """An adapter atsfill can create an account through, where the system's sign-up allows it.
+    Account creation is a side effect it declares (ADR 0008)."""
+
+    def sign_up(self, page: Page, email: str, password: str) -> None:
+        """Creates the account from the page `login_url` loaded, signed in once it returns.
+        Raises as `sign_in` does; `Refused` names the rule a `password_rule` page showed."""
+        ...
+
+
+@runtime_checkable
 class ReadsOverHttp(Adapter, Protocol):
     """An adapter that can list a form's fields over HTTP, without a browser (ADR 0011)."""
 

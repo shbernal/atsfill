@@ -9,6 +9,7 @@ from atsfill.core import accounts, attempts, browser, matching, passwords, paths
 from atsfill.core.adapter import (
     Adapter,
     Blocked,
+    CreatesAccount,
     NeedsAccount,
     NotTaken,
     ReadsOverHttp,
@@ -49,6 +50,15 @@ def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
 
 
 type Credentials = tuple[str, str]  # email, password
+# Refusals the page states before any account exists: the generated password goes.
+NO_ACCOUNT = {"email_in_use", "email_domain_rejected", "password_rule"}
+
+
+def _email_link(reason: str | None, email: str, command: str) -> str | None:
+    """Names the address a verification link went to and the command to run once clicked."""
+    if reason and reason.split(":")[0] == "email_link":
+        return f"email_link: click the link sent to {email}, then run `{command}`"
+    return reason
 
 
 def _credentials(
@@ -140,6 +150,8 @@ def _sign_in_again(
         accounts.sign_in(page, adapter, scope, *credentials, session)
         page.goto(url)
         return None
+    command = login_command(adapter.name, user, url if adapter.per_employer else None)
+    result.reason = _email_link(result.reason, credentials[0] if credentials else "", command)
     return result
 
 
@@ -410,19 +422,26 @@ def login(
     email: str | None = None,
     password: str | None = None,
     window: bool = False,
+    create: bool = False,
     data_dir: Path | None = None,
 ) -> SessionReport:
     """Signs in with the account's password source, headless, and stores the session; without
     a source, or with `window`, opens a window on the system's login page for a person.
 
-    `email` is remembered for the account; `password` is used for this sign-in only."""
+    `email` is remembered for the account; `password` is used for this sign-in only. `create`
+    creates the account with a password atsfill generates and stores first (a side effect)."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
     mine = paths.user_dir(data, user)
     session = accounts.session_file(mine, adapter, scope)
     report = SessionReport(user, adapter, scope, "missing", session)
+    if create and not email:
+        raise ValueError("creating an account needs --email")
     if email:
         accounts.remember(mine, adapter, scope, email)
+    if create:
+        assert email
+        return _create(report, account, url, mine, email, data)
     if password and not (isinstance(account, SignsIn) and accounts.email(mine, adapter, scope)):
         raise ValueError(f"signing in to {adapter} with a password needs --email")
     try:
@@ -436,24 +455,66 @@ def login(
             accounts.wait_for_person(account, scope, data, session),
         )
     else:
-        result = _headless_sign_in(data, account, scope, credentials, session)
-        report.status, report.reason = result.status, result.reason
+        result = _headless(data, account, scope, credentials, session)
+        command = login_command(adapter, user, url)
+        report.status, report.reason = (
+            result.status,
+            _email_link(result.reason, credentials[0], command),
+        )
     if report.reason is None:
         report.session = report.status = "signed_in"
     return report
 
 
-def _headless_sign_in(
-    data: Path, account: NeedsAccount, scope: str | None, credentials: Credentials, session: Path
+def _create(
+    report: SessionReport,
+    account: NeedsAccount,
+    url: str | None,
+    mine: Path,
+    email: str,
+    data: Path,
+) -> SessionReport:
+    """Creates the account: the generated password is stored before the click, and deleted
+    only on a refusal the page states before any account exists."""
+    if not isinstance(account, CreatesAccount):
+        report.status = Status.UNSUPPORTED
+        report.reason = f"no_sign_up: atsfill cannot create a {account.name} account"
+        return report
+    password = passwords.generate()
+    try:
+        passwords.store(mine, account.name, report.scope, password)
+    except passwords.PasswordError as e:
+        report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
+        return report
+    result = _headless(data, account, report.scope, (email, password), report.path, create=True)
+    command = login_command(account.name, report.user, url)
+    report.status, report.reason = result.status, _email_link(result.reason, email, command)
+    report.password = "stored"
+    if result.status is Status.REFUSED and (result.reason or "").split(":")[0] in NO_ACCOUNT:
+        passwords.delete(mine, account.name, report.scope)
+        report.password = "deleted"
+    if report.reason is None:
+        report.session = report.status = "signed_in"
+    return report
+
+
+def _headless(
+    data: Path,
+    account: NeedsAccount,
+    scope: str | None,
+    credentials: Credentials,
+    session: Path,
+    create: bool = False,
 ) -> Result:
-    """Signs in through the adapter: `ready` once the session is stored."""
+    """Signs in, or creates the account, through the adapter: `ready` once the session is
+    stored."""
     assert isinstance(account, SignsIn)
     url = account.login_url(scope)
 
     def run(_: list[str]) -> Result:
         result = Result(Status.READY, url, account.name)
         with open_page(data, None) as page, _stops(result):
-            accounts.sign_in(page, account, scope, *credentials, session)
+            accounts.sign_in(page, account, scope, *credentials, session, create)
         return result
 
     return _in_budget(url, run)
