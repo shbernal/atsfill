@@ -63,6 +63,8 @@ INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
 # A page holding a banner the lists hide: until they do, the blocker is still starting.
 PROBE = ("https://blocker.invalid/", '<div id="cookie-banner">probe</div>')
 BLOCKER_TIMEOUT_MS = 30_000  # its lists take seconds to compile on each launch, more under load
+OVERLAY_GRACE_MS = 1_000  # how long a cover may stay on a click target before it counts
+OVERLAY_POLL_MS = 100
 
 
 class OutOfTime(Exception):
@@ -338,7 +340,11 @@ def overlay_on(target: Locator) -> str | None:
 
 
 def click(target: Locator) -> None:
-    """Clicks the target, raising `Overlaid` when an overlay is on top of it."""
-    if overlay := overlay_on(target):
-        raise Overlaid(overlay)
+    """Clicks the target, raising `Overlaid` when an overlay stays on top of it for the grace
+    period: a toast or a spinner that goes within it is waited out."""
+    deadline = time.monotonic() + OVERLAY_GRACE_MS / 1000
+    while overlay := overlay_on(target):
+        if time.monotonic() >= deadline:
+            raise Overlaid(overlay)
+        target.page.wait_for_timeout(OVERLAY_POLL_MS)
     target.click()

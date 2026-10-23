@@ -218,8 +218,12 @@ class Rippling:
                 timeout=PARSE_TIMEOUT_MS,
             ):
                 _attach(page, "resume", answers["resume"])
-            with suppress(Timeout):  # its notice covers the fields below it while it shows
-                page.get_by_text(PARSED_NOTICE).wait_for(state="hidden", timeout=NOTICE_TIMEOUT_MS)
+            # The page writes the parse and shows its notice a moment after the response; the
+            # notice then covers the fields below it while it shows.
+            notice = page.get_by_text(PARSED_NOTICE)
+            with suppress(Timeout):
+                notice.wait_for(timeout=NOTICE_TIMEOUT_MS)
+                notice.wait_for(state="hidden", timeout=NOTICE_TIMEOUT_MS)
         for field_id, field in self._fields.items():
             if field_id == "resume" or field_id not in answers:
                 continue

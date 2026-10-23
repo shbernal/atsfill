@@ -23,6 +23,19 @@ def test_click_reports_what_covers_the_target(page):
         browser.click(page.locator("#overlaid"))
 
 
+def test_click_waits_out_a_cover_that_goes_within_the_grace_period(page):
+    page.locator("#free").evaluate(
+        """(el, ms) => { const r = el.getBoundingClientRect();
+        const cover = document.createElement("div");
+        cover.style.cssText = `position: fixed; left: ${r.left}px; top: ${r.top}px;
+          width: ${r.width}px; height: ${r.height}px; z-index: 99`;
+        document.body.append(cover);
+        setTimeout(() => cover.remove(), ms); }""",
+        browser.OVERLAY_GRACE_MS // 3,
+    )
+    browser.click(page.locator("#free"))
+
+
 def test_click_reaches_a_target_in_a_shadow_root(page):
     browser.click(page.locator("#shadowed"))
 
