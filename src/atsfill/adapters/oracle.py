@@ -34,7 +34,6 @@ LOADING = ".app-loading-spinner, .cx-select--loading, .apply-flow-block .skeleto
 OTP_PAGE = ".apply-flow-pin-code-required"
 CAPTCHA = "iframe[src*='hcaptcha.com']"
 MANUALLY = ".quick-apply-flow__manually--link:visible"  # past an offer to import a profile
-COOKIES = ".cookie-consent button:visible"
 ATTACHED = ".attachment-upload-button__download, .misc-attachment-list__item-name"
 STEP_TIMEOUT_MS = 30_000
 LIST_TIMEOUT_MS = 3_000
@@ -237,6 +236,7 @@ _READ_BACK = """(ids) => {
 class Oracle:
     name = "oracle"
     known_gaps = {"entries": Gap.RENDERING}
+    filters = ["##.cookie-consent-modal"]  # some tenants' banner, over the email step and the form
     side_effects = [
         SideEffect(
             "load",
@@ -501,16 +501,12 @@ class Oracle:
 
 
 def _click(page: Page, target: Locator) -> None:
-    """Clicks, once more after what came over the target: the app's loading spinner, the
-    cookie banner (declined), or a header fixed over the top of the page."""
+    """Clicks, once more after what came over the target: the app's loading spinner, or a
+    header fixed over the top of the page."""
     try:
         browser.click(target)
-    except browser.Covered as e:
-        if "cookie-consent" in str(e):
-            buttons = page.locator(COOKIES)
-            decline = buttons.filter(has_text=re.compile("decline|reject|necessary", re.I))
-            browser.click((decline if decline.count() else buttons).first)
-        elif "loading" in str(e):
+    except browser.Overlaid as e:
+        if "loading" in str(e):
             _settle(page)
         else:  # a header fixed over the top of the page
             target.evaluate("e => e.scrollIntoView({block: 'center'})")

@@ -28,12 +28,9 @@ POSTING = "https://{host}/recruit/v2/public/Job_Openings/{job}"
 API = POSTING + "/apply/{form}?pagename={page}&source=CareerSite"
 WEBFORM = re.compile(r'"webform_id":"(\d+)"')
 APPLY = "#detail-page-applybtn button"
-COOKIES = "button.cookie-decline-btn"
 FORM = "rec-form-component[webformid]"
 SUBMIT = "#cw-submit-btn button"
 FORM_TIMEOUT_MS = 30_000
-COOKIE_TIMEOUT_MS = 5_000
-COOKIE_ATTEMPTS = 3
 SHOWN_TIMEOUT_MS = 2_000
 TAG_TIMEOUT_MS = 2_000
 TAG_ATTEMPTS = 4
@@ -131,6 +128,7 @@ class ZohoRecruit:
     name = "zohorecruit"
     known_gaps: dict[str, Gap] = {}
     side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
+    filters = ["##career-cookie-consent"]  # its banner, on Zoho's domains and employers' own
 
     def __init__(self) -> None:
         self._controls: list[_Control] = []  # in the form's order
@@ -168,7 +166,7 @@ class ZohoRecruit:
         html = page.evaluate(_FETCH, page.url)
         if "status" in html or (form := WEBFORM.search(html["text"])) is None:
             raise Unsupported("posting_gone: the job page names no application form")
-        _open(page, apply)
+        browser.click(apply)
         page.locator(SUBMIT).wait_for(timeout=FORM_TIMEOUT_MS)
         api = page.evaluate(_FETCH, _api(page.url, form[1]))
         if "status" in api:
@@ -258,23 +256,6 @@ def _get(url: str) -> str:
     request = urllib.request.Request(url, headers={"User-Agent": "atsfill"})
     with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
         return response.read().decode()
-
-
-def _open(page: Page, apply) -> None:
-    """Clicks "I'm interested", declining the cookie banner first: its layer takes every
-    click while it shows, and it shows a moment after the page, at times after a while."""
-    decline = page.locator(COOKIES)
-    for attempt in range(COOKIE_ATTEMPTS):
-        with suppress(Timeout):
-            decline.wait_for(timeout=COOKIE_TIMEOUT_MS if attempt == 0 else 0)
-            decline.click()
-        try:
-            browser.click(apply)
-            return
-        except browser.Covered:
-            if attempt == COOKIE_ATTEMPTS - 1:
-                raise
-            decline.wait_for(timeout=COOKIE_TIMEOUT_MS)
 
 
 def _form(api: dict[str, Any]) -> tuple[list[_Control], bool]:

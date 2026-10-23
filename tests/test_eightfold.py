@@ -47,7 +47,6 @@ def page(tmp_path_factory):
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
         mp.setattr("atsfill.adapters.eightfold.FORM_TIMEOUT_MS", 5_000)
-        mp.setattr("atsfill.adapters.eightfold.COOKIE_TIMEOUT_MS", 1_000)
         mp.setattr("atsfill.adapters.eightfold.PARSE_SETTLE_MS", 100)
         page.context.route(f"{SITE}/**", serve)
         yield page

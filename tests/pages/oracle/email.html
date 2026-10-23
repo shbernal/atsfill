@@ -5,7 +5,17 @@
 </head>
 <body>
 <!-- The email step, as Oracle renders it: an address, the terms, Next. A known address gets
-     the code page instead of the form. -->
+     the code page instead of the form. Some tenants' cookie banner covers it: the adapter's
+     filter hides it. -->
+<div class="cookie-consent-modal cookie-consent-site narrow" style="position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.5)">
+  <div class="cookie-consent__content" role="dialog" aria-label="Cookie Consent Message">
+    <div class="cookie-consent__message">This site uses cookies.</div>
+    <div class="cookie-consent__actions">
+      <button class="cookie-consent__button button accept"><span class="cookie-consent__button-label">OK</span></button>
+      <button class="cookie-consent__button button decline"><span class="cookie-consent__button-label">Decline</span></button>
+    </div>
+  </div>
+</div>
 <main id="main">
   <div class="apply-flow-email">
     <label class="input-row__label input-row__label--required" for="primary-email-1">Email Address</label>

@@ -12,7 +12,7 @@
   input[aria-hidden=true] { position: absolute; opacity: 0; width: 1px; height: 1px; }
   [role=listbox] { list-style: none; margin: 0; padding: 0; border: 1px solid #ccc; }
   [role=option] { padding: 4px; }
-  [data-ui=cookie-consent] { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); }
+  [data-ui=backdrop] { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); }
 </style>
 </head>
 <body>
@@ -155,16 +155,18 @@
   <div id="turnstile-container-1" hidden></div>
   <button data-ui="apply-button" type="submit">Submit application</button>
 </form>
-<div data-ui="cookie-consent" role="dialog" aria-modal="true">
-  <span>This website uses cookies.</span>
-  <button data-ui="cookie-consent-accept">Accept all</button>
-  <button data-ui="cookie-consent-decline">Decline all</button>
+<div style="--color-cookie-consent: #0c546c;">
+  <div data-ui="backdrop"></div>
+  <div data-ui="cookie-consent" role="dialog" aria-modal="true" aria-label="Cookie Consent">
+    <span>This website uses cookies.</span>
+    <button data-ui="cookie-consent-accept">Accept all</button>
+    <button data-ui="cookie-consent-decline">Decline all</button>
+  </div>
 </div>
 <script>
   // The page as observed: an option's state is its aria-checked, its hidden input is not kept
   // in step; a closed dropdown's list lingers a moment; number and date inputs reformat.
   const $ = (s, root = document) => root.querySelector(s);
-  $("[data-ui=cookie-consent-decline]").onclick = () => $("[data-ui=cookie-consent]").remove();
   document.querySelectorAll("[role=radio], [role=checkbox]").forEach(option => {
     option.closest("label, [role=radio]").addEventListener("click", event => {
       event.preventDefault();

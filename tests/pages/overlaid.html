@@ -2,24 +2,24 @@
 <meta charset="utf-8">
 <style>
   .banner { position: fixed; bottom: 0; left: 0; right: 0; height: 120px; background: #eee; }
-  #covered { position: fixed; bottom: 40px; left: 40px; }
+  #overlaid { position: fixed; bottom: 40px; left: 40px; }
   iframe { width: 300px; height: 120px; border: 0; }
-  #frame-cover { position: absolute; top: 260px; left: 0; width: 300px; height: 120px; }
+  #frame-overlay { position: absolute; top: 260px; left: 0; width: 300px; height: 120px; }
 </style>
 <button id="free">Free</button>
-<button id="covered">Covered</button>
-<div class="banner cookie-banner">We use cookies</div>
+<button id="overlaid">Overlaid</button>
+<div class="banner sheet">Saving your answers</div>
 <div id="host"></div>
 <script>
   const root = document.getElementById("host").attachShadow({ mode: "open" });
   root.innerHTML = '<button id="shadowed">In shadow</button>';
 </script>
 <div style="position: absolute; top: 140px"><iframe id="open-frame"></iframe></div>
-<div style="position: absolute; top: 260px"><iframe id="covered-frame"></iframe></div>
-<div id="frame-cover"></div>
+<div style="position: absolute; top: 260px"><iframe id="overlaid-frame"></iframe></div>
+<div id="frame-overlay"></div>
 <div style="position: absolute; top: 400px; width: 200px">Some text before <label id="wrapped">a label that wraps</label></div>
 <script>
-  const child = location.href.replace("localhost", "127.0.0.1").replace("covered.html", "button.html");
+  const child = location.href.replace("localhost", "127.0.0.1").replace("overlaid.html", "button.html");
   document.getElementById("open-frame").src = child;
-  document.getElementById("covered-frame").src = child;
+  document.getElementById("overlaid-frame").src = child;
 </script>

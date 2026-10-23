@@ -46,7 +46,6 @@ PROPS = "[data-react-class='HiringThing.Components.ApplyButtonGroup']"
 APPLY = "button.job-apply-button"
 FORM = "#job-application-form"
 SUBMIT = f"{FORM} button[type=submit]"
-BANNER = ".cookie-banner"
 UPLOAD = "/client_api/add_file"
 FORM_TIMEOUT_MS = 30_000
 PAGE_TIMEOUT_MS = 30_000
@@ -164,7 +163,6 @@ class HiringThing:
             props.wait_for(state="attached", timeout=PAGE_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("posting_gone: no application on the page") from None
-        _hide_banner(page)
         form = page.locator(FORM)
         if not form.count():
             page.locator(APPLY).filter(visible=True).first.click()
@@ -184,7 +182,6 @@ class HiringThing:
         ]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        _hide_banner(page)
         form = page.locator(FORM)
         # the state last: its options are the chosen country's
         for field_id, kind in sorted(self._kinds.items(), key=lambda k: k[1] == "region"):
@@ -276,12 +273,6 @@ def _field(control: dict, questions: dict[str, str], options: list[str] | None) 
         options = control["options"]
     max_length = control.get("maxLength") if kind == "text" else None
     return Field(field_id, label, TYPES[kind], required, options, max_length)
-
-
-def _hide_banner(page: Page) -> None:
-    """Hides the cookie banner, which covers the form's bottom, without answering it."""
-    with suppress(Exception):
-        page.locator(BANNER).evaluate_all("es => es.forEach(e => e.style.display = 'none')")
 
 
 def _combobox(page: Page, field_id: str) -> Locator:

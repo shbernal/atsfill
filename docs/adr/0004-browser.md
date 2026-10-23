@@ -8,7 +8,8 @@
 - No persistent browser profile: every command gets a fresh browser context, so autofill, saved drafts and another system's cookies never reach a form. What persists is the device identity and the sessions a system needs, loaded into that context only (ADR 0007).
 - The window is at least 900px tall: Greenhouse's and Teamtailor's submit buttons misbehave in a shorter one.
 - One command uses the data directory at a time; another waits on its lock, so two sends of one posting cannot both pass the double-send guard (ADR 0006). Each command has a time budget of about three minutes, always returns a status, and closes the browser when it exits.
-- Before a click, atsfill checks with `elementFromPoint` that the target is on top, closing what covers it when the adapter knows how. Evidence of a send is a URL or a network response, never page text, so page language does not matter.
+- Every launch loads uBlock Origin with its annoyance lists on (cookie banners, pop-ups, widgets), read from disk: `install-browser` fetches them, since fetching them at launch held the first page for up to 30 seconds. Each launch compiles the lists on, so only the annoyance lists are: ads and trackers are not atsfill's concern. Until they compile, about two seconds, a page keeps its banners, so a launch returns once a probe page's banner is hidden. A banner the lists hide needs no code in the adapter. For one they miss, the adapter gives uBlock Origin cosmetic filters (`filters`); the blocker carries them as one more list on, rewritten by each launch, so the adapter knows its page and the core does the hiding.
+- Before a click, atsfill checks with `elementFromPoint` that the target is on top, closing the overlay when the adapter knows how; otherwise the command ends `overlaid: …`. Evidence of a send is a URL or a network response, never page text, so page language does not matter.
 
 ## Rejected
 

@@ -59,7 +59,7 @@ CASES = {  # an `unsupported` reason's code, by its case (ADR 0014)
     "unhandled_rendering": "unhandled",
     "adapter_error": "unhandled",
 }
-NOT_A_BLOCK = ("covered", "time_budget")  # `blocked` statuses that are atsfill's own limits
+NOT_A_BLOCK = ("overlaid", "time_budget")  # `blocked` statuses that are atsfill's own limits
 LOGIN_PATH = re.compile(r"/(log-?in|sign-?in|auth|authenticate|sso)\b", re.IGNORECASE)
 
 

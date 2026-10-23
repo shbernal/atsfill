@@ -8,7 +8,7 @@
 <style>
   [role=listbox], [data-testid=picker-dialog], [role=dialog] { border: 1px solid #888; background: #fff; }
   .hidden { display: none; }
-  #banner { position: fixed; bottom: 0; left: 0; right: 0; height: 40%; background: #333; }
+  #onetrust-banner-sdk { position: fixed; bottom: 0; left: 0; right: 0; height: 40%; background: #333; }
 </style>
 </head>
 <body>
@@ -125,7 +125,7 @@
   <button data-test-id="confirm-upload-resume" id="confirmUploadResume">I Agree</button>
 </div>
 
-<div id="banner"><button id="onetrust-reject-all-handler">Reject All</button></div>
+<div id="onetrust-consent-sdk"><div id="onetrust-banner-sdk"><button id="onetrust-reject-all-handler">Reject All</button></div></div>
 
 <template id="events-field">
   <div class="field">
@@ -140,7 +140,6 @@
 
 <script>
 const STATES = {"Canada": ["Ontario", "Quebec"], "United States": ["District of Columbia", "Ohio"]};
-document.getElementById("onetrust-reject-all-handler").onclick = () => document.getElementById("banner").remove();
 
 // A combobox renders its listbox at the end of the page when clicked; an option sets its value.
 function open(combo) {

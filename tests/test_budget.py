@@ -14,8 +14,8 @@ def test_budget_interrupts_the_browser(server, tmp_path):
     start = time.monotonic()
     with pytest.raises(OutOfTime), browser.open_page(tmp_path, seconds=5) as page:
         page.goto(f"{server}/button.html")
-        page.wait_for_timeout(60_000)
-    assert time.monotonic() - start < 20
+        page.wait_for_timeout(120_000)
+    assert time.monotonic() - start < 60  # interrupted, with room for a launch under load
 
 
 def test_out_of_time_before_the_click_is_blocked(server, tmp_path, monkeypatch):

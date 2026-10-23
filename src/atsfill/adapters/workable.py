@@ -24,10 +24,8 @@ JOB = re.compile(r"^(?:/[^/]+)?/j/([0-9A-F]{10})\b")
 API = "https://apply.workable.com/api/v1/jobs/{code}/form"
 APPLIED = re.compile(r"/api/v1/jobs/[0-9A-F]{10}/apply$")
 FORM = "form[data-ui=application-form]"
-COOKIES = "[data-ui=cookie-consent-decline]"
 UPLOADED = "[data-action=delete]"  # an uploading file shows its name and an abort button
 FORM_TIMEOUT_MS = 30_000
-COOKIE_TIMEOUT_MS = 5_000
 OPTIONS_TIMEOUT_MS = 5_000
 CHECK_TIMEOUT_MS = 3_000
 UPLOAD_TIMEOUT_MS = 30_000
@@ -184,7 +182,6 @@ class Workable:
             form.wait_for(timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
-        _decline_cookies(page)
         fields, self._kinds, self._formats = [], {}, {}
         for raw in form.evaluate(_READ):
             fields.append(self._field(page, raw))
@@ -194,7 +191,6 @@ class Workable:
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        _decline_cookies(page, wait=False)
         # attaching the resume empties the photo, so it goes first
         for field_id, answer in sorted(answers.items(), key=lambda a: a[0] != "resume"):
             values = [answer] if isinstance(answer, str) else answer
@@ -338,17 +334,6 @@ def _code(url: str) -> str | None:
         return None
     match = JOB.match(parts.path)
     return match[1] if match else None
-
-
-def _decline_cookies(page: Page, wait: bool = True) -> None:
-    """Declines the cookie banner, a modal dialog that leaves the form inert while it is open;
-    it shows a moment after the page."""
-    decline = page.locator(COOKIES)
-    with suppress(Timeout):
-        if wait:
-            decline.wait_for(timeout=COOKIE_TIMEOUT_MS)
-        if decline.is_visible():
-            decline.click()
 
 
 def _exact(value: str) -> re.Pattern[str]:

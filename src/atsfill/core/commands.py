@@ -17,7 +17,7 @@ from atsfill.core.adapter import (
     SignsIn,
     Unsupported,
 )
-from atsfill.core.browser import Covered, OutOfTime, Page, open_page
+from atsfill.core.browser import OutOfTime, Overlaid, Page, open_page
 from atsfill.core.results import (
     AdapterStatus,
     Answer,
@@ -188,8 +188,8 @@ def _stops(result: Result) -> Generator[None]:
         result.status, result.reason = Status.REFUSED, str(e)
     except Blocked as e:
         result.status, result.reason = Status.BLOCKED, str(e)
-    except Covered as e:
-        result.status, result.reason = Status.BLOCKED, f"covered: {e}"
+    except Overlaid as e:
+        result.status, result.reason = Status.BLOCKED, f"overlaid: {e}"
 
 
 def _in_budget(url: str, command: Callable[[list[str]], Result]) -> Result:

@@ -22,7 +22,7 @@ from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.workable import Workable
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.adapters.zohorecruit import ZohoRecruit
-from atsfill.core.adapter import Adapter
+from atsfill.core.adapter import Adapter, Filtered
 
 
 def adapters() -> list[Adapter]:
@@ -53,3 +53,8 @@ def adapters() -> list[Adapter]:
         Eightfold(),
         Phenom(),  # last: it claims a URL by its path alone
     ]
+
+
+def filters() -> list[str]:
+    """The cosmetic filters of each adapter whose system's banner the blocker's lists miss."""
+    return [line for a in adapters() if isinstance(a, Filtered) for line in a.filters]

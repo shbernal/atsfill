@@ -5,6 +5,8 @@ import fcntl
 import json
 import locale
 import platform
+import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -13,8 +15,11 @@ from collections.abc import Generator
 from concurrent.futures import Future
 from contextlib import contextmanager
 from pathlib import Path
+from urllib.parse import urljoin
+from urllib.request import Request as HttpRequest
+from urllib.request import urlopen
 
-from camoufox.addons import DefaultAddons, maybe_download_addons
+from camoufox.addons import ADDONS_DIR, DefaultAddons, get_addon_path, maybe_download_addons
 from camoufox.exceptions import CamoufoxNotInstalled
 from camoufox.fingerprints import Screen, generate_fingerprint
 from camoufox.pkgman import installed_verstr
@@ -27,7 +32,7 @@ from playwright.sync_api import TimeoutError as Timeout
 __all__ = [
     "BUILD",
     "BrowserError",
-    "Covered",
+    "Overlaid",
     "Locator",
     "OutOfTime",
     "Page",
@@ -50,14 +55,22 @@ BUDGET = 180.0  # seconds per command, lock wait included
 LOCK_POLL_S = 0.1
 HTTP_TIMEOUT_S = 20  # per request to a hiring system's API
 BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compare across machines
+BLOCKER = ADDONS_DIR / "UBO-annoyances"  # Camoufox's uBlock Origin, its annoyance lists on
+BLOCKER_LISTS = "annoyances"  # the group of uBlock Origin lists: cookie banners, pop-ups, widgets
+# The adapters' filters for the banners the lists miss: a list of the blocker's, on like them.
+FILTERS = "assets/atsfill/filters.txt"
+INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
+# A page holding a banner the lists hide: until they do, the blocker is still starting.
+PROBE = ("https://blocker.invalid/", '<div id="cookie-banner">probe</div>')
+BLOCKER_TIMEOUT_MS = 30_000  # its lists take seconds to compile on each launch, more under load
 
 
 class OutOfTime(Exception):
     """The command's time budget ran out."""
 
 
-class Covered(Exception):
-    """Another element is on top of the click target; the message describes it."""
+class Overlaid(Exception):
+    """An overlay is on top of the click target; the message describes it."""
 
 
 def version() -> str:
@@ -77,7 +90,61 @@ def install() -> int:
         print(f"the Camoufox build {BUILD} is not installed", file=sys.stderr)
         return 1
     maybe_download_addons(list(DefaultAddons))
+    try:
+        _build_blocker()
+    except OSError as e:
+        print(f"the annoyance lists could not be fetched: {e}", file=sys.stderr)
+        return 1
     return 0
+
+
+def _build_blocker() -> None:
+    """Copies Camoufox's uBlock Origin to `BLOCKER` with only its annoyance lists on, read
+    from disk: fetched by each launch, they would hold its first page for seconds, and each
+    list on is compiled by each launch before the blocker starts."""
+    ADDONS_DIR.mkdir(parents=True, exist_ok=True)
+    with (ADDONS_DIR / f"{BLOCKER.name}.lock").open("w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        build = BLOCKER.with_name(f"{BLOCKER.name}.build")
+        shutil.rmtree(build, ignore_errors=True)
+        shutil.copytree(get_addon_path(DefaultAddons.UBO.name), build)
+        assets = build / "assets" / "assets.json"
+        entries = json.loads(assets.read_text())
+        for key, entry in entries.items():
+            if entry.get("group") != BLOCKER_LISTS:
+                if entry.get("content") == "filters":  # ads and trackers: compiled for nothing
+                    entry["off"] = True
+                continue
+            urls = entry["contentURL"]
+            urls = [urls] if isinstance(urls, str) else urls
+            local = f"assets/{BLOCKER_LISTS}/{key}.txt"
+            (build / local).parent.mkdir(exist_ok=True)
+            (build / local).write_text(_filter_list([*urls, *entry.get("cdnURLs", [])]))
+            entry.pop("off", None)  # on from the start, the way a fresh profile reads it
+            entry["contentURL"] = [local, *urls]
+        entries["atsfill"] = {"content": "filters", "group": "custom", "title": "atsfill",
+                              "contentURL": [FILTERS]}  # fmt: skip
+        (build / FILTERS).parent.mkdir()
+        (build / FILTERS).touch()
+        assets.write_text(json.dumps(entries))
+        shutil.rmtree(BLOCKER, ignore_errors=True)
+        build.rename(BLOCKER)
+
+
+def _filter_list(urls: list[str]) -> str:
+    """A filter list from the first of its sources that answers, its includes inlined."""
+    for url in (u for u in urls if u.startswith("https://")):
+        try:
+            return INCLUDE.sub(lambda m, base=url: _fetch(urljoin(base, m[1])), _fetch(url))
+        except OSError:
+            continue
+    raise OSError(f"no source answered for {urls[0]}")
+
+
+def _fetch(url: str) -> str:
+    request = HttpRequest(url, headers={"User-Agent": "Mozilla/5.0"})  # some refuse urllib's
+    with urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
+        return response.read().decode()
 
 
 def identity(data_dir: Path) -> dict:
@@ -117,15 +184,51 @@ def lock(data_dir: Path, deadline: float) -> Generator[None]:
 
 @contextmanager
 def _launch(data_dir: Path, headless: bool) -> Generator[Browser]:
+    if not (BLOCKER / FILTERS).exists():  # installed before the blocker, or its filters, were
+        maybe_download_addons(list(DefaultAddons))
+        _build_blocker()
+    _write_filters()
     with Camoufox(
         headless=headless,
+        addons=[str(BLOCKER)],
+        exclude_addons=list(DefaultAddons),
         fingerprint=identity(data_dir),
         os=HOST_OS,
         locale=machine_locale(),
         i_know_what_im_doing=True,
     ) as browser:
         assert isinstance(browser, Browser)  # not a persistent context
+        _wait_for_blocker(browser)
         yield browser
+
+
+def _write_filters() -> None:
+    """Writes the adapters' filters into the blocker when they changed, in one rename so that
+    a launch beside it reads either version whole."""
+    from atsfill.adapters import filters  # adapters import this module
+
+    path = BLOCKER / FILTERS
+    text = "".join(f"{line}\n" for line in filters())
+    if path.read_text() != text:
+        staged = path.with_suffix(f".{threading.get_native_id()}")
+        staged.write_text(text)
+        staged.replace(path)
+
+
+def _wait_for_blocker(browser: Browser) -> None:
+    """Returns once the blocker hides banners: until then a page shows them, and a fresh
+    browser starts on the posting itself."""
+    context = browser.new_context()
+    url, html = PROBE
+    context.route(url, lambda route: route.fulfill(content_type="text/html", body=html))
+    page = context.new_page()
+    page.goto(url)
+    try:
+        page.locator("#cookie-banner").wait_for(state="hidden", timeout=BLOCKER_TIMEOUT_MS)
+    except Timeout:
+        raise BrowserError("the blocker hid no banner: run `atsfill install-browser`") from None
+    finally:
+        context.close()
 
 
 @contextmanager
@@ -198,7 +301,7 @@ def session_request(path: Path) -> Generator[Request]:
 # What sits on top of a point, null when the element (or the shadow host holding it) is what
 # a click there would reach. The point defaults to where Playwright clicks: the centre of the
 # first box, which for wrapped inline text is its first line, not the bounding box's centre.
-_COVER = """(el, point) => {
+_OVERLAY = """(el, point) => {
     const r = [...el.getClientRects()].find(b => b.width && b.height)
         ?? el.getBoundingClientRect();
     const [x, y] = point ?? [r.left + r.width / 2, r.top + r.height / 2];
@@ -214,12 +317,12 @@ _COVER = """(el, point) => {
 }"""
 
 
-def covered_by(target: Locator) -> str | None:
-    """What covers the target, in its own document and then at its point in each frame up."""
+def overlay_on(target: Locator) -> str | None:
+    """The overlay on the target, in its own document and then at its point in each frame up."""
     target.scroll_into_view_if_needed()
     handle = target.element_handle()
-    if cover := handle.evaluate(_COVER, None):
-        return cover
+    if overlay := handle.evaluate(_OVERLAY, None):
+        return overlay
     box = target.bounding_box()  # in the top page's viewport
     frame = handle.owner_frame()
     if box is None or frame is None:
@@ -228,14 +331,14 @@ def covered_by(target: Locator) -> str | None:
     while (parent := frame.parent_frame) is not None:
         origin = parent.frame_element().bounding_box() if parent.parent_frame else None
         point = [x - origin["x"], y - origin["y"]] if origin else [x, y]
-        if cover := frame.frame_element().evaluate(_COVER, point):
-            return cover
+        if overlay := frame.frame_element().evaluate(_OVERLAY, point):
+            return overlay
         frame = parent
     return None
 
 
 def click(target: Locator) -> None:
-    """Clicks the target, raising `Covered` when something else is on top of it."""
-    if cover := covered_by(target):
-        raise Covered(cover)
+    """Clicks the target, raising `Overlaid` when an overlay is on top of it."""
+    if overlay := overlay_on(target):
+        raise Overlaid(overlay)
     target.click()

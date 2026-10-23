@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
-from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Covered, Locator, Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Locator, Overlaid, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 JOB = re.compile(r"^(/[a-z]{2,8}/[a-z]{2})/(job|\w*apply)(?:/|$)")
@@ -139,22 +139,6 @@ _DIAL = """form => {
   if (!el) return null;
   const text = el.tagName === 'SELECT' ? (el.selectedOptions[0]?.text || '') : el.value;
   return (text.match(/\\(\\+(\\d+)/) || (el.value || '').match(/_(\\d+)$/) || [])[1] || null;
-}"""
-
-# Declines, else accepts, the cookie banner: it sits over the form's controls.
-_COOKIES = """() => {
-  const banners = [...document.querySelectorAll('[ph-module=gdpr], [id*=cookie i],'
-    + ' [class*=cookie i], [id*=truste i], [id*=onetrust i], [class*=consent i], .cc-window,'
-    + ' [role=dialog][aria-label*=cookie i]')];
-  const buttons = banners.flatMap(b => [...b.querySelectorAll('button, a[role=button], a')])
-    .filter(b => b.offsetWidth || b.offsetHeight);
-  const pick = buttons.find(b => /^\\W*(deny|decline|reject)/i.test(b.innerText.trim()))
-    || buttons.find(b => /^\\W*(allow|accept|agree|i consent|ok|got it|close|dismiss)/i
-      .test(b.innerText.trim() || b.getAttribute('aria-label') || ''));
-  if (pick) { pick.click(); return true; }
-  for (const b of banners)  // no button to answer it: out of the way, unanswered
-    if (getComputedStyle(b).position === 'fixed') b.style.display = 'none';
-  return false;
 }"""
 
 # Picks a dropdown's option by its text, as React sees a change, even to the value it holds.
@@ -1128,11 +1112,9 @@ def _next(page: Page, number: int) -> None:
 
 
 def _click(page: Page, target: Locator) -> None:
-    """Clicks once the page's loading overlay is gone, past the cookie banner, which can show
-    at any time and covers the form."""
+    """Clicks once the page's loading overlay is gone."""
     with suppress(Timeout):
         page.locator(LOADING).first.wait_for(state="hidden", timeout=STEP_TIMEOUT_MS)
-    page.evaluate(_COOKIES)
     browser.click(target)
 
 
@@ -1309,10 +1291,9 @@ def _fill(page: Page, raw: dict[str, Any], answer: Answer) -> None:
                 try:
                     _click(page, item.first if item.count() else items.first)
                     break
-                except BrowserError, Covered:  # rendered again under the click
+                except BrowserError, Overlaid:  # rendered again under the click
                     continue
         case "radio":  # its label wraps it or names it by `for`
-            page.evaluate(_COOKIES)
             if not form.evaluate(_RADIO, [raw["id"], _one(answer)]):
                 raise NotTaken(f"{raw['id']} has no option {_one(answer)!r}")
         case "checkbox":

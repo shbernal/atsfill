@@ -16,11 +16,7 @@ JOB = "https://recruiting.paylocity.com/Recruiting/Jobs/Details/1234"
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    with (
-        pytest.MonkeyPatch.context() as mp,
-        browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
-    ):
-        mp.setattr("atsfill.adapters.paylocity.COOKIE_TIMEOUT_MS", 500)
+    with browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page:
         page.context.route(
             "https://recruiting.paylocity.com/**",
             lambda route: (

@@ -19,13 +19,11 @@ from atsfill.core.results import Answer, Field, FieldType, SideEffect
 HOST = re.compile(r"^[\w-]+\.applytojob\.com$")
 JOB = re.compile(r"^/apply/([A-Za-z0-9]{10})\b")
 FORM = "#form_submit_new_resume"
-COOKIES = "#tracking-consent-banner .reject"
 CAPTCHA = "#resumator-recaptcha iframe[title=reCAPTCHA]"
 CHALLENGE = "iframe[src*='recaptcha/api2/bframe']"
 RESUME_TYPES = [".pdf", ".doc", ".docx", ".odt", ".txt", ".rtf"]  # as the page states them
 YES_NO = ["Yes", "No"]
 FORM_TIMEOUT_MS = 20_000
-COOKIE_TIMEOUT_MS = 3_000
 CAPTCHA_TIMEOUT_MS = 20_000
 SUBMIT_TIMEOUT_MS = 90_000
 
@@ -141,7 +139,6 @@ class JazzHR:
             form.wait_for(state="attached", timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
-        _reject_cookies(page)
         fields, self._fields = [], {}
         for raw in form.evaluate(_READ):
             fields.append(_field(raw))
@@ -149,7 +146,6 @@ class JazzHR:
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        _reject_cookies(page, wait=False)
         form = page.locator(FORM)
         for field_id, answer in answers.items():
             values = [answer] if isinstance(answer, str) else answer
@@ -247,13 +243,3 @@ def _field(raw: dict[str, Any]) -> Field:
     return Field(
         raw["id"], raw["label"], field_type, raw["required"], options, raw.get("maxLength"), accept
     )
-
-
-def _reject_cookies(page: Page, wait: bool = True) -> None:
-    """Rejects the tracking banner, which shows a moment after the page, over its foot."""
-    reject = page.locator(COOKIES)
-    with suppress(Timeout):
-        if wait:
-            reject.wait_for(timeout=COOKIE_TIMEOUT_MS)
-        if reject.is_visible():
-            reject.click()
