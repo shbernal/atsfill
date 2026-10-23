@@ -5,8 +5,8 @@
 </head>
 <body>
 <!-- The email step, as Oracle renders it: an address, the terms, Next. A known address gets
-     the code page instead of the form. Some tenants' cookie banner covers it until declined:
-     the blocker's lists do not hide it. -->
+     the code page instead of the form. Some tenants' cookie banner covers it: the adapter's
+     filter hides it. -->
 <div class="cookie-consent-modal cookie-consent-site narrow" style="position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.5)">
   <div class="cookie-consent__content" role="dialog" aria-label="Cookie Consent Message">
     <div class="cookie-consent__message">This site uses cookies.</div>
@@ -40,8 +40,6 @@
   </div>
 </main>
 <script>
-  document.querySelectorAll(".cookie-consent__button").forEach(b =>
-    b.addEventListener("click", () => document.querySelector(".cookie-consent-modal").remove()));
   const box = document.querySelector("#legal-disclaimer-checkbox");
   const button = document.querySelector(".apply-flow-input-checkbox__button");
   document.querySelector("legal-disclaimer label").addEventListener("click", e => {

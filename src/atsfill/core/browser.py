@@ -57,6 +57,8 @@ HTTP_TIMEOUT_S = 20  # per request to a hiring system's API
 BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compare across machines
 BLOCKER = ADDONS_DIR / "UBO-annoyances"  # Camoufox's uBlock Origin, its annoyance lists on
 BLOCKER_LISTS = "annoyances"  # the group of uBlock Origin lists: cookie banners, pop-ups, widgets
+# The adapters' filters for the banners the lists miss: a list of the blocker's, on like them.
+FILTERS = "assets/atsfill/filters.txt"
 INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
 # A page holding a banner the lists hide: until they do, the blocker is still starting.
 PROBE = ("https://blocker.invalid/", '<div id="cookie-banner">probe</div>')
@@ -120,6 +122,10 @@ def _build_blocker() -> None:
             (build / local).write_text(_filter_list([*urls, *entry.get("cdnURLs", [])]))
             entry.pop("off", None)  # on from the start, the way a fresh profile reads it
             entry["contentURL"] = [local, *urls]
+        entries["atsfill"] = {"content": "filters", "group": "custom", "title": "atsfill",
+                              "contentURL": [FILTERS]}  # fmt: skip
+        (build / FILTERS).parent.mkdir()
+        (build / FILTERS).touch()
         assets.write_text(json.dumps(entries))
         shutil.rmtree(BLOCKER, ignore_errors=True)
         build.rename(BLOCKER)
@@ -178,9 +184,10 @@ def lock(data_dir: Path, deadline: float) -> Generator[None]:
 
 @contextmanager
 def _launch(data_dir: Path, headless: bool) -> Generator[Browser]:
-    if not BLOCKER.exists():  # installed before the blocker was
+    if not (BLOCKER / FILTERS).exists():  # installed before the blocker, or its filters, were
         maybe_download_addons(list(DefaultAddons))
         _build_blocker()
+    _write_filters()
     with Camoufox(
         headless=headless,
         addons=[str(BLOCKER)],
@@ -193,6 +200,19 @@ def _launch(data_dir: Path, headless: bool) -> Generator[Browser]:
         assert isinstance(browser, Browser)  # not a persistent context
         _wait_for_blocker(browser)
         yield browser
+
+
+def _write_filters() -> None:
+    """Writes the adapters' filters into the blocker when they changed, in one rename so that
+    a launch beside it reads either version whole."""
+    from atsfill.adapters import filters  # adapters import this module
+
+    path = BLOCKER / FILTERS
+    text = "".join(f"{line}\n" for line in filters())
+    if path.read_text() != text:
+        staged = path.with_suffix(f".{threading.get_native_id()}")
+        staged.write_text(text)
+        staged.replace(path)
 
 
 def _wait_for_blocker(browser: Browser) -> None:

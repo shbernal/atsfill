@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
-<!-- A Teamtailor application page as the adapter meets it: the cookie banner is a modal dialog
-     that leaves the form inert, a qualifying question locks the rest of the form until it is
+<!-- A Teamtailor application page as the adapter meets it: the cookie banner is a dialog over
+     the form, hidden by the blocker's lists, a qualifying question locks the rest of the form until it is
      answered "Yes", files upload to storage and the form keeps their addresses, a clip for a
      video question becomes a video and the form keeps its id, the address is
      kept only once a suggestion is picked, required labels carry an asterisk, a choice can be a
@@ -12,7 +12,7 @@
   [role=menu] { position: absolute; z-index: 1; background: white; height: 200px; width: 300px; }
   fieldset { position: relative; }
 </style>
-<dialog id="cookies">
+<dialog data-controller="common--cookies--alert" style="position: fixed; inset: 0; width: auto; height: auto; max-width: none; max-height: none; margin: 0; z-index: 10" aria-label="This website uses cookies to ensure you get the best experience.">
   <button data-action="click->common--cookies--alert#acceptAll">Accept all cookies</button>
   <button data-action="click->common--cookies--alert#disableAll">Decline all non-necessary cookies</button>
 </dialog>
@@ -140,8 +140,8 @@
 </form>
 <footer><a href="https://www.teamtailor.com/?utm_campaign=poweredby">Outil de recrutement de Teamtailor</a></footer>
 <script>
-  const cookies = document.getElementById("cookies");
-  cookies.showModal();
+  const cookies = document.querySelector("dialog");
+  cookies.show();
   cookies.querySelectorAll("button").forEach(b => b.onclick = () => cookies.close());
   const upload = (id, name) => document.getElementById(id).addEventListener("change", e => {
     const file = e.target.files[0].name.normalize("NFKD").replace(/[^\x00-\x7f]/g, "")

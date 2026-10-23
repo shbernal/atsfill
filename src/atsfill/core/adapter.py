@@ -85,6 +85,14 @@ class Adapter(Protocol):
 
 
 @runtime_checkable
+class Filtered(Protocol):
+    """An adapter whose system shows a cookie banner the blocker's lists miss: its own
+    uBlock Origin cosmetic filters hide it (ADR 0004)."""
+
+    filters: list[str]
+
+
+@runtime_checkable
 class NeedsAccount(Protocol):
     """An adapter whose system needs a signed-in session, one per user and account scope
     (ADR 0015)."""

@@ -1,12 +1,12 @@
 # Zoho Recruit
 
-Zoho Recruit's career sites, observed on live postings, last on 2026-10-21. The fixture page is [tests/pages/zohorecruit/job.html](../../tests/pages/zohorecruit/job.html) with its form API answer [form.json](../../tests/pages/zohorecruit/form.json), served as `acme.zohorecruit.com` in `tests/test_zohorecruit.py`: one example of each rendering below, Zoho's Lyte components reduced to their markup and a few lines that act as they do.
+Zoho Recruit's career sites, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/zohorecruit/job.html](../../tests/pages/zohorecruit/job.html) with its form API answer [form.json](../../tests/pages/zohorecruit/form.json), served as `acme.zohorecruit.com` in `tests/test_zohorecruit.py`: one example of each rendering below, Zoho's Lyte components reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 
 - A job is `<account>.zohorecruit.<tld>/jobs/<page>/<job id>[/<slug>]` (`.com`, `.eu`, `.in`, `.ca`, …). The double-send key is the job's public API URL, by host and job id. A career site on the employer's own domain is not detected.
 - The job page carries its form's id (`"webform_id"`) in its page data. "I'm interested" (`#detail-page-applybtn`, its text set per site) renders the form in place from `/recruit/v2/public/Job_Openings/<job>/apply/<form>?pagename=<page>`: a public API, no session, listing the sections and their fields with each one's type, `required`, length and options, the site's display rules, and the pre-screening questions a form asks with it. `read_api` fetches the job page and the API over HTTP, `read_form` from inside the page, and both list the fields from it: parity holds by construction.
-- A cookie banner shows a moment after the page, at times several seconds after; its layer takes every click, so it is declined first, and again if it covers the button.
+- A cookie banner (`<career-cookie-consent>`) shows a moment after the page, at times several seconds after, and its layer takes every click. The blocker's lists miss it; the adapter's filter hides it.
 - Above the form, an "Autofill Application" uploader (`rec-easyresume_file`, its type `RESUME` like the attachment's) sends a resume to Zoho at once (`POST /recruit/v2/public/parseresume`), behind a loading overlay, and what the parse finds overwrites the fields already filled. The adapter attaches files through each attachment's own input (`rec-form_<id>_file`), which keeps them in the page: nothing reaches Zoho before submit. Enter in a text field does not submit.
 
 ## Reading the form

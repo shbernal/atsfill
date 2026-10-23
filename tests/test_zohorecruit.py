@@ -39,7 +39,6 @@ def page(tmp_path_factory):
         browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page,
     ):
         mp.setattr("atsfill.adapters.zohorecruit.FORM_TIMEOUT_MS", 5_000)
-        mp.setattr("atsfill.adapters.zohorecruit.COOKIE_TIMEOUT_MS", 1_000)
         page.context.route("https://acme.zohorecruit.com/**", serve)
         yield page
 

@@ -1,6 +1,6 @@
 # Teamtailor
 
-Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
+Observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
 
 ## Where the form is
 
@@ -42,7 +42,7 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
 ## Filling
 
-- The cookie banner is a modal `<dialog>`. While it is open the rest of the page is inert: typing into a field does nothing and raises nothing. The blocker's lists hide it on `teamtailor.com` only, so on a custom domain it is declined (`[data-action*="cookies--alert#disableAll"]`) before filling. It can come back over the consent box and the submit button, so clicks check what is on top first.
+- The cookie banner is a non-modal `<dialog data-controller="common--cookies--alert">` over the form. The blocker's lists hide it on every domain, custom ones included.
 - Qualifying questions are answered first. While one is unanswered, or answered with what the employer does not accept, the rest of the form sits under `[data-careersite--form-target=formContentWrapper].cursor-not-allowed` and takes no clicks; atsfill then stops with `not_qualified`.
 - A follow-up question shows once its earlier question has the answer it waits for. An answer to one that stays hidden is not filled, so it reads back as a mismatch; a required one that shows without an answer stops the fill with `missing_answer`.
 - Click the consent box's label.

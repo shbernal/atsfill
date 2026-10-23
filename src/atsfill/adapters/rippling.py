@@ -39,7 +39,6 @@ SUBMIT_TIMEOUT_MS = 90_000
 DIAL_CODES = (3, 2, 1)  # the lengths a dial code can have, longest tried first
 FILE_TYPES = [".doc", ".docx", ".pdf"]
 OTHER = "Other"
-COOKIES = "#transcend-consent-manager"
 TESTIDS = {"pronouns": "pronouns_strategy"}  # a field whose element is not named by its id
 
 # A standard question's type, by its `fieldType`; the location is a place typeahead.
@@ -160,6 +159,7 @@ _SHOWN = """(root, [id, nth, testids]) => {
 class Rippling:
     name = "rippling"
     known_gaps: dict[str, Gap] = {}
+    filters = ["ats.rippling.com###transcend-consent-manager"]  # Transcend's banner
     side_effects = [
         SideEffect("upload", "hiring_system", "an attached file is uploaded, a résumé parsed"),
         SideEffect("submit", "employer", "the application reaches the employer"),
@@ -199,7 +199,6 @@ class Rippling:
             page.locator("[data-testid=Apply]").wait_for(timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
-        _hide_cookies(page)
         data = page.locator("#__NEXT_DATA__").text_content() or "{}"
         out = []
         for field in _form(_api(json.loads(data))):
@@ -338,13 +337,6 @@ def _custom(field_id: str, q: dict[str, Any]) -> list[Field]:
     if q.get("allowComments"):
         out.append(Field(f"{field_id}_comment", f"{label}: comment", FieldType.TEXT, False))
     return out
-
-
-def _hide_cookies(page: Page) -> None:
-    """Hides the cookie banner, whose layer takes the clicks on the lower part of the page: it
-    renders in a closed shadow root, out of reach of a click, and shows a moment after the
-    form. Nothing is answered to it."""
-    page.add_style_tag(content=f"{COOKIES} {{display: none !important}}")
 
 
 def _click(target: Locator) -> None:

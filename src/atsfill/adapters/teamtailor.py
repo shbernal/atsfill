@@ -221,7 +221,6 @@ class Teamtailor:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
         self._videos = {}
-        _decline_cookies(page)
         for field_id in [i for i in answers if i in self._qualifying]:
             self._fill(form, field_id, answers[field_id])
         if form.locator(LOCKED).count():
@@ -252,7 +251,7 @@ class Teamtailor:
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def submit(self, page: Page) -> str | None:
-        _click(page, page.locator(f"{FORM} [type=submit]"))
+        browser.click(page.locator(f"{FORM} [type=submit]"))
         page.wait_for_url(re.compile(r"/applications/[^/]+/thanks"), timeout=SUBMIT_TIMEOUT_MS)
         return page.url
 
@@ -266,17 +265,17 @@ class Teamtailor:
             case FieldType.CHOICE, str() if host.locator("input[type=checkbox]").count():
                 box = host.locator("input[type=checkbox]")
                 if box.is_checked() != (answer == "Yes"):
-                    _click(page, page.locator(f"label[for='{box.get_attribute('id')}']"))
+                    browser.click(page.locator(f"label[for='{box.get_attribute('id')}']"))
             case FieldType.CHOICE, str() if host.locator("input[type=range]").count():
                 host.locator("input[type=range]").fill(answer)
             case FieldType.TYPEAHEAD, str():
-                _suggest(page, field, host, answer)
+                _suggest(field, host, answer)
             case FieldType.CHOICE | FieldType.MULTI_CHOICE, _:
                 for value in [answer] if isinstance(answer, str) else answer:
-                    _pick(page, host, value)
+                    _pick(host, value)
                 trigger = host.locator("button[aria-haspopup][aria-expanded=true]")
                 if trigger.count():  # a multiple choice menu stays open over the next fields
-                    _click(page, trigger.first)
+                    browser.click(trigger.first)
             case FieldType.TEXT, str() if host.locator("input[type=number]").count():
                 if re.fullmatch(r"-?\d+(\.\d+)?", answer):  # else left empty: a mismatch
                     host.locator("input[type=number]").first.fill(answer)
@@ -374,23 +373,7 @@ _VIDEO = """url => fetch(url, {headers: {Accept: "application/json"}})
   .then(r => r.ok ? r.json() : {}).then(v => v.file_file_name ?? null)"""
 
 
-def _decline_cookies(page: Page) -> None:
-    """Closes the cookie banner, a modal dialog that leaves the form inert while it is open."""
-    decline = page.locator("[data-action*='cookies--alert#disableAll']").first
-    if decline.is_visible():
-        decline.click()
-
-
-def _click(page: Page, target: Locator) -> None:
-    """Clicks, first declining the cookie banner when it covers the target: it comes back."""
-    try:
-        browser.click(target)
-    except browser.Covered:
-        _decline_cookies(page)
-        browser.click(target)
-
-
-def _suggest(page: Page, field: Field, host: Locator, answer: str) -> None:
+def _suggest(field: Field, host: Locator, answer: str) -> None:
     """Types the address key by key, which loads the suggestions, and picks the first that
     matches it: the form keeps an address only once a suggestion is picked."""
     box = host.locator("input[role=combobox]")
@@ -400,20 +383,20 @@ def _suggest(page: Page, field: Field, host: Locator, answer: str) -> None:
     options.first.wait_for()
     for i in range(options.count()):
         if matching.matches(field, answer, options.nth(i).get_attribute("data-description") or ""):
-            _click(page, options.nth(i))
+            browser.click(options.nth(i))
             return
     raise NotTaken(f"no suggestion for {answer!r} in {field.id}")
 
 
-def _pick(page: Page, question: Locator, value: str) -> None:
+def _pick(question: Locator, value: str) -> None:
     """Checks the option whose text is `value`, a radio or checkbox label or a dropdown item."""
     label = question.locator("label:visible").filter(
         has_text=re.compile(rf"^\s*{re.escape(value)}\s*$")
     )
     if label.count():
-        _click(page, label.first)
+        browser.click(label.first)
         return
     trigger = question.locator("button[aria-haspopup]").first
     if trigger.get_attribute("aria-expanded") != "true":
-        _click(page, trigger)
-    _click(page, question.locator(f"[role^=menuitem][data-search-text='{value}']").first)
+        browser.click(trigger)
+    browser.click(question.locator(f"[role^=menuitem][data-search-text='{value}']").first)
