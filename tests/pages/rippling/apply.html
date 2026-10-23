@@ -254,7 +254,8 @@ for (const button of document.querySelectorAll("[data-testid='Add comment']")) {
     button.replaceWith(div);
   };
 }
-// A file is uploaded, then shown as a chip; the résumé is parsed and fills the first name.
+// A file is uploaded, then shown as a chip; the résumé is parsed and, a moment after the
+// response, fills the first name and shows its notice.
 for (const input of document.querySelectorAll("input[type=file]")) {
   input.onchange = async () => {
     const name = input.files[0].name;
@@ -264,6 +265,7 @@ for (const input of document.querySelectorAll("input[type=file]")) {
     input.parentElement.querySelector("[id$=-content] div").textContent = name;
     if (input.dataset.testid !== "input-resume") return;
     await fetch(`/api/v1/board/${board}/jobs/${job.split("/")[3]}/parse_resume`, {method: "POST", body: "{}"});
+    await new Promise(resolve => setTimeout(resolve, 300));  // the page's own work on the parse
     document.querySelector("[data-testid=input-first_name]").value = "Parsed";
     const notice = document.createElement("div");
     notice.className = "notice";
