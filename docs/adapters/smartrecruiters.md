@@ -51,7 +51,7 @@ Each question renders as a `[data-test=question-container]` in `sr-screening-que
 ## Filling
 
 - Text: typed into the inner `input`/`textarea`.
-- City: typed, then the first `spl-select-option` starting with the answer is clicked. Clicking anything else (an empty search's last row) switches the field to a country search and a postal code; atsfill presses Escape instead, and the city reads back empty.
+- City: typed, then the first `spl-select-option` starting with the answer is clicked. Some postings label the same field "Postal code / zip code" from the start: it is still `location`, its label says what to type, and a city there finds no suggestion (`20001` lists "20001, Washington, DC, USA"). Clicking anything else (an empty search's last row) switches the field to a country search and a postal code; atsfill presses Escape instead, and the city reads back empty.
 - Phone: typed with its dial code, which sets the country (`+1…` is US).
 - Resume: set on the profile's own dropzone, never Easy Apply's, which parses the file and fills the profile. Attaching uploads it at once (`POST …/oneclick-ui/api/company/<id>/attachment/resume`).
 - Next validates the profile in the browser and sends nothing. A click right after the last answer can go unheeded; atsfill clicks up to three times. The footer's buttons are named in the posting's language ("Suivant", "Siguiente"), so they are found by `data-test`: Next is `footer-next`, Submit `footer-submit`. Only `footer-next` is clicked: Submit is never pressed by `fill`.

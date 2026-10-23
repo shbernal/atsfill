@@ -85,6 +85,8 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("a", "Photo", FieldType.FILE, True, accept=[".jpg", ".png"]),
         Field("b", "Scan", FieldType.FILE, False, accept=[".tiff"]),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
+        Field("t", "City", FieldType.TYPEAHEAD, True),
+        Field("z", "Postal code / zip code", FieldType.TYPEAHEAD, True),
         Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
         Field("o", "Video", FieldType.FILE, False, unfillable="out_of_scope: o is a video"),
     ]
@@ -98,6 +100,8 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         "s": testuser.SALARY,
         "q": testuser.TEXT,
         "d": answers["d"],
+        "t": testuser.CITY,
+        "z": testuser.ZIP,
         "c": str(cv),
         "a": str(picture),
     }
