@@ -1,4 +1,4 @@
-"""The main checkout, where the gitignored `.env` and `.tmp/` live, also from a git worktree."""
+"""The main checkout, where the gitignored `.tmp/` lives, also from a git worktree."""
 
 import subprocess
 from pathlib import Path
