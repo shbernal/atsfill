@@ -5,6 +5,8 @@ import fcntl
 import json
 import locale
 import platform
+import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -13,8 +15,11 @@ from collections.abc import Generator
 from concurrent.futures import Future
 from contextlib import contextmanager
 from pathlib import Path
+from urllib.parse import urljoin
+from urllib.request import Request as HttpRequest
+from urllib.request import urlopen
 
-from camoufox.addons import DefaultAddons, maybe_download_addons
+from camoufox.addons import ADDONS_DIR, DefaultAddons, get_addon_path, maybe_download_addons
 from camoufox.exceptions import CamoufoxNotInstalled
 from camoufox.fingerprints import Screen, generate_fingerprint
 from camoufox.pkgman import installed_verstr
@@ -50,6 +55,9 @@ BUDGET = 180.0  # seconds per command, lock wait included
 LOCK_POLL_S = 0.1
 HTTP_TIMEOUT_S = 20  # per request to a hiring system's API
 BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compare across machines
+BLOCKER = ADDONS_DIR / "UBO-annoyances"  # Camoufox's uBlock Origin, its annoyance lists on
+BLOCKER_LISTS = "annoyances"  # the group of uBlock Origin lists: cookie banners, pop-ups, widgets
+INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
 
 
 class OutOfTime(Exception):
@@ -77,7 +85,54 @@ def install() -> int:
         print(f"the Camoufox build {BUILD} is not installed", file=sys.stderr)
         return 1
     maybe_download_addons(list(DefaultAddons))
+    try:
+        _build_blocker()
+    except OSError as e:
+        print(f"the annoyance lists could not be fetched: {e}", file=sys.stderr)
+        return 1
     return 0
+
+
+def _build_blocker() -> None:
+    """Copies Camoufox's uBlock Origin to `BLOCKER` with its annoyance lists on and read from
+    disk: fetched by each launch, they would hold its first page for seconds."""
+    ADDONS_DIR.mkdir(parents=True, exist_ok=True)
+    with (ADDONS_DIR / f"{BLOCKER.name}.lock").open("w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        build = BLOCKER.with_name(f"{BLOCKER.name}.build")
+        shutil.rmtree(build, ignore_errors=True)
+        shutil.copytree(get_addon_path(DefaultAddons.UBO.name), build)
+        assets = build / "assets" / "assets.json"
+        entries = json.loads(assets.read_text())
+        for key, entry in entries.items():
+            if entry.get("group") != BLOCKER_LISTS:
+                continue
+            urls = entry["contentURL"]
+            urls = [urls] if isinstance(urls, str) else urls
+            local = f"assets/{BLOCKER_LISTS}/{key}.txt"
+            (build / local).parent.mkdir(exist_ok=True)
+            (build / local).write_text(_filter_list([*urls, *entry.get("cdnURLs", [])]))
+            entry.pop("off", None)  # on from the start, the way a fresh profile reads it
+            entry["contentURL"] = [local, *urls]
+        assets.write_text(json.dumps(entries))
+        shutil.rmtree(BLOCKER, ignore_errors=True)
+        build.rename(BLOCKER)
+
+
+def _filter_list(urls: list[str]) -> str:
+    """A filter list from the first of its sources that answers, its includes inlined."""
+    for url in (u for u in urls if u.startswith("https://")):
+        try:
+            return INCLUDE.sub(lambda m, base=url: _fetch(urljoin(base, m[1])), _fetch(url))
+        except OSError:
+            continue
+    raise OSError(f"no source answered for {urls[0]}")
+
+
+def _fetch(url: str) -> str:
+    request = HttpRequest(url, headers={"User-Agent": "Mozilla/5.0"})  # some refuse urllib's
+    with urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
+        return response.read().decode()
 
 
 def identity(data_dir: Path) -> dict:
@@ -117,8 +172,13 @@ def lock(data_dir: Path, deadline: float) -> Generator[None]:
 
 @contextmanager
 def _launch(data_dir: Path, headless: bool) -> Generator[Browser]:
+    if not BLOCKER.exists():  # installed before the blocker was
+        maybe_download_addons(list(DefaultAddons))
+        _build_blocker()
     with Camoufox(
         headless=headless,
+        addons=[str(BLOCKER)],
+        exclude_addons=list(DefaultAddons),
         fingerprint=identity(data_dir),
         os=HOST_OS,
         locale=machine_locale(),

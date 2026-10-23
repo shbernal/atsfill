@@ -19,7 +19,7 @@ def test_click_reaches_a_free_target(page):
 
 
 def test_click_reports_what_covers_the_target(page):
-    with pytest.raises(Covered, match=r'div\.banner\.cookie-banner "We use cookies"'):
+    with pytest.raises(Covered, match=r'div\.banner\.sheet "Saving your answers"'):
         browser.click(page.locator("#covered"))
 
 

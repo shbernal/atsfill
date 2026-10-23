@@ -59,6 +59,13 @@ How a field's answer is written and matched: `text`, `date`, `choice`, `multi_ch
 **Rendering**:
 One way a field type appears on a hiring system's page, such as a native select or a combobox that saves on Enter.
 
+**Overlay**:
+Whatever a page draws on top of a control, taking the click meant for it: a cookie banner, a toast, a spinner, a modal.
+
+**Toast**:
+An overlay that shows a short message for a few seconds and goes by itself, such as a résumé parse's result. The Rippling fixture page names its toast `.notice`; that class is not the term.
+_Avoid_: notice
+
 **Side effect**:
 Something the hiring system or the employer receives before the submit, such as a field saved as it is typed or an uploaded resume, or an account created. Muted per user with `mute-side-effect-warnings`.
 

@@ -194,9 +194,9 @@ def test_a_covered_submit_ends_covered(ashby, page):
     adapter.read_form(page)
     page.evaluate("""() => {
         const cover = document.createElement("div");
-        cover.className = "cookie-banner";
+        cover.className = "sheet";
         cover.style.cssText = "position:fixed;inset:0;z-index:9999;background:#fff";
         document.body.append(cover);
     }""")
-    with pytest.raises(browser.Covered, match="cookie-banner"):
+    with pytest.raises(browser.Covered, match="sheet"):
         adapter.submit(page)
