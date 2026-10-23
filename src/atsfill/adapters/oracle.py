@@ -2,7 +2,7 @@
 as docs/adapters/oracle.md observes.
 
 The form opens only past an email step, and an email the employer's Oracle already knows gets an
-emailed code instead. Reading passes the step with a throwaway address; filling starts over with
+emailed OTP instead. Reading passes the step with a throwaway address; filling starts over with
 the answer's. Oracle keeps a draft of the application from then on, autosaved as fields change.
 """
 
@@ -31,7 +31,7 @@ SUBMIT = ".apply-flow-pagination__submit-button"
 PAGINATION = ".apply-flow-pagination__button"
 PAGE_NUMBERS = ".apply-flow-navigation-pages__link:visible"
 LOADING = ".app-loading-spinner, .cx-select--loading, .apply-flow-block .skeleton"
-CODE_PAGE = ".apply-flow-pin-code-required"
+OTP_PAGE = ".apply-flow-pin-code-required"
 CAPTCHA = "iframe[src*='hcaptcha.com']"
 MANUALLY = ".quick-apply-flow__manually--link:visible"  # past an offer to import a profile
 COOKIES = ".cookie-consent button:visible"
@@ -356,7 +356,7 @@ class Oracle:
             if "--checked" not in (box.get_attribute("class") or ""):
                 _click(page, box)
         _click(page, page.locator(NEXT).first)
-        opened = page.locator(f"apply-flow-block, {CODE_PAGE}, {MANUALLY}")
+        opened = page.locator(f"apply-flow-block, {OTP_PAGE}, {MANUALLY}")
         try:
             opened.first.wait_for(timeout=STEP_TIMEOUT_MS)
             if page.locator(MANUALLY).count():
@@ -366,10 +366,10 @@ class Oracle:
             if page.locator(CAPTCHA).count():
                 raise Blocked("captcha: the email step asks for an hCaptcha") from None
             raise RuntimeError("the email step did not open the form") from None
-        if page.locator(CODE_PAGE).count():
+        if page.locator(OTP_PAGE).count():
             raise Blocked(
-                f"email_code: {email} is known to this employer's Oracle, which emails it a"
-                " code before it shows the form"
+                f"email_otp: {email} is known to this employer's Oracle, which emails it an"
+                " OTP before it shows the form"
             )
         page.locator(f"{PAGINATION}:visible").first.wait_for(timeout=STEP_TIMEOUT_MS)
         _settle(page)

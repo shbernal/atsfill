@@ -17,14 +17,14 @@
 | `ready` | dry run clean |
 | `refused` | a mismatch, a missing answer, an answer the page would not take, or an adapter not enabled to submit |
 | `submitted` | sent, with the evidence |
-| `blocked` | a captcha challenge, an emailed code, a low reCAPTCHA score, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason and the URL come back |
+| `blocked` | a captcha challenge, an OTP, a low reCAPTCHA score, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason and the URL come back |
 | `unknown` | submit was clicked and no evidence came before the time budget ran out |
 | `unsupported` | no adapter for the system, a required field atsfill cannot fill (ADR 0014), a flow the adapter does not handle, or a step on another site; the reason comes back |
 
-The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `answer_not_taken: …` (no suggestion or option holds it), `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `email_code`, `time_budget`, `covered: …` (what sits on a control), `no_adapter`, `out_of_scope: <field id> is <what>`, `unsupported_rendering: <gap id>: …`, `unsupported_flow: <gap id>: …` (a known gap, ADR 0014), `unhandled_rendering: …` (a rendering the adapter does not know), `external_step: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`.
+The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `answer_not_taken: …` (no suggestion or option holds it), `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `email_otp`, `time_budget`, `covered: …` (what sits on a control), `no_adapter`, `out_of_scope: <field id> is <what>`, `unsupported_rendering: <gap id>: …`, `unsupported_flow: <gap id>: …` (a known gap, ADR 0014), `unhandled_rendering: …` (a rendering the adapter does not know), `external_step: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`.
 
 The exit code is 0 for `ready` and `submitted`, 1 for any other status, 2 for a usage error.
 
 **Double-send guard.** Before clicking submit, atsfill appends the attempt to `attempts.jsonl` in its data directory, keyed by the posting. A `send` for a posting whose last attempt ended `submitted` or `unknown` is refused unless it passes `--resend`. This covers a command killed after the click, which no consumer can tell apart from one that failed before it.
 
-**Emailed codes** end the command as `blocked: email_code` and close the page. The consumer starts over later.
+**OTPs** end the command as `blocked: email_otp` or `blocked: sms_otp` and close the page. The consumer starts over later.
