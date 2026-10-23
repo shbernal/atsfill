@@ -324,6 +324,14 @@ def test_a_send_warns_on_an_adapter_not_send_verified(fake, config, url, answers
     )
 
 
+def test_a_ready_dry_run_warns_before_the_send(fake, config, url, answers, data):
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.warning) == (
+        Status.READY,
+        "not_send_verified: fake is not in the registry",
+    )
+
+
 def test_a_send_verified_adapter_sends_without_warning(
     fake, config, url, answers, data, monkeypatch
 ):
