@@ -73,7 +73,8 @@ class SessionReport:
     scope: str | None  # the account scope, None for an account that covers the whole system
     session: str  # signed_in | signed_out | missing
     path: Path
-    reason: str | None = None  # why a login stored nothing: window_closed | login_timeout
+    status: str | None = None  # a login's outcome: signed_in | refused | blocked | unsupported
+    reason: str | None = None  # why a login stored nothing, `code` or `code: detail`
 
 
 @dataclass
@@ -95,6 +96,7 @@ class StatusReport:
     config: Path
     browser: str  # the installed build
     browser_pinned: str
+    secret_store: str  # the backend generated passwords go to, `file` without one
     users: list[str]
     adapters: list[AdapterStatus]
     sessions: list[SessionReport]  # every stored one, of every user

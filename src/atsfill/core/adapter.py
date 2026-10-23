@@ -38,6 +38,14 @@ def out_of_scope(field_id: str, what: str) -> str:
     return f"out_of_scope: {field_id} is {what}"
 
 
+class Refused(Exception):
+    """The system turned down a sign-in or a sign-up for a reason it states:
+    `email_in_use`, `email_domain_rejected`, `password_rule`, `wrong_password`.
+
+    The message is the result's reason, `code` or `code: detail`.
+    """
+
+
 class NotTaken(Exception):
     """The page would not take an answer the user gave: no suggestion or option holds it.
 
@@ -93,6 +101,17 @@ class NeedsAccount(Protocol):
 
     def signed_in(self, request: Request, scope: str | None) -> bool:
         """Whether the cookies `request` carries are signed in, from one request to the system."""
+        ...
+
+
+@runtime_checkable
+class SignsIn(NeedsAccount, Protocol):
+    """An adapter atsfill can sign in through with an email and a password (ADR 0015)."""
+
+    def sign_in(self, page: Page, email: str, password: str) -> None:
+        """Signs in on the page `login_url` loaded. Raises `Blocked` for what the system waits
+        for (`email_link`, `email_otp`, `sms_otp`, `captcha`), `Refused` for what it turns down,
+        `Unsupported` for a page it does not know."""
         ...
 
 

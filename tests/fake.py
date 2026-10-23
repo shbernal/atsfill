@@ -3,7 +3,7 @@
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Gap
+from atsfill.core.adapter import Gap, Refused
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -107,3 +107,26 @@ class FakeEmployerAccount(FakeAccount):
     def account_scope(self, url: str) -> str | None:
         employer = parse_qs(urlsplit(url).query).get("employer")
         return employer[0].lower() if employer else None
+
+
+class FakeSignIn(FakeAccount):
+    """The same, signed in by atsfill: `password` is the account's, `stops` what the system
+    raises instead of signing in."""
+
+    password = "correct horse battery staple"
+
+    def __init__(self, server: str) -> None:
+        super().__init__(server)
+        self.stops: Exception | None = None
+        self.sign_ins = 0
+
+    def login_url(self, scope: str | None) -> str:
+        return f"{self.server}/button.html"
+
+    def sign_in(self, page: Page, email: str, password: str) -> None:
+        self.sign_ins += 1
+        if self.stops:
+            raise self.stops
+        if password != self.password:
+            raise Refused("wrong_password")
+        page.evaluate("document.cookie = 'session=ok; path=/'")

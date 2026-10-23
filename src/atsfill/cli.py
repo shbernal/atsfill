@@ -84,12 +84,20 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("install-browser", help="download the Camoufox build atsfill is pinned to")
     accounts = [a.name for a in adapters() if isinstance(a, NeedsAccount)]
     for name, text in (
-        ("login", "sign in, in a visible window, to a system that needs an account"),
+        ("login", "sign in to a system that needs an account"),
         ("logout", "delete a stored session"),
     ):
         c = with_user(sub.add_parser(name, help=text))
         c.add_argument("adapter", choices=accounts)
         c.add_argument("--url", help="a posting, for a system with an account per employer")
+    login = sub.choices["login"]
+    login.add_argument("--email", help="the account's email, remembered for it")
+    login.add_argument(
+        "--password", choices=["-"], help="read the password from stdin, for this sign-in only"
+    )
+    login.add_argument(
+        "--window", action="store_true", help="sign in in a visible window, by a person"
+    )
     return p
 
 
@@ -139,11 +147,19 @@ def run(args: argparse.Namespace) -> int:
         case "install-browser":
             return browser.install()
         case "login" | "logout":
-            command = core.login if args.command == "login" else core.logout
+            where = {"user": args.user, "url": args.url, "data_dir": args.data_dir}
             try:
-                session = command(
-                    args.adapter, user=args.user, url=args.url, data_dir=args.data_dir
-                )
+                if args.command == "logout":
+                    session = core.logout(args.adapter, **where)
+                else:
+                    password = sys.stdin.readline().rstrip("\n") if args.password else None
+                    session = core.login(
+                        args.adapter,
+                        email=args.email,
+                        password=password,
+                        window=args.window,
+                        **where,
+                    )
             except ValueError as e:
                 print(f"atsfill: {e}", file=sys.stderr)
                 return 2

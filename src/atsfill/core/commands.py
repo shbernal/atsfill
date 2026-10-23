@@ -5,13 +5,15 @@ from importlib.metadata import version
 from pathlib import Path
 
 from atsfill.adapters import adapters
-from atsfill.core import accounts, attempts, browser, matching, paths, registry
+from atsfill.core import accounts, attempts, browser, matching, passwords, paths, registry
 from atsfill.core.adapter import (
     Adapter,
     Blocked,
     NeedsAccount,
     NotTaken,
     ReadsOverHttp,
+    Refused,
+    SignsIn,
     Unsupported,
 )
 from atsfill.core.browser import Covered, OutOfTime, Page, open_page
@@ -46,28 +48,52 @@ def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
     return Result(Status.BLOCKED, url, adapter.name, reason=f"login_required: run `{command}`")
 
 
+type Credentials = tuple[str, str]  # email, password
+
+
+def _credentials(
+    adapter: NeedsAccount, user: str, mine: Path, scope: str | None, given: str | None = None
+) -> Credentials | None:
+    """The account's email and a password from its password source, where atsfill can sign in
+    through the adapter; None otherwise."""
+    if not isinstance(adapter, SignsIn):
+        return None
+    if not (email := accounts.email(mine, adapter.name, scope)):
+        return None
+    password = passwords.password(user, mine, adapter.name, scope, email, given)
+    return (email, password) if password else None
+
+
 @contextmanager
 def _opened(
     data: Path, user: str, url: str, sessions: Sessions | None, detected: list[str]
 ) -> Generator[tuple[Page, Adapter] | Result]:
     """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
     lands on, else by its page; or the result that ends the command first. An adapter that
-    needs an account gets the user's session, and only that adapter's (ADR 0015). The adapter's name
-    goes in `detected` once known. The adapters are fresh: none keeps state from another
+    needs an account gets the user's session, and only that adapter's; signed out with a
+    password source, atsfill signs in again (ADR 0015). The adapter's name goes in `detected`
+    once known. The adapters are fresh: none keeps state from another
     posting (a survey or the adapter gate runs many commands in one process)."""
     candidates = adapters()
     adapter = _detect(candidates, url)
     if adapter:
         detected.append(adapter.name)
-    session, scope = None, None
+    mine = paths.user_dir(data, user)
+    session, credentials = None, None
     if isinstance(adapter, NeedsAccount):
         scope = adapter.account_scope(url)
-        session = (sessions or {}).get(adapter.name) or accounts.session_file(
-            paths.user_dir(data, user), adapter.name, scope
-        )
+        stored = accounts.session_file(mine, adapter.name, scope)
+        session = (sessions or {}).get(adapter.name) or stored
         if not session.exists():
-            yield _login_required(url, adapter, user)
-            return
+            try:
+                credentials = _credentials(adapter, user, mine, scope)
+            except passwords.PasswordError as e:
+                yield Result(Status.BLOCKED, url, adapter.name, f"password_source: {e}")
+                return
+            if credentials is None:
+                yield _login_required(url, adapter, user)
+                return
+            session = None
     with open_page(data, session) as page:
         try:
             page.goto(url)
@@ -83,11 +109,38 @@ def _opened(
         if adapter is None:
             yield _no_adapter(url)
         elif isinstance(adapter, NeedsAccount) and not (
-            session and adapter.signed_in(page.request, scope)
+            session and adapter.signed_in(page.request, adapter.account_scope(url))
         ):
-            yield _login_required(url, adapter, user)
+            yield _sign_in_again(page, adapter, user, mine, url, credentials) or (page, adapter)
         else:
             yield page, adapter
+
+
+def _sign_in_again(
+    page: Page,
+    adapter: NeedsAccount,
+    user: str,
+    mine: Path,
+    url: str,
+    credentials: Credentials | None,
+) -> Result | None:
+    """Signs in with the account's password source, stores the session and loads the posting
+    again; the result that ends the command instead, `login_required` without a source."""
+    result = Result(Status.BLOCKED, url, adapter.name)
+    with _stops(result):
+        scope = adapter.account_scope(url)
+        try:
+            credentials = credentials or _credentials(adapter, user, mine, scope)
+        except passwords.PasswordError as e:
+            result.reason = f"password_source: {e}"
+            return result
+        if credentials is None or not isinstance(adapter, SignsIn):
+            return _login_required(url, adapter, user)
+        session = accounts.session_file(mine, adapter.name, scope)
+        accounts.sign_in(page, adapter, scope, *credentials, session)
+        page.goto(url)
+        return None
+    return result
 
 
 def _result(adapter: Adapter, url: str, user: str) -> Result:
@@ -119,6 +172,8 @@ def _stops(result: Result) -> Generator[None]:
         result.status, result.reason = Status.UNSUPPORTED, str(e)
     except NotTaken as e:
         result.status, result.reason = Status.REFUSED, f"answer_not_taken: {e}"
+    except Refused as e:
+        result.status, result.reason = Status.REFUSED, str(e)
     except Blocked as e:
         result.status, result.reason = Status.BLOCKED, str(e)
     except Covered as e:
@@ -302,6 +357,7 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         config=paths.config_file(),
         browser=browser.version(),
         browser_pinned=browser.BUILD,
+        secret_store=passwords.secret_store(),
         users=users,
         adapters=[_adapter_status(a, users) for a in candidates],
         sessions=_sessions(data, users, candidates),
@@ -351,15 +407,56 @@ def login(
     *,
     user: str = paths.DEFAULT_USER,
     url: str | None = None,
+    email: str | None = None,
+    password: str | None = None,
+    window: bool = False,
     data_dir: Path | None = None,
 ) -> SessionReport:
-    """Opens a window on the system's login page and stores the session once signed in."""
+    """Signs in with the account's password source, headless, and stores the session; without
+    a source, or with `window`, opens a window on the system's login page for a person.
+
+    `email` is remembered for the account; `password` is used for this sign-in only."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
-    session = accounts.session_file(paths.user_dir(data, user), adapter, scope)
-    reason = accounts.sign_in(account, scope, data, session)
-    state = "signed_in" if reason is None else "missing"
-    return SessionReport(user, adapter, scope, state, session, reason)
+    mine = paths.user_dir(data, user)
+    session = accounts.session_file(mine, adapter, scope)
+    report = SessionReport(user, adapter, scope, "missing", session)
+    if email:
+        accounts.remember(mine, adapter, scope, email)
+    if password and not (isinstance(account, SignsIn) and accounts.email(mine, adapter, scope)):
+        raise ValueError(f"signing in to {adapter} with a password needs --email")
+    try:
+        credentials = None if window else _credentials(account, user, mine, scope, password)
+    except passwords.PasswordError as e:
+        report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
+        return report
+    if credentials is None:
+        report.status, report.reason = (
+            Status.BLOCKED,
+            accounts.wait_for_person(account, scope, data, session),
+        )
+    else:
+        result = _headless_sign_in(data, account, scope, credentials, session)
+        report.status, report.reason = result.status, result.reason
+    if report.reason is None:
+        report.session = report.status = "signed_in"
+    return report
+
+
+def _headless_sign_in(
+    data: Path, account: NeedsAccount, scope: str | None, credentials: Credentials, session: Path
+) -> Result:
+    """Signs in through the adapter: `ready` once the session is stored."""
+    assert isinstance(account, SignsIn)
+    url = account.login_url(scope)
+
+    def run(_: list[str]) -> Result:
+        result = Result(Status.READY, url, account.name)
+        with open_page(data, None) as page, _stops(result):
+            accounts.sign_in(page, account, scope, *credentials, session)
+        return result
+
+    return _in_budget(url, run)
 
 
 def logout(
