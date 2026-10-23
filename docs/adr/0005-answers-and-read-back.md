@@ -13,6 +13,8 @@ Fields are identified by a stable `id` from the form (the input's `name`, the sy
 
 A field missing from the map is left as the page has it, empty or prefilled by an account. A required field missing from the map refuses the command, unless the account prefilled it (`prefilled` in `read`).
 
+An answer the form's fields already rule out refuses the command before any typing (`invalid_answers`): an unknown field id, a value of the wrong shape, a choice not among the options, a text longer than the field's length limit, a file that is not there.
+
 The read-back is compared to the answers by field type:
 
 | Type | Matches when |
