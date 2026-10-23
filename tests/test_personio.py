@@ -9,7 +9,7 @@ from atsfill.adapters.personio import Personio, _form, _parse
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/personio"
 JOB = "https://acme.jobs.personio.com/job/1234567"
@@ -43,7 +43,7 @@ def page(tmp_path_factory):
 
 @pytest.fixture
 def resume(tmp_path) -> str:
-    return str(persona.resume(tmp_path / "CV Ada.pdf"))
+    return str(testuser.resume(tmp_path / "CV Ada.pdf"))
 
 
 def opened(page, url: str = JOB) -> tuple[Personio, list]:
@@ -128,9 +128,9 @@ def test_every_answer_reads_back(page, resume):
     assert len(checks) == len(answers)
 
 
-def test_the_persona_answers_every_field(page, tmp_path):
+def test_the_test_user_answers_every_field(page, tmp_path):
     adapter, fields = opened(page)
-    answers = persona.answers(fields, persona.resume(tmp_path / "cv.pdf"))
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "cv.pdf"))
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []

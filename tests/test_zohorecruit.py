@@ -9,7 +9,7 @@ from atsfill.adapters.zohorecruit import ZohoRecruit, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/zohorecruit"
 JOB = "https://acme.zohorecruit.com/jobs/Careers/1234567/Placeholder-Role?source=CareerSite"
@@ -46,7 +46,7 @@ def page(tmp_path_factory):
 
 @pytest.fixture
 def resume(tmp_path) -> str:
-    return str(persona.resume(tmp_path / "CV Ada.pdf"))
+    return str(testuser.resume(tmp_path / "CV Ada.pdf"))
 
 
 def opened(page) -> tuple[ZohoRecruit, list]:
@@ -130,7 +130,7 @@ def test_every_answer_reads_back(page, resume, tmp_path):
         "Experience_Details.Work_Duration.from": "01/2020",
         "Experience_Details.Work_Duration.to": "05/2024",
         "RESUME": resume,
-        "$photo_id": str(persona.photo(tmp_path / "photo.png")),
+        "$photo_id": str(testuser.photo(tmp_path / "photo.png")),
         "100000000000000050": "3",
         "100000000000000051": "No",
         "100000000000000054": "30 days",
@@ -149,9 +149,9 @@ def test_a_field_its_answer_hides_is_not_filled(page):
     assert "Certificate_Link" not in read_back
 
 
-def test_the_persona_leaves_out_what_its_answers_hide(tmp_path):
+def test_the_test_user_leaves_out_what_its_answers_hide(tmp_path):
     fields = [c.field for c in _form(FORM)[0]]
-    answers = persona.answers(fields, tmp_path / "cv.pdf")
+    answers = testuser.answers(fields, tmp_path / "cv.pdf")
     assert answers["Batch"] == "No Batch"
     assert "Certificate_Link" not in answers
     assert answers["Experience_Details.I_currently_work_here"] == "Yes"

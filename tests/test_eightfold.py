@@ -9,7 +9,7 @@ from atsfill.adapters.eightfold import Eightfold, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/eightfold"
 SITE = "https://acme.eightfold.ai"
@@ -55,7 +55,7 @@ def page(tmp_path_factory):
 
 @pytest.fixture
 def resume(tmp_path) -> str:
-    return str(persona.resume(tmp_path / "CV Ada.pdf"))
+    return str(testuser.resume(tmp_path / "CV Ada.pdf"))
 
 
 def opened(page, url: str = JOB) -> tuple[Eightfold, list]:
@@ -119,7 +119,7 @@ def test_read_api_lists_the_same_fields(page):
 
 def test_every_answer_reads_back(page, resume, tmp_path):
     adapter, fields = opened(page)
-    cover = persona.resume(tmp_path / "letter.pdf")
+    cover = testuser.resume(tmp_path / "letter.pdf")
     answers: dict[str, Answer] = {
         "position_location_1234567": ["Shelbyville,United States"],
         "resume": resume,
@@ -163,12 +163,12 @@ def test_a_question_its_answer_hides_is_not_filled(page):
     assert "Q_EVENTS" not in read_back
 
 
-def test_the_persona_leaves_out_what_its_answers_hide(tmp_path):
+def test_the_test_user_leaves_out_what_its_answers_hide(tmp_path):
     fields = [c.field for c in _form(QUESTIONS["data"])]
-    answers = persona.answers(fields, tmp_path / "cv.pdf")
+    answers = testuser.answers(fields, tmp_path / "cv.pdf")
     assert answers["Q_HEAR_ABOUT_US"] == "Events"
     assert answers["Q_EVENTS"] == "Conference"
-    assert answers["state"] == persona.REGION
+    assert answers["state"] == testuser.REGION
 
 
 def test_a_question_rendered_by_a_hidden_one_is_left_out(tmp_path):
@@ -192,7 +192,7 @@ def test_a_question_rendered_by_a_hidden_one_is_left_out(tmp_path):
         "Local name (asked when \"I have a preferred name (asked when 'Do you live in the US?'"
         ' is No)" is Yes)'
     )
-    answers = persona.answers(list(fields.values()), tmp_path / "cv.pdf")
+    answers = testuser.answers(list(fields.values()), tmp_path / "cv.pdf")
     assert answers == {"country_us": "Yes", "name_fr": "No"}
 
 

@@ -32,7 +32,7 @@ Tests run in one process by default. The whole suite in parallel, as CI runs it,
 
 ## Survey
 
-`uv run python -m scripts.survey` reads and dry-runs postings with the committed test persona and writes one row per URL to `.tmp/corpus/` ([ADR 0013](docs/adr/0013-survey-and-adapter-rounds.md)). It never sends. Sampling a source needs:
+`uv run python -m scripts.survey` reads and dry-runs postings with the committed Test user and writes one row per URL to `.tmp/corpus/` ([ADR 0013](docs/adr/0013-survey-and-adapter-rounds.md)). It never sends. Sampling a source needs:
 
 - the [freehire CLI](https://github.com/strelov1/freehire-cli): `mise use -g github:strelov1/freehire-cli`;
 - the `freehire-search` skill, committed under `.agents/` and `.claude/skills/`; to reinstall it: `npx skills add shbernal/skills --skill freehire-search -a claude-code -a codex -y`.

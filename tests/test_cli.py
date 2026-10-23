@@ -27,6 +27,13 @@ def test_malformed_session_is_a_usage_error():
     assert exit.value.code == 2
 
 
+def test_a_user_name_is_lowercase_letters_digits_and_dashes():
+    assert parser().parse_args(["read", "https://example.com", "--user", "jane-2"]).user == "jane-2"
+    with pytest.raises(SystemExit) as exit:
+        parser().parse_args(["read", "https://example.com", "--user", "../jane"])
+    assert exit.value.code == 2
+
+
 def test_status(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
     assert run(parser().parse_args(["--data-dir", str(tmp_path / "data"), "status"])) == 0

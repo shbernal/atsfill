@@ -9,7 +9,7 @@ from atsfill.adapters.hireology import Hireology, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/hireology"
 JOB = "https://careers.hireology.com/acme/1234567/description"
@@ -45,7 +45,7 @@ def page(tmp_path_factory):
 
 @pytest.fixture
 def resume(tmp_path) -> str:
-    return str(persona.resume(tmp_path / "CV Ada.pdf"))
+    return str(testuser.resume(tmp_path / "CV Ada.pdf"))
 
 
 def opened(page) -> tuple[Hireology, list]:
@@ -150,9 +150,9 @@ def test_a_field_its_answer_hides_is_not_read_back(page):
     assert "institute_name" not in read_back
 
 
-def test_the_persona_leaves_out_what_its_answers_hide(tmp_path):
+def test_the_test_user_leaves_out_what_its_answers_hide(tmp_path):
     fields = [f for f, _ in _form(FORM)]
-    answers = persona.answers(fields, tmp_path / "cv.pdf")
+    answers = testuser.answers(fields, tmp_path / "cv.pdf")
     assert answers["highest_grade"] == "Did Not Complete High School"
     assert "institute_name" not in answers
     assert answers["candidate_referred"] == "Yes"

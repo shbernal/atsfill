@@ -6,7 +6,7 @@ from pathlib import Path
 
 from atsfill import core
 from atsfill.adapters import adapters
-from atsfill.core import browser
+from atsfill.core import browser, paths
 from atsfill.core.adapter import NeedsAccount
 from atsfill.core.results import Result, SessionReport, Status, StatusReport
 
@@ -18,6 +18,22 @@ def session(value: str) -> tuple[str, Path]:
     if not (sep and adapter and path):
         raise argparse.ArgumentTypeError(f"expected <adapter>=<path>, got {value!r}")
     return adapter, Path(path)
+
+
+def user(value: str) -> str:
+    if not paths.USER_NAME.fullmatch(value):
+        raise argparse.ArgumentTypeError(f"lowercase letters, digits and -, got {value!r}")
+    return value
+
+
+def with_user(command: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    command.add_argument(
+        "--user",
+        type=user,
+        default=paths.DEFAULT_USER,
+        help="the user applications are sent for (default: %(default)s)",
+    )
+    return command
 
 
 HELP = {
@@ -42,7 +58,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--data-dir", type=Path, help="default: $ATSFILL_DATA_DIR, then the state dir")
     sub = p.add_subparsers(dest="command", required=True)
     for name in ("read", "fill", "send"):
-        c = sub.add_parser(name, help=HELP[name], epilog=EPILOG, formatter_class=p.formatter_class)
+        c = with_user(
+            sub.add_parser(name, help=HELP[name], epilog=EPILOG, formatter_class=p.formatter_class)
+        )
         c.add_argument("url")
         c.add_argument(
             "--session",
@@ -65,11 +83,25 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("status", help="version, paths, browser, and each adapter's state")
     sub.add_parser("install-browser", help="download the Camoufox build atsfill is pinned to")
     accounts = [a.name for a in adapters() if isinstance(a, NeedsAccount)]
-    sub.add_parser(
-        "login", help="sign in, in a visible window, to a system that needs an account"
-    ).add_argument("adapter", choices=accounts)
-    sub.add_parser("logout", help="delete a stored session").add_argument(
-        "adapter", choices=accounts
+    for name, text in (
+        ("login", "sign in to a system that needs an account"),
+        ("logout", "delete a stored session"),
+    ):
+        c = with_user(sub.add_parser(name, help=text))
+        c.add_argument("adapter", choices=accounts)
+        c.add_argument("--url", help="a posting, for a system with an account per employer")
+    login = sub.choices["login"]
+    login.add_argument("--email", help="the account's email, remembered for it")
+    login.add_argument(
+        "--password", choices=["-"], help="read the password from stdin, for this sign-in only"
+    )
+    login.add_argument(
+        "--window", action="store_true", help="sign in in a visible window, by a person"
+    )
+    login.add_argument(
+        "--create",
+        action="store_true",
+        help="create the account with --email and a password atsfill generates and stores",
     )
     return p
 
@@ -85,35 +117,60 @@ def answers_file(path: str) -> dict:
 
 
 def run(args: argparse.Namespace) -> int:
+    try:
+        paths.config(getattr(args, "user", paths.DEFAULT_USER))
+    except paths.ConfigError as e:
+        print(f"atsfill: {e}", file=sys.stderr)
+        return 2
     match args.command:
         case "read":
-            result = core.read(args.url, data_dir=args.data_dir, sessions=dict(args.session))
+            result = core.read(
+                args.url, user=args.user, data_dir=args.data_dir, sessions=dict(args.session)
+            )
         case "fill":
             result = core.fill(
-                args.url, args.answers, data_dir=args.data_dir, sessions=dict(args.session)
+                args.url,
+                args.answers,
+                user=args.user,
+                data_dir=args.data_dir,
+                sessions=dict(args.session),
             )
         case "send":
             result = core.send(
                 args.url,
                 args.answers,
                 resend=args.resend,
+                user=args.user,
                 data_dir=args.data_dir,
                 sessions=dict(args.session),
             )
         case "status":
             report = core.status(data_dir=args.data_dir)
             emit(report)
-            signed_out = any(a.session == "signed_out" for a in report.adapters)
+            signed_out = any(s.session == "signed_out" for s in report.sessions)
             return 1 if signed_out or report.browser != report.browser_pinned else 0
         case "install-browser":
             return browser.install()
-        case "login":
-            session = core.login(args.adapter, data_dir=args.data_dir)
+        case "login" | "logout":
+            where = {"user": args.user, "url": args.url, "data_dir": args.data_dir}
+            try:
+                if args.command == "logout":
+                    session = core.logout(args.adapter, **where)
+                else:
+                    password = sys.stdin.readline().rstrip("\n") if args.password else None
+                    session = core.login(
+                        args.adapter,
+                        email=args.email,
+                        password=password,
+                        window=args.window,
+                        create=args.create,
+                        **where,
+                    )
+            except ValueError as e:
+                print(f"atsfill: {e}", file=sys.stderr)
+                return 2
             emit(session)
-            return 0 if session.session == "signed_in" else 1
-        case "logout":
-            emit(core.logout(args.adapter, data_dir=args.data_dir))
-            return 0
+            return 0 if args.command == "logout" or session.session == "signed_in" else 1
     emit(result)
     return 0 if result.status in OK else 1
 

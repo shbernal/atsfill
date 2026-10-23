@@ -1,9 +1,9 @@
 """A hiring system of one hand-made page, tests/pages/form.html, driven through every outcome."""
 
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Gap
+from atsfill.core.adapter import Gap, Refused
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -80,14 +80,72 @@ class FakeAccount(Fake):
     """The same form on a system that needs an account, signed in by tests/pages/login.html."""
 
     name = "fakeaccount"
+    per_employer = False
 
     def __init__(self, server: str) -> None:
         super().__init__()
         self.server = server
-        self.login_url = f"{server}/login.html"
 
     def detect(self, url: str, page: Page | None) -> bool:
-        return urlsplit(url).query == "account"
+        return "account" in parse_qs(urlsplit(url).query, keep_blank_values=True)
 
-    def signed_in(self, request: Request) -> bool:
+    def account_scope(self, url: str) -> str | None:
+        return None
+
+    def login_url(self, scope: str | None) -> str:
+        return f"{self.server}/login.html"
+
+    def signed_in(self, request: Request, scope: str | None) -> bool:
         return request.get(f"{self.server}/me").ok
+
+
+class FakeEmployerAccount(FakeAccount):
+    """The same, with an account per employer: `?account&employer=<name>`, in any case."""
+
+    per_employer = True
+
+    def account_scope(self, url: str) -> str | None:
+        employer = parse_qs(urlsplit(url).query).get("employer")
+        return employer[0].lower() if employer else None
+
+
+class FakeSignIn(FakeAccount):
+    """The same, signed in by atsfill: `password` is the account's, `stops` what the system
+    raises instead of signing in."""
+
+    password = "correct horse battery staple"
+
+    def __init__(self, server: str) -> None:
+        super().__init__(server)
+        self.stops: Exception | None = None
+        self.sign_ins = 0
+
+    def login_url(self, scope: str | None) -> str:
+        return f"{self.server}/button.html"
+
+    def sign_in(self, page: Page, email: str, password: str) -> None:
+        self.sign_ins += 1
+        if self.stops:
+            raise self.stops
+        if password != self.password:
+            raise Refused("wrong_password")
+        page.evaluate("document.cookie = 'session=ok; path=/'")
+
+
+class FakeSignUp(FakeSignIn):
+    """The same, whose accounts atsfill creates: `refuses` is the refusal a sign-up meets."""
+
+    side_effects = [
+        *FakeSignIn.side_effects,
+        SideEffect("sign_up", "hiring_system", "login --create creates an account"),
+    ]
+
+    def __init__(self, server: str) -> None:
+        super().__init__(server)
+        self.created: str | None = None  # the password the account was created with
+
+    def sign_up(self, page: Page, email: str, password: str) -> None:
+        if self.stops:
+            raise self.stops
+        self.created = password
+        page.evaluate("document.cookie = 'session=ok; path=/'")

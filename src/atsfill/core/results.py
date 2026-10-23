@@ -48,7 +48,7 @@ class Check:
 
 @dataclass(frozen=True)
 class SideEffect:
-    step: str  # load | fill | upload | submit
+    step: str  # load | fill | upload | submit | sign_up
     reaches: str  # hiring_system | employer
     effect: str
 
@@ -67,16 +67,27 @@ class Result:
 
 
 @dataclass
+class SessionReport:
+    user: str
+    adapter: str
+    scope: str | None  # the account scope, None for an account that covers the whole system
+    session: str  # signed_in | signed_out | missing
+    path: Path
+    status: str | None = None  # a login's outcome: signed_in | refused | blocked | unsupported
+    reason: str | None = None  # why a login stored nothing, `code` or `code: detail`
+    password: str | None = None  # after `--create`, the generated one: stored | deleted
+
+
+@dataclass
 class AdapterStatus:
     name: str
-    submit_enabled: bool
+    submit_allowed: list[str]  # the users whose config lets it submit
     side_effects: list[SideEffect]
-    side_effects_acknowledged: bool
+    side_effects_muted: list[str]  # the users who muted them
     verified: str | None = None  # mapped | dry_run_verified | send_verified (ADR 0012)
     verified_version: str | None = None
     verified_release: str | None = None  # this_release | older | newer than the installed one
     send_broken: str | None = None  # since when and why, with the last verified send
-    session: str | None = None  # signed_in | signed_out | missing, for a system with accounts
 
 
 @dataclass
@@ -86,12 +97,7 @@ class StatusReport:
     config: Path
     browser: str  # the installed build
     browser_pinned: str
+    secret_store: str  # the backend generated passwords go to, `file` without one
+    users: list[str]
     adapters: list[AdapterStatus]
-
-
-@dataclass
-class SessionReport:
-    adapter: str
-    session: str  # signed_in | missing
-    path: Path
-    reason: str | None = None  # why a login stored nothing: window_closed | login_timeout
+    sessions: list[SessionReport]  # every stored one, of every user

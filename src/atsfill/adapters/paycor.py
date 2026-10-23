@@ -259,7 +259,7 @@ class Paycor:
             named.nth(n).evaluate(_CHECK, option in labels)
 
     def _walk(self, page: Page, answers: dict[str, Answer] | None) -> None:
-        """Opens the apply page and answers the pages before the form: the persona's picks
+        """Opens the apply page and answers the pages before the form: the Test user's picks
         when filling, the last option and Yes when only reading, which list the fields."""
         if self._start is None:
             raise RuntimeError("no Paycor job in the page")

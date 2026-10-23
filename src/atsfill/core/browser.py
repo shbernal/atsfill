@@ -179,7 +179,7 @@ def login_window(data_dir: Path, url: str, headless: bool = False) -> Generator[
 
 
 def save_session(page: Page, path: Path) -> None:
-    path.parent.mkdir(mode=0o700, exist_ok=True)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     path.touch(mode=0o600)
     page.context.storage_state(path=path)
 

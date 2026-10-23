@@ -38,6 +38,14 @@ def out_of_scope(field_id: str, what: str) -> str:
     return f"out_of_scope: {field_id} is {what}"
 
 
+class Refused(Exception):
+    """The system turned down a sign-in or a sign-up for a reason it states:
+    `email_in_use`, `email_domain_rejected`, `password_rule`, `wrong_password`.
+
+    The message is the result's reason, `code` or `code: detail`.
+    """
+
+
 class NotTaken(Exception):
     """The page would not take an answer the user gave: no suggestion or option holds it.
 
@@ -78,12 +86,43 @@ class Adapter(Protocol):
 
 @runtime_checkable
 class NeedsAccount(Protocol):
-    """An adapter whose system needs a signed-in session (ADR 0007)."""
+    """An adapter whose system needs a signed-in session, one per user and account scope
+    (ADR 0015)."""
 
-    login_url: str
+    name: str
+    per_employer: bool  # each employer keeps its own accounts, so a scope is always given
 
-    def signed_in(self, request: Request) -> bool:
+    def account_scope(self, url: str) -> str | None:
+        """The account scope of a posting's URL: None where an account covers the whole system,
+        the employer where each keeps its own, the same for every URL of that employer."""
+        ...
+
+    def login_url(self, scope: str | None) -> str: ...
+
+    def signed_in(self, request: Request, scope: str | None) -> bool:
         """Whether the cookies `request` carries are signed in, from one request to the system."""
+        ...
+
+
+@runtime_checkable
+class SignsIn(NeedsAccount, Protocol):
+    """An adapter atsfill can sign in through with an email and a password (ADR 0015)."""
+
+    def sign_in(self, page: Page, email: str, password: str) -> None:
+        """Signs in on the page `login_url` loaded. Raises `Blocked` for what the system waits
+        for (`email_link`, `email_otp`, `sms_otp`, `captcha`), `Refused` for what it turns down,
+        `Unsupported` for a page it does not know."""
+        ...
+
+
+@runtime_checkable
+class CreatesAccount(SignsIn, Protocol):
+    """An adapter atsfill can create an account through, where the system's sign-up allows it.
+    Account creation is a side effect it declares (ADR 0008)."""
+
+    def sign_up(self, page: Page, email: str, password: str) -> None:
+        """Creates the account from the page `login_url` loaded, signed in once it returns.
+        Raises as `sign_in` does; `Refused` names the rule a `password_rule` page showed."""
         ...
 
 

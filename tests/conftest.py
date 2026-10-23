@@ -5,6 +5,9 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
 
+import keyring
+import keyring.backend
+import keyring.errors
 import pytest
 
 PAGES = Path(__file__).parent / "pages"
@@ -47,6 +50,34 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     kept = {id(t) for k, key in enumerate(order) if k % n == i - 1 for t in units[key]}
     config.hook.pytest_deselected(items=[t for t in items if id(t) not in kept])
     items[:] = [t for t in items if id(t) in kept]
+
+
+class MemoryKeyring(keyring.backend.KeyringBackend):
+    """A secret store held in memory: no test reaches the machine's, and CI has none."""
+
+    priority = 1
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.passwords: dict[tuple[str, str], str] = {}
+
+    def get_password(self, service: str, username: str) -> str | None:
+        return self.passwords.get((service, username))
+
+    def set_password(self, service: str, username: str, password: str) -> None:
+        self.passwords[service, username] = password
+
+    def delete_password(self, service: str, username: str) -> None:
+        if self.passwords.pop((service, username), None) is None:
+            raise keyring.errors.PasswordDeleteError(username)
+
+
+@pytest.fixture(autouse=True)
+def secret_store() -> Generator[MemoryKeyring]:
+    store, previous = MemoryKeyring(), keyring.get_keyring()
+    keyring.set_keyring(store)
+    yield store
+    keyring.set_keyring(previous)
 
 
 @pytest.fixture(scope="session")

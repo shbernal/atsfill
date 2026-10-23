@@ -8,7 +8,7 @@ from atsfill.adapters.hiringthing import HiringThing
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/hiringthing"
 HOST = "https://acme.hiringthing.com"
@@ -101,7 +101,7 @@ def test_read_form(page):
 
 def test_every_answer_reads_back(page, tmp_path):
     adapter, fields = opened(page)
-    cv = str(persona.resume(tmp_path / "CV Ada.pdf"))
+    cv = str(testuser.resume(tmp_path / "CV Ada.pdf"))
     answers: dict[str, Answer] = {
         "user.first_name": "Ada",
         "user.email": "ada@example.com",
@@ -135,9 +135,9 @@ def test_every_answer_reads_back(page, tmp_path):
     assert len(checks) == len(answers)
 
 
-def test_the_persona_answers_every_field(page, tmp_path):
+def test_the_test_user_answers_every_field(page, tmp_path):
     adapter, fields = opened(page)
-    answers = persona.answers(fields, persona.resume(tmp_path / "cv.pdf"))
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "cv.pdf"))
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []

@@ -5,15 +5,19 @@ Job application forms on hiring systems, read, dry-run and submitted from the co
 ## People
 
 **User**:
-The person applying: owns the answers, the config file and the decision to send.
+The person applications are sent for, with their accounts and attempts. Picked with `--user`, `default` without it.
 _Avoid_: applicant, candidate
+
+**Home**:
+The operating-system account atsfill runs under, through its home directory: the config file and the data directory. It serves one or more users; its owner writes the config and answers the send prompt.
+_Avoid_: machine, OS user
 
 **Consumer**:
 The agent or script that runs atsfill commands for the user.
 _Avoid_: client, caller
 
 **Harness**:
-The consumer's permission layer, which asks the user before each send.
+The consumer's permission layer, which asks the home's owner before each send.
 
 **Employer**:
 The organization a posting belongs to, which receives the application.
@@ -56,13 +60,19 @@ How a field's answer is written and matched: `text`, `date`, `choice`, `multi_ch
 One way a field type appears on a hiring system's page, such as a native select or a combobox that saves on Enter.
 
 **Side effect**:
-Something the hiring system or the employer receives before the submit, such as a field saved as it is typed or an uploaded resume.
+Something the hiring system or the employer receives before the submit, such as a field saved as it is typed or an uploaded resume, or an account created. Muted per user with `mute-side-effect-warnings`.
 
 **Account**:
-A user's sign-in on a hiring system, needed by some systems to read or to send.
+A user's sign-in on a hiring system, needed by some systems to read or to send: one per user, hiring system and account scope.
+
+**Account scope**:
+What one account covers on a hiring system: the whole system (no scope), or one employer where each keeps its own, such as a Workday tenant.
 
 **Login**:
-Signing in to an account, in a visible window only a person can complete, which stores its session. Also the `login` command.
+Signing in to an account, which stores its session: by a person in a visible window, or by atsfill with a password source. Also the `login` command.
+
+**Password source**:
+Where atsfill gets an account's password: `--password -` on stdin, the user's `password-commands` entry, or the secret store for passwords atsfill generated.
 
 **Session**:
 The stored browser state of a signed-in account, loaded only into its own adapter's context.
@@ -113,14 +123,14 @@ The adapter step that clicks the form's submit control and returns the evidence.
 A form submitted for a posting: real and final.
 
 **Submit gate**:
-The core's rules for whether a send may submit: every check matches, the adapter is enabled to submit, and the posting was not already sent.
+The core's rules for whether a send may submit: every check matches, the adapter is in the user's `submit-allowed`, and the posting was not already sent.
 _Avoid_: gate, read-back gate
 
 **Attempt**:
 The record of a send that reached the submit step, keyed by posting: `clicked` until its outcome is recorded. Its last outcome is what the double-send guard reads.
 
 **Double-send guard**:
-The part of the submit gate that refuses a send for a posting whose last attempt ended `submitted`, `unknown` or without an outcome, unless the user passes `--resend`.
+The part of the submit gate that refuses a send for a posting whose last attempt ended `submitted`, `unknown` or without an outcome, unless `--resend` is passed.
 
 **Status**:
 The one outcome every form command ends in: `ready`, `refused`, `submitted`, `blocked`, `unknown` or `unsupported`.
@@ -152,7 +162,7 @@ The browser fingerprint generated on the first launch and reused by every later 
 _Avoid_: fingerprint, profile
 
 **Data directory**:
-Where atsfill keeps the device identity, sessions, attempts and the lock.
+Where atsfill keeps the home's device identity and lock, and each user's sessions, accounts and attempts.
 
 ## Registry
 
@@ -184,13 +194,14 @@ A send-verified adapter whose send fails now. The last send verification stays a
 ## Development
 
 **Survey**:
-A run of `read` and a dry run with the test persona over a list of posting URLs, one row per URL. It never sends.
+A run of `read` and a dry run with the Test user over a list of posting URLs, one row per URL. It never sends.
 
 **Corpus**:
 The survey's rows, in `.tmp/corpus/`.
 
-**Test persona**:
-The committed fictional user whose answers are derived from each form's own fields.
+**Test user**:
+The fictional user the project tests with, `--user test`, whose answers are derived from each form's own fields. Always capitalized and followed by "user".
+_Avoid_: persona, fixture user
 
 **Fixture page**:
 A hand-made HTML page that reproduces one hiring system's renderings for the committed tests.
@@ -226,3 +237,4 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 - "Gap" meant both a known gap and anything atsfill could not fill. A form it cannot fill is out of scope, a known gap or unhandled; "gap" alone is not used.
 - "Out of scope" also named a `custom` source and finding postings. As a term it means only what needs the user live.
 - "Company" and "employer" named the same organization. It is the employer. "Company" stays only where it is a hiring system's own word: a field label, a URL path.
+- "User" meant both the person applications are sent for and the person who owns the home, writes the config and answers the send prompt. The second is the home's owner.
