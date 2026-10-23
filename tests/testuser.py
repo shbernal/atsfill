@@ -170,7 +170,7 @@ def _asked(field: Field, given: dict[str, Answer], hidden: set[str]) -> bool:
     if not match or match["trigger"] not in given:
         return True
     picked = given[match["trigger"]]
-    picks = match["value"].split(" or ")
+    picks = [match["value"], *match["value"].split(" or ")]  # an option can hold " or "
     shown = any(p in picks for p in ([picked] if isinstance(picked, str) else picked))
     return shown != bool(match["negated"])
 
