@@ -505,7 +505,7 @@ def _click(page: Page, target: Locator) -> None:
     header fixed over the top of the page."""
     try:
         browser.click(target)
-    except browser.Covered as e:
+    except browser.Overlaid as e:
         if "loading" in str(e):
             _settle(page)
         else:  # a header fixed over the top of the page

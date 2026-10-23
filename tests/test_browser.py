@@ -4,13 +4,13 @@ import time
 import pytest
 
 from atsfill.core import browser
-from atsfill.core.browser import Covered, OutOfTime
+from atsfill.core.browser import OutOfTime, Overlaid
 
 
 @pytest.fixture(scope="module")
 def page(server, tmp_path_factory):
     with browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page:
-        page.goto(f"{server}/covered.html")
+        page.goto(f"{server}/overlaid.html")
         yield page
 
 
@@ -19,8 +19,8 @@ def test_click_reaches_a_free_target(page):
 
 
 def test_click_reports_what_covers_the_target(page):
-    with pytest.raises(Covered, match=r'div\.banner\.sheet "Saving your answers"'):
-        browser.click(page.locator("#covered"))
+    with pytest.raises(Overlaid, match=r'div\.banner\.sheet "Saving your answers"'):
+        browser.click(page.locator("#overlaid"))
 
 
 def test_click_reaches_a_target_in_a_shadow_root(page):
@@ -36,8 +36,8 @@ def test_click_reaches_a_target_in_a_cross_origin_frame(page):
 
 
 def test_click_reports_what_covers_a_cross_origin_frame(page):
-    with pytest.raises(Covered, match=r"div#frame-cover"):
-        browser.click(page.frame_locator("#covered-frame").locator("#inner"))
+    with pytest.raises(Overlaid, match=r"div#frame-overlay"):
+        browser.click(page.frame_locator("#overlaid-frame").locator("#inner"))
 
 
 def test_a_second_command_waits_on_the_lock(tmp_path):

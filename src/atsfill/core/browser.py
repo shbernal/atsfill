@@ -32,7 +32,7 @@ from playwright.sync_api import TimeoutError as Timeout
 __all__ = [
     "BUILD",
     "BrowserError",
-    "Covered",
+    "Overlaid",
     "Locator",
     "OutOfTime",
     "Page",
@@ -69,8 +69,8 @@ class OutOfTime(Exception):
     """The command's time budget ran out."""
 
 
-class Covered(Exception):
-    """Another element is on top of the click target; the message describes it."""
+class Overlaid(Exception):
+    """An overlay is on top of the click target; the message describes it."""
 
 
 def version() -> str:
@@ -301,7 +301,7 @@ def session_request(path: Path) -> Generator[Request]:
 # What sits on top of a point, null when the element (or the shadow host holding it) is what
 # a click there would reach. The point defaults to where Playwright clicks: the centre of the
 # first box, which for wrapped inline text is its first line, not the bounding box's centre.
-_COVER = """(el, point) => {
+_OVERLAY = """(el, point) => {
     const r = [...el.getClientRects()].find(b => b.width && b.height)
         ?? el.getBoundingClientRect();
     const [x, y] = point ?? [r.left + r.width / 2, r.top + r.height / 2];
@@ -317,12 +317,12 @@ _COVER = """(el, point) => {
 }"""
 
 
-def covered_by(target: Locator) -> str | None:
-    """What covers the target, in its own document and then at its point in each frame up."""
+def overlay_on(target: Locator) -> str | None:
+    """The overlay on the target, in its own document and then at its point in each frame up."""
     target.scroll_into_view_if_needed()
     handle = target.element_handle()
-    if cover := handle.evaluate(_COVER, None):
-        return cover
+    if overlay := handle.evaluate(_OVERLAY, None):
+        return overlay
     box = target.bounding_box()  # in the top page's viewport
     frame = handle.owner_frame()
     if box is None or frame is None:
@@ -331,14 +331,14 @@ def covered_by(target: Locator) -> str | None:
     while (parent := frame.parent_frame) is not None:
         origin = parent.frame_element().bounding_box() if parent.parent_frame else None
         point = [x - origin["x"], y - origin["y"]] if origin else [x, y]
-        if cover := frame.frame_element().evaluate(_COVER, point):
-            return cover
+        if overlay := frame.frame_element().evaluate(_OVERLAY, point):
+            return overlay
         frame = parent
     return None
 
 
 def click(target: Locator) -> None:
-    """Clicks the target, raising `Covered` when something else is on top of it."""
-    if cover := covered_by(target):
-        raise Covered(cover)
+    """Clicks the target, raising `Overlaid` when an overlay is on top of it."""
+    if overlay := overlay_on(target):
+        raise Overlaid(overlay)
     target.click()

@@ -23,7 +23,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
-from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Covered, Locator, Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Locator, Overlaid, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 JOB = re.compile(r"^(/[a-z]{2,8}/[a-z]{2})/(job|\w*apply)(?:/|$)")
@@ -1291,7 +1291,7 @@ def _fill(page: Page, raw: dict[str, Any], answer: Answer) -> None:
                 try:
                     _click(page, item.first if item.count() else items.first)
                     break
-                except BrowserError, Covered:  # rendered again under the click
+                except BrowserError, Overlaid:  # rendered again under the click
                     continue
         case "radio":  # its label wraps it or names it by `for`
             if not form.evaluate(_RADIO, [raw["id"], _one(answer)]):

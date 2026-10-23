@@ -188,7 +188,7 @@ def test_a_career_page_embedding_ashby(page):
     page.unroute_all()
 
 
-def test_a_covered_submit_ends_covered(ashby, page):
+def test_an_overlaid_submit_ends_overlaid(ashby, page):
     adapter, _ = ashby
     page.goto(URL)
     adapter.read_form(page)
@@ -198,5 +198,5 @@ def test_a_covered_submit_ends_covered(ashby, page):
         cover.style.cssText = "position:fixed;inset:0;z-index:9999;background:#fff";
         document.body.append(cover);
     }""")
-    with pytest.raises(browser.Covered, match="sheet"):
+    with pytest.raises(browser.Overlaid, match="sheet"):
         adapter.submit(page)

@@ -61,6 +61,7 @@ One way a field type appears on a hiring system's page, such as a native select 
 
 **Overlay**:
 Whatever a page draws on top of a control, taking the click meant for it: a cookie banner, a toast, a spinner, a modal.
+_Avoid_: covered (reads as test coverage)
 
 **Toast**:
 An overlay that shows a short message for a few seconds and goes by itself, such as a résumé parse's result. The Rippling fixture page names its toast `.notice`; that class is not the term.

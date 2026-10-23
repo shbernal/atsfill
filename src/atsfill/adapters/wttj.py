@@ -106,7 +106,7 @@ class WelcomeToTheJungle:
         if not form.is_visible():  # an easyapply link opens the form by itself
             try:
                 browser.click(apply)
-            except browser.Covered:
+            except browser.Overlaid:
                 if not form.is_visible():
                     raise
         try:
