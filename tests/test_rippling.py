@@ -164,13 +164,17 @@ def test_the_test_user_dry_run_reads_back(page, tmp_path):
 
 def test_a_place_is_picked_from_the_settled_suggestions(page):
     adapter, _ = opened(page)
-    page.evaluate(  # each key's suggestions render again a few times, as a live list does
-        f"""() => {{ const render = open;
-        open = (...list) => {{ for (let n = 0; n <= {RERENDERS}; n++)
-          setTimeout(() => render(...list), n * {RERENDER_MS}); }}; }}"""
+    # Each key's suggestions render again a few times, as a live list does. `evaluate` runs in
+    # an isolated world, so the patch goes in a script element to reach the page's own `open`.
+    page.add_script_tag(
+        content=f"""const render = open;
+        open = (...list) => {{ document.body.dataset.rerendered = "yes";
+          for (let n = 0; n <= {RERENDERS}; n++)
+            setTimeout(() => render(...list), n * {RERENDER_MS}); }};"""
     )
     adapter.fill(page, {"location": "London"})
     assert adapter.read_back(page)["location"] == "London, UK"
+    assert page.locator("body").get_attribute("data-rerendered") == "yes"
 
 
 def test_a_posting_gone(page):
