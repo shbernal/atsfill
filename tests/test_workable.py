@@ -8,7 +8,7 @@ from atsfill.adapters.workable import Workable
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGE = Path(__file__).parent / "pages/workable/apply.html"
 JOB = "https://apply.workable.com/acme/j/ABCDEF1234/"
@@ -46,7 +46,7 @@ def resume(tmp_path) -> str:
 
 @pytest.fixture
 def photo(tmp_path) -> str:
-    return str(persona.photo(tmp_path / "photo.png"))
+    return str(testuser.photo(tmp_path / "photo.png"))
 
 
 def opened(page) -> tuple[Workable, list]:

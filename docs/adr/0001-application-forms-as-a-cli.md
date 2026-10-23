@@ -6,14 +6,14 @@ Agents that apply to jobs on external hiring systems drive a generic browser and
 
 ## Decision
 
-atsfill is a standalone command line tool that gives external application forms that contract. It is a product: any agent with a shell is a consumer, and the user decides which hiring systems it lets submit. Each form command prints one JSON document and exits:
+atsfill is a standalone command line tool that gives external application forms that contract. It is a product: any agent with a shell is a consumer, and the home's owner decides which hiring systems it lets submit (ADR 0015). Each form command prints one JSON document and exits:
 
 - `atsfill read <url>`: the form's fields, the hiring system and its side effects.
 - `atsfill fill <url> --answers <file>`: fills and reads back, never submits (the dry run).
 - `atsfill send <url> --answers <file>`: fills again and submits only when the read-back is clean.
 - `atsfill status`: version, data directory, browser, and every adapter with its verification.
 
-Sending is its own command, not a flag on `fill`, so an agent harness can ask the user before every `send` (ADR 0006). Answers come from a file (`-` for stdin) so personal data stays out of command lines and shell history.
+Sending is its own command, not a flag on `fill`, so an agent harness can ask the home's owner before every `send` (ADR 0006). Answers come from a file (`-` for stdin) so personal data stays out of command lines and shell history.
 
 Finding job postings is out of scope. atsfill starts from an application URL.
 

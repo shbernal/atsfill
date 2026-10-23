@@ -9,7 +9,7 @@ from atsfill.adapters.rippling import DATA, Rippling, _api, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/rippling"
 JOB = "https://ats.rippling.com/acme/jobs/0b6a3f8e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
@@ -50,7 +50,7 @@ def page(tmp_path_factory):
 
 @pytest.fixture
 def resume(tmp_path) -> str:
-    return str(persona.resume(tmp_path / "CV Ada.pdf"))
+    return str(testuser.resume(tmp_path / "CV Ada.pdf"))
 
 
 def opened(page, url: str = JOB) -> tuple[Rippling, list]:
@@ -153,10 +153,10 @@ def test_every_answer_reads_back(page, resume):
     assert read_back["first_name"] == "Ada"  # typed over what the résumé's parse filled
 
 
-def test_the_persona_dry_run_reads_back(page, tmp_path):
+def test_the_test_user_dry_run_reads_back(page, tmp_path):
     adapter, fields = opened(page)
-    answers = persona.answers(fields, persona.resume(tmp_path / "cv.pdf"))
-    assert f"{Q}source_other" not in answers  # the persona picks the first option
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "cv.pdf"))
+    assert f"{Q}source_other" not in answers  # the Test user picks the first option
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []

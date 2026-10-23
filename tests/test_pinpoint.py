@@ -9,7 +9,7 @@ from atsfill.adapters.pinpoint import Pinpoint, _form, _parse
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/pinpoint"
 UUID = "1a2b3c4d-0000-4000-8000-000000000001"
@@ -43,7 +43,7 @@ def page(tmp_path_factory):
 
 @pytest.fixture
 def resume(tmp_path) -> str:
-    return str(persona.resume(tmp_path / "CV Ada.pdf"))
+    return str(testuser.resume(tmp_path / "CV Ada.pdf"))
 
 
 def opened(page, url: str = JOB) -> tuple[Pinpoint, list]:
@@ -187,9 +187,9 @@ def test_an_address_outside_the_united_states(page):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
 
 
-def test_the_persona_answers_every_field(page, tmp_path):
+def test_the_test_user_answers_every_field(page, tmp_path):
     adapter, fields = opened(page)
-    answers = persona.answers(fields, persona.resume(tmp_path / "cv.pdf"))
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "cv.pdf"))
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []

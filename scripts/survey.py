@@ -1,4 +1,4 @@
-"""Reads and dry-runs postings with the test persona, one row per URL in .tmp/corpus/ (ADR 0013).
+"""Reads and dry-runs postings with the Test user, one row per URL in .tmp/corpus/ (ADR 0013).
 
     uv run python -m scripts.survey URL...
     uv run python -m scripts.survey --source greenhouse --employers 5
@@ -30,7 +30,7 @@ from atsfill.core import browser, paths
 from atsfill.core.browser import Page, Response
 from atsfill.core.commands import Sessions
 from atsfill.core.results import Status
-from tests import persona
+from tests import testuser
 from tests.checkout import MAIN
 
 ROOT = Path(__file__).parents[1]
@@ -160,7 +160,7 @@ def survey(
     read = core.read(url, data_dir=data, sessions=sessions)
     result = read
     if read.status is Status.READY:
-        answers = persona.answers(read.fields, cv, cv.with_name("photo.png"))
+        answers = testuser.answers(read.fields, cv, cv.with_name("photo.png"))
         result = core.fill(url, answers, data_dir=data, sessions=sessions)
     step = None
     if found.label == "block":
@@ -244,8 +244,8 @@ def run(
 ) -> list[dict]:
     """Surveys each (URL, employer), appending its row to .tmp/corpus/<out or source>.jsonl."""
     CORPUS.mkdir(parents=True, exist_ok=True)
-    cv = persona.resume(CORPUS / "resume.pdf")
-    persona.photo(CORPUS / "photo.png")
+    cv = testuser.resume(CORPUS / "resume.pdf")
+    testuser.photo(CORPUS / "photo.png")
     data = paths.data_dir(data_dir)
     path, rows = CORPUS / f"{out or source or 'urls'}.jsonl", []
     for n, (url, employer) in enumerate(postings):

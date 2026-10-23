@@ -5,7 +5,7 @@ import pytest
 from atsfill.core import browser
 from atsfill.core.results import Field, FieldType
 from scripts import survey
-from tests import persona
+from tests import testuser
 
 
 @pytest.fixture(scope="module")
@@ -67,9 +67,9 @@ def test_an_unsupported_reason_is_labelled_by_its_case(reason, label):
     assert survey.case(reason) == label
 
 
-def test_the_persona_answers_from_the_fields(tmp_path):
-    cv = persona.resume(tmp_path / "resume.pdf")
-    picture = persona.photo(tmp_path / "photo.png")
+def test_the_test_user_answers_from_the_fields(tmp_path):
+    cv = testuser.resume(tmp_path / "resume.pdf")
+    picture = testuser.photo(tmp_path / "photo.png")
     fields = [
         Field("e", "Email address", FieldType.TEXT, True),
         Field("n", "Full name", FieldType.TEXT, True, max_length=5),
@@ -88,15 +88,15 @@ def test_the_persona_answers_from_the_fields(tmp_path):
         Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
         Field("o", "Video", FieldType.FILE, False, unfillable="out_of_scope: o is a video"),
     ]
-    answers = persona.answers(fields, cv, picture)
+    answers = testuser.answers(fields, cv, picture)
     assert answers == {
-        "e": persona.EMAIL,
+        "e": testuser.EMAIL,
         "n": "Ada P",
         "g": "Decline to self-identify",
         "v": "Yes",
         "l": ["French"],
-        "s": persona.SALARY,
-        "q": persona.TEXT,
+        "s": testuser.SALARY,
+        "q": testuser.TEXT,
         "d": answers["d"],
         "c": str(cv),
         "a": str(picture),

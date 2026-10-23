@@ -13,7 +13,7 @@ from atsfill.adapters.paycor import Paycor, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/paycor"
 JOB = "https://recruitingbypaycor.com/career/JobIntroduction.action?clientId=c1&id=j1&source=x"
@@ -195,7 +195,7 @@ def test_every_answer_reads_back(page, resume):
 
 def test_submit_posts_the_form(page, resume):
     adapter, fields = opened(page)
-    adapter.fill(page, persona.answers(fields, Path(resume)))
+    adapter.fill(page, testuser.answers(fields, Path(resume)))
     submitted.clear()
     assert "ApplyJob.action" in (adapter.submit(page) or "")
     assert submitted

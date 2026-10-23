@@ -9,7 +9,7 @@ from atsfill.adapters.bamboohr import BambooHR, _form, _from_page, _to_page
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
-from tests import persona
+from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/bamboohr"
 JOB = "https://acme.bamboohr.com/careers/1234"
@@ -58,7 +58,7 @@ def page(tmp_path_factory):
 
 @pytest.fixture
 def resume(tmp_path) -> str:
-    return str(persona.resume(tmp_path / "CV Ada.pdf"))
+    return str(testuser.resume(tmp_path / "CV Ada.pdf"))
 
 
 def opened(page) -> tuple[BambooHR, list]:
@@ -178,9 +178,9 @@ def test_a_country_without_a_list_takes_a_typed_state(page):
     assert adapter.read_back(page)["state"] == "Madrid"
 
 
-def test_the_persona_keeps_the_page_country(tmp_path):
+def test_the_test_user_keeps_the_page_country(tmp_path):
     fields = [f for f, _ in _form(DETAIL, LISTS, None)]
-    answers = persona.answers(fields, tmp_path / "cv.pdf")
+    answers = testuser.answers(fields, tmp_path / "cv.pdf")
     assert "countryId" not in answers
     assert answers["state"] == "District of Columbia"
     assert answers["veteranStatusId"] == "Decline to Answer"

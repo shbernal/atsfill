@@ -6,7 +6,7 @@ Dayforce's career sites (`jobs.dayforcehcm.com`) and their guest application, ob
 
 - A job is `jobs.dayforcehcm.com/<culture>/<namespace>/<career site>/jobs/<id>`; the culture redirects to the site's own (`en-US` to `en-AU`), and the wizard's steps drop it. The double-send key is `https://jobs.dayforcehcm.com/<namespace>/<career site>/jobs/<id>`.
 - Apply offers "Apply without an Account" (`…/apply?flowSelection=true`); atsfill goes straight to the guest form, `…/jobs/<id>/apply/manualApplication?applicationSource=Manual`. A closed posting shows no form: `posting_gone`.
-- The site context (`/api/geo/<ns>/sitecontext/<ns>/<site>/<culture>?jobPostingId=<id>`) and the application template (`/api/geo/<ns>/jobapplication/<ns>/<culture>/<job board id>/<id>`) are public JSON and list every section, field and question. They leave out the options of the country and contact method dropdowns, bundled in the page, so there is no `read_api`: the persona, and a user, need those options.
+- The site context (`/api/geo/<ns>/sitecontext/<ns>/<site>/<culture>?jobPostingId=<id>`) and the application template (`/api/geo/<ns>/jobapplication/<ns>/<culture>/<job board id>/<id>`) are public JSON and list every section, field and question. They leave out the options of the country and contact method dropdowns, bundled in the page, so there is no `read_api`: the Test user, and a user, need those options.
 - The page keeps its draft in `sessionStorage` (`jobPostingApplication-<id>-<ns>`); `fill` clears it and loads the form again.
 - Dialogs cover the form on load: the employer's privacy policy where `enablePrivacyPolicy` (an agree box and Save; Cancel leaves the form, so atsfill accepts it, a declared side effect), the SMS consent where `hasActiveSMSProvider` (two radios, Save), the cookie banner (rejected). Accepting the policy is kept in the `SiteConfig` cookie of the browser profile.
 - The wizard is Candidate Info, one page per questionnaire ("Questionnaire 1 of 4", then its name; some sites show no counter), an Assessment step on some sites, then Submit. Next (`[test-id=application-next-step]`) validates the step (`POST …/JobApplication/validatesections`, `…/canuserreapply`) and stores nothing.
@@ -52,7 +52,7 @@ A template field, section or answer type outside this table is listed as `unhand
 
 ## Filling
 
-- The resume goes first: uploading it (`POST …/FileService/uploadresume`) imports it over the personal information, so nothing is typed until the upload answers.
+- The resume goes first: uploading it (`POST …/FileService/uploadresume`) imports it over the Test userl information, so nothing is typed until the upload answers.
 - The country goes before the state. A dropdown is opened from the middle of the window, the step's button bar covering the bottom; its option is clicked in the same script that finds it, the virtual list rendering its options anew as it moves. A searchable one is typed into first; a `readonly` one is scrolled to the option.
 - A phone number picks the longest dial code its digits start with, the main country of a shared one (`+1` is the United States), and types the rest.
 - A section saves with its Update, the first submit button after its first field; a click while a dropdown is still closing is lost, so Update is clicked until the section closes. An open section keeps Next from going on.

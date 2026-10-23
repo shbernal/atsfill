@@ -1,4 +1,4 @@
-"""A fictional applicant whose answers come from each form's own fields (ADR 0009)."""
+"""The Test user, a fictional user whose answers come from each form's own fields (ADR 0009)."""
 
 import re
 import secrets
@@ -20,7 +20,7 @@ CITY = "London"
 BIRTH_DATE = "1990-01-31"
 COUNTRY = "United States"
 COUNTRY_NAMES = (COUNTRY, "United States of America")  # the names a country list gives it
-REGION = "District of Columbia"  # the state of the persona's phone and zip code
+REGION = "District of Columbia"  # the state of the Test user's phone and zip code
 
 SENSITIVE = re.compile(
     r"gender|sex\b|race|ethnic|hispanic|latin|veteran|disab|pronoun|orientation|demograph",
@@ -74,7 +74,7 @@ _OBJECTS = [
 
 
 def resume(path: Path) -> Path:
-    """Writes the persona's résumé to `path`."""
+    """Writes the Test user's résumé to `path`."""
     out, offsets = bytearray(b"%PDF-1.4\n"), []
     for n, body in enumerate(_OBJECTS, 1):
         offsets.append(len(out))
@@ -91,7 +91,7 @@ def resume(path: Path) -> Path:
 
 
 def photo(path: Path) -> Path:
-    """Writes the persona's photo to `path`: a 64x64 grey PNG."""
+    """Writes the Test user's photo to `path`: a 64x64 grey PNG."""
     chunk = lambda kind, data: (  # noqa: E731
         struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
     )
@@ -110,7 +110,7 @@ def _option(field: Field) -> str:
     if SENSITIVE.search(field.label):
         return next((o for o in options if DECLINE.search(o)), options[0])
     if re.search(r"country", field.label, re.IGNORECASE):
-        # where the persona's phone and zip code are; `United States of America (+1)`
+        # where the Test user's phone and zip code are; `United States of America (+1)`
         mentioned = sorted((o for o in options if COUNTRY in o), key=len)
         return next((o for o in options if o in COUNTRY_NAMES), next(iter(mentioned), options[0]))
     if ANSWER_NO.search(field.label) and "No" in options:
@@ -124,7 +124,7 @@ def _text(field: Field) -> str:
 
 
 def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None:
-    """The persona's answer to one field; None for a choice with no options to pick from, or
+    """The Test user's answer to one field; None for a choice with no options to pick from, or
     a file that takes neither a PDF nor, given a `picture`, a PNG."""
     match field.type:
         case FieldType.FILE if field.accept and ".pdf" not in field.accept:

@@ -1,5 +1,7 @@
 # 0007. Data directory and sessions
 
+The login, the session paths and the attempts' place are superseded by ADR 0015 (users and accounts).
+
 ## Decision
 
 Everything atsfill keeps lives under one data directory: `$XDG_STATE_HOME/atsfill` on Linux (`~/.local/state/atsfill` when the variable is unset), `~/.atsfill` elsewhere. `--data-dir` (or `ATSFILL_DATA_DIR`) moves it. The config file (ADR 0006) lives apart, in the config directory. Created `0700`.

@@ -6,7 +6,7 @@ The registry (ADR 0012) is filled by trying real postings, and adapters are adde
 
 ## Decision
 
-**Survey.** `scripts/survey.py`, a development tool outside the CLI, runs `read` and a `fill` dry run with the test persona (ADR 0009) over a list of URLs, one browser at a time. It writes one row per URL to `.tmp/corpus/`, with the commit it ran at (none on a tree with uncommitted changes), and labels what stopped the form: a login wall, a `block`, an embed, a redirect, `out_of_scope`, a `known_gap`, an `unhandled` case (ADR 0014), or `unclear` for the agent to judge. It never runs `send`.
+**Survey.** `scripts/survey.py`, a development tool outside the CLI, runs `read` and a `fill` dry run with the Test user (ADR 0009) over a list of URLs, one browser at a time. It writes one row per URL to `.tmp/corpus/`, with the commit it ran at (none on a tree with uncommitted changes), and labels what stopped the form: a login wall, a `block`, an embed, a redirect, `out_of_scope`, a `known_gap`, an `unhandled` case (ADR 0014), or `unclear` for the agent to judge. It never runs `send`.
 
 **Coverage.** Postings come from freehire. Mapping covers the sources that add up to 90% of postings, five different employers each; an aggregator is resolved by following its links to the systems behind it.
 
