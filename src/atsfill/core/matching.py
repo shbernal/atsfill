@@ -73,6 +73,9 @@ def _answer_problem(field: Field, answer: object) -> str | None:
         values = [answer]
     if field.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE) and not _in_options(field, values):
         return f"{answer!r} is not one of {field.options}"
+    length = len(_norm(values[0]))
+    if field.type is FieldType.TEXT and field.max_length and length > field.max_length:
+        return f"{length} characters, over the limit of {field.max_length}"
     if field.type is FieldType.DATE and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", values[0]):
         return "a date answer is YYYY-MM-DD"
     if field.type is FieldType.FILE:

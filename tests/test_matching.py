@@ -58,6 +58,9 @@ def test_problems_before_filling():
     date = Field("d", "Start", FieldType.DATE, False)
     assert problems([date], {"d": "11/02/2026"}) == ["d: a date answer is YYYY-MM-DD"]
     assert problems([date], {"d": "2026-11-02"}) == []
+    name = Field("n", "Name", FieldType.TEXT, True, max_length=5)
+    assert problems([name], {"n": "Jane Doe"}) == ["n: 8 characters, over the limit of 5"]
+    assert problems([name], {"n": " Jane "}) == []  # trimmed, as the read-back is
 
 
 def test_a_click_without_outcome_blocks_the_next_send(tmp_path):
