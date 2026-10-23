@@ -105,7 +105,7 @@ Every push to `main` that passes CI is also published as a dev release; `uvx --p
 
 A dry run is not invisible: some systems save answers or the resume as they are typed.
 `atsfill status` lists each system's side effects, whether it is allowed to submit, and how far atsfill has verified it: [the systems](docs/adapters/README.md).
-A `send` through an adapter no send was verified on goes ahead with a `warning`.
+A dry run or a `send` through an adapter no send was verified on carries a `warning`; the send goes ahead anyway.
 
 One home can apply for more than one person: `--user <name>` gives each their own sessions, double-send guard and `[users.<name>]` section in the config file ([ADR 0015](docs/adr/0015-users-and-accounts.md)).
 Given an account's email (`atsfill login <adapter> --email`) and a password source (a `[password-commands]` entry such as `rbw get example.com {email}`, or `--password -` on stdin), atsfill signs in by itself, and again whenever a form command finds the session signed out.

@@ -27,7 +27,7 @@ A re-run at an old commit meets today's postings, not the ones the verified send
 
 The Camoufox browser build is pinned along with the package (ADR 0004), so a block result compares across machines.
 
-`atsfill status` shows each adapter's verification, its verified release against the installed one (`this_release`, `older`, `newer`) and a break with its last verified send. `send` warns `not_send_verified` or `send_broken`. The backlog in `docs/adapters/` and one badge per adapter in the README, red when sending is broken, are generated from it.
+`atsfill status` shows each adapter's verification, its verified release against the installed one (`this_release`, `older`, `newer`) and a break with its last verified send. `fill` and `send` warn `not_send_verified` or `send_broken`: a dry run that ends `ready`, before the send it stands for, and a send as it goes ahead. The backlog in `docs/adapters/` and one badge per adapter in the README, red when sending is broken, are generated from it.
 
 ## Consequences
 

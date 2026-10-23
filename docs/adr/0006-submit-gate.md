@@ -17,7 +17,7 @@
 | `ready` | dry run clean |
 | `refused` | a mismatch, a missing answer, an answer the page would not take, or an adapter not enabled to submit |
 | `submitted` | sent, with the evidence |
-| `blocked` | a captcha challenge, an OTP, a low reCAPTCHA score, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason and the URL come back |
+| `blocked` | a captcha challenge, an OTP, a low reCAPTCHA score, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason comes back |
 | `unknown` | submit was clicked and no evidence came before the time budget ran out |
 | `unsupported` | no adapter for the system, a required field atsfill cannot fill (ADR 0014), a flow the adapter does not handle, or a step on another site; the reason comes back |
 

@@ -265,9 +265,11 @@ def _form_command(
             reason = f"already_sent: last attempt ended {last}; pass --resend"
             return Result(Status.REFUSED, url, adapter.name, reason=reason)
         result = _fill(page, adapter, url, answers, user)
-        if not send or result.status is not Status.READY:
+        if result.status is not Status.READY:
             return result
         result.warning = _unverified(adapter.name)
+        if not send:
+            return result
         attempts.record(mine, posting, attempts.PENDING, url=url)
         try:
             result.evidence = adapter.submit(page)
@@ -336,8 +338,8 @@ def send(
 
 
 def _unverified(adapter: str) -> str | None:
-    """The warning a send carries when no send through the adapter was verified, or the last
-    verified one fails now (ADR 0012)."""
+    """The warning a ready dry run or a send carries when no send through the adapter was
+    verified, or the last verified one fails now (ADR 0012)."""
     source = registry.for_adapter(adapter)
     if source and source.send_broken:
         return f"send_broken: {_broken(source)}"

@@ -1,11 +1,13 @@
+import dataclasses
 import json
 from pathlib import Path
 
 import pytest
 
 from atsfill.adapters import adapters
-from atsfill.cli import parser, run
+from atsfill.cli import emit, parser, run
 from atsfill.core import browser
+from atsfill.core.results import Check, Field, FieldType, Result, SideEffect, Status
 
 
 def test_send_requires_answers():
@@ -49,3 +51,61 @@ def test_status_fails_on_another_browser_build(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(browser, "version", lambda: "135.0-beta.25")
     assert run(parser().parse_args(["--data-dir", str(tmp_path / "data"), "status"])) == 1
     assert json.loads(capsys.readouterr().out)["browser_pinned"] == browser.BUILD
+
+
+FIELDS = [
+    Field("name", "Name", FieldType.TEXT, True),
+    Field("level", "Level", FieldType.CHOICE, False, options=["Basic", "Fluent"]),
+]
+EFFECTS = [SideEffect("fill", "hiring_system", "answers are saved as typed")]
+URL = "https://example.com/form"
+
+
+def emitted(capsys, result: Result, command: str, verbose: bool = False) -> dict:
+    emit(result, verbose, command)
+    out = capsys.readouterr().out
+    assert verbose or out.count("\n") == 1
+    return json.loads(out)
+
+
+def test_a_read_keeps_the_fields_and_side_effects_without_empty_keys(capsys):
+    result = Result(Status.READY, URL, "fake", fields=FIELDS, side_effects=EFFECTS)
+    assert emitted(capsys, result, "read") == {
+        "status": "ready",
+        "system": "fake",
+        "fields": [
+            {"id": "name", "label": "Name", "type": "text", "required": True},
+            {"id": "level", "label": "Level", "type": "choice", "options": ["Basic", "Fluent"]},
+        ],
+        "side_effects": [dataclasses.asdict(EFFECTS[0])],
+    }
+
+
+def test_a_ready_fill_is_its_status_system_and_warning(capsys):
+    checks = [Check("name", "Ada", "Ada", True)]
+    result = Result(Status.READY, URL, "fake", fields=FIELDS, checks=checks, side_effects=EFFECTS)
+    result.warning = "not_send_verified: fake is mapped"
+    assert emitted(capsys, result, "fill") == {
+        "status": "ready",
+        "system": "fake",
+        "warning": "not_send_verified: fake is mapped",
+    }
+
+
+def test_a_mismatch_keeps_only_the_failing_checks_read_back(capsys):
+    checks = [Check("name", "Ada", "Ada", True), Check("level", "Fluent", "Basic", False)]
+    result = Result(Status.REFUSED, URL, "fake", "mismatch: level", FIELDS, checks, EFFECTS)
+    assert emitted(capsys, result, "send") == {
+        "status": "refused",
+        "system": "fake",
+        "reason": "mismatch: level",
+        "checks": [{"field_id": "level", "read_back": "Basic"}],
+    }
+
+
+def test_verbose_prints_the_whole_result(capsys):
+    checks = [Check("name", "Ada", "Ada", True)]
+    result = Result(Status.SUBMITTED, URL, "fake", fields=FIELDS, checks=checks, evidence="e")
+    assert emitted(capsys, result, "send", verbose=True) == json.loads(
+        json.dumps(dataclasses.asdict(result))
+    )

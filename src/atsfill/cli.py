@@ -44,8 +44,10 @@ HELP = {
 EPILOG = """\
 A dry run is visible to the hiring system: some save each answer or the resume as it is
 typed (`status` lists each adapter's side effects). A `send` that ends `submitted` is a real
-application, final. Each command prints one JSON result; exit 0 for ready and submitted,
-1 for any other status, 2 for a usage error."""
+application, final. Each command prints one JSON result on one line, without the keys that
+are null, false or empty, and after `fill` and `send` only the checks that failed; `-v`
+prints all of it. Exit 0 for ready and submitted, 1 for any other status, 2 for a usage
+error."""
 
 
 def parser() -> argparse.ArgumentParser:
@@ -103,6 +105,10 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="create the account with --email and a password atsfill generates and stores",
     )
+    for name in ("read", "fill", "send", "status", "login", "logout"):
+        sub.choices[name].add_argument(
+            "-v", "--verbose", action="store_true", help="the whole result, every key, indented"
+        )
     return p
 
 
@@ -146,7 +152,7 @@ def run(args: argparse.Namespace) -> int:
             )
         case "status":
             report = core.status(data_dir=args.data_dir)
-            emit(report)
+            emit(report, args.verbose)
             signed_out = any(s.session == "signed_out" for s in report.sessions)
             return 1 if signed_out or report.browser != report.browser_pinned else 0
         case "install-browser":
@@ -169,15 +175,48 @@ def run(args: argparse.Namespace) -> int:
             except ValueError as e:
                 print(f"atsfill: {e}", file=sys.stderr)
                 return 2
-            emit(session)
+            emit(session, args.verbose)
             return 0 if args.command == "logout" or session.session == "signed_in" else 1
-    emit(result)
+    emit(result, args.verbose, args.command)
     return 0 if result.status in OK else 1
 
 
-def emit(value: Result | StatusReport | SessionReport) -> None:
-    json.dump(dataclasses.asdict(value), sys.stdout, default=str, ensure_ascii=False, indent=2)
+def emit(
+    value: Result | StatusReport | SessionReport, verbose: bool, command: str | None = None
+) -> None:
+    """Prints the whole value with `verbose`; else what its consumer acts on, on one line."""
+    data = dataclasses.asdict(value)
+    if verbose:
+        json.dump(data, sys.stdout, default=str, ensure_ascii=False, indent=2)
+    else:
+        if isinstance(value, Result):
+            data = _slim(data, command)
+        json.dump(_sparse(data), sys.stdout, default=str, ensure_ascii=False, separators=(",", ":"))
     sys.stdout.write("\n")
+
+
+def _slim(result: dict, command: str | None) -> dict:
+    """A form command's result without what the consumer already has: the URL it passed and,
+    after `read`, the fields, the side effects and each answer it gave."""
+    del result["url"]
+    if command != "read":
+        del result["fields"], result["side_effects"]
+        result["checks"] = [
+            {"field_id": c["field_id"], "read_back": c["read_back"]}
+            for c in result["checks"]
+            if not c["match"]
+        ]
+    return result
+
+
+def _sparse(value: object) -> object:
+    """Drops the keys whose value is null, false or empty, at every depth."""
+    if isinstance(value, dict):
+        kept = {k: _sparse(v) for k, v in value.items()}
+        return {k: v for k, v in kept.items() if v not in (None, False, [], {})}
+    if isinstance(value, list):
+        return [_sparse(v) for v in value]
+    return value
 
 
 def main() -> None:

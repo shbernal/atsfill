@@ -13,6 +13,8 @@ atsfill is a standalone command line tool that gives external application forms 
 - `atsfill send <url> --answers <file>`: fills again and submits only when the read-back is clean.
 - `atsfill status`: version, data directory, browser, and every adapter with its verification.
 
+The document holds what its status needs, on one line, without the keys that are null, false or empty: a `ready` fill is its status, system and any warning. `-v` prints the whole result, indented.
+
 Sending is its own command, not a flag on `fill`, so an agent harness can ask the home's owner before every `send` (ADR 0006). Answers come from a file (`-` for stdin) so personal data stays out of command lines and shell history.
 
 Finding job postings is out of scope. atsfill starts from an application URL.

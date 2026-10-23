@@ -149,7 +149,7 @@ _Avoid_: gap, coverage gap
 Said of a rendering or an error nobody has looked at yet, with no known gap behind it: `unhandled_rendering` or `adapter_error`.
 
 **Warning**:
-A code a send carries when it went ahead anyway: `not_send_verified` or `send_broken`.
+A code a dry run that ends `ready`, or a send that went ahead anyway, carries about its adapter's verification: `not_send_verified` or `send_broken`.
 
 **Evidence**:
 A URL or network response that proves a submit went through. Never page text.

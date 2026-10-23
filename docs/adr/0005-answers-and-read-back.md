@@ -24,4 +24,4 @@ The read-back is compared to the answers by field type:
 | `file` | the base names are equal |
 | `phone` | the digits and the country are equal |
 
-The response lists every field with its answer, its read-back and `match` or `mismatch`.
+The response lists each mismatch with its field id and read-back; with `-v`, every field with its answer, its read-back and `match`.
