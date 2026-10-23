@@ -83,14 +83,13 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("status", help="version, paths, browser, and each adapter's state")
     sub.add_parser("install-browser", help="download the Camoufox build atsfill is pinned to")
     accounts = [a.name for a in adapters() if isinstance(a, NeedsAccount)]
-    with_user(
-        sub.add_parser(
-            "login", help="sign in, in a visible window, to a system that needs an account"
-        )
-    ).add_argument("adapter", choices=accounts)
-    with_user(sub.add_parser("logout", help="delete a stored session")).add_argument(
-        "adapter", choices=accounts
-    )
+    for name, text in (
+        ("login", "sign in, in a visible window, to a system that needs an account"),
+        ("logout", "delete a stored session"),
+    ):
+        c = with_user(sub.add_parser(name, help=text))
+        c.add_argument("adapter", choices=accounts)
+        c.add_argument("--url", help="a posting, for a system with an account per employer")
     return p
 
 
@@ -139,13 +138,17 @@ def run(args: argparse.Namespace) -> int:
             return 1 if signed_out or report.browser != report.browser_pinned else 0
         case "install-browser":
             return browser.install()
-        case "login":
-            session = core.login(args.adapter, user=args.user, data_dir=args.data_dir)
+        case "login" | "logout":
+            command = core.login if args.command == "login" else core.logout
+            try:
+                session = command(
+                    args.adapter, user=args.user, url=args.url, data_dir=args.data_dir
+                )
+            except ValueError as e:
+                print(f"atsfill: {e}", file=sys.stderr)
+                return 2
             emit(session)
-            return 0 if session.session == "signed_in" else 1
-        case "logout":
-            emit(core.logout(args.adapter, user=args.user, data_dir=args.data_dir))
-            return 0
+            return 0 if args.command == "logout" or session.session == "signed_in" else 1
     emit(result)
     return 0 if result.status in OK else 1
 

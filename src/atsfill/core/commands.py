@@ -1,3 +1,4 @@
+import shlex
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from importlib.metadata import version
@@ -30,10 +31,19 @@ def _detect(candidates: list[Adapter], url: str, page: Page | None = None) -> Ad
     return next((a for a in candidates if a.detect(url, page)), None)
 
 
-def _login_required(url: str, adapter: Adapter, user: str) -> Result:
-    by = "" if user == paths.DEFAULT_USER else f" --user {user}"
-    reason = f"login_required: run `atsfill login {adapter.name}{by}`"
-    return Result(Status.BLOCKED, url, adapter.name, reason=reason)
+def login_command(adapter: str, user: str, url: str | None) -> str:
+    """The `login` command line for one account: its user, and a posting where it is scoped."""
+    command = ["atsfill", "login", adapter]
+    if user != paths.DEFAULT_USER:
+        command += ["--user", user]
+    if url:
+        command += ["--url", url]
+    return shlex.join(command)
+
+
+def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
+    command = login_command(adapter.name, user, url if adapter.per_employer else None)
+    return Result(Status.BLOCKED, url, adapter.name, reason=f"login_required: run `{command}`")
 
 
 @contextmanager
@@ -49,10 +59,11 @@ def _opened(
     adapter = _detect(candidates, url)
     if adapter:
         detected.append(adapter.name)
-    session = None
+    session, scope = None, None
     if isinstance(adapter, NeedsAccount):
+        scope = adapter.account_scope(url)
         session = (sessions or {}).get(adapter.name) or accounts.session_file(
-            paths.user_dir(data, user), adapter.name
+            paths.user_dir(data, user), adapter.name, scope
         )
         if not session.exists():
             yield _login_required(url, adapter, user)
@@ -72,7 +83,7 @@ def _opened(
         if adapter is None:
             yield _no_adapter(url)
         elif isinstance(adapter, NeedsAccount) and not (
-            session and adapter.signed_in(page.request)
+            session and adapter.signed_in(page.request, scope)
         ):
             yield _login_required(url, adapter, user)
         else:
@@ -271,13 +282,13 @@ def _unverified(adapter: str) -> str | None:
 
 def _sessions(data: Path, users: list[str], candidates: list[Adapter]) -> list[SessionReport]:
     """Every session a user stored, each asked of its system."""
-    rows = []
-    for user in users:
-        for adapter in candidates:
-            path = accounts.session_file(paths.user_dir(data, user), adapter.name)
-            if isinstance(adapter, NeedsAccount) and path.exists():
-                rows.append(SessionReport(user, adapter.name, accounts.state(adapter, path), path))
-    return rows
+    return [
+        SessionReport(user, adapter.name, scope, accounts.state(adapter, path, scope), path)
+        for user in users
+        for adapter in candidates
+        if isinstance(adapter, NeedsAccount)
+        for scope, path in accounts.stored(paths.user_dir(data, user), adapter.name)
+    ]
 
 
 def status(*, data_dir: Path | None = None) -> StatusReport:
@@ -327,21 +338,39 @@ def _account(name: str) -> NeedsAccount:
     return adapter
 
 
+def _scope(account: NeedsAccount, url: str | None) -> str | None:
+    """The account scope `--url` gives, required where each employer keeps its own accounts."""
+    scope = account.account_scope(url) if url else None
+    if account.per_employer and scope is None:
+        raise ValueError(f"{account.name} keeps an account per employer: pass --url <posting>")
+    return scope
+
+
 def login(
-    adapter: str, *, user: str = paths.DEFAULT_USER, data_dir: Path | None = None
+    adapter: str,
+    *,
+    user: str = paths.DEFAULT_USER,
+    url: str | None = None,
+    data_dir: Path | None = None,
 ) -> SessionReport:
     """Opens a window on the system's login page and stores the session once signed in."""
     account, data = _account(adapter), paths.data_dir(data_dir)
-    session = accounts.session_file(paths.user_dir(data, user), adapter)
-    reason = accounts.sign_in(account, data, session)
+    scope = _scope(account, url)
+    session = accounts.session_file(paths.user_dir(data, user), adapter, scope)
+    reason = accounts.sign_in(account, scope, data, session)
     state = "signed_in" if reason is None else "missing"
-    return SessionReport(user, adapter, state, session, reason)
+    return SessionReport(user, adapter, scope, state, session, reason)
 
 
 def logout(
-    adapter: str, *, user: str = paths.DEFAULT_USER, data_dir: Path | None = None
+    adapter: str,
+    *,
+    user: str = paths.DEFAULT_USER,
+    url: str | None = None,
+    data_dir: Path | None = None,
 ) -> SessionReport:
-    _account(adapter)
-    session = accounts.session_file(paths.user_dir(paths.data_dir(data_dir), user), adapter)
+    scope = _scope(_account(adapter), url)
+    mine = paths.user_dir(paths.data_dir(data_dir), user)
+    session = accounts.session_file(mine, adapter, scope)
     session.unlink(missing_ok=True)
-    return SessionReport(user, adapter, "missing", session)
+    return SessionReport(user, adapter, scope, "missing", session)

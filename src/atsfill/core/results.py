@@ -70,6 +70,7 @@ class Result:
 class SessionReport:
     user: str
     adapter: str
+    scope: str | None  # the account scope, None for an account that covers the whole system
     session: str  # signed_in | signed_out | missing
     path: Path
     reason: str | None = None  # why a login stored nothing: window_closed | login_timeout

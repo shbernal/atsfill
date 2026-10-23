@@ -3,11 +3,11 @@ import json
 
 import pytest
 
-from atsfill import core
+from atsfill import cli, core
 from atsfill.cli import parser, run
 from atsfill.core import accounts, browser, commands
 from atsfill.core.results import Status
-from tests.fake import FakeAccount
+from tests.fake import FakeAccount, FakeEmployerAccount
 
 
 @pytest.fixture
@@ -97,3 +97,38 @@ def test_an_expired_session_is_login_required(account, data, url, tmp_path):
         Status.BLOCKED,
         "login_required: run `atsfill login fakeaccount`",
     )
+
+
+@pytest.fixture
+def employer_account(account, server, monkeypatch) -> FakeEmployerAccount:
+    adapter = FakeEmployerAccount(server)
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+    return adapter
+
+
+def test_each_employer_has_its_own_session(employer_account, data, server, tmp_path):
+    acme = f"{server}/form.html?account&employer=acme"
+    report = core.login("fakeaccount", url=acme, data_dir=data)
+    assert (report.scope, report.session) == ("acme", "signed_in")
+    assert report.path == data / "users/default/sessions/fakeaccount/acme.json"
+    same = f"{server}/form.html?employer=Acme&account"
+    assert core.fill(same, {"name": "Ada"}, data_dir=data).status is Status.READY
+    other = f"{server}/form.html?account&employer=globex"
+    result = core.fill(other, {"name": "Ada"}, user="jane", data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.BLOCKED,
+        f"login_required: run `atsfill login fakeaccount --user jane --url '{other}'`",
+    )
+    (state,) = core.status(data_dir=data).sessions
+    assert (state.user, state.scope, state.session) == ("default", "acme", "signed_in")
+
+
+def test_an_account_per_employer_needs_the_posting(employer_account, data, capsys, monkeypatch):
+    monkeypatch.setattr(cli, "adapters", lambda: [employer_account])
+    assert run(parser().parse_args(["--data-dir", str(data), "logout", "fakeaccount"])) == 2
+    assert "pass --url <posting>" in capsys.readouterr().err
+
+
+def test_a_scope_is_one_path_segment(tmp_path):
+    with pytest.raises(ValueError):
+        accounts.session_file(tmp_path, "fakeaccount", "../acme")

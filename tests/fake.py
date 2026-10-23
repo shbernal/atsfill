@@ -1,6 +1,6 @@
 """A hiring system of one hand-made page, tests/pages/form.html, driven through every outcome."""
 
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser
 from atsfill.core.adapter import Gap
@@ -80,14 +80,30 @@ class FakeAccount(Fake):
     """The same form on a system that needs an account, signed in by tests/pages/login.html."""
 
     name = "fakeaccount"
+    per_employer = False
 
     def __init__(self, server: str) -> None:
         super().__init__()
         self.server = server
-        self.login_url = f"{server}/login.html"
 
     def detect(self, url: str, page: Page | None) -> bool:
-        return urlsplit(url).query == "account"
+        return "account" in parse_qs(urlsplit(url).query, keep_blank_values=True)
 
-    def signed_in(self, request: Request) -> bool:
+    def account_scope(self, url: str) -> str | None:
+        return None
+
+    def login_url(self, scope: str | None) -> str:
+        return f"{self.server}/login.html"
+
+    def signed_in(self, request: Request, scope: str | None) -> bool:
         return request.get(f"{self.server}/me").ok
+
+
+class FakeEmployerAccount(FakeAccount):
+    """The same, with an account per employer: `?account&employer=<name>`, in any case."""
+
+    per_employer = True
+
+    def account_scope(self, url: str) -> str | None:
+        employer = parse_qs(urlsplit(url).query).get("employer")
+        return employer[0].lower() if employer else None

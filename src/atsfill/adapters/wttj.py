@@ -57,7 +57,7 @@ _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
 
 class WelcomeToTheJungle:
     name = "wttj"
-    login_url = f"https://{HOST}/en/signin"
+    per_employer = False
     known_gaps: dict[str, Gap] = {}
     side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
 
@@ -75,7 +75,13 @@ class WelcomeToTheJungle:
         match = JOB.match(urlsplit(url).path)
         return f"https://{HOST}/companies/{match[1]}/jobs/{match[2]}" if match else url
 
-    def signed_in(self, request: Request) -> bool:
+    def account_scope(self, url: str) -> None:
+        return None
+
+    def login_url(self, scope: str | None) -> str:
+        return f"https://{HOST}/en/signin"
+
+    def signed_in(self, request: Request, scope: str | None) -> bool:
         """`users/me` answers 200 for an account, 204 for a visitor."""
         return request.get(ME).status == 200
 

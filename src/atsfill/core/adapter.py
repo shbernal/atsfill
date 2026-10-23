@@ -78,11 +78,20 @@ class Adapter(Protocol):
 
 @runtime_checkable
 class NeedsAccount(Protocol):
-    """An adapter whose system needs a signed-in session (ADR 0007)."""
+    """An adapter whose system needs a signed-in session, one per user and account scope
+    (ADR 0015)."""
 
-    login_url: str
+    name: str
+    per_employer: bool  # each employer keeps its own accounts, so a scope is always given
 
-    def signed_in(self, request: Request) -> bool:
+    def account_scope(self, url: str) -> str | None:
+        """The account scope of a posting's URL: None where an account covers the whole system,
+        the employer where each keeps its own, the same for every URL of that employer."""
+        ...
+
+    def login_url(self, scope: str | None) -> str: ...
+
+    def signed_in(self, request: Request, scope: str | None) -> bool:
         """Whether the cookies `request` carries are signed in, from one request to the system."""
         ...
 
