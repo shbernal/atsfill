@@ -45,6 +45,6 @@ The survey and the adapter gate take `--session ADAPTER=PATH` for a system that 
 
 ## Rules
 
-- The repository is public and holds no personal data: answers, resumes, posting URLs and sessions stay in `.env` and `.tmp/`. Test pages are hand-made, never captured from an employer.
+- The repository is public and holds no personal data: answers, resumes, posting URLs, sessions and account emails stay in the data directory, the config file or the gitignored `.tmp/`. Test pages are hand-made, never captured from an employer.
 - A hiring system's behaviour is observed, not specified: its doc in [docs/adapters/](docs/adapters/), its adapter and its test page change together.
 - The send rules (matching, refusal, statuses, double-send guard) live in the core. An adapter only knows its system's page. The reasons are in [docs/adr/](docs/adr/README.md).

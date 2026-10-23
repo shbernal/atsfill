@@ -6,8 +6,8 @@ build/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
-# Personal data for local development and live tests: answers, resumes,
-# posting URLs, sessions. Never committed.
+# Local development data: answers, resumes, posting URLs, survey rows.
+# Never committed; sessions and account emails live in the data directory.
 .env
 .tmp/
 
