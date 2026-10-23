@@ -255,7 +255,6 @@ class Oracle:
         self._picked: dict[str, str] = {}  # a geography field's id: the item picked in it
         self._months: list[str] = []
         self._job = ""
-        self._uploads: dict[str, str] = {}
 
     def detect(self, url: str, page: Page | None) -> bool:
         return JOB.search(urlsplit(url).path) is not None
@@ -311,14 +310,14 @@ class Oracle:
             if COUNTRY in on_page:  # the address below it follows the country's format
                 self._fill(page, COUNTRY, answers[COUNTRY])
                 _settle(page)
-            for field_id in [i for i in on_page if i != COUNTRY]:
+            # Files go last: a click while one attaches can be lost, and once attached its
+            # label takes the focus back from a field typed after it.
+            files = [i for i in on_page if self._kinds[i] == "file"]
+            for field_id in [i for i in on_page if i not in (COUNTRY, *files)] + files:
                 self._fill(page, field_id, answers[field_id])
-        self._uploads = {
-            i: PurePath(a).name
-            for i, a in answers.items()
-            if self._fields[i].type is FieldType.FILE and isinstance(a, str)
-        }
-        self._wait_for_uploads(page)
+            self._wait_for_uploads(
+                page, {i: PurePath(a).name for i in files if isinstance(a := answers[i], str)}
+            )
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values: dict[str, Any] = page.evaluate(_READ_BACK, self._kinds)
@@ -490,8 +489,9 @@ class Oracle:
     def _file_input(self, page: Page, field_id: str) -> Locator:
         return page.locator(f"{_upload(field_id)} input[type=file]").first
 
-    def _wait_for_uploads(self, page: Page) -> None:
-        for field_id, name in self._uploads.items():
+    def _wait_for_uploads(self, page: Page, uploads: dict[str, str]) -> None:
+        """Waits for each file (by field id: its name) to show attached."""
+        for field_id, name in uploads.items():
             selector = f"{_upload(field_id)} :is({ATTACHED})"
             done = page.locator(selector, has_text=name)
             try:

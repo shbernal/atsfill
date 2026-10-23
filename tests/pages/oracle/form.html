@@ -236,8 +236,18 @@
       if (single) pill.setAttribute("aria-checked", "true");
     });
   }
+  const ATTACH_MS = 1000;
+  let attaching = 0;  // a click on a pill or a checkbox while a file attaches is dropped
+  document.addEventListener("click", e => {
+    if (attaching && e.target.closest(".cx-select-pill-section, label")) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  }, true);
   for (const input of document.querySelectorAll(".attachment-upload-button input[type=file]")) {
     input.addEventListener("change", () => {
+      attaching++;
+      setTimeout(() => attaching--, ATTACH_MS);
       const done = document.createElement("button");
       done.type = "button";
       done.className = "attachment-upload-button__download";
@@ -245,8 +255,16 @@
       const list = input.closest(".apply-flow-block--misc-attachments");
       if (list) {  // a list of files under the upload button
         done.className = "misc-attachment-list__item-name";
-        setTimeout(() => list.append(done), 300);
-      } else setTimeout(() => input.closest(".attachment-upload-button").replaceWith(done), 300);
+        setTimeout(() => list.append(done), ATTACH_MS);
+      } else setTimeout(() => {
+        // once attached, its label takes the focus, and takes it back from a field typed after
+        const label = document.createElement("span");
+        label.tabIndex = -1;
+        label.className = "attachment-upload-button__success-label";
+        input.closest(".attachment-upload-button").replaceWith(done, label);
+        label.addEventListener("focusout", () => setTimeout(() => label.focus()));
+        label.focus();
+      }, ATTACH_MS);
     });
   }
 </script>

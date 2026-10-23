@@ -129,12 +129,12 @@ def test_every_answer_reads_back(opened, page, resume):
         "city": "London",
         "postalCode": "2000, Sydney, NSW",
         "dateOfBirth": "1991-02-03",
+        "resume": resume,  # attached after the pills and text below, whatever the order
         "3001": "Yes",
         "3002": ["Alumni", "None of the above"],
         "3003": "Employee referral",
         "3004": "No",
         "3005": "50000",
-        "resume": resume,
         "block:107": resume,
         "siteLink-1": "https://example.com",
         "US-STANDARD-ORA_ETHNICITY_US_OTHERS-STANDARD": ["I do not wish to answer"],
