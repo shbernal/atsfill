@@ -68,6 +68,10 @@ Signing in to an account, in a visible window only a person can complete, which 
 The stored browser state of a signed-in account, loaded only into its own adapter's context.
 _Avoid_: cookies
 
+**OTP**:
+A one-time password a hiring system sends by email or SMS and asks for before it goes on. Its reasons are `email_otp` and `sms_otp`.
+_Avoid_: code, verification code, PIN
+
 **Account profile**:
 What a hiring system keeps about an account and prefills its forms from.
 
@@ -212,12 +216,13 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 - "Session" meant both the stored browser state and an agent's working session. The agent's is an agent run.
 - "Profile" meant the answers, the device identity and the account profile. Only the account profile keeps the word, never bare.
 - "Login" is the act of signing in; the session is what it stores.
+- "Code" meant both an OTP and a reason's snake_case code. Only the reason keeps the word.
 - "Corpus" meant both the survey's rows and which postings mapping covers. The second is coverage.
 - "Sample" meant the round's sample, a skipped posting, and drawing postings outside the sample. Only the first keeps the word.
 - "Job board" meant both a board, which takes the application, and an aggregator, which links out.
 - "System" meant both a hiring system and any registry entry. A registry entry is a source; "system" is a hiring system.
 - "Refusal" means the `refused` status only. A low reCAPTCHA score is `blocked`.
-- A **Block** (a bot protection in the registry) is not the `blocked` status, which also covers emailed codes, login walls and the time budget.
+- A **Block** (a bot protection in the registry) is not the `blocked` status, which also covers OTPs, login walls and the time budget.
 - "Gap" meant both a known gap and anything atsfill could not fill. A form it cannot fill is out of scope, a known gap or unhandled; "gap" alone is not used.
 - "Out of scope" also named a `custom` source and finding postings. As a term it means only what needs the user live.
 - "Company" and "employer" named the same organization. It is the employer. "Company" stays only where it is a hiring system's own word: a field label, a URL path.

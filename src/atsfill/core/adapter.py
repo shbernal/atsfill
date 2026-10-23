@@ -6,8 +6,8 @@ from atsfill.core.results import Answer, Field, SideEffect
 
 
 class Blocked(Exception):
-    """The system stopped the command: a captcha, a low reCAPTCHA score, an emailed code, a
-    login wall.
+    """The system stopped the command: a captcha, a low reCAPTCHA score, an OTP, a login
+    wall.
 
     The message is the result's reason, `code` or `code: detail`.
     """

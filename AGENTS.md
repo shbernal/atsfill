@@ -17,6 +17,7 @@
   - CI green on the first run: merge. A red run counts even if a re-run goes green; re-run only to tell a flake from a break.
   - A flake (red then green on one commit, main red after a green PR, green locally and red in CI) in the code the PR touches is its bug: fix it before merging. Elsewhere: find or file a `flaky` issue, then merge. After merging, check main's CI the same way.
   - Waits and timeouts are named constants, never hardcoded.
+  - OTPs are out of scope. Each one met (sign-in, sign-up or form) gets an `otp-required` issue naming the system and the step, never the posting: the count decides whether to handle them.
 
 - Iron Laws
   - Tokens are expensive, state of the art models need minimal guidance, don't repeat yourself, don't babysit, don't be over-specific.

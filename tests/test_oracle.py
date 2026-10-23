@@ -149,5 +149,5 @@ def test_every_answer_reads_back(opened, page, resume):
 
 def test_a_known_address_gets_an_emailed_code(opened, page, resume):
     adapter, _ = opened
-    with pytest.raises(Blocked, match="email_code"):
+    with pytest.raises(Blocked, match="email_otp"):
         adapter.fill(page, {"email": "known@example.com", "legalDisclaimer": "Yes"})

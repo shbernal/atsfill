@@ -10,7 +10,7 @@ from pathlib import Path
 from atsfill.core.results import Answer, Field, FieldType
 
 FIRST, LAST = "Ada", "Placeholder"
-# A new address each run: Oracle emails a code, instead of showing the form, to one it has seen.
+# A new address each run: Oracle emails an OTP, instead of showing the form, to one it has seen.
 EMAIL = f"ada.placeholder.{secrets.token_hex(4)}@example.com"
 PHONE = "+12025550143"  # 555-01xx numbers are reserved for fiction
 WEBSITE = "https://example.com"

@@ -52,4 +52,4 @@ The form is server-rendered and goes live a second or two later. Until then a se
 
 - Nothing but the files reaches Greenhouse before submit, so the read-back is the page: input values, each select's shown value, the checked boxes' labels, the attached file's name. The phone reads back as the Country select's dial code then the number; it is empty until a country is set.
 - Submit runs an invisible reCAPTCHA Enterprise check. The evidence is the redirect to `…/confirmation`, titled "Thank you for applying".
-- An emailed verification code can stop the send. Its markup has not been observed, so such a send ends `unknown`.
+- An emailed OTP can stop the send. Its markup has not been observed, so such a send ends `unknown`.
