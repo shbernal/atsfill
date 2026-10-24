@@ -197,6 +197,16 @@ def test_create_keeps_the_password_while_the_account_may_exist(
     assert (stored is not None) == kept
 
 
+def test_create_signs_in_with_a_password_already_stored(creates, config, data, capsys):
+    login(data, capsys, "--create", "--email", EMAIL)
+    first = creates.created
+    code, report = login(data, capsys, "--create", "--email", "other@example.com")
+    assert (code, report["status"], report["password"]) == (0, "signed_in", "kept")
+    assert creates.created == first
+    assert passwords.stored(data / "users/default", "fakeaccount", None) == first
+    assert core.accounts.email(data / "users/default", "fakeaccount", None) == EMAIL
+
+
 def test_a_verification_link_names_the_address_and_the_command(creates, config, data, capsys):
     creates.stops = Blocked("email_link")
     code, report = login(data, capsys, "--user", "test", "--create", "--email", EMAIL)

@@ -75,7 +75,7 @@ class SessionReport:
     path: Path
     status: str | None = None  # a login's outcome: signed_in | refused | blocked | unsupported
     reason: str | None = None  # why a login stored nothing, `code` or `code: detail`
-    password: str | None = None  # after `--create`, the generated one: stored | deleted
+    password: str | None = None  # after `--create`: stored | deleted, or kept
 
 
 @dataclass

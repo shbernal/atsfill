@@ -433,7 +433,8 @@ def login(
 
     `email` is remembered for the account; `password` is used for this sign-in only. `create`
     creates the account with a password atsfill generates and stores first (a side effect),
-    giving `name` where the sign-up asks it."""
+    giving `name` where the sign-up asks it; with a password already stored, the account may
+    exist, so it signs in with that password and keeps the account's email instead."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
     mine = paths.user_dir(data, user)
@@ -441,11 +442,18 @@ def login(
     report = SessionReport(user, adapter, scope, "missing", session)
     if create and not email:
         raise ValueError("creating an account needs --email")
-    if email:
+    try:
+        kept = create and passwords.stored(mine, adapter, scope) is not None
+    except passwords.PasswordError as e:
+        report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
+        return report
+    if email and not kept:
         accounts.remember(mine, adapter, scope, email)
-    if create:
+    if create and not kept:
         assert email
         return _create(report, account, url, mine, (email, name), data)
+    if kept:
+        report.password = "kept"
     if password and not (isinstance(account, SignsIn) and accounts.email(mine, adapter, scope)):
         raise ValueError(f"signing in to {adapter} with a password needs --email")
     try:
