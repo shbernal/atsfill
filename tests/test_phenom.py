@@ -8,10 +8,10 @@ from pathlib import Path
 import pytest
 
 from atsfill.adapters import phenom
-from atsfill.adapters.phenom import Phenom
+from atsfill.adapters.phenom import Phenom, _Config
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import FieldType
+from atsfill.core.results import AnyOf, FieldType, Is
 
 PAGES = Path(__file__).parent / "pages/phenom"
 JOB = "https://careers.acme.example/us/en/job/ACMEUS1001EXTERNALENUS/Data-Analyst"
@@ -126,9 +126,9 @@ def test_read_form_lists_every_step_from_the_configuration(opened):
     assert fields["educationData[0].schoolName"].type is FieldType.TYPEAHEAD
     assert fields["jsqData.Q1.a"].options == ["Yes", "No"]
     follow_up = fields["jsqData.Q1.a_dot_a"]
-    asked = "(asked when 'Have you worked for Acme before?' is Yes)"
-    assert follow_up.label == f"When did you leave? {asked}"
-    assert not follow_up.required
+    assert follow_up.label == "When did you leave?"
+    assert follow_up.shown_when == Is("jsqData.Q1.a", ["Yes"])  # `not` `not` the option's key
+    assert follow_up.required  # whenever shown
     assert fields["comments"].type is FieldType.TEXT and not fields["comments"].required
 
 
@@ -179,6 +179,8 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
     assert read_back["educationData[0].schoolName"] == "Acme University"
     checks = matching.check(fields, answers(resume), read_back)
     assert [c for c in checks if not c.match] == []
+    shown = adapter.shown_fields(page)
+    assert "jsqData.Q1.a_dot_a" in shown and not set(shown) - {f.id for f in fields}
 
 
 def test_a_follow_up_its_trigger_hides_has_no_read_back(opened, page, resume):
@@ -189,6 +191,7 @@ def test_a_follow_up_its_trigger_hides_has_no_read_back(opened, page, resume):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == [
         ("jsqData.Q1.a_dot_a", None)
     ]
+    assert "jsqData.Q1.a_dot_a" not in adapter.shown_fields(page)
 
 
 def test_an_apply_link_to_another_system_is_unsupported(page):
@@ -238,3 +241,41 @@ def test_a_first_step_other_than_the_form_is_a_known_gap(page, monkeypatch):
             Phenom().read_form(page)
     finally:
         page.unroute(APPLY)
+
+
+def test_rules_on_answers_become_conditions():
+    schema = {
+        "type": "object",
+        "properties": {
+            "visa": {"title": "Visa?", "type": "string", "enum": ["v1", "v2"],
+                     "enumNames": ["Yes", "No"]},
+            "box": {"title": "Relocate?", "type": "boolean"},
+            "phone": {"title": "Phone", "type": "string"},
+            "locale": {"type": "string"},
+        },
+        "allOf": [
+            {"if": {"anyOf": [{"properties": {"visa": {"const": "v1"}}},
+                              {"properties": {"box": {"const": True}}}]},
+             "then": {"properties": {"which": {"title": "Which?", "type": "string"}},
+                      "required": ["which"]}},
+            {"if": {"properties": {"visa": {"enum": ["v2"]}}}, "then": {"required": ["phone"]}},
+            {"if": {"properties": {"resumeName": {"isNotEmpty": True}}},
+             "then": {"properties": {"cover": {"title": "Cover note", "type": "string"}}}},
+            {"if": {"properties": {"locale": {"const": "fr_fr"}}},
+             "then": {"properties": {"fr": {"title": "French", "type": "string"}}}},
+        ],
+    }  # fmt: skip
+    ui = {"visa": {"ui:widget": "select"}, "box": {"ui:widget": "checkbox"},
+          "locale": {"htmlType": "hidden"}}  # fmt: skip
+    reader = _Config({"locale": "en_us"}, {"schema": schema, "uiSchema": ui}, {}, lambda _: None)
+    raws = reader.object(schema, ui, "", None, False, None)
+    for raw in raws:
+        for key in ("when", "required_when"):
+            raw[key] = reader.labeled(raw.get(key), resume=True)
+    by_id = {r["id"]: r for r in raws}
+    assert "fr" not in by_id  # on the page's own data
+    assert by_id["which"]["when"] == AnyOf([Is("visa", ["Yes"]), Is("box", ["Yes"])])
+    assert by_id["which"]["required"]
+    assert by_id["phone"]["required_when"] == Is("visa", ["No"])
+    assert by_id["cover"]["when"] == Is("resume")  # a resume given
+    assert reader.labeled(Is("resume"), resume=False) is False  # no upload: never given
