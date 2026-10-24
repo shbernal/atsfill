@@ -61,8 +61,12 @@ _Avoid_: dependent field, branching question, conditional question
 One of a group of fields that take the same thing in different shapes (a resume as a file or as a text), sharing a key in `one_of`. The form expects exactly one; the group, not the field, is required.
 _Avoid_: exclusive field, either-or field
 
+**Dependent list**:
+A choice whose options follow other fields' answers, a state list under a country: one option set per condition. It always shows, so it is not a follow-up.
+_Avoid_: dependent field, cascading select
+
 **Condition**:
-What decides, from other fields' answers, whether a field shows (`shown_when`) or is required (`required_when`): `Is`, `AnyOf`, `AllOf`.
+What decides, from other fields' answers, whether a field shows (`shown_when`) or is required (`required_when`), or which options a dependent list offers (`option_sets`): `Is`, `AnyOf`, `AllOf`.
 
 **Field type**:
 How a field's answer is written and matched: `text`, `url`, `date`, `choice`, `multi_choice`, `typeahead`, `file` or `phone`. A field is `url` only where its hiring system declares it one, never from its label.

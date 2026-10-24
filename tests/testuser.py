@@ -5,6 +5,7 @@ import secrets
 import shutil
 import struct
 import zlib
+from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -239,12 +240,15 @@ def answers(
     out, given, answered = {}, {}, set()
     files = {f.one_of for f in fields if f.type is FieldType.FILE and not f.unfillable}
     for f in fields:
-        if not Form(fields, given).shown(f):
+        form = Form(fields, given)
+        if not form.shown(f):
             continue
         if f.one_of and (
             f.one_of in answered or (f.type is not FieldType.FILE and f.one_of in files)
         ):
             continue
+        if f.option_sets:  # a dependent list, answered from the options its parents leave
+            f = replace(f, options=form.options(f), option_sets=None)
         if f.unfillable or (a := answer(f, cv, picture, video)) is None:
             continue
         if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):

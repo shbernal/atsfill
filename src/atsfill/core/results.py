@@ -51,6 +51,14 @@ type Condition = Is | AnyOf | AllOf
 
 
 @dataclass(frozen=True)
+class OptionSet:
+    """A dependent list's options while `when` holds; `[]` leaves nothing to choose."""
+
+    when: Condition
+    options: list[str]
+
+
+@dataclass(frozen=True)
 class Field:
     id: str
     label: str
@@ -65,6 +73,7 @@ class Field:
     shown_when: Condition | None = None  # a follow-up: shown only when it holds (ADR 0005)
     required_when: Condition | None = None  # required once shown when it holds, if not always
     one_of: str | None = None  # an alternative: one of the fields with this key answers (ADR 0005)
+    option_sets: list[OptionSet] | None = None  # a dependent list's; `options` where none holds
 
 
 @dataclass(frozen=True)
