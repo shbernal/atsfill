@@ -13,9 +13,19 @@ def _parents(condition: Condition) -> list[str]:
             return [p for c in condition.all_of for p in _parents(c)]
 
 
+def alternatives(fields: list[Field]) -> dict[str, list[Field]]:
+    """The fields of each `one_of` group, by its key."""
+    out: dict[str, list[Field]] = {}
+    for f in fields:
+        if f.one_of:
+            out.setdefault(f.one_of, []).append(f)
+    return out
+
+
 def faults(fields: list[Field]) -> list[str]:
-    """What makes the fields' conditions unusable: a field they name that is not listed, or a
-    field shown by its own answer, through any chain."""
+    """What makes the fields' conditions unusable: a field they name that is not listed, a
+    field shown by its own answer through any chain, a group of alternatives with one member or
+    members disagreeing on `required`."""
     by_id = {f.id: f for f in fields}
     out = [
         f"{f.id}: its condition names no field {p}"
@@ -34,6 +44,11 @@ def faults(fields: list[Field]) -> list[str]:
         return any(loops(p, (*seen, field_id)) for p in parents)
 
     out += [f"{f.id}: shown by its own answer" for f in fields if loops(f.id, ())]
+    for key, members in alternatives(fields).items():
+        if len(members) == 1:
+            out.append(f"{key}: one alternative, {members[0].id}")
+        elif len({m.required for m in members}) > 1:
+            out.append(f"{key}: alternatives disagree on required")
     return out
 
 
@@ -43,6 +58,7 @@ class Form:
 
     def __init__(self, fields: list[Field], answers: dict[str, Answer]) -> None:
         self.by_id = {f.id: f for f in fields}
+        self.groups = alternatives(fields)
         self.answers = answers
 
     def holds(self, condition: Condition) -> bool:
@@ -64,7 +80,15 @@ class Form:
         return field.shown_when is None or self.holds(field.shown_when)
 
     def required(self, field: Field) -> bool:
-        """Required as the form asks it: shown, and always required or required by an answer."""
+        """Required as the form asks it: shown, and always required or required by an answer.
+        An alternative never is on its own: its group is (`group_required`)."""
+        return field.one_of is None and self.asked(field)
+
+    def group_required(self, key: str) -> bool:
+        return any(self.asked(m) for m in self.groups[key])
+
+    def asked(self, field: Field) -> bool:
+        """The field's own flag and conditions, whatever its group."""
         if not self.shown(field):
             return False
         when = field.required_when

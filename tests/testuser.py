@@ -213,16 +213,23 @@ def _showing_most(
 def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
     prefilled to the account, a résumé aside, a field its own answers keep hidden, and one
-    atsfill cannot fill. A choice that shows follow-ups takes the option that shows the most."""
-    out, given = {}, {}
+    atsfill cannot fill. A choice that shows follow-ups takes the option that shows the most.
+    Of a group of alternatives, it answers one, the file where it can."""
+    out, given, answered = {}, {}, set()
+    files = {f.one_of for f in fields if f.type is FieldType.FILE and not f.unfillable}
     for f in fields:
         if not Form(fields, given).shown(f):
+            continue
+        if f.one_of and (
+            f.one_of in answered or (f.type is not FieldType.FILE and f.one_of in files)
+        ):
             continue
         if f.unfillable or (a := answer(f, cv, picture)) is None:
             continue
         if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
             a = _showing_most(f, fields, given, cv, picture)
         given[f.id] = a
+        answered.add(f.one_of)
         if f.prefilled is None or f.type is FieldType.FILE:
             out[f.id] = a
     return out

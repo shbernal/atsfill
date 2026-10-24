@@ -108,8 +108,8 @@ def _answer_problem(field: Field, answer: object) -> str | None:
 
 
 def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
-    """What refuses a fill before typing: unknown ids, missing required answers, answers to
-    follow-ups the answers keep hidden, bad values."""
+    """What refuses a fill before typing: unknown ids, missing required answers, more than one
+    alternative answered, answers to follow-ups the answers keep hidden, bad values."""
     by_id = {f.id: f for f in fields}
     out = [f"no field {i}" for i in answers if i not in by_id]
     form = Form(fields, {i: a for i, a in answers.items() if i in by_id})
@@ -118,6 +118,13 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
         for f in fields
         if form.required(f) and f.prefilled is None and not f.unfillable and f.id not in answers
     ]
+    for key, members in form.groups.items():
+        given = [m.id for m in members if m.id in answers]
+        if len(given) > 1:
+            out.append(f"{key}: one of {', '.join(given)}, not both")
+        elif form.group_required(key) and not given and all(m.prefilled is None for m in members):
+            labels = " or ".join(m.label for m in members)
+            out.append(f"no answer for required {key} ({labels})")
     out += [
         f"{i}: not asked, it shows when {describe(f.shown_when, by_id)}"
         for i in answers
