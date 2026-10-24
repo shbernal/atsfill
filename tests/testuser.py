@@ -20,6 +20,7 @@ CITY = "London"
 BIRTH_DATE = "1990-01-31"
 COUNTRY = "United States"
 COUNTRY_NAMES = (COUNTRY, "United States of America")  # the names a country list gives it
+ZIP = "20001"
 REGION = "District of Columbia"  # the state of the Test user's phone and zip code
 
 SENSITIVE = re.compile(
@@ -41,7 +42,7 @@ ASKED_WHEN = re.compile(
 )
 BY_LABEL = [
     (re.compile(r"MM/YYYY"), "01/2020"),
-    (re.compile(r"zip|postal", re.IGNORECASE), "20001"),
+    (re.compile(r"zip|postal", re.IGNORECASE), ZIP),
     (re.compile(r"extension", re.IGNORECASE), "1"),
     (re.compile(r"e-?mail", re.IGNORECASE), EMAIL),
     (re.compile(r"first.?name|given name|pr[ée]nom", re.IGNORECASE), FIRST),
@@ -153,6 +154,8 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
         case FieldType.TYPEAHEAD:
             if field.options:
                 return field.options[0]
+            if re.search(r"zip|postal", field.label, re.I):
+                return ZIP
             return REGION if re.search(r"state|province|region", field.label, re.I) else CITY
         case _:
             return _text(field)
@@ -167,7 +170,7 @@ def _asked(field: Field, given: dict[str, Answer], hidden: set[str]) -> bool:
     if not match or match["trigger"] not in given:
         return True
     picked = given[match["trigger"]]
-    picks = match["value"].split(" or ")
+    picks = [match["value"], *match["value"].split(" or ")]  # an option can hold " or "
     shown = any(p in picks for p in ([picked] if isinstance(picked, str) else picked))
     return shown != bool(match["negated"])
 
