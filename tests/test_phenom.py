@@ -11,7 +11,7 @@ from atsfill.adapters import phenom
 from atsfill.adapters.phenom import Phenom, _Config
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import AnyOf, FieldType, Is
+from atsfill.core.results import AllOf, AnyOf, FieldType, Is, OptionSet
 
 PAGES = Path(__file__).parent / "pages/phenom"
 JOB = "https://careers.acme.example/us/en/job/ACMEUS1001EXTERNALENUS/Data-Analyst"
@@ -107,12 +107,19 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
     assert resume.accept == [".doc", ".docx", ".pdf", ".txt"]
     assert fields["firstName"].label == "First Name" and fields["firstName"].required
     assert fields["country"].options == ["Canada", "United States"]
-    assert fields["state"].options == ["Texas", "Utah"]
-    assert fields["state"].label == "State (options for 'Country' 'United States')"
+    # the list under the country before any; any other country's costs a request
+    assert fields["state"].label == "State" and fields["state"].options is None
+    assert fields["state"].option_sets == [
+        OptionSet(Is("country", ["United States"]), ["Texas", "Utah"])
+    ]
     assert fields["phoneWidget.phoneNumber"].type is FieldType.PHONE
     assert fields["phoneWidget.phoneNumber"].required
     assert fields["sourceType"].options == ["Job Board", "Referral"]
-    assert fields["applicantSource"].options == ["LinkedIn", "Indeed", "Employee"]
+    assert fields["applicantSource"].options is None
+    assert fields["applicantSource"].option_sets == [
+        OptionSet(Is("sourceType", ["Job Board"]), ["LinkedIn", "Indeed"]),  # not a hidden one
+        OptionSet(Is("sourceType", ["Referral"]), ["Employee"]),
+    ]
     assert fields["nationality"].options == ["American", "Canadian"]
     assert fields["emailAgreement"].options == ["Yes", "No"]
     assert fields["smsOptIn"].options == ["No", "Yes"] and not fields["smsOptIn"].required
@@ -181,6 +188,46 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
     assert [c for c in checks if not c.match] == []
     shown = adapter.shown_fields(page)
     assert "jsqData.Q1.a_dot_a" in shown and not set(shown) - {f.id for f in fields}
+
+
+def test_a_dependent_list_takes_the_options_its_parent_leaves(opened, resume):
+    _, fields = opened
+    under = lambda **given: [  # noqa: E731
+        p for p in matching.problems(fields, answers(resume) | given) if p.split(":")[0] in given
+    ]
+    assert under(sourceType="Job Board", applicantSource="Employee") == [
+        "applicantSource: 'Employee' is not one of ['LinkedIn', 'Indeed'], "
+        'the options when "How did you hear about us?" is "Job Board"'
+    ]
+    assert under(country="Canada", state="Ontario") == []  # left to the read-back
+
+
+def test_a_list_under_two_parents_keys_its_set_on_both():
+    api = {"payload": '{"formData": {"applyddokey": "cities", "country": "%%formData.country%%",'
+                      ' "region": "%%formData.region%%"}}'}  # fmt: skip
+    schema = {
+        "type": "object",
+        "properties": {
+            "country": {"title": "Country", "type": "string", "enum": ["US", "CA"],
+                        "enumNames": ["United States", "Canada"], "default": "US"},
+            "region": {"title": "Region", "type": "string", "enum": ["TX"], "enumNames": ["Texas"]},
+            "city": {"title": "City", "type": "string"},
+        },
+    }  # fmt: skip
+    city = {"htmlType": "asyncselect", "dependentKey": "region", "apiConfig": api}
+    ui = {"country": {"ui:widget": "select"}, "region": {"ui:widget": "select"}, "city": city}
+    posted = []
+
+    def post(body):
+        posted.append(body["formData"])
+        return {"applyGetReferences": {"data": {"values": [{"key": "1", "label": "Austin"}]}}}
+
+    reader = _Config({"locale": "en_us"}, {"schema": schema, "uiSchema": ui}, {}, post)
+    raw = {r["id"]: r for r in reader.object(schema, ui, "", None, False, None)}["city"]
+    assert posted[0] | {"country": "US", "region": "TX"} == posted[0]
+    assert phenom._field(raw).option_sets == [
+        OptionSet(AllOf([Is("region", ["Texas"]), Is("country", ["United States"])]), ["Austin"])
+    ]
 
 
 def test_a_follow_up_its_trigger_hides_has_no_read_back(opened, page, resume):
