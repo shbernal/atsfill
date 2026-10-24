@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from atsfill.core import browser
-from atsfill.core.results import Field, FieldType
+from atsfill.core.results import Field, FieldType, Is
 from scripts import survey
 from tests import testuser
 
@@ -120,3 +120,21 @@ def test_a_follow_up_is_answered_when_its_trigger_option_holds_or(tmp_path):
     ]
     answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
     assert answers == {"w": current, "i": testuser.TEXT}
+
+
+def test_a_choice_takes_the_option_that_shows_the_most_follow_ups(tmp_path):
+    fields = [
+        Field("w", "Have you worked here?", FieldType.CHOICE, True, ["Never", "Yes"]),
+        Field("i", "Your ID", FieldType.TEXT, True, shown_when=Is("w", ["Yes"])),
+    ]
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
+    assert answers == {"w": "Yes", "i": testuser.TEXT}
+
+
+def test_a_choice_never_shows_a_required_follow_up_without_an_answer(tmp_path):
+    fields = [
+        Field("w", "Have you worked here?", FieldType.CHOICE, True, ["Never", "Yes"]),
+        Field("v", "Video", FieldType.FILE, True, accept=[".mp4"], shown_when=Is("w", ["Yes"])),
+    ]
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
+    assert answers == {"w": "Never"}

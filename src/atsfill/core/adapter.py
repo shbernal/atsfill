@@ -141,3 +141,13 @@ class ReadsOverHttp(Adapter, Protocol):
     def read_api(self, url: str) -> list[Field] | None:
         """The same fields as `read_form`; None when it cannot for this URL."""
         ...
+
+
+@runtime_checkable
+class ListsShownFields(Adapter, Protocol):
+    """An adapter whose form can show fields after an answer: once filled, it says which the
+    page shows, so that one `read_form` did not list stops the fill (ADR 0005)."""
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The ids of the fields the filled page shows, each as `read_form` would name it."""
+        ...

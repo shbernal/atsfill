@@ -2,10 +2,10 @@
 the employer's own domain), as docs/adapters/eightfold.md observes.
 
 A posting's apply page (`/careers/apply?pid=<pid>`) renders its form from a questions API:
-sections of questions by id, type, requirement and options, and the questions another one's
-answer shows. `read_api` fetches it over HTTP, `read_form` through the page's browser context,
-and both list the fields from it. Each question renders as a control whose element id is its
-section's title and its id, with every other character an underscore.
+sections of questions by id, type, requirement and options, and the questions whose answer
+shows each follow-up. `read_api` fetches it over HTTP, `read_form` through the page's browser
+context, and both list the fields from it. Each question renders as a control whose element id
+is its section's title and its id, with every other character an underscore.
 """
 
 import http.cookiejar
@@ -13,15 +13,15 @@ import json
 import re
 import urllib.request
 from contextlib import suppress
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from atsfill.core import browser
+from atsfill.core import browser, conditions
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
 HOST = re.compile(r"^[\w-]+\.eightfold\.ai$")
 JOB = re.compile(r"^/careers/job/(\d+)")
@@ -33,7 +33,6 @@ CSRF = re.compile(r'<meta name="_csrf" content="([^"]+)"')
 SUBMIT = "[data-test-id=submitApplicationButton]"
 AGREE = "#confirmUploadResume"  # the privacy dialog a resume upload opens
 PICKER = "[data-testid=picker-dialog]"
-MAX_DEPTH = 5  # the deepest chain of questions rendering one another that a label names"
 FORM_TIMEOUT_MS = 30_000
 SHOWN_TIMEOUT_MS = 2_000
 OPTIONS_TIMEOUT_MS = 5_000
@@ -131,8 +130,6 @@ class _Control:
     field: Field
     kind: str
     ends: list[str]  # what the control's element id ends with
-    # the questions whose answer renders it, each with the answers that do (any when empty)
-    parents: list[tuple[str, list[str]]] = field(default_factory=list)
     resume: bool = False
     dom: str | None = None
 
@@ -152,6 +149,7 @@ class Eightfold:
 
     def __init__(self) -> None:
         self._controls: list[_Control] = []  # in the form's order
+        self._fields: list[Field] = []
 
     def detect(self, url: str, page: Page | None) -> bool:
         if _pid(url) is None:
@@ -210,14 +208,14 @@ class Eightfold:
             control.dom = doms.get(control.field.id)
             if control.field.unfillable:
                 continue
-            if control.dom is None and not control.parents:
+            if control.dom is None and not control.field.shown_when:
                 reason = f"unhandled_rendering: {control.field.id} is not on the page"
                 control.field = replace(control.field, unfillable=reason)
             elif control.dom is not None and _prefilled(page, control):
                 control.field = replace(control.field, prefilled=True)
-        fields = [c.field for c in self._controls]
+        self._fields = [c.field for c in self._controls]
         self._controls = [c for c in self._controls if not c.field.unfillable]
-        return fields
+        return self._fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         # the resume first: what its parse finds is written over the fields filled before it
@@ -226,8 +224,8 @@ class Eightfold:
         for control in order:
             if (answer := answers.get(control.field.id)) is None:
                 continue
-            if control.dom is None:  # rendered once a question that shows it is answered
-                if not any(_shows(given.get(p), values) for p, values in control.parents):
+            if control.dom is None:  # a follow-up, rendered once its condition holds
+                if not conditions.Form(self._fields, given).shown(control.field):
                     continue
                 with suppress(Timeout):
                     _box_of(page, control).wait_for(timeout=SHOWN_TIMEOUT_MS)
@@ -320,21 +318,23 @@ def _plain(label: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", label)).strip()
 
 
-def _label(q: dict[str, Any], by_id: dict[str, dict[str, Any]], depth: int = 0) -> str:
-    """The question's text; one some of a parent's answers render says so, naming the first
-    parent by its own label, so that a parent asked for other answers names it apart."""
+def _label(q: dict[str, Any]) -> str:
     label = _plain(q.get("label") or "")
     if (q.get("textOptions") or {}).get("type") == "number":  # a number input takes no text
         label += " (a number)"
-    first = (q.get("parentDependencies") or [{}])[0]
-    if not first.get("values") or depth > MAX_DEPTH:
-        return label
-    parent = by_id.get(str(first["questionId"]), {})
-    labels = {str(c["value"]): c["label"] for c in _choices(parent)}
-    shown = " or ".join(labels.get(str(v), str(v)) for v in first["values"])
-    named = _label(parent, by_id, depth + 1)
-    quote = '"' if "'" in named else "'"  # never escaped: the outermost is the last
-    return f"{label} (asked when {quote}{named}{quote} is {shown})"
+    return label
+
+
+def _shown_when(q: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> Condition | None:
+    """What renders a follow-up: any of its parents' answers it lists, any answer where it
+    lists none."""
+    parents: list[Condition] = []
+    for dependency in q.get("parentDependencies") or []:
+        parent = by_id.get(str(dependency["questionId"]), {})
+        labels = {str(c["value"]): c["label"] for c in _choices(parent)}
+        values = [labels.get(str(v), str(v)) for v in dependency.get("values") or []]
+        parents.append(Is(str(dependency["questionId"]), values or None))
+    return parents[0] if len(parents) == 1 else AnyOf(parents) if parents else None
 
 
 def _choices(q: dict[str, Any]) -> list[dict[str, Any]]:
@@ -356,24 +356,17 @@ def _form(data: dict[str, Any]) -> list[_Control]:
 
 
 def _control(q: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> _Control:
-    qid, label = str(q["questionId"]), _label(q, by_id)
+    qid, label, shown_when = str(q["questionId"]), _label(q), _shown_when(q, by_id)
     kind = KINDS.get(q.get("type", ""))
     choices = _choices(q)
     if kind == "select" and not choices and (q.get("selectOptions") or {}).get("apiEndpoint"):
         kind = "lookup"  # options load once the question it depends on is answered
     required = bool(q.get("required"))
-    parents = []
-    for dependency in q.get("parentDependencies") or []:
-        parent = by_id.get(str(dependency["questionId"]), {})
-        labels = {str(c["value"]): c["label"] for c in _choices(parent)}
-        values = [labels.get(str(v), str(v)) for v in dependency.get("values") or []]
-        parents.append((str(dependency["questionId"]), values))
-    if parents and parents[0][1]:  # asked for some of its parent's answers only
-        required = False
     ends = list(dict.fromkeys([_norm(qid), qid]))
     if kind is None:
         reason = f"unhandled_rendering: {qid} is a question of type {q.get('type')}"
-        return _Control(Field(qid, label, FieldType.TEXT, required, unfillable=reason), "", ends)
+        unfillable = Field(qid, label, FieldType.TEXT, required, unfillable=reason)
+        return _Control(replace(unfillable, shown_when=shown_when), "", ends)
     options = [c["label"] for c in choices] or None
     accept = None
     if kind == "file":
@@ -381,8 +374,17 @@ def _control(q: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> _Control:
         types = files.get("acceptedFileTypes") or (files.get("fileFormats") or "").split(",")
         accept = [t.strip() for t in types if t.strip()] or None
     today = bool((q.get("dateOptions") or {}).get("today"))  # today's date, read-only
-    question = Field(qid, label, TYPES[kind], required, options, accept=accept, prefilled=today)
-    return _Control(question, kind, ends, parents, q.get("type") == "resumeUpload")
+    question = Field(
+        qid,
+        label,
+        TYPES[kind],
+        required,
+        options,
+        accept=accept,
+        prefilled=today,
+        shown_when=shown_when,
+    )
+    return _Control(question, kind, ends, q.get("type") == "resumeUpload")
 
 
 def _find(page: Page, control: _Control) -> str | None:
@@ -531,14 +533,6 @@ def _iso(shown: str) -> str:
         with suppress(ValueError):
             return datetime.strptime(shown, pattern).date().isoformat()
     return shown
-
-
-def _shows(answer: Answer | None, values: list[str]) -> bool:
-    """Whether a parent's answer renders its dependent: any answer when `values` is empty."""
-    if answer in (None, "", []):
-        return False
-    picks = [answer] if isinstance(answer, str) else answer
-    return not values or any(p in values for p in picks)
 
 
 def _exact(value: str) -> re.Pattern[str]:

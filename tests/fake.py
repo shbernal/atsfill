@@ -26,6 +26,7 @@ class Fake:
         self.submit_raises: Exception | None = None  # after the click
         self.evidence = True
         self.fields = FIELDS
+        self.shows: list[str] = []  # what a fill shows besides the fields without a condition
 
     def detect(self, url: str, page: Page | None) -> bool:
         if page is None:
@@ -56,6 +57,9 @@ class Fake:
                         target.and_(page.locator(f'[value="{value}"]')).check()
                 case "cv":
                     target.set_input_files(answer)
+
+    def shown_fields(self, page: Page) -> list[str]:
+        return [f.id for f in self.fields if not f.shown_when] + self.shows
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         return page.evaluate("""() => {

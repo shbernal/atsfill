@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.teamtailor import Teamtailor, _stored_name
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import FieldType
+from atsfill.core.results import FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/teamtailor/new.html"
 JOB = "https://careers.example.com/fr/jobs/1234567-solution-engineer"
@@ -99,11 +99,9 @@ def test_read_form(opened):
     assert fields["candidate[location_ids][]"].options == ["Paris", "Lyon"]
     assert fields["candidate[location_ids][]"].required
     assert fields["question:100"].required  # qualifying questions are always answered
-    assert (
-        fields["question:108"].label
-        == 'À partir de quand ? (asked when "Êtes-vous disponible ?" is "Oui")'
-    )
-    assert not fields["question:108"].required  # only once an earlier answer asks it
+    assert fields["question:108"].label == "À partir de quand ?"
+    assert fields["question:108"].shown_when == Is("question:101", ["Oui"])
+    assert fields["question:108"].required  # once shown
     assert fields["question:105"].options == ["Samedi", "Dimanche"]
     assert fields["question:106"].options == [str(n) for n in range(11)]
 
@@ -153,6 +151,7 @@ def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume, tm
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+    assert set(adapter.shown_fields(page)) <= {f.id for f in fields}  # an upload's address too
 
 
 def test_a_disqualifying_answer_leaves_the_form_locked(opened, page):
@@ -160,16 +159,11 @@ def test_a_disqualifying_answer_leaves_the_form_locked(opened, page):
         opened[0].fill(page, {"question:100": "Non", "candidate[first_name]": "Ada"})
 
 
-def test_an_unanswered_follow_up_stops_the_fill(opened, page):
-    with pytest.raises(Unsupported, match="missing_answer"):
-        opened[0].fill(page, {"question:100": "Oui", "question:101": "Oui"})
-
-
-def test_a_follow_up_not_asked_is_not_filled(opened, page):
-    adapter, fields = opened
-    answers = {"question:100": "Oui", "question:101": "Non", "question:108": "Lundi"}
-    adapter.fill(page, answers)
-    assert "question:108" not in adapter.read_back(page)
+def test_the_page_shows_a_follow_up_once_its_earlier_answer_asks_it(opened, page):
+    adapter, _ = opened
+    assert "question:108" not in adapter.shown_fields(page)
+    adapter.fill(page, {"question:100": "Oui", "question:101": "Oui"})
+    assert "question:108" in adapter.shown_fields(page)
 
 
 def test_submit_returns_the_thanks_page(opened, page):

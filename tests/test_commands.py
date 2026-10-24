@@ -7,7 +7,7 @@ from atsfill.cli import parser, run
 from atsfill.core import attempts, commands, registry
 from atsfill.core.adapter import Blocked, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
-from atsfill.core.results import Field, FieldType, Status
+from atsfill.core.results import Field, FieldType, Is, Status
 from tests.fake import FIELDS, Fake
 
 
@@ -193,6 +193,34 @@ def test_an_answer_to_an_unfillable_field_refuses(fake, config, url, answers, da
     result = core.fill(url, answers | {"extra": answers["cv"]}, data_dir=data)
     assert result.status is Status.REFUSED
     assert result.reason == f"invalid_answers: extra: cannot be filled ({UNFILLABLE[0]})"
+
+
+def test_a_field_a_fill_shows_that_read_did_not_list_stops_it(fake, config, url, answers, data):
+    fake.shows = ["salary"]
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.UNSUPPORTED,
+        "unhandled_rendering: an answer showed salary, not listed",
+    )
+
+
+def test_a_follow_up_shown_though_its_condition_is_unmet_refuses(fake, config, url, answers, data):
+    why = Field("why", "Why?", FieldType.TEXT, False, shown_when=Is("level", ["Native"]))
+    fake.fields, fake.shows = [*FIELDS, why], ["why"]
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.REFUSED,
+        "mismatch: why shows though its condition is unmet",
+    )
+
+
+def test_a_condition_on_a_field_not_listed_is_an_adapter_error(fake, config, url, data):
+    fake.fields = [*FIELDS, Field("why", "Why?", FieldType.TEXT, False, shown_when=Is("x"))]
+    result = core.read(url, data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.UNSUPPORTED,
+        "adapter_error: ValueError: why: its condition names no field x",
+    )
 
 
 def test_a_known_gap_names_its_code_and_id():

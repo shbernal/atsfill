@@ -4,6 +4,7 @@ import re
 import unicodedata
 from pathlib import Path, PurePath
 
+from atsfill.core.conditions import Form, describe
 from atsfill.core.results import Answer, Check, Field, FieldType
 
 
@@ -54,11 +55,18 @@ def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
 def check(
     fields: list[Field], answers: dict[str, Answer], read_back: dict[str, Answer]
 ) -> list[Check]:
-    by_id = {f.id: f for f in fields}
-    return [
+    """Each answer against its read-back; a follow-up the answers keep hidden that reads back a
+    value is a mismatch too, its condition read wrong."""
+    by_id, form = {f.id: f for f in fields}, Form(fields, answers)
+    checks = [
         Check(f.id, a, read_back.get(f.id), matches(f, a, read_back.get(f.id)))
         for f_id, a in answers.items()
         if (f := by_id.get(f_id))
+    ]
+    return checks + [
+        Check(f.id, None, read_back[f.id], False)
+        for f in fields
+        if not form.shown(f) and f.id not in answers and read_back.get(f.id) not in (None, "", [])
     ]
 
 
@@ -88,13 +96,20 @@ def _answer_problem(field: Field, answer: object) -> str | None:
 
 
 def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
-    """What refuses a fill before typing: unknown ids, missing required answers, bad values."""
+    """What refuses a fill before typing: unknown ids, missing required answers, answers to
+    follow-ups the answers keep hidden, bad values."""
     by_id = {f.id: f for f in fields}
     out = [f"no field {i}" for i in answers if i not in by_id]
+    form = Form(fields, {i: a for i, a in answers.items() if i in by_id})
     out += [
         f"no answer for required {f.id} ({f.label})"
         for f in fields
-        if f.required and not f.prefilled and not f.unfillable and f.id not in answers
+        if form.required(f) and not f.prefilled and not f.unfillable and f.id not in answers
+    ]
+    out += [
+        f"{i}: not asked, it shows when {describe(f.shown_when, by_id)}"
+        for i in answers
+        if (f := by_id.get(i)) and f.shown_when and not form.shown(f)
     ]
     out += [
         f"{i}: cannot be filled ({f.unfillable})"

@@ -9,6 +9,7 @@ video Teamtailor holds under the id the form keeps.
 import re
 import time
 import unicodedata
+from dataclasses import replace
 from pathlib import PurePath
 from typing import Any
 from urllib.parse import urlsplit
@@ -16,7 +17,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Response
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 FORM = "#job-application-form"
 # A custom question, or a qualifying one: the rest of the form stays disabled until it is
@@ -73,6 +74,7 @@ _READ = """(form, QUESTION) => {
   const fields = [];
   for (const el of form.querySelectorAll("input, textarea")) {
     if (el.closest(QUESTION) || el.disabled || fields.some(f => f.id === el.name)) continue;
+    if (el.type !== "file" && /_remote_url\\]$/.test(el.name)) continue;  // an upload's address
     const kind = el.tagName === "TEXTAREA" ? "textarea"
       : el.name === "candidate[location][query]" ? "location"
       : el.type === "checkbox" && el.name.endsWith("[]") ? "choices" : el.type;
@@ -106,12 +108,13 @@ _READ = """(form, QUESTION) => {
       && form.querySelector(`[data-question-uuid="${q.dataset.questionShowIfUuid}"]`);
     const shownBy = parent && [...parent.querySelectorAll(PICKS)]
       .find(e => e.value === q.dataset.questionShowIfValue);
-    const when = shownBy && ` (asked when "${label(parent.querySelector("legend, label"))}" is`
-      + ` "${options(parent, [shownBy])[0]}")`;
-    fields.push({id: `question:${qid}`, kind, question: true, qualifying, conditional: !!parent,
-                 label: label(q.querySelector("legend, label")) + (when || ""),
-                 required: qualifying || (!parent && q.dataset.questionMandatory === "true"),
-                 asked: q.dataset.questionMandatory === "true",
+    const parentId = parent?.querySelector("input[name$='[question_id]']")?.value;
+    fields.push({id: `question:${qid}`, kind, question: true, qualifying,
+                 shownBy: parent && shownBy
+                   ? {id: `question:${parentId}`, option: options(parent, [shownBy])[0]} : null,
+                 visible: q.checkVisibility(),
+                 label: label(q.querySelector("legend, label")),
+                 required: qualifying || q.dataset.questionMandatory === "true",
                  accept: kind === "video"
                    ? q.querySelector("input[type=file]")?.accept.split(",").filter(Boolean) : null,
                  options: picks.length ? picks : menu.length ? menu : null});
@@ -176,7 +179,7 @@ class Teamtailor:
     def __init__(self) -> None:
         self._fields: dict[str, Field] = {}
         self._qualifying: set[str] = set()
-        self._follow_ups: dict[str, bool] = {}  # shown by an earlier answer: required once shown
+        self._follow_ups: set[str] = set()
         self._uploads: dict[str, str] = {}  # file field id: the answer's file name
         self._videos: dict[str, tuple[str, str]] = {}  # video field id: its video id, its URL
 
@@ -208,13 +211,15 @@ class Teamtailor:
             form.wait_for()
         except browser.Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
-        fields, self._qualifying, self._follow_ups = [], set(), {}
+        fields, self._qualifying, self._follow_ups = [], set(), set()
         for raw in form.evaluate(_READ, QUESTION):
             if raw.get("qualifying"):
                 self._qualifying.add(raw["id"])
-            if raw.get("conditional"):
-                self._follow_ups[raw["id"]] = raw["asked"]
-            fields.append(self._field(raw))
+            field = self._field(raw)
+            if shown_by := raw.get("shownBy"):  # a follow-up of an earlier question
+                self._follow_ups.add(raw["id"])
+                field = replace(field, shown_when=Is(shown_by["id"], [shown_by["option"]]))
+            fields.append(field)
         self._fields = {f.id: f for f in fields}
         return fields
 
@@ -229,16 +234,16 @@ class Teamtailor:
             if field_id in self._follow_ups and not self._shown(form, field_id):
                 continue  # not asked: the read-back leaves it out
             self._fill(form, field_id, answers[field_id])
-        for field_id, required in self._follow_ups.items():
-            if required and field_id not in answers and self._shown(form, field_id):
-                label = self._fields[field_id].label
-                raise Unsupported(f"missing_answer: an earlier answer asks {label!r}")
         self._uploads = {
             i: PurePath(a).name
             for i, a in answers.items()
             if self._fields[i].type is FieldType.FILE and isinstance(a, str)
         }
         self._wait_for_uploads(form)
+
+    def shown_fields(self, page: Page) -> list[str]:
+        raws = page.locator(FORM).evaluate(_READ, QUESTION)
+        return [raw["id"] for raw in raws if raw.get("visible", True)]
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, QUESTION)
