@@ -9,7 +9,7 @@ import pytest
 from atsfill.adapters.dayforce import Dayforce
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/dayforce/apply.html"
 JOB = "https://jobs.dayforcehcm.com/en-US/acme/careers/jobs/123"
@@ -56,7 +56,7 @@ TEMPLATE = {
             question(14, 3, "Your notice period"),
             question(15, 6, "I agree to a background check", required=True),
             question(16, 7, "Which locations?",
-                     [option(5, "North"), option(6, "South"), option(7, "East", True)]),
+                     [option(5, "North"), option(6, "South", True), option(7, "East", True)]),
          ]}},
         {"xRefCode": "DISABILITYQUESTIONNAIRE", "displayName": "Disability Form Questionnaire",
          "sequence": 6, "isRequired": False, "questionnaire": {"questions": [
@@ -153,7 +153,7 @@ def test_read_form_lists_every_page(page):
         "workHistory.isCurrent", "workHistory.stateCode", "educationHistory.schoolName",
         "educationHistory.gpa", "workHours.days", "workHours.start",
         "workHours.end", "workHours.comment", "q11", "q11.followup", "q13", "q14",
-        "q15", "q16", "q16.followup", "q23", "userAcknowledged",
+        "q15", "q16", "q16.followup.6", "q16.followup.7", "q23", "userAcknowledged",
     ]  # fmt: skip
     assert by_id["prefixId"].options == ["Mr", "Ms", "Dr"]  # a readonly dropdown, scrolled
     assert by_id["countryCode"].options and "United Kingdom" in by_id["countryCode"].options
@@ -165,10 +165,13 @@ def test_read_form_lists_every_page(page):
     assert by_id["workHistory.companyName"].max_length == 50  # read from an entry it opens
     assert by_id["workHistory.isCurrent"].options == ["No", "Yes"]
     assert by_id["educationHistory.gpa"].label == "Education History: GPA (a number)"
-    assert by_id["candidateSourceDescription"].label.endswith(
-        "(asked when 'CandidateSource' is Agency)"
-    )
-    assert by_id["q11.followup"].label.endswith("(asked when 'Do you hold a licence?' is Yes)")
+    assert by_id["candidateSourceDescription"].label == "Additional details"
+    assert by_id["candidateSourceDescription"].shown_when == Is("candidateSource", ["Agency"])
+    assert by_id["q11.followup"].label == "Enter additional comments here"
+    assert by_id["q11.followup"].shown_when == Is("q11", ["Yes"])
+    assert by_id["q11.followup"].required  # whenever shown
+    assert by_id["q16.followup.6"].shown_when == Is("q16", ["South"])  # one per option
+    assert by_id["q16.followup.7"].shown_when == Is("q16", ["East"])
     assert by_id["q15"].options == ["Yes", "No"] and by_id["q15"].required
     assert by_id["q16"].type is FieldType.MULTI_CHOICE
     assert "q22" not in by_id  # the disability form's name is the page's own, disabled
@@ -212,8 +215,9 @@ def test_every_answer_reads_back(page, resume):
         "q13": "Nights",
         "q14": "One month",
         "q15": "Yes",
-        "q16": ["North", "East"],
-        "q16.followup": "Remote",
+        "q16": ["North", "South", "East"],
+        "q16.followup.6": "Weekdays",
+        "q16.followup.7": "Remote",
         "q23": ["I do not want to answer"],
         "userAcknowledged": "Yes",
     }
@@ -222,6 +226,9 @@ def test_every_answer_reads_back(page, resume):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
     assert page.locator("main [test-id=application-next-step]").inner_text() == "Submit"
+    assert sorted(adapter.shown_fields(page)) == [
+        "candidateSourceDescription", "q11.followup", "q16.followup.6", "q16.followup.7"
+    ]  # fmt: skip
 
 
 def test_a_future_start_date_keeps_the_wizard_on_candidate_info(page, resume):

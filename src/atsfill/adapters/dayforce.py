@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Gap, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = "jobs.dayforcehcm.com"
 JOB = re.compile(r"^/(?:([a-z]{2}(?:-[A-Za-z]{2,4})?)/)?([^/]+)/([^/]+)/jobs/(\d+)")
@@ -36,6 +36,7 @@ UPDATE_TIMEOUT_MS = 5_000  # for a section to close, per Update click
 SUBMIT_TIMEOUT_MS = 90_000
 UPDATE_TRIES = 3
 FOLLOWUP_TIMEOUT_MS = 3_000
+FOLLOWUP = "Enter additional comments here"  # an option's comment box, required once shown
 DIAL_TIMEOUT_MS = 2_000  # per dial code tried, longest first
 OPTIONS_TIMEOUT_MS = 5_000  # for a dropdown's options to render
 NEXT_TRIES = 3
@@ -187,6 +188,7 @@ class Dayforce:
         self._sections: list[dict[str, Any]] = []  # the questionnaires, in page order
         self._options: dict[str, dict[str, str]] = {}  # field id: page text to option
         self._values: dict[str, Answer | None] = {}  # read back from each page before leaving it
+        self._shown: list[str] = []  # the follow-ups each page showed before leaving it
 
     def detect(self, url: str, page: Page | None) -> bool:
         return _job(url) is not None
@@ -236,7 +238,7 @@ class Dayforce:
             raise Unsupported("posting_gone: not a Dayforce job page")
         page.evaluate("key => sessionStorage.removeItem(key)", _draft(found))
         _open_form(page, found)
-        self._values = {}
+        self._values, self._shown = {}, []
         self._dialogs(page, answers)
         self._fill_candidate_info(page, answers)
         if not _next(page):
@@ -255,6 +257,11 @@ class Dayforce:
         if box.count():
             values["userAcknowledged"] = "Yes" if box.is_checked() else "No"
         return {k: v for k, v in values.items() if v not in (None, "", [])}
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The follow-ups the fill saw shown on each page before leaving it: the wizard keeps
+        no page but the last, so the rest are not listed."""
+        return list(self._shown)
 
     def submit(self, page: Page) -> str | None:
         before = page.url
@@ -294,9 +301,9 @@ class Dayforce:
             }.get(key) or None
             fields.append(Field(key, f["displayName"], kind, bool(f["isRequired"]), options))
             if key == "candidateSource" and explained:
-                asked = f"asked when {f['displayName']!r} is {' or '.join(explained)}"
-                label = f"Additional details ({asked})"
-                fields.append(Field("candidateSourceDescription", label, FieldType.TEXT, False))
+                fields.append(Field("candidateSourceDescription", "Additional details",
+                                    FieldType.TEXT, False,
+                                    shown_when=Is("candidateSource", explained)))  # fmt: skip
         if context.get("hasActiveSMSProvider"):
             fields.append(Field("smsConsent", "Consent to receive SMS messages", FieldType.CHOICE,
                                 False, NO_YES))  # fmt: skip
@@ -375,6 +382,7 @@ class Dayforce:
         description = page.locator(_id("candidateSourceDescription"))
         if description.count():
             self._values["candidateSourceDescription"] = description.input_value()
+            self._shown.append("candidateSourceDescription")
         _update(page, f"{PERSONAL}email")
         if page.locator(f"{HOURS}sunday_isChecked").count():
             self._fill_hours(page, answers)
@@ -449,13 +457,16 @@ class Dayforce:
         if field_id in answers and target.is_enabled():
             self._set_question(page, target, field, question, answers[field_id])
         self._values[field_id] = self._get_question(page, target, field, question)
-        followup = f"{field_id}.followup"
-        if followup in self._fields:
-            boxes = page.locator(  # a box group's is one per option asking for comments
-                f"[id='{base}answerFollowup'],"
-                f" :is(input, textarea)[id^='{base}answerFollowups_'],"
-                f" [id*='questionnaireFollowUp-{question['questionId']}-']"
-            )
+        # a box group's comment box is one per option asking for it, a single choice's one
+        followups = {f"{field_id}.followup": f"[id='{base}answerFollowup'],"
+                     f" [id*='questionnaireFollowUp-{question['questionId']}-']"}  # fmt: skip
+        for option in question["options"]:
+            box_id = f"{base}answerFollowups_{option['optionId']}"
+            followups[f"{field_id}.followup.{option['optionId']}"] = f"[id='{box_id}']"
+        for followup, selector in followups.items():
+            if followup not in self._fields:
+                continue
+            boxes = page.locator(selector)
             if followup in answers:
                 with suppress(Timeout):  # it shows once an option asking for comments is picked
                     boxes.first.wait_for(timeout=FOLLOWUP_TIMEOUT_MS)
@@ -464,6 +475,13 @@ class Dayforce:
                     box.fill(_one(answers[followup]))
             shown = [b.input_value() for b in boxes.all() if b.is_visible()]
             self._values[followup] = shown[0] if shown else ""
+            self._shown += [followup] if shown else []
+        for box in page.locator(f"[id^='{base}answerFollowup']").all():
+            box_id = box.get_attribute("id") or ""
+            option = box_id.removeprefix(f"{base}answerFollowup").removeprefix("s_")
+            followup = f"{field_id}.followup" + (f".{option}" if option else "")
+            if box.is_visible() and followup not in self._fields:
+                self._shown.append(box_id)  # a comment box `read_form` did not list
 
     def _set_question(
         self, page: Page, target: Locator, field: Field, question: dict[str, Any], answer: Answer
@@ -619,10 +637,22 @@ def _question_fields(section: dict[str, Any], question: dict[str, Any]) -> list[
     elif kind in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
         options = [_option_label(o) for o in question["options"]]
     fields = [Field(field_id, label, kind, bool(question["isRequired"]), options)]
-    asking = [_option_label(o) for o in question["options"] if o.get("hasFollowUp")]
-    if asking:
-        followup = f"Additional comments (asked when {label!r} is {' or '.join(asking)})"
-        fields.append(Field(f"{field_id}.followup", followup, FieldType.TEXT, False))
+    asking = [o for o in question["options"] if o.get("hasFollowUp")]
+    if question["answerType"] == MULTI:  # a comment box per option ticked
+        fields += [
+            Field(
+                f"{field_id}.followup.{o['optionId']}",
+                FOLLOWUP,
+                FieldType.TEXT,
+                True,
+                shown_when=Is(field_id, [_option_label(o)]),
+            )  # fmt: skip
+            for o in asking
+        ]
+    elif asking:
+        picks = [_option_label(o) for o in asking]
+        fields.append(Field(f"{field_id}.followup", FOLLOWUP, FieldType.TEXT, True,
+                            shown_when=Is(field_id, picks)))  # fmt: skip
     return fields
 
 
