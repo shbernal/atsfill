@@ -1,4 +1,4 @@
-"""The Greenhouse adapter on tests/pages/greenhouse, served as a job board and an embedding page."""
+"""The Greenhouse adapter on tests/pages/greenhouse, served as its hosted page and embedded."""
 
 from pathlib import Path
 

@@ -13,7 +13,7 @@ The operating-system account atsfill runs under, through its home directory: the
 _Avoid_: machine, OS user
 
 **Consumer**:
-The agent or script that runs atsfill commands for the user.
+Whoever runs atsfill commands for the user: an agent, a script, or a person.
 _Avoid_: client, caller
 
 **Harness**:
