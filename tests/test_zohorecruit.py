@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.zohorecruit import ZohoRecruit, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/zohorecruit"
@@ -87,15 +87,14 @@ def test_read_form(page):
     assert by_id["Languages"].type is FieldType.MULTI_CHOICE
     assert by_id["Skill_Set"].label == "Skill Set (comma-separated)"
     assert by_id["Experience_in_Years"].label == "Experience in Years (a number)"
-    assert by_id["Certificate_Link"].label == (
-        "Certificate Link (asked when 'Batch' is not No Batch)"
-    )
-    assert not by_id["Certificate_Link"].required
-    assert by_id["Experience_Details.I_currently_work_here"].options == ["Yes", "No"]
-    assert by_id["Experience_Details.Work_Duration.to"].label == (
-        "Experience Details: Work Duration end (MM/YYYY)"
-        " (asked when 'Experience Details: I currently work here' is No)"
-    )
+    assert by_id["Certificate_Link"].label == "Certificate Link"
+    assert by_id["Certificate_Link"].shown_when == Is("Batch", ["No Batch"], negated=True)
+    assert by_id["Certificate_Link"].required  # whenever shown
+    current = by_id["Experience_Details.I_currently_work_here"]
+    assert current.options == ["Yes", "No"] and current.default == "No"  # clear before any
+    end = by_id["Experience_Details.Work_Duration.to"]
+    assert end.label == "Experience Details: Work Duration end (MM/YYYY)"
+    assert end.shown_when == Is("Experience_Details.I_currently_work_here", ["No"])
     assert by_id["RESUME"].required
     assert by_id["RESUME"].accept == [".doc", ".docx", ".odt", ".pdf", ".rtf"]
     assert by_id["100000000000000050"].label == "How many years of experience do you have?"
@@ -138,6 +137,7 @@ def test_every_answer_reads_back(page, resume, tmp_path):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+    assert "Certificate_Link" in adapter.shown_fields(page)
 
 
 def test_a_field_its_answer_hides_is_not_filled(page):
@@ -145,16 +145,17 @@ def test_a_field_its_answer_hides_is_not_filled(page):
     adapter.fill(page, {"Batch": "No Batch", "Certificate_Link": "https://example.com"})
     read_back = adapter.read_back(page)
     assert read_back["Batch"] == "No Batch"
+    assert "Certificate_Link" not in adapter.shown_fields(page)
     assert "Certificate_Link" not in read_back
 
 
-def test_the_test_user_leaves_out_what_its_answers_hide(tmp_path):
+def test_the_test_user_answers_what_shows_the_most(tmp_path):
     fields = [c.field for c in _form(FORM)[0]]
     answers = testuser.answers(fields, tmp_path / "cv.pdf")
-    assert answers["Batch"] == "No Batch"
-    assert "Certificate_Link" not in answers
-    assert answers["Experience_Details.I_currently_work_here"] == "Yes"
-    assert "Experience_Details.Work_Duration.to" not in answers
+    assert answers["Batch"] == "Batch 1"
+    assert "Certificate_Link" in answers
+    assert answers["Experience_Details.I_currently_work_here"] == "No"
+    assert "Experience_Details.Work_Duration.to" in answers
 
 
 def test_a_posting_gone(page):

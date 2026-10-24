@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.hireology import Hireology, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/hireology"
@@ -86,17 +86,16 @@ def test_read_form(page):
     assert by_id["state_id"].options == ["DC", "MD"]
     assert by_id["sms_opt_in"].options == ["Yes", "No"]
     assert not by_id["sms_opt_in"].required  # a box left clear is an answer
-    assert by_id["referred_by"].label == (
-        "Name of person who referred you (asked when 'Were you referred by anyone?' is Yes)"
-    )
-    assert not by_id["referred_by"].required
+    assert by_id["referred_by"].label == "Name of person who referred you"
+    assert by_id["referred_by"].shown_when == Is("candidate_referred", ["Yes"])
+    assert by_id["candidate_referred"].default == "No"  # picked on the page before any answer
+    assert by_id["state_id"].default == "MD" and by_id["sms_opt_in"].default == "Yes"
     assert by_id["resume"].accept == [".pdf", ".doc", ".docx"]
     assert by_id["earliest_availability"].type is FieldType.DATE
     assert by_id["start_date"].label == "Work history: Start date (MM/YYYY)"
-    assert by_id["institute_name"].label.endswith(
-        "(asked when 'Education: Highest level of education completed'"
-        " is not Did Not Complete High School)"
-    )
+    assert by_id["institute_name"].shown_when == Is(
+        "highest_grade", ["Did Not Complete High School"], negated=True
+    )  # hidden until an education is picked
     assert by_id["custom_why_do_you_want_this_role"].label == "Why do you want this role?"
     assert by_id["custom_why_do_you_want_this_role"].max_length == 255
     assert by_id["legal"].label == "Do you have a legal right to work in the United States?"
@@ -150,12 +149,12 @@ def test_a_field_its_answer_hides_is_not_read_back(page):
     assert "institute_name" not in read_back
 
 
-def test_the_test_user_leaves_out_what_its_answers_hide(tmp_path):
+def test_the_test_user_answers_what_shows_the_most(tmp_path):
     fields = [f for f, _ in _form(FORM)]
     answers = testuser.answers(fields, tmp_path / "cv.pdf")
-    assert answers["highest_grade"] == "Did Not Complete High School"
-    assert "institute_name" not in answers
-    assert answers["candidate_referred"] == "Yes"
+    assert answers["highest_grade"] == "High School/GED"  # it shows the school fields
+    assert "institute_name" in answers
+    assert answers["candidate_referred"] == "Yes"  # over the page's No: it shows a field
     assert "referred_by" in answers
 
 

@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Gap, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = "recruiting.paylocity.com"
 JOB = re.compile(r"^/Recruiting/Jobs/(?:Details|Apply)/(\d+)", re.IGNORECASE)
@@ -317,6 +317,7 @@ class Paylocity:
     def __init__(self) -> None:
         self._form: list[tuple[Field, Control]] = []
         self._values: dict[str, Answer] = {}  # the read-back of the steps left behind
+        self._shown: list[str] = []  # the fields each step showed
 
     def detect(self, url: str, page: Page | None) -> bool:
         return _job(url) is not None
@@ -351,7 +352,7 @@ class Paylocity:
         return [f for f, _ in form]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        self._values = {}
+        self._values, self._shown = {}, []
         page.locator("form, #app").first.wait_for(timeout=FORM_TIMEOUT_MS)
         if "resume" in answers:  # first: a parsed resume fills fields the answers then override
             _upload_resume(page, _one(answers["resume"]))
@@ -360,8 +361,13 @@ class Paylocity:
                 if field.id in answers and field.id != "resume" and _present(page, control):
                     _fill(page, control, answers[field.id])
             self._values.update(self._read(page))
+            self._shown += [f.id for f, c in self._form if _present(page, c)]
             if not page.locator(NEXT).count() or not _next(page):
                 return
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The listed fields each step showed once filled: the wizard keeps only its last."""
+        return list(dict.fromkeys(self._shown))
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = {**self._values, **self._read(page)}
@@ -398,7 +404,7 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
     """The fields and their controls, in the page's order, from the apply page's pageData."""
     custom = data["customJobApplication"]
     out: list[tuple[Field, Control]] = []
-    labels: dict[str, str] = {}
+    ids: dict[str, str] = {}  # a listed control's field id, by its DOM id
 
     def add(spec: Spec, field: dict[str, Any], prefix: str = "", n: int = 0) -> None:
         dom = spec.dom.format(n=n)
@@ -410,13 +416,12 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
             options = [o["value" if spec.kind == "state" else "text"] for o in listed]
         label = prefix + (spec.label or _plain(field["displayName"]))
         required = field["isRequired"] if spec.required is None else spec.required
-        if spec.when:
-            trigger, value = spec.when
-            label += f" (asked when {labels.get(trigger, trigger)!r} is {value})"
-        labels[dom] = label
-        field_id = FILE_IDS.get(dom, dom)
+        shown_when = None
+        if spec.when and spec.when[0] in ids:
+            shown_when = Is(ids[spec.when[0]], [spec.when[1]])
+        field_id = ids[dom] = FILE_IDS.get(dom, dom)
         out.append((Field(field_id, label, TYPES[spec.kind], bool(required), options,
-                          spec.max_length),
+                          spec.max_length, shown_when=shown_when),
                     Control(spec.kind, dom, options)))  # fmt: skip
 
     add(RESUME, {"isRequired": bool(custom.get("requireResume") or data.get("requireResume"))})

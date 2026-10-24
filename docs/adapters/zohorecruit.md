@@ -22,7 +22,7 @@ Each rendering, and in how many of 36 employers' forms it shows (2026-10-21):
 | file (`lyte-fileupload`): resume (36), photo (15), cover letter (11), others; the accepted extensions from the API | `file` | 36 |
 | phone: a country dropdown (default the browser's locale) beside the number; the country picked by the number's dial code, the longest that fits, the first listed | `phone` | 33 |
 | image CAPTCHA (`captcha`) | not a field; `blocked` on submit | 27 |
-| repeatable section (education, experience) behind "Add": text, textarea, a "currently" box, a month range of four dropdowns (month by index, its names in the site's language, and year) | the first entry; the range's end asked when the box is clear | 18 |
+| repeatable section (education, experience) behind "Add": text, textarea, a "currently" box, a month range of four dropdowns (month by index, its names in the site's language, and year) | the first entry; the box `default` `No` (clear), the range's end `shown_when` it is `No` | 18 |
 | skill set (`textarea` rendered as tags): a tag per comma-separated skill, added on Enter after a lookup, then a proficiency popover closed with Escape; a tag shows its name shortened | `text`, `(comma-separated)` | 17 |
 | number input (`double`, `currency`, `integer`) | `text`, `(a number)` | 14 |
 | a pre-screening questionnaire answered after submit (`assessment_id`, not mandated) | not read: it follows the send | 8 |
@@ -32,13 +32,13 @@ Each rendering, and in how many of 36 employers' forms it shows (2026-10-21):
 | textarea | `text`, its length | 4 |
 | pre-screening questions in the form (`mandate_assessment`): text (type 1), textarea (2), radio (3), dropdown (6) | `text`, `choice` | 2 |
 | consent (`gdpr`): in the API, not rendered | not a field | 2 |
-| a field a display rule shows once another is answered (`layout_rules`, `Show_Fields`) | optional, the label says `(asked when '<label>' is [not] <value>)` | 1 |
+| a field a display rule shows once another is answered (`layout_rules`, `Show_Fields`) | its `shown_when`: `Is` the field on the value's option (`not_equal` negated, hidden while the field is unanswered), `AnyOf` several rules; its `required` kept | 1 |
 
 A component's own state lives in page scripts that Camoufox's isolated evaluation does not reach, so every control is driven and read through its markup.
 
 ## Filling
 
-- The first entry of each repeatable section answered is added, then the fields are filled in the API's order. A field a rule shows is waited for briefly, and skipped when the answer keeps it hidden.
+- The first entry of each repeatable section answered is added, then the fields are filled in the API's order. A field a rule shows is filled only when the answers show it, its control waited for briefly: a month range's end is hidden behind its dropdowns, so it is never tested for visibility. Once filled, the fields shown are those whose control is visible.
 - Text, number and date inputs are filled; a dropdown is opened and its item clicked; a box or a radio is clicked through its label.
 
 ## Read-back and submit

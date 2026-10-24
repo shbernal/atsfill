@@ -13,7 +13,7 @@ Paylocity Recruiting's public apply page, observed on live postings, last on 202
 
 ## Reading the form
 
-A field's id is its control's DOM id (`info.firstName`, `workHistory.companyName.0`), `resume`, `coverLetter`, `additionalFiles`, or `screener.<question id>`. Labels are the page's, a reference's prefixed `Reference 1: `; a field shown only after another's answer is optional, its label naming the condition.
+A field's id is its control's DOM id (`info.firstName`, `workHistory.companyName.0`), `resume`, `coverLetter`, `additionalFiles`, or `screener.<question id>`. Labels are the page's, a reference's prefixed `Reference 1: `; a field shown only after another's answer (worked here before, may we contact the supervisor, graduated: `Yes`) has that `shown_when`. Once filled, the fields shown are the listed ones each step showed.
 
 Each rendering, and in how many of 60 postings' configurations it shows (2026-10-20):
 
