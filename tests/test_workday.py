@@ -9,7 +9,7 @@ from atsfill.adapters import workday as workday_module
 from atsfill.adapters.workday import Workday
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, NotTaken, Refused, Unsupported
-from atsfill.core.results import FieldType
+from atsfill.core.results import AnyOf, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/workday"
@@ -243,6 +243,9 @@ def test_a_fresh_draft_lists_the_pages_up_to_the_first_it_cannot_save(opened):
     assert by_id["workExperience--jobTitle"].required
     assert not by_id["workExperience--location"].required  # shown, not required
     assert by_id["workExperience--startDate"].label == "Work Experience: From (MM/YYYY)"
+    end = by_id["workExperience--endDate"]
+    assert end.shown_when == Is("workExperience--currentlyWorkHere", ["No"])
+    assert by_id["workExperience--currentlyWorkHere"].default == "No"  # shows the end date
     school = by_id["education--school"]  # the tenant lists schools
     assert school.type is FieldType.TYPEAHEAD and not school.required  # Education is optional
     assert by_id["education--degree"].options == ["Bachelor's Degree", "Master's Degree"]
@@ -254,10 +257,8 @@ def test_a_fresh_draft_lists_the_pages_up_to_the_first_it_cannot_save(opened):
     assert by_id["primaryQuestionnaire--q2"].type is FieldType.MULTI_CHOICE
     assert by_id["primaryQuestionnaire--q4"].type is FieldType.DATE
     follow_up = by_id["primaryQuestionnaire--q5"]
-    assert not follow_up.required
-    assert follow_up.label == (
-        'Which visa do you need? (asked when "Are you authorized to work in the UK?" is "No")'
-    )
+    assert follow_up.label == "Which visa do you need?"
+    assert follow_up.shown_when == Is("primaryQuestionnaire--q1", ["No"])
     assert by_id["primaryQuestionnaire--q6"].label == "Years of experience (a number)"
     assert "personalInfoPerson--gender" not in by_id  # behind pages that do not save yet
 
@@ -302,29 +303,36 @@ def test_another_country_renders_fields_the_read_did_not(opened, page):
 def test_a_follow_up_an_answer_opens_on_my_information_is_named(opened, page):
     adapter, _ = opened
     with pytest.raises(
-        NotTaken, match="^My Information shows fields the read did not: What's their name.; an"
+        Unsupported, match="^unhandled_rendering: an answer showed What's their name., not listed"
     ):
         adapter.fill(page, {"source--source": "Employee Referral"})
 
 
-def test_a_follow_up_of_a_follow_up_names_its_question_as_listed():
+def test_a_follow_up_of_a_follow_up_holds_on_its_parent_s_answers():
     yes_no = "Multiple Choice - Single Select"
     items = [
         {"id": "a", "body": "Held a public office?", "required": True,
          "type": {"descriptor": yes_no},
          "possibleAnswers": [{"answerText": "Yes", "branchingQuestion": {"id": "b"}},
-                             {"answerText": "No"}]},
+                             {"answerText": "No", "branchingQuestion": {"id": "d"}}]},
         {"id": "b", "body": "<p>In the last two years?</p>", "required": True,
          "type": {"descriptor": yes_no},
          "possibleAnswers": [{"answerText": "Yes", "branchingQuestion": {"id": "c"}},
                              {"answerText": "No", "branchingQuestion": {"id": "c"}}]},
         {"id": "c", "body": "Which one?", "required": True, "type": {"descriptor": "Text"}},
+        {"id": "d", "body": "Since when?", "required": False, "type": {"descriptor": "Text"}},
+        {"id": "e", "body": "Ever abroad?", "required": False, "type": {"descriptor": yes_no},
+         "possibleAnswers": [{"answerText": "Yes", "branchingQuestion": {"id": "d"}}]},
     ]  # fmt: skip
     fields = {f.id: f for f in workday_module._questions("primary", items)}
     b, c = fields["primaryQuestionnaire--b"], fields["primaryQuestionnaire--c"]
-    assert b.label == 'In the last two years? (asked when "Held a public office?" is "Yes")'
-    assert c.label == f'Which one? (asked when "{b.label}" is "Yes or No")'
-    assert not b.required and not c.required
+    assert b.label == "In the last two years?" and c.label == "Which one?"
+    assert b.shown_when == Is("primaryQuestionnaire--a", ["Yes"])
+    assert c.shown_when == Is("primaryQuestionnaire--b", ["Yes", "No"])
+    assert fields["primaryQuestionnaire--d"].shown_when == AnyOf(
+        [Is("primaryQuestionnaire--a", ["No"]), Is("primaryQuestionnaire--e", ["Yes"])]
+    )
+    assert b.required and c.required  # whenever shown
     answers = testuser.answers(list(fields.values()), Path("cv.pdf"))
     assert answers["primaryQuestionnaire--a"] == "Yes"
-    assert "primaryQuestionnaire--c" in answers  # the Test user reads the nested label
+    assert "primaryQuestionnaire--c" in answers  # shown through b
