@@ -7,7 +7,16 @@ import pytest
 from atsfill.adapters import adapters
 from atsfill.cli import emit, parser, run
 from atsfill.core import browser
-from atsfill.core.results import Check, Field, FieldType, Result, SideEffect, Status
+from atsfill.core.results import (
+    Check,
+    Field,
+    FieldType,
+    Is,
+    OptionSet,
+    Result,
+    SideEffect,
+    Status,
+)
 
 
 def test_send_requires_answers():
@@ -79,6 +88,29 @@ def test_a_read_keeps_the_fields_and_side_effects_without_empty_keys(capsys):
         ],
         "side_effects": [dataclasses.asdict(EFFECTS[0])],
     }
+
+
+def test_a_read_keeps_empty_options_nothing_to_choose(capsys):
+    state = Field(
+        "state",
+        "State",
+        FieldType.CHOICE,
+        False,
+        [],
+        option_sets=[OptionSet(Is("country", ["Canada"]), ["Ontario"])],
+    )
+    result = Result(Status.READY, URL, "fake", fields=[state])
+    assert emitted(capsys, result, "read")["fields"] == [
+        {
+            "id": "state",
+            "label": "State",
+            "type": "choice",
+            "options": [],
+            "option_sets": [
+                {"when": {"field_id": "country", "values": ["Canada"]}, "options": ["Ontario"]}
+            ],
+        }
+    ]
 
 
 def test_a_ready_fill_is_its_status_system_and_warning(capsys):

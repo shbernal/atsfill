@@ -212,10 +212,15 @@ def _slim(result: dict, command: str | None) -> dict:
 
 
 def _sparse(value: object) -> object:
-    """Drops the keys whose value is null, false or empty, at every depth."""
+    """Drops the keys whose value is null, false or empty, at every depth; empty `options`
+    stay, nothing to choose, where null is unknown."""
     if isinstance(value, dict):
         kept = {k: _sparse(v) for k, v in value.items()}
-        return {k: v for k, v in kept.items() if v not in (None, False, [], {})}
+        return {
+            k: v
+            for k, v in kept.items()
+            if v not in (None, False, [], {}) or (k == "options" and v == [])
+        }
     if isinstance(value, list):
         return [_sparse(v) for v in value]
     return value
