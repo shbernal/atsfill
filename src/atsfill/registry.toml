@@ -53,7 +53,7 @@ account = "to_send"
 hosting = ["hosted"]
 adapter = "wttj"
 send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "9bc6d84" }
-dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "adapter_gate", commit = "ad9f478" }
+dry_run_verified = { date = 2026-10-24, version = "0.0.3", by = "adapter_gate", commit = "90c58c3" }
 
 [workday]
 kind = "ats"
