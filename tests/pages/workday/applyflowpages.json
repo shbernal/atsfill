@@ -1,0 +1,85 @@
+{
+  "total": 5,
+  "data": [
+    {
+      "id": "p1",
+      "descriptor": "My Information",
+      "sections": null
+    },
+    {
+      "id": "p2",
+      "descriptor": "My Experience",
+      "sections": [
+        {
+          "id": "s1",
+          "hidden": false,
+          "required": false,
+          "label": "Certification Number"
+        },
+        {
+          "id": "s2",
+          "hidden": false,
+          "required": true,
+          "label": "Work Experience"
+        },
+        {
+          "id": "s3",
+          "hidden": false,
+          "required": false,
+          "label": "Location"
+        },
+        {
+          "id": "s4",
+          "hidden": true,
+          "required": false,
+          "label": "Role Description"
+        },
+        {
+          "id": "s9",
+          "hidden": false,
+          "required": false,
+          "label": "Education"
+        },
+        {
+          "id": "s5",
+          "hidden": false,
+          "required": false,
+          "label": "Skills"
+        },
+        {
+          "id": "s6",
+          "hidden": false,
+          "required": true,
+          "label": "Resume/CV"
+        },
+        {
+          "id": "s7",
+          "hidden": true,
+          "required": false,
+          "label": "Languages"
+        },
+        {
+          "id": "s8",
+          "hidden": false,
+          "required": false,
+          "label": "Websites"
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "descriptor": "Application Questions",
+      "sections": null
+    },
+    {
+      "id": "p4",
+      "descriptor": "Voluntary Disclosures",
+      "sections": null
+    },
+    {
+      "id": "p5",
+      "descriptor": "Review",
+      "sections": null
+    }
+  ]
+}

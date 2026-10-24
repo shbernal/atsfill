@@ -1,0 +1,10 @@
+{
+  "jobPostingInfo": {
+    "title": "Engineer",
+    "jobPostingId": "Engineer_R123-1",
+    "posted": true,
+    "canApply": true,
+    "country": {"descriptor": "United Kingdom"},
+    "questionnaireId": "qn1"
+  }
+}

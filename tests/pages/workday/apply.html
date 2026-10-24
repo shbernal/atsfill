@@ -1,0 +1,260 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Acme Careers</title>
+<!-- Workday's apply wizard for an Acme posting: one example of each rendering. Each page saves
+     to a draft (sessionStorage) the next load resumes, from My Information, as Workday does. -->
+<style>
+  [role=listbox], [data-automation-id=promptPopup] { border: 1px solid; margin: 0; padding: 0; }
+  [role=option], [data-automation-id=promptOption] { list-style: none; padding: 2px; }
+</style>
+<div data-automation-id="applyFlowPage">
+  <h2 data-automation-id="jobTitleHeading">Engineer</h2>
+  <ol data-automation-id="progressBar"></ol>
+  <div id="errors"></div>
+  <div id="page"></div>
+  <button data-automation-id="pageFooterNextButton">Save and Continue</button>
+</div>
+<script>
+  const PAGES = {
+    "My Information": [
+      {id: "country--country", label: "Country*", kind: "list", value: "United Kingdom",
+       options: ["United Kingdom", "United States of America"]},
+      {id: "address--countryRegion", label: "State*", kind: "list", options: ["Texas"],
+       when: ["country--country", "United States of America"]},  // the country's address
+      {id: "name--legalName--firstName", label: "Given Name(s)*", kind: "text"},
+      {id: "name--preferredCheck", label: "I have a preferred name", kind: "box"},
+      {id: "previousWorker--candidateIsPreviousWorker", label: "Have you worked for Acme before?*", kind: "radio",
+       options: ["Yes", "No"]},
+      {id: "source--source", label: "How Did You Hear About Us?*", kind: "prompt", single: true,
+       tree: {"Job Board": ["LinkedIn", "Indeed", "Linked Jobs", "Job Fair (Acme)"],
+              "Corporate Website": null}},
+      {id: "phoneNumber--countryPhoneCode", label: "Country Phone Code*", kind: "prompt", single: true,
+       value: ["United Kingdom (+44)"], size: 250,
+       tree: {"United Kingdom (+44)": null, "United States of America (+1)": null}},
+      {id: "phoneNumber--phoneNumber", label: "Phone Number*", kind: "text"},
+    ],
+    "My Experience": [
+      // An entry is added by its list's Add button, its fields numbered the page's own way.
+      {id: "workExperience-3--jobTitle", label: "Job Title*", kind: "text", entry: "Work-Experience"},
+      {id: "workExperience-3--companyName", label: "Company*", kind: "text", entry: "Work-Experience"},
+      {id: "workExperience-3--location", label: "Location", kind: "text", entry: "Work-Experience"},
+      {id: "workExperience-3--currentlyWorkHere", label: "I currently work here", kind: "box", entry: "Work-Experience"},
+      {id: "workExperience-3--startDate", label: "From*", kind: "month", entry: "Work-Experience"},
+      // A school is searched for where the tenant lists schools.
+      {id: "education-5--school", label: "School or University*", kind: "prompt", single: true,
+       tree: {"University of Acme": null, "Acme Institute": null}, entry: "Education-(Optional)"},
+      {id: "education-5--degree", label: "Degree*", kind: "list",
+       options: ["Bachelor's Degree", "Master's Degree"], entry: "Education-(Optional)"},
+      {id: "resumeAttachments--attachments", label: "Upload a file (5MB max)*", kind: "file",
+       value: ["old resume.pdf"]},
+      {id: "skills--skills", label: "Type to Add Skills", kind: "prompt", tree: {"Python": null}},
+    ],
+    "Application Questions": [
+      {id: "primaryQuestionnaire--q1", label: "Are you authorized to work in the UK?*", kind: "list",
+       options: ["Yes", "No"]},
+      {id: "primaryQuestionnaire--q2", label: "Which languages do you speak?*", kind: "boxes",
+       options: ["English", "French"]},
+      {id: "primaryQuestionnaire--q3", label: "Why Acme?*", kind: "textarea"},
+      {id: "primaryQuestionnaire--q4", label: "When can you start?*", kind: "date"},
+    ],
+    "Voluntary Disclosures": [
+      {id: "personalInfoPerson--gender", label: "Gender*", kind: "list", portal: true,
+       options: ["Female", "Male", "Not declared"]},
+      {id: "termsAndConditions--acceptTermsAndAgreements", label: "I Agree*", kind: "box"},
+    ],
+    "Review": [],
+  };
+  const STEPS = Object.keys(PAGES);
+  const draft = JSON.parse(sessionStorage.getItem("draft") || "{}");
+  let step = 0;
+  const el = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
+  const live = {};  // what the page holds before it is saved
+  const shown = f => !f.when || (live[f.when[0]] ?? valueOf(PAGES["My Information"][0])) === f.when[1];
+  const valueOf = f => live[f.id] ?? draft[f.id] ?? f.value ?? (["boxes", "prompt", "file"].includes(f.kind) ? [] : f.kind === "box" ? false : "");
+
+  const closeLists = () => document.querySelectorAll("[data-automation-id=activeListContainer]").forEach(e => e.remove());
+  document.addEventListener("click", e => { if (e.target.closest("h2")) closeLists(); });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") document.querySelectorAll("ul[role=listbox][id]").forEach(e => e.remove());
+  });
+
+  function progress() {
+    document.querySelector("[data-automation-id=progressBar]").innerHTML = STEPS.map((s, n) =>
+      `<li data-automation-id="${n === step ? "progressBarActiveStep" : "progressBarInactiveStep"}">` +
+      `${n === step ? "current " : ""}step ${n + 1} of ${STEPS.length}<br>${s}</li>`).join("");
+  }
+
+  function render() {
+    progress();
+    document.getElementById("errors").innerHTML = "";
+    const page = document.getElementById("page");
+    page.innerHTML = "";
+    const added = new Set(JSON.parse(sessionStorage.getItem("entries") || "[]"));
+    for (const group of new Set(PAGES[STEPS[step]].filter(f => f.entry).map(f => f.entry))) {
+      const section = el(`<div role="group" aria-labelledby="${group}-section"><h3 id="${group}-section">${group.replace("-", " ")}</h3></div>`);
+      if (!added.has(group)) {
+        const add = el(`<button type="button" data-automation-id="add-button">Add</button>`);
+        add.onclick = () => {
+          added.add(group);
+          sessionStorage.setItem("entries", JSON.stringify([...added]));
+          setTimeout(render, 200);
+        };
+        section.append(add);
+      }
+      page.append(section);
+    }
+    for (const f of PAGES[STEPS[step]].filter(f => (!f.entry || added.has(f.entry)) && shown(f))) {
+      const box = el(`<div data-automation-id="formField-${f.id.split("--").pop()}" data-fkit-id="${f.id}"></div>`);
+      box.append(el(`<label for="${f.id}-in">${f.label}</label>`));
+      const value = valueOf(f);
+      if (f.kind === "text" || f.kind === "textarea") {
+        const input = el(f.kind === "text" ? `<input type="text" id="${f.id}-in">` : `<textarea id="${f.id}-in"></textarea>`);
+        input.value = value;
+        box.append(input);
+      } else if (f.kind === "box") {
+        const input = el(`<input type="checkbox" id="${f.id}-in">`);
+        input.checked = value;
+        box.append(input);
+      } else if (f.kind === "radio" || f.kind === "boxes") {
+        f.options.forEach((o, n) => {
+          const input = el(`<input type="${f.kind === "radio" ? "radio" : "checkbox"}" name="${f.id}" id="${f.id}-${n}">`);
+          input.checked = f.kind === "radio" ? value === o : value.includes(o);
+          box.append(input, el(`<label for="${f.id}-${n}">${o}</label>`));
+        });
+      } else if (f.kind === "list") {
+        // Some tenants' dropdowns name their listbox only once it opens, at the end of the body.
+        const controls = f.portal ? "" : `aria-controls="${f.id}-list"`;
+        const button = el(`<button type="button" aria-haspopup="listbox" ${controls} id="${f.id}-in">${value || "Select One"}</button>`);
+        button.onclick = () => {
+          const list = el(`<ul role="listbox" id="${f.id}-list"></ul>`);
+          for (const o of ["Select One", ...f.options]) {
+            const option = el(`<li role="option" ${o === "Select One" ? 'aria-disabled="true"' : ""}>${o}</li>`);
+            option.onclick = () => {
+              button.textContent = o;
+              list.remove();
+              if (f.id === "country--country") { live[f.id] = o; render(); }
+              // A question's answer posts the questionnaire's definition; the page renders the
+              // reply over the answers given meanwhile.
+              if (f.id.startsWith("primaryQuestionnaire--")) {
+                live[f.id] = o;
+                fetch("questionnaire/qn1/definition?type=primary", {method: "POST"})
+                  .then(r => r.json()).then(render);
+              }
+            };
+            list.append(option);
+          }
+          setTimeout(() => {
+            (f.portal ? document.body : box).append(list);
+            button.setAttribute("aria-controls", list.id);
+          }, 200);  // the options come a moment later
+        };
+        box.append(button);
+      } else if (f.kind === "prompt") {
+        // Picked items as pills; a category's items behind a chevron and a back button.
+        const picked = el(`<ul data-automation-id="selectedItemList" role="listbox"></ul>`);
+        const pick = name => {
+          if (f.single) picked.innerHTML = "";
+          const item = el(`<li data-automation-id="menuItem"><div data-automation-id="selectedItem" role="option"><p data-automation-id="promptOption">${name}</p><span data-automation-id="DELETE_charm" aria-label="delete"></span></div></li>`);
+          item.querySelector("[data-automation-id=DELETE_charm]").onclick = () => item.remove();
+          picked.append(item);
+        };
+        value.forEach(pick);
+        const input = el(`<input type="text" id="${f.id}-in" data-uxi-widget-type="selectinput">`);
+        const leaves = Object.entries(f.tree).flatMap(([k, v]) => v || [k]);
+        const show = (rows, back) => {
+          closeLists();
+          const list = el(`<div data-automation-id="activeListContainer" role="listbox"></div>`);
+          if (back) {
+            const button = el(`<button type="button" data-automation-id="backButton">Back</button>`);
+            button.onclick = () => show(Object.keys(f.tree), false);
+            list.append(button);
+          }
+          for (const name of rows) {
+            const nested = !back && Array.isArray(f.tree[name]);
+            const row = el(`<div role="option" aria-setsize="${f.size || rows.length}"><div data-automation-id="promptLeafNode" data-uxi-multiselectlistitem-hassidecharm="${nested}"><div data-automation-id="promptOption">${name}</div></div></div>`);
+            row.onclick = () => nested ? show(f.tree[name], true) : pick(name);
+            list.append(row);
+          }
+          document.body.append(list);
+        };
+        // Enter on an empty search opens the tree; after typing it lists the matching items,
+        // and picks the only one. The search misses names with brackets, as live ones can.
+        input.onkeydown = e => {
+          if (e.key === "Escape") closeLists();
+          if (e.key !== "Enter") return;
+          if (!input.value) return show(Object.keys(f.tree), false);
+          const found = leaves.filter(o =>
+            !o.includes("(") && o.toLowerCase().includes(input.value.toLowerCase()));
+          if (found.length === 1) { pick(found[0]); input.value = ""; } else show(found, false);
+        };
+        box.append(picked, input);
+      } else if (f.kind === "month") {
+        const [m, y] = (value || "/").split("/");
+        for (const [part, v] of [["Month", m], ["Year", y]]) {
+          const input = el(`<input type="text" data-automation-id="dateSection${part}-input">`);
+          input.value = v;
+          box.append(input);
+        }
+      } else if (f.kind === "date") {
+        const parts = (value || "--").split("-");
+        for (const [part, n] of [["Month", 1], ["Day", 2], ["Year", 0]]) {
+          const input = el(`<input type="text" data-automation-id="dateSection${part}-input">`);
+          input.value = parts[n];
+          box.append(input);
+        }
+      } else if (f.kind === "file") {
+        const items = el(`<div></div>`);
+        const item = name => {
+          const row = el(`<div data-automation-id="file-upload-item"><div data-automation-id="file-upload-item-name">${name}</div><button type="button" data-automation-id="delete-file">Delete ${name}</button></div>`);
+          row.lastChild.onclick = () => setTimeout(() => row.remove(), 300);
+          items.append(row);
+        };
+        value.forEach(item);
+        const input = el(`<input type="file" data-automation-id="file-upload-input-ref" multiple>`);
+        input.onchange = () => { for (const file of input.files) setTimeout(() => item(file.name), 300); };
+        box.append(input, items);
+      }
+      page.append(box);
+    }
+  }
+
+  function values() {
+    const out = {};
+    for (const f of PAGES[STEPS[step]]) {
+      const box = document.querySelector(`[data-fkit-id="${f.id}"]`);
+      if (!box) continue;  // an entry not added
+      const text = s => [...box.querySelectorAll(s)].map(e => e.textContent.replace(/x$/, "").trim());
+      if (f.kind === "text" || f.kind === "textarea") out[f.id] = box.querySelector("input, textarea").value;
+      else if (f.kind === "box") out[f.id] = box.querySelector("input").checked;
+      else if (f.kind === "radio") out[f.id] = f.options.find((o, n) => box.querySelector(`#${CSS.escape(f.id)}-${n}`).checked) || "";
+      else if (f.kind === "boxes") out[f.id] = f.options.filter((o, n) => box.querySelector(`#${CSS.escape(f.id)}-${n}`).checked);
+      else if (f.kind === "list") out[f.id] = box.querySelector("button").textContent === "Select One" ? "" : box.querySelector("button").textContent;
+      else if (f.kind === "prompt") out[f.id] = text("[data-automation-id=selectedItem]");
+      else if (f.kind === "file") out[f.id] = text("[data-automation-id=file-upload-item-name]");
+      else if (f.kind === "month") {
+        const [m, y] = ["Month", "Year"].map(p => box.querySelector(`[data-automation-id=dateSection${p}-input]`).value);
+        out[f.id] = y && m ? `${m.padStart(2, "0")}/${y}` : "";
+      }
+      else if (f.kind === "date") {
+        const [m, d, y] = ["Month", "Day", "Year"].map(p => box.querySelector(`[data-automation-id=dateSection${p}-input]`).value);
+        out[f.id] = y && m && d ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : "";
+      }
+    }
+    return out;
+  }
+
+  document.querySelector("[data-automation-id=pageFooterNextButton]").onclick = () => {
+    const page = values();
+    const missing = PAGES[STEPS[step]].filter(f => f.id in page && f.label.endsWith("*") && (page[f.id] === "" || page[f.id] === false || page[f.id].length === 0));
+    if (missing.length) {
+      document.getElementById("errors").innerHTML = `<div data-automation-id="errorHeading">Errors Found ` +
+        missing.map(f => `Error - ${f.label.replace("*", "")}: The field is required and must have a value.`).join(" ") + "</div>";
+      return;
+    }
+    Object.assign(draft, page);
+    sessionStorage.setItem("draft", JSON.stringify(draft));
+    step += 1;
+    setTimeout(render, 300);  // the next page renders after the save answers
+  };
+  render();
+</script>
