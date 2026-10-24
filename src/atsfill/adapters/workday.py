@@ -317,7 +317,7 @@ class Workday:
                         _until_rendered(page, pending)
                 page.wait_for_timeout(SETTLE_MS)
             self._unread(page)
-            self._values |= {r["id"]: r["value"] for r in _page_fields(page)}
+            self._values |= {r["id"]: r["value"] for r in _filled(page, answers)}
             if self._values.get(PHONE_NUMBER) and (code := _phone_code(page)):
                 self._values[PHONE_NUMBER] = f"+{code} {self._values[PHONE_NUMBER]}"
             _save_and_continue(page)
@@ -528,6 +528,17 @@ def _rendered(page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
     for _ in range(RENDER_TRIES):
         raws = _page_fields(page)
         if all(r["kind"] for r in raws if r["id"] in answers):
+            break
+        page.wait_for_timeout(SETTLE_MS)
+    return raws
+
+
+def _filled(page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
+    """The page's fields once each answered one shows a value: a picked item can leave the
+    page for a moment as it renders again."""
+    for _ in range(RENDER_TRIES):
+        raws = _page_fields(page)
+        if all(r["value"] not in (None, "", []) for r in raws if r["id"] in answers):
             break
         page.wait_for_timeout(SETTLE_MS)
     return raws

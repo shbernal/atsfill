@@ -62,7 +62,7 @@ Each rendering, from 40 postings' questionnaires and the pages walked:
 
 ## Read-back and submit
 
-- Each page's values are read before it is saved: an input's value, a dropdown's text, the picked prompt items, the checked option's label, a box as `Yes`/`No`, the uploaded file's name, a date as `YYYY-MM-DD`, the phone with the country code beside it (`+44 1234567890`). Every page is saved as it is left, so the read-back is what the draft holds, read from the page, not from the server. Review repeats it without field ids.
+- Each page's values are read before it is saved, once each answered field shows one (a picked item can leave the page for a moment): an input's value, a dropdown's text, the picked prompt items, the checked option's label, a box as `Yes`/`No`, the uploaded file's name, a date as `YYYY-MM-DD`, the phone with the country code beside it (`+44 1234567890`). Every page is saved as it is left, so the read-back is what the draft holds, read from the page, not from the server. Review repeats it without field ids.
 - Submit is Review's `pageFooterNextButton`, which atsfill expects to post the application (`…/submit`); no send was made.
 
 ## Development
