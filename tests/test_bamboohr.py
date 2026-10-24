@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.bamboohr import BambooHR, _form, _from_page, _to_page
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import Answer, FieldType, Is
+from atsfill.core.results import Answer, FieldType, Is, OptionSet
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/bamboohr"
@@ -103,13 +103,11 @@ def test_browser_read(page):
     ]
     assert by_id["phone"].type is FieldType.PHONE
     assert by_id["dateAvailable"].type is FieldType.DATE
-    # every country's list, the default country's first: the page's list follows the answer
-    assert by_id["state"].options == [
-        "District of Columbia",
-        "Maryland",
-        "Alberta",
-        "Western Australia",
-        "Aberdeen City",
+    # each list under its country the form lists; any other country's state is typed
+    assert by_id["state"].options is None
+    assert by_id["state"].option_sets == [
+        OptionSet(Is("countryId", ["United States"]), ["District of Columbia", "Maryland"]),
+        OptionSet(Is("countryId", ["Canada"]), ["Alberta"]),
     ]
     assert by_id["countryId"].default == "United States" and by_id["countryId"].prefilled is None
     assert by_id["question_13"].options == ["Yes", "No"]
@@ -128,7 +126,7 @@ def test_browser_read(page):
 
 def test_request_read_lists_the_same_fields(page):
     _, fields = opened(page)
-    shape = lambda fs: [(f.id, f.label, f.type, f.required, f.options) for f in fs]  # noqa: E731
+    shape = lambda fs: [(f.id, f.label, f.type, f.required, f.options, f.option_sets) for f in fs]  # noqa: E731
     assert shape(f for f, _ in _form(DETAIL, LISTS, None)) == shape(fields)
 
 
@@ -174,6 +172,21 @@ def test_a_country_without_a_list_takes_a_typed_state(page):
     adapter, _ = opened(page)
     adapter.fill(page, {"countryId": "Spain", "state": "Madrid"})
     assert adapter.read_back(page)["state"] == "Madrid"
+
+
+def test_a_state_is_one_of_its_country_list():
+    fields = [f for f, _ in _form(DETAIL, LISTS, None)]
+
+    def state(country: str, state: str) -> list[str]:
+        given = {"countryId": country, "state": state}
+        return [p for p in matching.problems(fields, given) if p.startswith("state:")]
+
+    assert state("Canada", "Alberta") == []
+    assert state("United States", "Alberta") == [
+        "state: 'Alberta' is not one of ['District of Columbia', 'Maryland'], "
+        'the options when "Country" is "United States"'
+    ]
+    assert state("Spain", "Madrid") == []  # typed, left to the read-back
 
 
 def test_the_test_user_keeps_the_page_country(tmp_path):

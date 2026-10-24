@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, OptionSet, SideEffect
 
 HOST = re.compile(r"^[\w-]+\.bamboohr\.com$")
 JOB = re.compile(r"^/careers/(\d+)(?:/|$)")
@@ -411,25 +411,41 @@ def _form(
         if key == "countryId" and country:
             by_id = {str(o["id"]): o["text"] for o in entry.get("options") or []}
             shown = by_id.get(str(country), country if country in by_id.values() else None)
+        option_sets = None
         if key == "state" and options:
-            options = _states(states, country)
-        if key == "state" and not options:
+            countries = result["formFields"].get("countryId") or {}
+            options, option_sets = None, _states(states, countries.get("options") or [])
+        if key == "state" and not option_sets:
             kind = "text"
         if kind == "veteran":
             extra = {o["id"]: o["text"] for o in entry["options"] if int(o["id"]) > 0}
             options = list(VETERAN) + list(extra.values())
         accept = FILE_TYPES if kind == "file" else None
-        field = Field(key, label, TYPES[kind], required, options, None, accept, default=shown)
+        field = Field(
+            key,
+            label,
+            TYPES[kind],
+            required,
+            options,
+            None,
+            accept,
+            default=shown,
+            option_sets=option_sets,
+        )
         out.append((field, (kind, name, extra)))
     return out
 
 
-def _states(states: dict[str, Any], default: str | None) -> list[str]:
-    """The state lists of every country that has one, the default country's (an id) first:
-    the list the page shows follows the country answered."""
-    order = sorted(STATE_LISTS, key=lambda c: c != default)
-    names = [s["full_name"] for c in order for s in (states.get(c) or {}).get("data") or []]
-    return list(dict.fromkeys(names))
+def _states(states: dict[str, Any], countries: list[dict[str, Any]]) -> list[OptionSet]:
+    """The state list of each country that has one, under that country as the form lists it;
+    any other country's state is typed."""
+    by_id = {str(o["id"]): o["text"] for o in countries}
+    return [
+        OptionSet(Is("countryId", [by_id[c]]), names)
+        for c in STATE_LISTS
+        if c in by_id
+        and (names := [s["full_name"] for s in (states.get(c) or {}).get("data") or []])
+    ]
 
 
 def _custom(question: dict[str, Any]) -> list[tuple[Field, tuple[str, str | None, Any]]]:
