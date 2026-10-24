@@ -1,6 +1,6 @@
 # JazzHR
 
-Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/jazzhr/apply.html](../../tests/pages/jazzhr/apply.html), served as a posting's page in `tests/test_jazzhr.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/jazzhr/apply.html](../../tests/pages/jazzhr/apply.html), served as a posting's page in `tests/test_jazzhr.py`.
 
 ## Where the form is
 
@@ -19,7 +19,7 @@ The form is server-rendered HTML in a Bootstrap layout: each field a `.form-grou
 | `input[type=email]` | `text` | 15 |
 | `input[type=tel]` | `phone` | 15 |
 | Address: one label over four inputs (address, city, state, postal), the last three named by their placeholder; its star stands for all four | `text` each | 13 |
-| Resume: `input[type=file]` behind "Attach resume", beside "Paste resume" (a textarea, not offered) | `file`, `.pdf .doc .docx .odt .txt .rtf` | 15 |
+| Resume: `input[type=file]` behind "Attach resume", beside "Paste resume" (`resumator-resumetext-value`, a textarea) | `file` (`.pdf .doc .docx .odt .txt .rtf`) and `text` alternatives, `one_of` `resume`, both under the resume's star | 15 |
 | `textarea`: cover letter, references, a questionnaire question | `text` | 6 |
 | `select` with a placeholder option (`resumator_no_selection` or "No answer", left out): citizenship, over 18, education, questionnaire questions | `choice` | 10 |
 | `select` with `optgroup`s (citizenship by country) | `choice`, the groups flattened | 4 |
@@ -36,7 +36,7 @@ Every other control is hidden and not a field. The disability name and date are 
 ## Filling
 
 - Plain inputs, selects (by the option's text), radios and boxes, set directly; nothing reaches JazzHR before submit.
-- "Attach resume" is clicked to show the file input before the resume is attached.
+- "Attach resume" is clicked to show the file input before the resume is attached; "Paste resume" (or the file side's own "Paste resume" link) to show the textarea before a pasted resume is typed.
 - A questionnaire's boxes are joined into its hidden answer only on submit, so they read back by which are checked.
 
 ## Read-back and submit

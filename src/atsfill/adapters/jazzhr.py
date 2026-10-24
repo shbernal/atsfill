@@ -47,13 +47,15 @@ _READ = """form => {
   const shown = el => el.offsetParent !== null;
   const disability = "#resumator-new-disability-message";
   const found = [], radios = new Set();
+  const pasted = "resumator-resumetext-value";  // "Paste resume", the file's alternative
+  const pasteable = !!form.querySelector(`#${pasted}`);
   const controls = form.querySelectorAll(
     "input:not([type=hidden]), select, textarea, input.resumator-questionnaire-checkbox-answer");
   for (const el of controls) {
-    if (["resumator-resumetext-value", "resumator-xml-value", "g-recaptcha-response"]
-        .includes(el.id) || el.classList.contains("resumator-questionnaire-checkbox")) continue;
+    if (["resumator-xml-value", "g-recaptcha-response"].includes(el.id)
+        || el.classList.contains("resumator-questionnaire-checkbox")) continue;
     const hidden = el.type === "file" ? el.id !== "resumator-resume-value"
-      : !shown(el) && el.type !== "hidden";
+      : !shown(el) && el.type !== "hidden" && el.id !== pasted;
     if (hidden) continue;
     const group = el.closest(".form-group, .resumator-field-wrapper");
     const groupLabel = group?.querySelector(".control-label, .resumator-label");
@@ -79,10 +81,11 @@ _READ = """form => {
       field.kind = "select";
       field.options = [...el.options].filter(o => !o.value.startsWith("resumator_no_selection")
         && !/^no answer$/i.test(o.text.trim())).map(o => o.text.trim());
-    } else if (el.type === "file") {
-      field.kind = "file";
+    } else if (el.type === "file" || el.id === pasted) {
+      field.kind = el.type === "file" ? "file" : "pasted";
       field.label = text(groupLabel);
       field.required = starred(groupLabel);
+      if (pasteable) field.oneOf = "resume";
     } else {
       field.kind = el.classList.contains("resumator-datepicker") ? "date"
         : el.type === "tel" ? "tel" : "text";
@@ -162,6 +165,12 @@ class JazzHR:
                         if attach.is_visible():
                             attach.click()
                     field.set_input_files(values[0])
+                case "pasted":  # behind "Paste resume", from the choice or the file's own link
+                    for link in ("#resumator-choose-paste", "#resumator-resume-switch-paste"):
+                        if page.locator(link).is_visible():
+                            page.locator(link).click()
+                            break
+                    field.fill(values[0])
                 case "select":
                     field.select_option(label=values[0])
                 case "radio":
@@ -235,7 +244,7 @@ def _signed_on_disability(fields: list[Field]) -> list[Field]:
 def _field(raw: dict[str, Any]) -> Field:
     kind, options = raw["kind"], raw.get("options")
     match kind:
-        case "text":
+        case "text" | "pasted":
             field_type = FieldType.TEXT
         case "date":
             field_type = FieldType.DATE
@@ -256,5 +265,12 @@ def _field(raw: dict[str, Any]) -> Field:
             )
     accept = RESUME_TYPES if kind == "file" else None
     return Field(
-        raw["id"], raw["label"], field_type, raw["required"], options, raw.get("maxLength"), accept
+        raw["id"],
+        raw["label"],
+        field_type,
+        raw["required"],
+        options,
+        raw.get("maxLength"),
+        accept,
+        one_of=raw.get("oneOf"),
     )

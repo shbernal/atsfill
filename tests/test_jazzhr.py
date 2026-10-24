@@ -60,6 +60,7 @@ def test_read_form(page):
         "state",
         "postal",
         "resume",
+        "resumetext",
         "coverletter",
         "citizen",
         "salary",
@@ -81,6 +82,9 @@ def test_read_form(page):
     assert by_id["city"].required  # the address's star stands for its four inputs
     assert by_id["resume"].required
     assert by_id["resume"].accept == [".pdf", ".doc", ".docx", ".odt", ".txt", ".rtf"]
+    text = by_id["resumetext"]
+    assert (text.type, text.required, text.one_of) == (FieldType.TEXT, True, "resume")
+    assert by_id["resume"].one_of == "resume"
     assert by_id["citizen"].options == [
         "I am a U.S. Citizen/Permanent Resident",
         "Non-citizen seeking work authorization",
@@ -141,6 +145,13 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_a_resume_pasted_as_text(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"resumetext": "Jane Doe, engineer"}
+    adapter.fill(page, answers)
+    assert matching.check(fields, answers, adapter.read_back(page))[0].match
 
 
 def test_an_unknown_rendering_is_listed_unhandled():
