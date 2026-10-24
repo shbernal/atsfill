@@ -12,7 +12,7 @@ import pytest
 from atsfill.adapters.paycor import Paycor, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
-from atsfill.core.results import FieldType
+from atsfill.core.results import Answer, FieldType, Is, OptionSet
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/paycor"
@@ -139,10 +139,16 @@ def test_browser_read_lists_each_rendering(page):
     assert shifts.type is FieldType.MULTI_CHOICE and shifts.options == ["1st", "2nd"]
     assert by_id["gnewton_section_50_question_50_answer"].options == ["Yes", "No"]
     assert by_id["gnewton_section_50_question_70_answer_email"].label == "Personal Email"
-    assert by_id["gnewton_section_60_question_20_answer_country"].options == [
-        "Afghanistan",
-        "United States",
+    country = "gnewton_section_60_question_20_answer_country"
+    assert by_id[country].options == ["Afghanistan", "Canada", "United States"]
+    state = by_id["gnewton_section_60_question_30_answer_state"]
+    assert state.option_sets == [  # every country's list is in the page's script
+        OptionSet(Is(country, negated=True), ["DC", "NY"]),
+        OptionSet(Is(country, ["Canada"]), ["Alberta", "Ontario"]),
+        OptionSet(Is(country, ["United States"]), ["DC", "NY"]),
     ]
+    assert state.options == []  # any other country disables it
+    assert not state.required and state.required_when == Is(country, ["Canada", "United States"])
     assert by_id["gnewton_section_60_question_50_answer"].type is FieldType.PHONE
     assert by_id["candidateTextMessagingOptIn"].options == ["Yes", "No"]
     assert by_id["veteran"].label == "Protected veteran status"
@@ -216,6 +222,26 @@ def test_a_country_without_states_closes_the_state(page):
                 "gnewton_section_60_question_30_answer_state": "DC",
             },
         )
+
+
+def test_a_state_is_one_of_its_country_list(page):
+    _, fields = opened(page)
+    country, state = (
+        "gnewton_section_60_question_20_answer_country",
+        "gnewton_section_60_question_30_answer_state",
+    )
+
+    def under(**given: Answer) -> list[str]:
+        return [p for p in matching.problems(fields, given) if state in p]
+
+    assert under(**{country: "Canada", state: "Ontario"}) == []
+    assert under(**{country: "Canada", state: "DC"}) == [
+        f"{state}: 'DC' is not one of ['Alberta', 'Ontario'], the options when \"Country\" is "
+        '"Canada"'
+    ]
+    assert under(**{country: "Afghanistan", state: "DC"}) == [f"{state}: 'DC' is not one of []"]
+    assert under(**{country: "Canada"}) == [f"no answer for required {state} (State or Province)"]
+    assert under(**{country: "Afghanistan"}) == []  # not asked there
 
 
 def test_a_closed_posting_is_gone(page):

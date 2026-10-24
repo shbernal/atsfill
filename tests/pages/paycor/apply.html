@@ -135,14 +135,15 @@
           <div class="gnewtonQuestionInputClass">
             <select id="gnewton_section_60_question_20_answer_country" name="gnewton_section_60_question_20_answer_country"
                     class="gnewtonCountryClass" data-state-id="gnewton_section_60_question_30_answer_state" title="Country">
-              <option value="">Please Select</option><option value="AF">Afghanistan</option><option value="US" selected>United States</option>
+              <option value="">Please Select</option><option value="AF">Afghanistan</option><option value="CA">Canada</option><option value="US">United States</option>
             </select>
           </div>
         </div>
         <div>
           <div class="gnewtonQuestionLabelClass"><label>State or Province</label></div>
           <div class="gnewtonQuestionInputClass">
-            <select id="gnewton_section_60_question_30_answer_state" name="gnewton_section_60_question_30_answer_state" title="State or Province">
+            <select id="gnewton_section_60_question_30_answer_state" name="gnewton_section_60_question_30_answer_state" title="State or Province"
+                    required="required" class="gnewtonRequired">
               <option value="">Please Select</option><option value="DC">DC</option><option value="NY">NY</option>
             </select>
           </div>
@@ -238,9 +239,15 @@
   document.getElementById('mobile').addEventListener('input', e => {
     for (const r of document.getElementsByName('candidateTextMessagingOptIn')) r.disabled = !e.target.value;
   });
-  // A country without states closes its state select.
+  // Each country's state list; a country without one closes its state select.
+  var us_country_states = ["DC", "NY"];
+  var ca_country_states = ["Alberta", "Ontario"];
   document.querySelector('.gnewtonCountryClass').addEventListener('change', e => {
-    document.getElementById(e.target.dataset.stateId).disabled = e.target.value !== 'US';
+    const state = document.getElementById(e.target.dataset.stateId);
+    const states = window[e.target.value.toLowerCase() + '_country_states'];
+    state.disabled = !states;
+    state.required = !!states;
+    state.replaceChildren(new Option('Please Select', ''), ...(states || []).map(s => new Option(s, s)));
   });
 </script>
 </body>

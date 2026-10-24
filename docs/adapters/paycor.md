@@ -37,7 +37,7 @@ Each rendering, and in how many of 40 postings it shows (2026-10-20; 30 forms re
 | custom radios, the option's text after the input | `choice` | 8 |
 | custom checkboxes, one or several (an acceptance, shifts, "currently attend") | `multi_choice` | 13 |
 | custom date (`_answer_date`): a text `mm/dd/yyyy` turned by the page into a native date input | `date` | 13 |
-| custom country select with its state select (`data-state-id`); a country without states disables the state | `choice` | 1 |
+| custom country select with its state select (`data-state-id`): the page's script holds every country's state list (`var ca_country_states = [...]`) and refills the state on a change; a country without one disables the state and drops its `required` | the state a dependent list: `choice`, one option set per country with a list and one for no country, the list the page starts with; `options` empty under any other country; required only under a country with a list | 1 |
 | employer's self-identification inside the form: gender, race, veteran radios | `choice` | 13 |
 | text message opt-in (`candidateTextMessagingOptIn`), enabled once a mobile number is typed | `choice` | 14 |
 | privacy policy acknowledgement (`ccpaDisclaimerAgree`) | `multi_choice` | 30 |
@@ -52,7 +52,7 @@ Work history, education and references are flat custom questions (three blocks e
 - The pages before the form are walked again from the start with the answers; reading walks them picking the last option and Yes.
 - The resume is uploaded first and waited for (`ajaxResumeFilename`): its parse fills fields, which the answers then override.
 - Controls are filled in page order, so a country comes before its state and the mobile number before the opt-in. Text is filled, a native date takes `YYYY-MM-DD`, a text date `MM/DD/YYYY`, a select its option's text, radios and boxes are clicked.
-- A state select left disabled by the country answered is `answer_not_taken`.
+- A state answered under a country without states is refused before typing; a state select the page still leaves disabled is `answer_not_taken`.
 
 ## Read-back and submit
 
