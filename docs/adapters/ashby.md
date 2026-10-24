@@ -18,7 +18,7 @@ Each type, how the page renders it, and on how many of 15 employers' postings (2
 
 | Ashby type | Field type | Rendering | Postings |
 |---|---|---|---|
-| `String`, `Email`, `Url`, `Number`, `Phone` | `text`, `phone` for `Phone` | `input` of the matching `type` | 15 |
+| `String`, `Email`, `Url`, `Number`, `Phone` | `text`, `url` for `Url`, `phone` for `Phone` | `input` of the matching `type` | 15 |
 | `LongText` | `text` | `textarea` | 7 |
 | `Date` | `date` | text input with a date picker | 3 |
 | `File` | `file` | hidden file input in a drop zone | 15 |

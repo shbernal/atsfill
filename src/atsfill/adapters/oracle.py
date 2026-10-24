@@ -46,6 +46,7 @@ UPLOAD_TIMEOUT_MS = 30_000
 CHECKBOX = ["Yes", "No"]
 KINDS = {
     "text": FieldType.TEXT,
+    "url": FieldType.URL,
     "phone": FieldType.PHONE,
     "date": FieldType.DATE,
     "pills": FieldType.CHOICE,
@@ -136,7 +137,7 @@ _READ = """() => {
         field.kind = "checks";
         field.options = pills(".apply-flow-input-checkbox__label");
       } else if (input?.matches("textarea, input.input-row__control") && !input.disabled) {
-        field.kind = input.type === "email" ? "email" : "text";
+        field.kind = ["email", "url"].includes(input.type) ? input.type : "text";
         field.value = input.value;
         field.maxLength = input.maxLength > 0 ? input.maxLength : null;
       } else if (input?.disabled || !row.querySelector(CONTROL)) {
@@ -212,7 +213,7 @@ _READ_BACK = """(ids) => {
       const picked = [...row.querySelectorAll("input:checked")]
         .map(i => text(row.querySelector(`label[for="${i.id}"]`)));
       out[id] = kind === "radios" ? picked[0] ?? null : picked;
-    } else if (kind === "text" || kind === "email") {
+    } else if (kind === "text" || kind === "email" || kind === "url") {
       out[id] = input.value;
     }
   }
@@ -431,7 +432,7 @@ class Oracle:
             return
         row = self._row(page, field_id)
         match kind, answer:
-            case "text", str():
+            case "text" | "url", str():
                 box = row.locator("input, textarea").first
                 box.fill(answer)
                 if box.get_attribute("role") == "combobox":  # an address search, left unpicked

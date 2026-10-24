@@ -24,7 +24,7 @@ Each rendering, and on how many of the 12 forms reached out of 15 postings (2026
 
 | Page | Field type | Postings |
 |---|---|---|
-| `input.input-row__control` text, url, `textarea` | `text` | 12 |
+| `input.input-row__control` text, url, `textarea` | `text`, `url` for url | 12 |
 | phone: country code dropdown (`+44 (United Kingdom)`, on some tenants `United Kingdom (+44)`) and `input[type=tel]` | `phone` | 12 |
 | `ul[role=radiogroup]` pills (`.cx-select-pill-section`, `--selected`) | `choice` | 12 |
 | `.cx-multi-select-pills`, pills in `ul[role=list]` | `multi_choice` | 1 |

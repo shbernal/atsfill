@@ -20,6 +20,7 @@ class FieldType(StrEnum):
     TYPEAHEAD = "typeahead"
     FILE = "file"
     PHONE = "phone"
+    URL = "url"  # the system declares it a URL; answered as an absolute http(s) URL
 
 
 type Answer = str | list[str]

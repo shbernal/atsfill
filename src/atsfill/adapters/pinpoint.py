@@ -40,7 +40,7 @@ SUBMIT_TIMEOUT_MS = 90_000
 YES_NO = ["Yes", "No"]
 US = "United States"  # the country whose address asks for a city and a state
 JOB_PREFERENCES = "job_preferences"
-TEXT_QUESTIONS = {"Shorttext", "Longtext", "Url", "Numberinput"}
+TEXT_QUESTIONS = {"Shorttext", "Longtext", "Url", "Numberinput"}  # Url is a `url` field
 FILE_QUESTIONS = {"Document", "Multipledocuments"}
 NOT_FIELDS = {"New", "Chatbot", "Stagescarousel"}  # components without a field, by last name
 VOID = {"input", "br", "img", "hr", "meta", "link", "source", "wbr", "col", "area"}
@@ -459,6 +459,8 @@ def _component(
     yes_no = props.get("translations", {})
     if short in TEXT_QUESTIONS:
         field_type, spec = FieldType.TEXT, _Spec("text", props["name"], root)
+        if short == "Url":
+            field_type = FieldType.URL
         if short == "Numberinput":
             label += " (a number)"
     elif short == "Boolean":

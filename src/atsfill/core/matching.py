@@ -3,6 +3,7 @@
 import re
 import unicodedata
 from pathlib import Path, PurePath
+from urllib.parse import urlsplit
 
 from atsfill.core.results import Answer, Check, Field, FieldType
 
@@ -25,6 +26,11 @@ def _picked_from(answer: str, suggestion: str) -> bool:
     return all(any(p == wanted.strip() for p in parts) for wanted in answer.split(","))
 
 
+def _absolute_url(value: str) -> bool:
+    parts = urlsplit(_norm(value))
+    return parts.scheme in ("http", "https") and bool(parts.netloc)
+
+
 def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
     if read_back is None:
         return False
@@ -36,7 +42,7 @@ def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
     if not isinstance(answer, str) or not isinstance(read_back, str):
         return False
     match field.type:
-        case FieldType.TEXT:
+        case FieldType.TEXT | FieldType.URL:
             return _norm(answer) == _norm(read_back)
         case FieldType.DATE:
             return answer == read_back
@@ -74,8 +80,14 @@ def _answer_problem(field: Field, answer: object) -> str | None:
     if field.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE) and not _in_options(field, values):
         return f"{answer!r} is not one of {field.options}"
     length = len(_norm(values[0]))
-    if field.type is FieldType.TEXT and field.max_length and length > field.max_length:
+    if (
+        field.type in (FieldType.TEXT, FieldType.URL)
+        and field.max_length
+        and length > field.max_length
+    ):
         return f"{length} characters, over the limit of {field.max_length}"
+    if field.type is FieldType.URL and not _absolute_url(values[0]):
+        return "a url answer is an absolute http(s) URL"
     if field.type is FieldType.DATE and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", values[0]):
         return "a date answer is YYYY-MM-DD"
     if field.type is FieldType.FILE:

@@ -111,6 +111,7 @@ def test_read_form(page):
         == 'Which adjustments? (asked when "Do you require any adjustments?" is Yes)'
     )
     assert not follow_up.required
+    assert by_id["question_1004"].type is FieldType.URL
     assert by_id["question_1007"].type is FieldType.CHOICE
     assert by_id["question_1008"].type is FieldType.MULTI_CHOICE
     assert by_id["question_1009"].type is FieldType.DATE

@@ -54,7 +54,7 @@ One input on a form, identified by a stable id taken from the form. Its label is
 _Avoid_: input, question
 
 **Field type**:
-How a field's answer is written and matched: `text`, `date`, `choice`, `multi_choice`, `typeahead`, `file` or `phone`.
+How a field's answer is written and matched: `text`, `url`, `date`, `choice`, `multi_choice`, `typeahead`, `file` or `phone`. A field is `url` only where its hiring system declares it one, never from its label.
 
 **Rendering**:
 One way a field type appears on a hiring system's page, such as a native select or a combobox that saves on Enter.
