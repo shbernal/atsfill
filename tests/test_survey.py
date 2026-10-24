@@ -88,6 +88,7 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("i", "Avatar", FieldType.FILE, False, accept=["image/png"]),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
         Field("t", "City", FieldType.TYPEAHEAD, True),
+        Field("w", "Town", FieldType.TYPEAHEAD, False),  # the form's country's towns only
         Field("z", "Postal code / zip code", FieldType.TYPEAHEAD, True),
         Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
         Field("o", "Video", FieldType.FILE, False, unfillable="out_of_scope: o is a video"),

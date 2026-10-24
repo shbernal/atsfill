@@ -134,8 +134,9 @@ def _accepts(field: Field, extension: str, mime: str) -> bool:
 
 
 def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None:
-    """The Test user's answer to one field; None for a choice with no options to pick from, or
-    a file that takes neither a PDF nor, given a `picture`, a PNG."""
+    """The Test user's answer to one field; None for a choice with no options to pick from, an
+    optional search of places, or a file that takes neither a PDF nor, given a `picture`, a
+    PNG."""
     match field.type:
         case FieldType.FILE if not _accepts(field, ".pdf", "application/pdf"):
             return str(picture) if picture and _accepts(field, ".png", "image/png") else None
@@ -173,7 +174,10 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
                 return f"Citizen ({COUNTRY_NAMES[1]})"
             if re.search(r"nationalit|country", field.label, re.I):
                 return COUNTRY
-            return REGION if re.search(r"state|province|region", field.label, re.I) else CITY
+            if re.search(r"state|province|region", field.label, re.I):
+                return REGION
+            # an optional search of places is left: it may list only the form's country's (Workday)
+            return CITY if field.required else None
         case _:
             return _text(field)
 
