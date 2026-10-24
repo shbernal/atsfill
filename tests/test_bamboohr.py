@@ -111,7 +111,7 @@ def test_read_form(page):
         "Western Australia",
         "Aberdeen City",
     ]
-    assert by_id["countryId"].prefilled
+    assert by_id["countryId"].default == "United States" and by_id["countryId"].prefilled is None
     assert by_id["question_13"].options == ["Yes", "No"]
     assert by_id["question_14"].options == ["She/Her", "They/Them", "Other"]
     assert by_id["question_14_other"].label == (
@@ -181,7 +181,7 @@ def test_a_country_without_a_list_takes_a_typed_state(page):
 def test_the_test_user_keeps_the_page_country(tmp_path):
     fields = [f for f, _ in _form(DETAIL, LISTS, None)]
     answers = testuser.answers(fields, tmp_path / "cv.pdf")
-    assert "countryId" not in answers
+    assert answers["countryId"] == "United States"  # the page's, which the state list follows
     assert answers["state"] == "District of Columbia"
     assert answers["veteranStatusId"] == "Decline to Answer"
     assert "question_14_other" not in answers

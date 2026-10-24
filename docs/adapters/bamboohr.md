@@ -31,7 +31,7 @@ Each rendering, and in how many of 325 postings' detail answers it shows (2026-1
 
 A key or question type outside this table, or a field the JSON lists and the page does not show, is listed as `unhandled_rendering`.
 
-The page shows a country before any answer, the employer's; the country field is `prefilled`, so the Test user keeps it and answers the state from that country's list.
+The page shows a country before any answer, the employer's: the country field's `default`, which a required country still needs answered. The Test user answers it, and the state from that country's list.
 
 ## Filling
 

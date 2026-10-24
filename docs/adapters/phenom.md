@@ -21,7 +21,7 @@ The apply page's HTML assigns `phApp` (`refNum`, `locale`), `phApp.ddo.response.
 - Phenom's applicant-source workflow fills its lists from a `temp_data` `jsonData` table: the sources, or the sub-sources under each, which are listed together. A `dependent_utm` tree (sources under each "how you heard" answer, `sourceTypeSchema`) is listed the same way, a hidden sub-source (`show: false`) left out.
 - `allOf` rules add properties when their `if` holds: on the page's own data (a hidden field, `locale`) it is decided at once; on one answer it makes the field optional, its label ending `(asked when '<label>' is <option>)`; on a resume given (`resumeName` `isNotEmpty`), the field is not read and, where it is required, the resume is.
 
-A top-level list that holds an answer before any (its `default`, the job's country) is `prefilled`, as is a signature's date (`defaultTodayDate`); a `removeField` common rule leaves its field out; a `maxLength` is the field's.
+A top-level list that holds an answer before any (its `default`, the job's country) has that option's text as the field's `default`, the page's, not the account's, so a required one is still answered; a signature's date (`defaultTodayDate`) is `prefilled` with today's, the only one the page takes; a `removeField` common rule leaves its field out; a `maxLength` is the field's.
 
 A field's id is its schema path, dotted (`phoneWidget.phoneNumber`, `jsqData.QUESTIONNAIRE-3-185.a`, `experienceData[0].fromTo.startDate`), which is the control's DOM id, a radio group's `name`, or a checkbox group's boxes' id without `_<n>`; the resume is `resume`. Required: the parent's `required` list or `ui:required`.
 

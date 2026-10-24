@@ -63,9 +63,9 @@ PHONE_CODES = "/values/phone/countryCodes"
 # An answer to a question posts the questionnaire's definition; the page renders its reply
 # over the answers given meanwhile
 DEFINITION = "/definition?"
-# A field whose value is the site's default before any answer, not the account's: the
-# country's default is the browser's locale's, the user's, and decides the address fields read
-SITE_DEFAULTS = {PHONE_CODE_ID}
+# A field whose value before any answer is the site's, not the account's: the country is the
+# browser's locale's, and decides the address fields read
+SITE_DEFAULTS = {"country--country", PHONE_CODE_ID}
 PHONE_NUMBER = "phoneNumber--phoneNumber"
 RESUME_ID = "resumeAttachments--attachments"
 REVIEW = "Review"
@@ -555,8 +555,12 @@ def _field(raw: dict[str, Any]) -> Field | None:
     if kind is None:
         reason = f"unhandled_rendering: {raw['label'] or raw['id']!r} is a {raw['kind']}"
         return Field(raw["id"], raw["label"], FieldType.TEXT, raw["required"], unfillable=reason)
-    prefilled = raw["value"] not in (None, "", [], "No") and raw["id"] not in SITE_DEFAULTS
-    return Field(raw["id"], raw["label"], kind, raw["required"], options, prefilled=prefilled)
+    value = raw["value"] if raw["value"] not in (None, "", [], "No") else None
+    site = raw["id"] in SITE_DEFAULTS
+    return Field(
+        raw["id"], raw["label"], kind, raw["required"], options,
+        prefilled=None if site else value, default=value if site else None,
+    )  # fmt: skip
 
 
 def _experience(adapter: Workday, page: Page, flow: dict[str, Any], values: str) -> list[Field]:

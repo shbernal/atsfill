@@ -16,6 +16,7 @@ import urllib.request
 import uuid
 from collections.abc import Callable, Iterable, Iterator
 from contextlib import suppress
+from datetime import date
 from html import unescape
 from pathlib import PurePath
 from typing import Any
@@ -576,7 +577,8 @@ class _Config:
             "required": required,
             "options": None,
             "nav": nav,
-            "prefilled": p.get("defaultTodayDate") is True,  # a signature's date, today
+            # a signature's date: today's, the only one the page takes
+            "prefilled": date.today().isoformat() if p.get("defaultTodayDate") is True else None,
             "max_length": p.get("maxLength") if isinstance(p.get("maxLength"), int) else None,
         }
         self.labels[path] = raw["label"]
@@ -589,7 +591,7 @@ class _Config:
             }
             raw["options"] = _unique(t for _, t in self.loaded_list(listing, api)) or None
         if kind == "select" and re.fullmatch(r"\w+", path):  # a default, the job's country
-            raw["prefilled"] = self.prefilled(path)[0] is not None
+            raw["default"] = self.prefilled(path)[1] or None
         if kind in ("date", "month", "year"):
             raw["format"] = (u.get("ui:placeholder") if p.get("format") == "date" else None) or (
                 p.get("format") or "MM/dd/yyyy"
@@ -1085,7 +1087,8 @@ def _field(raw: dict[str, Any]) -> Field:
         raw["required"],
         options or None,
         max_length=raw.get("max_length") if field_type is FieldType.TEXT else None,
-        prefilled=raw.get("prefilled", False),
+        prefilled=raw.get("prefilled"),
+        default=raw.get("default"),
     )
 
 

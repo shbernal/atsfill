@@ -211,8 +211,10 @@ class Eightfold:
             if control.dom is None and not control.field.shown_when:
                 reason = f"unhandled_rendering: {control.field.id} is not on the page"
                 control.field = replace(control.field, unfillable=reason)
-            elif control.dom is not None and _prefilled(page, control):
-                control.field = replace(control.field, prefilled=True)
+        held = self._values(page, [c for c in self._controls if c.dom and not c.field.unfillable])
+        for control in self._controls:
+            if control.field.id in held and control.field.prefilled is None:
+                control.field = replace(control.field, default=held[control.field.id])
         self._fields = [c.field for c in self._controls]
         self._controls = [c for c in self._controls if not c.field.unfillable]
         return self._fields
@@ -240,10 +242,14 @@ class Eightfold:
         doms = page.evaluate(_DOM_IDS, unplaced) if unplaced else {}
         for control in self._controls:
             control.dom = control.dom or doms.get(control.field.id)
-        shown = [c for c in self._controls if c.dom]
-        values = page.evaluate(_READ_BACK, [[c.field.id, c.dom, c.kind] for c in shown])
+        return self._values(page, [c for c in self._controls if c.dom])
+
+    @staticmethod
+    def _values(page: Page, controls: list[_Control]) -> dict[str, Answer]:
+        """What each rendered control shows, a date in ISO; those showing nothing left out."""
+        values = page.evaluate(_READ_BACK, [[c.field.id, c.dom, c.kind] for c in controls])
         out: dict[str, Answer] = {}
-        for control in shown:
+        for control in controls:
             value = values.get(control.field.id)
             if control.kind == "date" and value:
                 value = _iso(value)
@@ -373,7 +379,8 @@ def _control(q: dict[str, Any], by_id: dict[str, dict[str, Any]]) -> _Control:
         files = q.get("resumeOptions") or q.get("fileUploadOptions") or {}
         types = files.get("acceptedFileTypes") or (files.get("fileFormats") or "").split(",")
         accept = [t.strip() for t in types if t.strip()] or None
-    today = bool((q.get("dateOptions") or {}).get("today"))  # today's date, read-only
+    # today's date, read-only: the page takes no other, so it stands for the answer
+    today = date.today().isoformat() if (q.get("dateOptions") or {}).get("today") else None
     question = Field(
         qid,
         label,
@@ -398,15 +405,6 @@ def _box_of(page: Page, control: _Control):
 
 def _box(page: Page, control: _Control):
     return page.locator(f"[id={json.dumps(f'{control.dom}_error')}]").locator("xpath=..")
-
-
-def _prefilled(page: Page, control: _Control) -> bool:
-    if control.kind in ("text", "select", "date"):
-        el = _box(page, control).locator("input:not([type=file]), textarea").first
-        return bool(el.count() and el.input_value())
-    if control.kind == "pills":
-        return _box(page, control).locator("[id^=selectPilllist]").count() > 0
-    return False
 
 
 def _fill(page: Page, control: _Control, answer: Answer) -> None:

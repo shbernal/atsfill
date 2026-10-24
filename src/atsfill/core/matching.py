@@ -116,7 +116,7 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
     out += [
         f"no answer for required {f.id} ({f.label})"
         for f in fields
-        if form.required(f) and not f.prefilled and not f.unfillable and f.id not in answers
+        if form.required(f) and f.prefilled is None and not f.unfillable and f.id not in answers
     ]
     out += [
         f"{i}: not asked, it shows when {describe(f.shown_when, by_id)}"

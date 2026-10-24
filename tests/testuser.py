@@ -229,7 +229,8 @@ def _showing_most(
 def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
     prefilled to the account, a résumé aside, a field its own answers keep hidden, and one
-    atsfill cannot fill. A choice that shows follow-ups takes the one that shows the most."""
+    atsfill cannot fill. A choice the page starts with an option keeps it; one that shows
+    follow-ups takes the option that shows the most."""
     out, given, by_label, hidden = {}, {}, {}, set()
     for f in fields:
         if not Form(fields, given).shown(f) or not _asked(f, by_label, hidden):
@@ -237,9 +238,11 @@ def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[
             continue
         if f.unfillable or (a := answer(f, cv, picture)) is None:
             continue
-        if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
+        if f.type is FieldType.CHOICE and f.default in (f.options or []):
+            a = f.default  # the page's country decides the lists and fields read after it
+        elif f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
             a = _showing_most(f, fields, given, cv, picture)
         given[f.id], by_label[f.label] = a, a
-        if not (f.prefilled and f.type is not FieldType.FILE):
+        if f.prefilled is None or f.type is FieldType.FILE:
             out[f.id] = a
     return out

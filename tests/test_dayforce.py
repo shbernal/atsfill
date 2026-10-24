@@ -153,7 +153,7 @@ def test_read_form_lists_every_page(page):
         "workHistory.isCurrent", "workHistory.stateCode", "educationHistory.schoolName",
         "educationHistory.gpa", "workHours.days", "workHours.start",
         "workHours.end", "workHours.comment", "q11", "q11.followup", "q13", "q14",
-        "q15", "q16", "q16.followup", "q22", "q23", "userAcknowledged",
+        "q15", "q16", "q16.followup", "q23", "userAcknowledged",
     ]  # fmt: skip
     assert by_id["prefixId"].options == ["Mr", "Ms", "Dr"]  # a readonly dropdown, scrolled
     assert by_id["countryCode"].options and "United Kingdom" in by_id["countryCode"].options
@@ -171,7 +171,7 @@ def test_read_form_lists_every_page(page):
     assert by_id["q11.followup"].label.endswith("(asked when 'Do you hold a licence?' is Yes)")
     assert by_id["q15"].options == ["Yes", "No"] and by_id["q15"].required
     assert by_id["q16"].type is FieldType.MULTI_CHOICE
-    assert by_id["q22"].prefilled  # the disability form's name is the page's own
+    assert "q22" not in by_id  # the disability form's name is the page's own, disabled
     assert by_id["q23"].options == ["Yes, I have a disability", "No, I do not",
                                     "I do not want to answer"]  # fmt: skip
     assert by_id["userAcknowledged"].label.startswith("Candidate Acknowledgement: By submitting")

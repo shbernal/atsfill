@@ -43,7 +43,7 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | type 6 box (`…_isChecked`) | `choice`, `Yes`/`No` | 2 |
 | type 7 boxes (`…_selectedOptionIds`, `.ant-checkbox-group`) | `multi_choice` | 11 |
 | an option with `hasFollowUp`: "Enter additional comments here" shows, required (`…_answerFollowup`; one per ticked option on a box group, `…_answerFollowups_<option id>`) | `q<id>.followup`, `text`, conditional | 19 |
-| EEO, veteran (radios), disability form: name and date prefilled and disabled, employee id disabled for a guest, boxes | `choice`, `multi_choice`; its text questions prefilled | 5 |
+| EEO, veteran (radios), disability form: name and date prefilled and disabled, employee id disabled for a guest, boxes | `choice`, `multi_choice`; its text questions, the page's own, are not fields | 5 |
 | candidate acknowledgement box on Submit (`#jobPostingApplication_userAcknowledged`) | `choice`, `Yes`/`No` | 26 |
 
 A conditional field is labelled `(asked when '<field>' is <option> or <option>)`.

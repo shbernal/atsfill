@@ -213,7 +213,8 @@ def test_a_fresh_draft_lists_the_pages_up_to_the_first_it_cannot_save(opened):
         "phoneNumber--phoneNumber",
     ]
     assert by_id["country--country"].options == ["United Kingdom", "United States of America"]
-    assert by_id["country--country"].required and by_id["country--country"].prefilled
+    country = by_id["country--country"]
+    assert country.required and country.default == "United Kingdom" and country.prefilled is None
     assert by_id["name--preferredCheck"].options == ["Yes", "No"]
     assert by_id["previousWorker--candidateIsPreviousWorker"].type is FieldType.CHOICE
     assert by_id["source--source"].type is FieldType.CHOICE
@@ -227,7 +228,7 @@ def test_a_fresh_draft_lists_the_pages_up_to_the_first_it_cannot_save(opened):
     ]
     code = by_id["phoneNumber--countryPhoneCode"]
     assert code.options == ["United Kingdom (+44)", "United States of America (+1)"]  # the API's
-    assert code.type is FieldType.CHOICE and not code.prefilled
+    assert code.type is FieldType.CHOICE and code.prefilled is None
     assert by_id["phoneNumber--phoneNumber"].type is FieldType.PHONE
     assert by_id["resumeAttachments--attachments"].required  # from the apply flow's sections
     entry = [i for i in by_id if i.startswith("workExperience--")]

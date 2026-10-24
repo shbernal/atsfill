@@ -407,7 +407,10 @@ def _form(
         label, required = entry["label"].strip(), entry["isRequired"]
         options = [o["text"] for o in entry.get("options") or []] or None
         extra: Any = None
-        prefilled = key == "countryId" and bool(country)
+        shown = None  # the employer's country, the page's own before any answer
+        if key == "countryId" and country:
+            by_id = {str(o["id"]): o["text"] for o in entry.get("options") or []}
+            shown = by_id.get(str(country), country if country in by_id.values() else None)
         if key == "state" and options:
             options = _states(states, country)
         if key == "state" and not options:
@@ -416,7 +419,7 @@ def _form(
             extra = {o["id"]: o["text"] for o in entry["options"] if int(o["id"]) > 0}
             options = list(VETERAN) + list(extra.values())
         accept = FILE_TYPES if kind == "file" else None
-        field = Field(key, label, TYPES[kind], required, options, None, accept, prefilled)
+        field = Field(key, label, TYPES[kind], required, options, None, accept, default=shown)
         out.append((field, (kind, name, extra)))
     return out
 

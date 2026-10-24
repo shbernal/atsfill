@@ -27,10 +27,10 @@ Each rendering, and in how many of the 13 employers whose forms were read it sho
 | radio group (`radio`, `choice`, `section-radio`): the input lies over its label | `choice` | 8 |
 | other file (`fileUpload`): cover letter, attachments; listed by name once attached | `file` | 5 |
 | checkbox group (`checkbox`): consents, mostly one box | `multi_choice` | 4 |
-| date (`date`, `date-today`, `date-advanced`): a read-only combobox opening a month picker whose cells are titled by ISO date; shown as `21 Nov 2026`; `date-today` is today's date, read-only | `date`, `date-today` prefilled | 5 |
-| position location (`positionLocation`): location pills, the only one preselected | `multi_choice`, prefilled | 1 |
+| date (`date`, `date-today`, `date-advanced`): a read-only combobox opening a month picker whose cells are titled by ISO date; shown as `21 Nov 2026`; `date-today` is today's date, read-only | `date`; `date-today` `prefilled` with today's date, the only one the page takes | 5 |
+| position location (`positionLocation`): location pills, the only one preselected | `multi_choice`, the pill its `default` | 1 |
 
-Instructions (`instruction`) are not fields. A question of another type is listed `unhandled_rendering`.
+Without an account, a control showing a value before any answer holds the page's: it is the field's `default`. Instructions (`instruction`) are not fields. A question of another type is listed `unhandled_rendering`.
 
 ## Filling
 

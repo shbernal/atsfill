@@ -120,7 +120,9 @@ QUESTION_TYPES = {
     CHECKBOX: FieldType.CHOICE,
     MULTI: FieldType.MULTI_CHOICE,
 }
-DISABILITY = "DISABILITYQUESTIONNAIRE"  # its text questions (name, date, id) are the page's
+# Its text questions (name, date, id) are the page's own, disabled and filled from other
+# answers: not fields
+DISABILITY = "DISABILITYQUESTIONNAIRE"
 
 # Each option of a dropdown, by scrolling its virtual list: only a screenful is in the DOM.
 _HARVEST = """async (id) => {
@@ -444,7 +446,7 @@ class Dayforce:
         target = _question_target(page, base, question)
         if target is None:
             return
-        if field_id in answers and not field.prefilled and target.is_enabled():
+        if field_id in answers and target.is_enabled():
             self._set_question(page, target, field, question, answers[field_id])
         self._values[field_id] = self._get_question(page, target, field, question)
         followup = f"{field_id}.followup"
@@ -605,6 +607,8 @@ def _question_fields(section: dict[str, Any], question: dict[str, Any]) -> list[
     if not label or len(label) > LONG_LABEL:
         label = _plain(question["displayName"])
     field_id = f"q{question['questionId']}"
+    if section.get("xRefCode") == DISABILITY and question["answerType"] == TEXT:
+        return []
     if kind is None:
         reason = f"unhandled_rendering: {field_id} has answer type {question['answerType']}"
         required = bool(question["isRequired"])
@@ -614,9 +618,7 @@ def _question_fields(section: dict[str, Any], question: dict[str, Any]) -> list[
         options = YES_NO
     elif kind in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
         options = [_option_label(o) for o in question["options"]]
-    prefilled = section.get("xRefCode") == DISABILITY and question["answerType"] == TEXT
-    fields = [Field(field_id, label, kind, bool(question["isRequired"]), options,
-                    prefilled=prefilled)]  # fmt: skip
+    fields = [Field(field_id, label, kind, bool(question["isRequired"]), options)]
     asking = [_option_label(o) for o in question["options"] if o.get("hasFollowUp")]
     if asking:
         followup = f"Additional comments (asked when {label!r} is {' or '.join(asking)})"

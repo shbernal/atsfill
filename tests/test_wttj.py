@@ -87,8 +87,13 @@ def test_read_form_waits_for_the_account(opened):
     ]  # the account's email is not the form's to change
     assert by_id["questions.ab12"].label == "Why this role?"
     assert by_id["resume"].required and by_id["resume"].accept == ["application/pdf"]
-    prefilled = [f.id for f in fields if f.prefilled]
-    assert prefilled == ["firstname", "phone", "location", "resume"]  # from the account profile
+    prefilled = {f.id: f.prefilled for f in fields if f.prefilled is not None}
+    assert prefilled == {  # from the account profile
+        "firstname": "Ada",
+        "phone": "+33 6 00 00 00 00",
+        "location": "Lyon, France",
+        "resume": "profile-resume.pdf",
+    }
 
 
 def test_every_answer_reads_back(opened, page, resume, monkeypatch):

@@ -88,7 +88,9 @@ def test_read_form(page):
         "q_signature",
     ]
     assert by_id["position_location_1234567"].type is FieldType.MULTI_CHOICE
-    assert by_id["position_location_1234567"].prefilled
+    location = by_id["position_location_1234567"]
+    assert location.default == ["Springfield,United States"] and location.prefilled is None
+    assert [f.id for f in fields if f.default] == ["position_location_1234567"]
     assert by_id["resume"].accept == [".pdf", ".doc", ".docx"]
     assert by_id["phone"].type is FieldType.PHONE
     assert by_id["country"].options == ["Canada", "United States"]
