@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from atsfill.core import attempts
@@ -49,8 +51,10 @@ def test_problems_before_filling():
         "cv: a file answer is an absolute path",
     ]
     assert problems(fields, {}) == ["no answer for required f (F)"]
-    prefilled = Field("f", "F", FieldType.TEXT, True, prefilled=True)
+    prefilled = Field("f", "F", FieldType.TEXT, True, prefilled="Ada")
     assert problems([prefilled], {}) == []  # left to the account's value
+    default = Field("f", "F", FieldType.TEXT, True, default="France")
+    assert problems([default], {}) == ["no answer for required f (F)"]  # the page's, not theirs
     assert problems(fields, {"f": ["Fluent"], "cv": "/no/resume.pdf"}) == [
         "f: a choice answer is a string",
         "cv: no file at /no/resume.pdf",
@@ -121,6 +125,13 @@ def test_conditions(condition, answers, shown):
     langs = Field("langs", "Languages", FieldType.MULTI_CHOICE, False, ["En", "Fr"])
     follow_up = Field("f", "F", FieldType.TEXT, False, shown_when=condition)
     assert Form([VISA, langs, follow_up], answers).shown(follow_up) is shown
+
+
+def test_a_condition_reads_the_prefilled_value_then_the_default():
+    which = Field("which", "Which visa?", FieldType.TEXT, True, shown_when=Is("visa", ["Yes"]))
+    for visa in (replace(VISA, prefilled="Yes"), replace(VISA, default="Yes")):
+        assert Form([visa, which], {}).shown(which)
+        assert not Form([visa, which], {"visa": "No"}).shown(which)  # the answer first
 
 
 def test_required_when_an_answer_asks_it():

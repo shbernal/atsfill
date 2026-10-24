@@ -220,7 +220,7 @@ const PAGES = [
     {type: "dropdown", label: "Which shift suits you?", options: ["Days", "Nights"]},
     {type: "text", label: "Your notice period"},
     {type: "checkbox", label: "I agree to a background check"},
-    {type: "multi", label: "Which locations?", options: ["North", "South", "East"], followUp: "East", followUpId: 7},
+    {type: "multi", label: "Which locations?", options: ["North", "South", "East"], followUps: {South: 6, East: 7}},
   ]},
   {title: "Disability Form Questionnaire", disability: true, questions: [
     {type: "prefilled", label: "Name"},
@@ -260,10 +260,11 @@ function questionnaire(n) {
       control = el(`<div id="${base}selectedOptionIds" class="ant-checkbox-group"></div>`);
       for (const o of q.options) {
         const w = el(`<label class="ant-checkbox-wrapper"><input type="checkbox"> ${o}</label>`);
-        if (o === q.followUp) w.querySelector("input").addEventListener("change", e => {
-          box.querySelector(`[id="${base}answerFollowups_${q.followUpId}"]`)?.parentElement.remove();
+        const asks = q.followUps?.[o];  // a comment box per option ticked that asks for one
+        if (asks) w.querySelector("input").addEventListener("change", e => {
+          box.querySelector(`[id="${base}answerFollowups_${asks}"]`)?.parentElement.remove();
           if (e.target.checked) control.after(item("Enter additional comments here",
-            text(`${base}answerFollowups_${q.followUpId}`), `${base}f`, true));
+            text(`${base}answerFollowups_${asks}`), `${base}f${asks}`, true));
         });
         control.append(w);
       }

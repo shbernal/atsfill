@@ -41,10 +41,6 @@ ANSWER_NO = re.compile(
 # An option that opens a field the form did not list: who referred or contacted, which other.
 OPENS_FIELD = re.compile(r"referr|contacted by|\bother\b", re.IGNORECASE)
 PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
-# The label of a follow-up whose adapter names its condition there, not in `shown_when`.
-ASKED_WHEN = re.compile(
-    r"""\(asked when (["'])(?P<trigger>.+)\1 is (?P<negated>not )?"?(?P<value>.+?)"?\)$"""
-)
 BY_LABEL = [
     (re.compile(r"MM/YYYY"), "01/2020"),
     (re.compile(r"zip|postal", re.IGNORECASE), ZIP),
@@ -187,30 +183,18 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
             return _text(field)
 
 
-def _asked(field: Field, given: dict[str, Answer], hidden: set[str]) -> bool:
-    """Whether the page shows the field, given the answers so far, when its label says it is
-    asked only after another field's answer: never after a field the answers keep hidden."""
-    match = ASKED_WHEN.search(field.label)
-    if match and match["trigger"] in hidden:
-        return False
-    if not match or match["trigger"] not in given:
-        return True
-    picked = given[match["trigger"]]
-    picks = [match["value"], *match["value"].split(" or ")]  # an option can hold " or "
-    shown = any(p in picks for p in ([picked] if isinstance(picked, str) else picked))
-    return shown != bool(match["negated"])
-
-
 def _showing_most(
     field: Field, fields: list[Field], given: dict[str, Answer], cv: Path, picture: Path | None
 ) -> Answer:
     """The choice that shows the most follow-ups, so that the dry run reaches them, never one
-    that shows a required follow-up it has no answer for: the usual answer among equals, and
-    always for a sensitive question."""
+    that shows a required follow-up it has no answer for: among equals the page's own pick,
+    else the usual answer, and always the usual for a sensitive question."""
     usual = answer(field, cv, picture)
     assert usual is not None
     if SENSITIVE.search(field.label) or not field.options:
         return usual
+    if field.type is FieldType.CHOICE and field.default in field.options:
+        usual = field.default  # the page's country decides the lists and fields read after it
 
     def shows(a: Answer) -> tuple[int, int]:
         form = Form(fields, {**given, field.id: a})
@@ -229,17 +213,16 @@ def _showing_most(
 def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
     prefilled to the account, a résumé aside, a field its own answers keep hidden, and one
-    atsfill cannot fill. A choice that shows follow-ups takes the one that shows the most."""
-    out, given, by_label, hidden = {}, {}, {}, set()
+    atsfill cannot fill. A choice that shows follow-ups takes the option that shows the most."""
+    out, given = {}, {}
     for f in fields:
-        if not Form(fields, given).shown(f) or not _asked(f, by_label, hidden):
-            hidden.add(f.label)
+        if not Form(fields, given).shown(f):
             continue
         if f.unfillable or (a := answer(f, cv, picture)) is None:
             continue
         if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
             a = _showing_most(f, fields, given, cv, picture)
-        given[f.id], by_label[f.label] = a, a
-        if not (f.prefilled and f.type is not FieldType.FILE):
+        given[f.id] = a
+        if f.prefilled is None or f.type is FieldType.FILE:
             out[f.id] = a
     return out

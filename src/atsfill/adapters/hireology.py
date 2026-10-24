@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser
 from atsfill.core.adapter import Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = "careers.hireology.com"
 JOB = re.compile(r"^/[^/]+/(\d+)(?:/|$)")
@@ -101,16 +101,17 @@ LABELS = {
 }
 # The page's heading of a section whose labels repeat others' ("City").
 SECTIONS = {"experience": "Work history: ", "education": "Education: ", "military": "Military: "}
-# A field the page shows only once another is answered: (that field, the answers that show it).
-SHOWN_BY = {
-    "referred_by": ("candidate_referred", "is Yes"),
-    "non_complete_in_place_reason": ("non_complete_in_place", "is Yes"),
-    "relocate_reason": ("relocate", "is Yes"),
-    "extra_activities": ("participation_extra_activities", "is Yes"),
-    "part_time_text": ("part_time", "is Yes"),
-    "academic_awards": ("gained_academic_awards", "is Yes"),
+# A field the page shows only once another is answered, and on which answers: the school fields
+# stay hidden until an education is picked.
+SHOWN_BY: dict[str, Is] = {
+    "referred_by": Is("candidate_referred", ["Yes"]),
+    "non_complete_in_place_reason": Is("non_complete_in_place", ["Yes"]),
+    "relocate_reason": Is("relocate", ["Yes"]),
+    "extra_activities": Is("participation_extra_activities", ["Yes"]),
+    "part_time_text": Is("part_time", ["Yes"]),
+    "academic_awards": Is("gained_academic_awards", ["Yes"]),
     **{
-        f: ("military", "is Yes")
+        f: Is("military", ["Yes"])
         for f in (
             "army_branch",
             "highest_rank",
@@ -122,7 +123,7 @@ SHOWN_BY = {
         )
     },
     **{
-        f: ("highest_grade", "is not Did Not Complete High School")
+        f: Is("highest_grade", ["Did Not Complete High School"], negated=True)
         for f in ("institute_name", "graduation_year", "education_city", "education_state_id")
     },
 }
@@ -230,6 +231,10 @@ class Hireology:
         self._kinds = {field.id: kind for field, kind in out if not field.unfillable}
         return [f for f, _ in out]
 
+    def shown_fields(self, page: Page) -> list[str]:
+        form = page.locator(FORM)
+        return [i for i in self._kinds if form.evaluate(_CONTROL, i) is not None]
+
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
         for field_id, kind in self._kinds.items():  # a question before the fields it shows
@@ -293,7 +298,7 @@ def _exact(value: str) -> re.Pattern[str]:
 
 def _form(api: dict[str, Any]) -> list[tuple[Field, str]]:
     """Each field of the form API's template with its API type; an entry the page can repeat
-    is read once, as its first."""
+    is read once, as its first. A field shown by one the form does not ask is never shown."""
     out = []
     for section in api["template"]["sections"]:
         for fieldset in section["fieldsets"]:
@@ -301,7 +306,8 @@ def _form(api: dict[str, Any]) -> list[tuple[Field, str]]:
                 out.append(
                     (_field(entry, SECTIONS.get(section["id"], "")), entry["attributes"]["type"])
                 )
-    return out
+    ids = {f.id for f, _ in out}
+    return [(f, k) for f, k in out if f.id not in SHOWN_BY or SHOWN_BY[f.id].field_id in ids]
 
 
 def _field(entry: dict[str, Any], section: str) -> Field:
@@ -316,20 +322,30 @@ def _field(entry: dict[str, Any], section: str) -> Field:
     if kind not in TYPES:
         reason = f"unhandled_rendering: {field_id} is a {kind}"
         return Field(
-            field_id, label, FieldType.TEXT, bool(attributes.get("required")), unfillable=reason
-        )
+            field_id, label, FieldType.TEXT, bool(attributes.get("required")), unfillable=reason,
+            shown_when=SHOWN_BY.get(field_id),
+        )  # fmt: skip
     required = attributes["required"] and kind != "checkbox"  # a box left clear is an answer
     options = [o["name"] for o in attributes["options"]] or None
     if kind == "checkbox":
         options = YES_NO
     elif kind == "month":
         label += MONTH
-    if shown_by := SHOWN_BY.get(field_id):
-        trigger, condition = shown_by
-        label += f" (asked when {section + LABELS[trigger]!r} {condition})"
-        required = False
     max_length = attributes.get("maxlength") if TYPES[kind] is FieldType.TEXT else None
     if kind == "month":
         max_length = None
     accept = FILE_TYPES if kind == "file" else None
-    return Field(field_id, label, TYPES[kind], required, options, max_length, accept)
+    return Field(
+        field_id, label, TYPES[kind], required, options, max_length, accept,
+        default=_default(attributes, kind), shown_when=SHOWN_BY.get(field_id),
+    )  # fmt: skip
+
+
+def _default(attributes: dict[str, Any], kind: str) -> str | None:
+    """The answer the page shows picked before any, from the API's `value`: an option's name,
+    a box's `Yes` or `No`."""
+    value = attributes.get("value")
+    if kind == "checkbox" and isinstance(value, bool):
+        return YES_NO[0] if value else YES_NO[1]
+    names = {str(o.get("value")): o["name"] for o in attributes.get("options") or []}
+    return names.get(str(value)) if isinstance(value, str | int) else None

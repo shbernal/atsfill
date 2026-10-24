@@ -14,8 +14,9 @@ import re
 import time
 import urllib.request
 import uuid
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import suppress
+from datetime import date
 from html import unescape
 from pathlib import PurePath
 from typing import Any
@@ -24,7 +25,7 @@ from urllib.parse import parse_qs, urlsplit
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Locator, Overlaid, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import AllOf, Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
 JOB = re.compile(r"^(/[a-z]{2,8}/[a-z]{2})/(job|\w*apply)(?:/|$)")
 APPLY = re.compile(r"^/[a-z]{2,8}/[a-z]{2}/\w*apply$")  # `apply`, `hvhapply` for hourly roles
@@ -35,6 +36,7 @@ NEXT = "button#next"
 SUBMIT = "button#submit, button.btn-submit, button[type=submit].btn-navigate:not(#next)"
 RESUME = ".resume-upload-wrapper input[type=file]"
 RESUME_ID = "resume"
+NO_RESUME = Is(RESUME_ID, negated=True)  # a field asked only without a resume
 MARKUP = "[data-ph-at-id], [phw-tk], [ph-module], form.rjsf"  # a Phenom page's own
 LOADING = ".overlaybg"
 UA = "Mozilla/5.0 (X11; Linux x86_64; rv:135.0) Gecko/20100101 Firefox/135.0"
@@ -246,6 +248,7 @@ class Phenom:
         self._apply = ""
         self._raws: dict[str, dict[str, Any]] = {}  # each field as the configuration has it
         self._kept: dict[str, Answer] = {}
+        self._shown: dict[str, None] = {}  # the fields each step showed, in order
 
     def detect(self, url: str, page: Page | None) -> bool:
         if JOB.match(urlsplit(url).path) is None:
@@ -317,7 +320,7 @@ class Phenom:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         page.context.clear_cookies()
         self._open(page, fresh=True)
-        self._kept = {}
+        self._kept, self._shown = {}, {}
         if RESUME_ID in answers and page.locator(RESUME).count():
             _upload(page, _one(answers[RESUME_ID]))
             self._kept[RESUME_ID] = PurePath(_one(answers[RESUME_ID])).name
@@ -335,10 +338,15 @@ class Phenom:
                 ):
                     break
             self._kept |= kept
+            self._shown |= dict.fromkeys(r["id"] for r in page.locator(FORM).evaluate(_SCAN))
             if not _has_next(page):
                 return
             _next(page, number)
         raise Unsupported(known_gap(self, "long_wizard", f"more than {MAX_STEPS} steps"))
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The fields each step showed once filled: the wizard keeps no step but the last."""
+        return list(self._shown)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         return self._kept
@@ -444,6 +452,10 @@ def _read(
     if not raws:
         raise RuntimeError("the wizard shows no fields")
     resume = reader.resume()
+    for raw in raws:
+        for key in ("when", "required_when"):
+            raw[key] = reader.labeled(raw.get(key), resume is not None)
+    raws = [raw for raw in raws if raw["when"] is not False]  # never shown
     return ([resume] if resume else []) + [_field(raw) for raw in raws], raws
 
 
@@ -516,20 +528,31 @@ class _Config:
         """An object's fields: its properties in the uiSchema's order, with those an `allOf`
         rule adds once an answer holds. A top-level property names its step (`nav`)."""
         props = dict(schema.get("properties") or {})
+        always = set(props)  # the properties no rule adds
         needed = set(schema.get("required") or [])
-        conditions: dict[str, Any] = {}
+        conditions: dict[str, Condition] = {}  # a property a rule adds: when it shows
+        required_when: dict[str, Condition] = {}  # one a rule makes required
         for rule in schema.get("allOf") or []:
             then = rule.get("then") or {}
             holds = self.condition(rule.get("if") or {}, path, props)
-            holds = True if holds == "given" else holds  # a resume is given where asked
             if holds is False:
                 continue
+            added = [n for n in then.get("properties") or {} if n not in always]
             for name, prop in (then.get("properties") or {}).items():
                 props.setdefault(name, prop)
+            for name in added:
                 if holds is True:
-                    needed |= {name} & set(then.get("required") or [])
-                else:
-                    conditions[name] = holds
+                    always.add(name)
+                    conditions.pop(name, None)
+                elif name not in always:
+                    held = conditions.get(name)
+                    conditions[name] = holds if held is None else AnyOf([held, holds])
+            for name in then.get("required") or []:
+                if holds is True or name in added:
+                    needed.add(name)  # required whenever shown
+                elif name in props:
+                    held = required_when.get(name)
+                    required_when[name] = holds if held is None else AnyOf([held, holds])
         for name, u in ui.items():  # a widget only the uiSchema describes
             if isinstance(u, dict) and u.get("htmlType") in SOURCE_TREE:
                 props.setdefault(name, {"type": "string"})
@@ -541,23 +564,37 @@ class _Config:
             if not isinstance(props[name], dict):
                 continue
             u = ui[name] if isinstance(ui.get(name), dict) else {}
-            out += self.property(
+            shown = when
+            if name in conditions:
+                shown = conditions[name] if when is None else AllOf([when, conditions[name]])
+            raws = self.property(
                 props[name], u, f"{path}{name}", nav or u.get("nav"),
-                required or name in needed, conditions.get(name, when), ui,
+                required or name in needed, shown, ui,
             )  # fmt: skip
+            for raw in raws:
+                if name in required_when and raw["id"] == f"{path}{name}":
+                    raw["required_when"] = required_when[name]
+            out += raws
         return out
 
     def property(
-        self, p: dict, u: dict, path: str, nav: Any, required: bool, when: Any, siblings: dict
+        self,
+        p: dict,
+        u: dict,
+        path: str,
+        nav: Any,
+        required: bool,
+        when: Condition | None,
+        siblings: dict,
     ) -> list[dict[str, Any]]:
         html, widget = u.get("htmlType"), u.get("ui:widget") or u.get("ui:field")
         if html in NOT_ASKED or widget in ("hidden", "markdown") or p.get("type") == "null":
             return []
-        if when == "resume":
+        if when == NO_RESUME:  # never read: where it is required, the resume is
             if any(raw["required"] for raw in self.property(p, u, path, nav, required, None, {})):
                 self.without_resume = True
             return []
-        required = (required or u.get("ui:required") is True) and when is None
+        required = required or u.get("ui:required") is True
         if html in LOADED:
             return self.loaded(u, nav) or self.job_questions(path, nav)
         if html == "daterangepicker" or widget == "daterangepicker":
@@ -576,7 +613,9 @@ class _Config:
             "required": required,
             "options": None,
             "nav": nav,
-            "prefilled": p.get("defaultTodayDate") is True,  # a signature's date, today
+            "when": when,
+            # a signature's date: today's, the only one the page takes
+            "prefilled": date.today().isoformat() if p.get("defaultTodayDate") is True else None,
             "max_length": p.get("maxLength") if isinstance(p.get("maxLength"), int) else None,
         }
         self.labels[path] = raw["label"]
@@ -589,13 +628,11 @@ class _Config:
             }
             raw["options"] = _unique(t for _, t in self.loaded_list(listing, api)) or None
         if kind == "select" and re.fullmatch(r"\w+", path):  # a default, the job's country
-            raw["prefilled"] = self.prefilled(path)[0] is not None
+            raw["default"] = self.prefilled(path)[1] or None
         if kind in ("date", "month", "year"):
             raw["format"] = (u.get("ui:placeholder") if p.get("format") == "date" else None) or (
                 p.get("format") or "MM/dd/yyyy"
             )
-        if when:
-            raw["label"] += self.asked_when(when)
         out = [raw]
         if html == "country":
             out += self.country_fields(p, u, path, nav)
@@ -852,12 +889,11 @@ class _Config:
             "id": path,
             "kind": kind if answers or kind != "select" else "text",
             "label": self.labels[path],
-            "required": bool(q.get("required")) and not parent,
+            "required": bool(q.get("required")),
             "options": options,
             "nav": nav,
+            "when": Is(f"{prefix}{parent}", [q["parentOptionId"]]) if parent else None,
         }
-        if parent:
-            raw["label"] += self.asked_when((f"{prefix}{parent}", [q.get("parentOptionId")], False))
         return raw
 
     def country_fields(self, p: dict, u: dict, path: str, nav: Any) -> list[dict[str, Any]]:
@@ -874,7 +910,9 @@ class _Config:
             part["schema"], part.get("uiSchema") or {}, "cntryFields.", nav, False, None
         )
 
-    def date_range(self, p: dict, u: dict, path: str, nav: Any, when: Any) -> list[dict[str, Any]]:
+    def date_range(
+        self, p: dict, u: dict, path: str, nav: Any, when: Condition | None
+    ) -> list[dict[str, Any]]:
         """A From and To pair, picked as days, months or years by its format."""
         out = []
         for n, title in ((1, p.get("fromTitle")), (2, p.get("toTitle"))):
@@ -884,8 +922,9 @@ class _Config:
                 {
                     "id": f"{path}.{name}",
                     "kind": _picker(p.get("format") or ""),
-                    "label": (self.text(title) or name) + (self.asked_when(when) if when else ""),
-                    "required": bool(needed) and not when,
+                    "label": self.text(title) or name,
+                    "required": bool(needed),
+                    "when": when,
                     "options": None,
                     "format": p.get("format") or "MM/yyyy",
                     "nav": nav,
@@ -893,29 +932,24 @@ class _Config:
             )
         return out
 
-    def condition(self, node: dict, path: str, props: dict) -> Any:
-        """What an `if` asks: True or False on the job's data, else the one answer it tests,
-        `(field id, values, negated)`; `resume` for a resume not given; None for several."""
-        parts = []
+    def condition(self, node: dict, path: str, props: dict) -> bool | Condition:
+        """What an `if` asks: True or False on the job's data, else a condition on the answers,
+        each `Is` in the schema's own values until `labeled`."""
+        parts: list[bool | Condition] = []
         if "not" in node:
             inner = self.condition(node["not"], path, props)
-            if isinstance(inner, bool):
-                parts.append(not inner)
-            elif isinstance(inner, tuple):
-                parts.append((inner[0], inner[1], not inner[2]))
-            else:
-                parts.append(None if inner is None else "resume" if inner == "given" else "given")
+            parts.append(not inner if isinstance(inner, bool) else _negate(inner))
         for key, kind in (("allOf", all), ("anyOf", any)):
             if key in node:
-                parts.append(_combine([self.condition(n, path, props) for n in node[key]], kind))
+                parts.append(_join([self.condition(n, path, props) for n in node[key]], kind))
         for name, test in (node.get("properties") or {}).items():
             parts.append(self.test(name, test, path, props))
-        return _combine(parts, all)
+        return _join(parts, all)
 
-    def test(self, name: str, test: dict, path: str, props: dict) -> Any:
+    def test(self, name: str, test: dict, path: str, props: dict) -> bool | Condition:
         values = [test["const"]] if "const" in test else test.get("enum")
         if name == "resumeName":  # `isNotEmpty`: a resume given
-            return "given"
+            return Is(RESUME_ID)
         if (
             get(props.get(name), "type") is None
             or get(self.config, f"uiSchema.{name}.htmlType") == "hidden"
@@ -925,37 +959,59 @@ class _Config:
             )
             held = held if held is not None else {"locale": self.ph.get("locale")}.get(name)
             return True if values is None else held in values
-        return None if values is None else (f"{path}{name}", values, False)
+        return Is(f"{path}{name}", values)
 
-    def asked_when(self, when: Any) -> str:
-        """The label's note on the answer that shows the field, as the options read."""
-        if not isinstance(when, tuple):
-            return " (asked depending on other answers)"
-        trigger, values, negated = when
-        listed = self.listed.get(trigger)
-        shown = [
-            listed[1][listed[0].index(v)] if listed and v in listed[0] else str(v) for v in values
-        ]
-        label = self.labels.get(trigger, trigger)
-        return f" (asked when {label!r} is {'not ' if negated else ''}{' or '.join(shown)})"
+    def labeled(self, condition: bool | Condition | None, resume: bool) -> bool | Condition | None:
+        """A condition in the options' labels, as answers give them (a box's `true` is `Yes`);
+        on the resume, decided where the form has no upload. True is None: always."""
+        match condition:
+            case None | True:
+                return None
+            case False:
+                return False
+            case Is(field_id=field_id) if field_id == RESUME_ID and not resume:
+                return condition.negated  # never given
+            case Is(values=None):
+                return condition
+            case Is():
+                values, texts = self.listed.get(condition.field_id) or ([], [])
+                shown = [
+                    ("Yes" if v else "No") if isinstance(v, bool)
+                    else texts[values.index(v)] if v in values else str(v)
+                    for v in condition.values or []
+                ]  # fmt: skip
+                return Is(condition.field_id, shown, condition.negated)
+            case AnyOf() | AllOf():
+                kind = any if isinstance(condition, AnyOf) else all
+                parts = condition.any_of if isinstance(condition, AnyOf) else condition.all_of
+                joined = _join([self.labeled(c, resume) for c in parts], kind)
+                return None if joined is True else joined
 
 
-def _combine(parts: list[Any], kind: Callable[[Iterable[object]], bool]) -> Any:
-    """Tests combined by `all` or `any`: known ones decide when they can; tests of one answer
-    merge; tests of several answers, or of the resume and an answer, are None."""
+def _join(
+    parts: Sequence[bool | Condition | None], kind: Callable[[Iterable[object]], bool]
+) -> bool | Condition:
+    """Conditions joined by `all` or `any`: a known part decides when it can, and drops out
+    when it cannot; None is no part."""
     known = [p for p in parts if isinstance(p, bool)]
     if (kind is any) in known:  # a False for `all`, a True for `any`
         return kind is any
-    named = [p for p in parts if not isinstance(p, bool)]
+    named = [p for p in parts if p is not None and not isinstance(p, bool)]
     if not named:
-        return True if kind is all or not known else any(known)
+        return kind is all or (bool(known) and any(known))
     if len(named) == 1:
         return named[0]
-    if any(not isinstance(n, tuple) for n in named) or len({(n[0], n[2]) for n in named}) > 1:
-        return None
-    sets = [set(n[1]) for n in named]
-    merged = set.union(*sets) if (kind is any) != named[0][2] else set.intersection(*sets)
-    return (named[0][0], sorted(merged, key=str), named[0][2])
+    return AllOf(named) if kind is all else AnyOf(named)
+
+
+def _negate(condition: Condition) -> Condition:
+    match condition:
+        case Is():
+            return Is(condition.field_id, condition.values, not condition.negated)
+        case AnyOf():
+            return AllOf([_negate(c) for c in condition.any_of])
+        case AllOf():
+            return AnyOf([_negate(c) for c in condition.all_of])
 
 
 def _rules_hold(ph: dict[str, Any], rules: Any) -> bool:
@@ -1085,7 +1141,10 @@ def _field(raw: dict[str, Any]) -> Field:
         raw["required"],
         options or None,
         max_length=raw.get("max_length") if field_type is FieldType.TEXT else None,
-        prefilled=raw.get("prefilled", False),
+        prefilled=raw.get("prefilled"),
+        default=raw.get("default"),
+        shown_when=raw.get("when"),
+        required_when=raw.get("required_when"),
     )
 
 

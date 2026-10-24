@@ -38,8 +38,8 @@ def faults(fields: list[Field]) -> list[str]:
 
 
 class Form:
-    """The fields under one set of answers: an answer to a field that stays hidden counts as
-    none."""
+    """The fields under one set of answers. A field's value is its answer, else what the account
+    prefilled, else the page's default; a field that stays hidden has none."""
 
     def __init__(self, fields: list[Field], answers: dict[str, Answer]) -> None:
         self.by_id = {f.id: f for f in fields}
@@ -72,8 +72,12 @@ class Form:
 
     def _value(self, field_id: str) -> Answer | None:
         field = self.by_id[field_id]
-        value = self.answers.get(field_id)
-        return value if value not in (None, "", []) and self.shown(field) else None
+        if not self.shown(field):
+            return None
+        for value in (self.answers.get(field_id), field.prefilled, field.default):
+            if value not in (None, "", []):
+                return value
+        return None
 
 
 def describe(condition: Condition, by_id: dict[str, Field]) -> str:

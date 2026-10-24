@@ -181,7 +181,7 @@ def _unfillable(result: Result, answers: dict[str, Answer] | None = None) -> boo
             f
             for f in result.fields
             if f.unfillable
-            and not f.prefilled
+            and f.prefilled is None
             and (form.required(f) if answers is not None else f.required and not f.shown_when)
         ),
         None,

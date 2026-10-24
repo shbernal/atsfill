@@ -8,7 +8,8 @@ import pytest
 from atsfill.adapters import paylocity
 from atsfill.adapters.paylocity import Paylocity
 from atsfill.core import browser, matching
-from atsfill.core.results import FieldType
+from atsfill.core.conditions import Form
+from atsfill.core.results import FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/paylocity/apply.html"
 JOB = "https://recruiting.paylocity.com/Recruiting/Jobs/Details/1234"
@@ -99,7 +100,7 @@ def test_read_form(opened):
     assert fields["public-site-address-us-state"].options == ["DC", "TX"]
     prior = fields["info.priorEmploymentStartDate"]
     assert prior.type is FieldType.DATE and not prior.required
-    assert "is Yes" in prior.label
+    assert prior.shown_when == Is("info.haveYouWorkedWithUsBefore", ["Yes"])
     assert fields["info.howDidYouHearAboutUs"].options == ["Online Job Board", "Other"]
     salary_type = fields["info.desiredSalaryType"]
     assert salary_type.required and salary_type.options == ["Hourly", "Yearly"]
@@ -160,6 +161,8 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
     assert page.locator("#step-2").is_visible()
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [c for c in checks if not c.match] == []
+    form, listed = Form(fields, answers), {f.id: f for f in fields}
+    assert [i for i in adapter.shown_fields(page) if not form.shown(listed[i])] == []
 
 
 def test_a_known_gap_and_an_unknown_field_are_listed_unfillable():
@@ -193,4 +196,5 @@ def test_a_graduation_date_is_a_month_asked_once_graduated():
     graduated = fields["txt-educationHistory-graduationDate-0"]
     assert graduated.type is FieldType.TEXT and not graduated.required
     assert not graduated.unfillable
-    assert graduated.label == "Graduation Date (MM/YYYY) (asked when 'Did you Graduate?' is Yes)"
+    assert graduated.label == "Graduation Date (MM/YYYY)"
+    assert graduated.shown_when == Is("educationHistory.didYouGraduate.0", ["Yes"])

@@ -635,5 +635,5 @@ def _field(raw: dict[str, Any]) -> Field:
         options,
         raw.get("maxLength"),
         raw.get("accept"),
-        prefilled=bool(raw.get("value")),
+        default=raw.get("value") or None,  # no account: the page's own, the visitor's country
     )

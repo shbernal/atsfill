@@ -44,7 +44,7 @@ Each rendering and on how many of 14 postings (2026-10-20):
 
 Diversity questions (5 postings) are ordinary questions flagged `diversity`, shown inline.
 
-**Conditional questions** (4 postings): `conditionalConfigurations` shows a question only when another is answered with given options. Such a question has no container on the page until then. It is listed as optional, its label naming the condition; answered while hidden, it reads back empty and the dry run refuses it.
+**Conditional questions** (4 postings): `conditionalConfigurations` shows a question only when another is answered with given options. Such a question has no container on the page until then. Its `shown_when` is `Is` the trigger's field on those options' labels (a box's on `Yes`), `AnyOf` them where several configurations show it; its `required` is its own. Once filled, the questions page's containers are the fields it shows; a container matching no listed question counts as unlisted.
 
 Each question renders as a `[data-test=question-container]` in `sr-screening-questions-form`'s shadow root, in definition order, hidden questions left out. A text, select or checkbox carries `question_<uuid>` as id or name; a radio group or an EEO pair does not and is matched as the next question of its type.
 

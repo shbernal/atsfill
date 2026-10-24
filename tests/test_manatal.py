@@ -7,7 +7,7 @@ import pytest
 
 from atsfill.adapters.manatal import Manatal
 from atsfill.core import browser, matching
-from atsfill.core.results import FieldType
+from atsfill.core.results import FieldType, Is
 
 PAGES = Path(__file__).parent / "pages/manatal"
 JOB = "https://www.careers-page.com/acme/job/ABC123?utm_source=board"
@@ -76,7 +76,8 @@ def test_read_form_lists_each_rendering(page):
     listed = [*ids[:9], *salary, *ids[10:17], *other, *ids[18:], "terms_and_condition"]
     assert list(by_id) == listed
     gap = "unsupported_rendering: other: 18.other is the text box an answer of Other opens"
-    assert (by_id["18.other"].unfillable, by_id["18.other"].required) == (gap, False)
+    assert (by_id["18.other"].unfillable, by_id["18.other"].required) == (gap, False)  # as 18
+    assert by_id["18.other"].shown_when == Is("18", ["Other"])
     gap = "unsupported_rendering: entries: 22 is a list of educations"
     assert (by_id["22"].unfillable, by_id["22"].required) == (gap, False)
     assert by_id["3"].type is FieldType.PHONE

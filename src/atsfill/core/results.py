@@ -59,7 +59,8 @@ class Field:
     options: list[str] | None = None
     max_length: int | None = None
     accept: list[str] | None = None
-    prefilled: bool = False  # holds a value before any answer, from the account profile
+    prefilled: Answer | None = None  # the account profile's value; it answers a required field
+    default: Answer | None = None  # the page's own starting value; conditions read it, not required
     unfillable: str | None = None  # why atsfill cannot fill it, a reason (ADR 0014)
     shown_when: Condition | None = None  # a follow-up: shown only when it holds (ADR 0005)
     required_when: Condition | None = None  # required once shown when it holds, if not always

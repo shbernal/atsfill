@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Gap, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
 HOSTS = ("jobs.smartrecruiters.com", "www.smartr.me")
 JOB = re.compile(r"^/([^/]+)/(\d+)")
@@ -86,8 +86,9 @@ _CONTEXT = """() => {
 }"""
 
 # Which question each container on the questions page holds, in page order. A text, select or
-# checkbox carries `question_<id>`; a radio group or an EEO pair does not, and is the next
-# question of its type: a hidden conditional question has no container.
+# checkbox carries `question_<id>`, a group of controls `question_<id>-<part>` or `_<part>` (work
+# shifts, an EEO pair); a radio group does not, and is the next question of its type: a hidden
+# conditional question has no container.
 _CONTAINERS = """(form, questions) => {
   const root = form.shadowRoot ?? form;
   let at = 0;
@@ -98,7 +99,8 @@ _CONTAINERS = """(form, questions) => {
     const FIELD = "SR-QUESTION-FIELD-";
     const field = [...box.querySelectorAll("*")].find(e => e.tagName.startsWith(FIELD));
     const type = field ? field.tagName.slice(FIELD.length).toLowerCase() : null;
-    const i = questions.findIndex((q, n) => n >= at && (id ? q.id === id : q.type === type));
+    const named = q => id === q.id || id.startsWith(`${q.id}-`) || id.startsWith(`${q.id}_`);
+    const i = questions.findIndex((q, n) => n >= at && (id ? named(q) : q.type === type));
     if (i < 0) return null;
     at = i + 1;
     return questions[i].id;
@@ -184,6 +186,17 @@ class SmartRecruiters:
             if field_id in answers and box.is_checked() != (answers[field_id] == "Yes"):
                 box.click()
 
+    def shown_fields(self, page: Page) -> list[str]:
+        """The questions the filled page holds a container for; one it does not know by its
+        place on the page."""
+        out = []
+        for n, question_id in enumerate(self._held(page)):
+            if question_id is None:
+                out.append(f"question #{n + 1}")
+                continue
+            out += [i for i in self._fields if i == question_id or i.startswith(f"{question_id}.")]
+        return out
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         values: dict[str, Answer] = dict(self._profile)
         for question_id, question in self._questions.items():
@@ -208,12 +221,8 @@ class SmartRecruiters:
         if kind in SKIPPED:
             return []
         label = _plain(question["label"])
-        if condition := self._condition(question["id"]):
-            trigger = self._questions[condition["questionId"]]
-            picks = [v["label"] for f in trigger["fields"] for v in f["values"]
-                     if v["id"] in condition["fieldValues"]]  # fmt: skip
-            label += f" (asked when {_plain(trigger['label'])!r} is {' or '.join(picks)})"
-        required = bool(question["required"]) and not condition
+        shown_when = self._shown_when(question["id"])
+        required = bool(question["required"])
         unfillable = None
         if kind in GAPS:
             gap, what = GAPS[kind]
@@ -221,7 +230,8 @@ class SmartRecruiters:
         elif kind != "currency" and any(e["type"] not in FIELD_TYPES for e in question["fields"]):
             unfillable = f"unhandled_rendering: {label!r} is a {kind} question"
         if unfillable:
-            return [Field(question["id"], label, FieldType.TEXT, required, unfillable=unfillable)]
+            return [Field(question["id"], label, FieldType.TEXT, required, unfillable=unfillable,
+                          shown_when=shown_when)]  # fmt: skip
         fields = []
         for entry in question["fields"]:
             field_type = FieldType.TEXT if kind == "currency" else FIELD_TYPES[entry["type"]]
@@ -237,6 +247,7 @@ class SmartRecruiters:
                 field_type,
                 required and entry.get("required", True),
                 options,
+                shown_when=shown_when,
             ))  # fmt: skip
         return fields
 
@@ -271,10 +282,32 @@ class SmartRecruiters:
         gap = known_gap(self, "entries", f"{field_id} is a list of entries")
         return Field(field_id, label, FieldType.TEXT, required, unfillable=gap)
 
-    def _condition(self, question_id: str) -> dict[str, Any] | None:
-        return next(
-            (c for c in self._conditions if question_id in c["conditionalQuestionIds"]), None
-        )
+    def _shown_when(self, question_id: str) -> Condition | None:
+        """Each configuration that shows the question, on the options of its trigger's fields:
+        any of them shows it."""
+        held: list[Condition] = []
+        for config in self._conditions:
+            trigger = self._questions.get(config["questionId"])
+            if trigger is None or question_id not in config["conditionalQuestionIds"]:
+                continue
+            many = len(trigger["fields"]) > 1
+            for entry in trigger["fields"]:
+                picks = [v["label"] for v in entry["values"] if v["id"] in config["fieldValues"]]
+                if trigger["type"] == "checkbox":  # a box's one value is its ticking
+                    picks = ["Yes"] if picks else []
+                if picks:
+                    held.append(
+                        Is(f"{trigger['id']}.{entry['id']}" if many else trigger["id"], picks)
+                    )
+        return None if not held else held[0] if len(held) == 1 else AnyOf(held)
+
+    def _held(self, page: Page) -> list[str | None]:
+        """The question each container on the questions page holds, None for one it does not
+        know; empty off that page."""
+        form = page.locator(QUESTIONS)
+        if not form.count():
+            return []
+        return form.first.evaluate(_CONTAINERS, list(self._questions.values()))
 
     def _consent_boxes(self, page: Page) -> dict[str, Locator]:
         """Each consent's box, in the order of the scopes: several open with a "Select all"."""
@@ -285,10 +318,7 @@ class SmartRecruiters:
         return {field_id: boxes.nth(skip + n) for n, field_id in enumerate(self._consents)}
 
     def _container(self, page: Page, question_id: str) -> Locator | None:
-        form = page.locator(QUESTIONS)
-        if not form.count():
-            return None
-        held = form.first.evaluate(_CONTAINERS, list(self._questions.values()))
+        held = self._held(page)
         if question_id not in held:
             return None
         return page.locator(CONTAINER).nth(held.index(question_id))

@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, out_of_scope
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = "ats.rippling.com"
 JOB = re.compile(r"^(?:/[a-z]{2}-[A-Z]{2})?/([^/]+)/jobs/([0-9a-f-]{36})(?:/|$)")
@@ -335,9 +335,9 @@ def _custom(field_id: str, q: dict[str, Any]) -> list[Field]:
             options.append(OTHER)
     max_length = q.get("maxChars") if kind is FieldType.TEXT else None
     out = [Field(field_id, label, kind, required, options, max_length)]
-    if q.get("isOtherEnabled"):
-        asked = f"{label}: {OTHER} (asked when {label!r} is {OTHER})"
-        out.append(Field(f"{field_id}_other", asked, FieldType.TEXT, False))
+    if q.get("isOtherEnabled"):  # marked required as its list is
+        out.append(Field(f"{field_id}_other", f"{label}: {OTHER}", FieldType.TEXT, required,
+                         shown_when=Is(field_id, [OTHER])))  # fmt: skip
     if q.get("allowComments"):
         out.append(Field(f"{field_id}_comment", f"{label}: comment", FieldType.TEXT, False))
     return out

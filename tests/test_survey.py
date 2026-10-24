@@ -81,7 +81,7 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("s", "Expected salary", FieldType.TEXT, False),
         Field("q", "Why us?", FieldType.TEXT, False),
         Field("d", "Start date", FieldType.DATE, False),
-        Field("c", "Resume", FieldType.FILE, True, prefilled=True),
+        Field("c", "Resume", FieldType.FILE, True, prefilled="resume.pdf"),
         Field("a", "Photo", FieldType.FILE, True, accept=[".jpg", ".png"]),
         Field("b", "Scan", FieldType.FILE, False, accept=[".tiff"]),
         Field("m", "CV", FieldType.FILE, False, accept=["application/pdf"]),
@@ -91,8 +91,9 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("t", "City", FieldType.TYPEAHEAD, True),
         Field("w", "Town", FieldType.TYPEAHEAD, False),  # the form's country's towns only
         Field("z", "Postal code / zip code", FieldType.TYPEAHEAD, True),
-        Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
+        Field("p", "Phone", FieldType.PHONE, True, prefilled="+33 600000000"),  # the account's
         Field("o", "Video", FieldType.FILE, False, unfillable="out_of_scope: o is a video"),
+        Field("k", "Country", FieldType.CHOICE, True, ["France", "Spain"], default="Spain"),
     ]
     answers = testuser.answers(fields, cv, picture)
     assert answers == {
@@ -111,6 +112,7 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         "a": str(picture),
         "m": str(cv),
         "i": str(picture),
+        "k": "Spain",  # the page's, which the lists after it follow
     }
     assert date.fromisoformat(str(answers["d"])) > date.today()
     assert cv.read_bytes().startswith(b"%PDF-1.4")
@@ -119,12 +121,11 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
 
 def test_a_follow_up_is_answered_when_its_trigger_option_holds_or(tmp_path):
     current = "Currently working as a student, contingent, or contractor"
-    asked = "(asked when 'Have you worked at Acme?' is"
     fields = [
         Field("w", "Have you worked at Acme?", FieldType.CHOICE, True, [current, "Never"]),
-        Field("i", f"Your ID {asked} {current})", FieldType.TEXT, False),
-        Field("r", f"Why? {asked} Never or Unsure)", FieldType.TEXT, False),
-    ]
+        Field("i", "Your ID", FieldType.TEXT, False, shown_when=Is("w", [current])),
+        Field("r", "Why?", FieldType.TEXT, False, shown_when=Is("w", ["Never or Unsure"])),
+    ]  # an option holding " or " is one value
     answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
     assert answers == {"w": current, "i": testuser.TEXT}
 

@@ -20,7 +20,8 @@ from urllib.parse import quote, urlsplit
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.conditions import Form
+from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
 HOST = re.compile(r"^[\w-]+\.zohorecruit\.(?:com|eu|in|ca|com\.au|jp|com\.cn|sa|uk)$")
 JOB = re.compile(r"^/jobs/([^/]+)/(\d+)(?:/|$)")
@@ -187,16 +188,18 @@ class ZohoRecruit:
         rows = {c.row for c in self._controls if c.row and c.field.id in answers}
         for add in rows:  # one entry of each repeatable section answered
             browser.click(page.locator(_id(add)))
+        form = Form([c.field for c in self._controls], answers)
         for control in self._controls:
-            if control.field.id not in answers:
+            if control.field.id not in answers or not form.shown(control.field):
                 continue
             el = page.locator(control.sel).first
             if control.shown_by:  # rendered once the field that shows it is answered
                 with suppress(Timeout):
-                    el.wait_for(state="visible", timeout=SHOWN_TIMEOUT_MS)
-                if not el.is_visible():
-                    continue
+                    el.wait_for(state="attached", timeout=SHOWN_TIMEOUT_MS)
             _fill(page, control, el, answers[control.field.id])
+
+    def shown_fields(self, page: Page) -> list[str]:
+        return [c.field.id for c in self._controls if page.locator(c.sel).first.is_visible()]
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         controls = [[c.field.id, c.kind, c.sel] for c in self._controls]
@@ -263,20 +266,29 @@ def _form(api: dict[str, Any]) -> tuple[list[_Control], bool]:
     section is read as its first entry; the pre-screening questions are read when the form
     asks them with the application."""
     webform = api["webforms"][0]
-    shown = {
-        f["api_name"]: (rule["primary_field"]["api_name"], query["criteria"])
-        for rule in api["meta"].get("layout_rules") or []
-        if rule.get("active", True)
-        for query in rule["queries"]
-        for action in query["actions"]
-        if action["type"] == "Show_Fields"
-        for f in action["fields"]
-    }
-    labels = {
-        f["api_name"]: f["field_label"].strip()
+    by_name = {  # a field a rule can name: one the form lists
+        f["api_name"]: f
         for s in webform["sections"]
+        if s.get("isVisible", True) and not s.get("istabular")
         for f in s.get("fields") or []
+        if f.get("visible", True)
     }
+    shows: dict[str, list[Condition]] = {}  # a field's display rules, any of them showing it
+    for rule in api["meta"].get("layout_rules") or []:
+        trigger = by_name.get(rule["primary_field"]["api_name"])
+        if not rule.get("active", True) or trigger is None:
+            continue
+        texts = {
+            o["actual_value"]: o["display_value"] for o in trigger.get("pick_list_values") or []
+        }
+        for query in rule["queries"]:
+            criteria = query["criteria"]
+            value = texts.get(criteria["value"], criteria["value"])
+            held = Is(trigger["api_name"], [value], criteria["comparator"] == "not_equal")
+            for action in query["actions"]:
+                for f in action["fields"] if action["type"] == "Show_Fields" else []:
+                    shows.setdefault(f["api_name"], []).append(held)
+    shown = {name: c[0] if len(c) == 1 else AnyOf(c) for name, c in shows.items()}
     controls, captcha = [], "captcha_info" in webform
     for section in sorted(webform["sections"], key=lambda s: s["sequence_number"]):
         if section.get("isattachment"):
@@ -287,7 +299,7 @@ def _form(api: dict[str, Any]) -> tuple[list[_Control], bool]:
             for f in section.get("fields") or []:
                 if f["data_type"] == "captcha":
                     captcha = True
-                if (control := _control(f, labels, shown)) is not None:
+                if (control := _control(f, shown)) is not None:
                     controls.append(control)
     assessment = api.get("Assessments")
     if webform.get("mandate_assessment") and isinstance(assessment, dict):
@@ -295,9 +307,7 @@ def _form(api: dict[str, Any]) -> tuple[list[_Control], bool]:
     return controls, captcha
 
 
-def _control(
-    f: dict[str, Any], labels: dict[str, str], shown: dict[str, tuple[str, dict]]
-) -> _Control | None:
+def _control(f: dict[str, Any], shown: dict[str, Condition]) -> _Control | None:
     kind = f["data_type"]
     if kind in NOT_FIELDS or not f.get("visible", True):
         return None
@@ -305,18 +315,7 @@ def _control(
         return _unhandled(f["api_name"], f["field_label"].strip(), f.get("required"), kind)
     kind = "skills" if f["ui_type"] == SKILLS_UI else KINDS[kind]
     field = _field(f["api_name"], f["field_label"].strip(), kind, f.get("required", False), f)
-    if trigger := shown.get(f["api_name"]):
-        name, criteria = trigger
-        negated = "not " if criteria["comparator"] == "not_equal" else ""
-        label = labels.get(name, name)
-        field = Field(
-            field.id,
-            f"{field.label} (asked when {label!r} is {negated}{criteria['value']})",
-            field.type,
-            False,
-            field.options,
-            field.max_length,
-        )
+    field = replace(field, shown_when=shown.get(f["api_name"]))
     return _Control(field, kind, _id(f"rec-form_{f['id']}"), shown_by=f["api_name"] in shown)
 
 
@@ -339,7 +338,7 @@ def _field(field_id: str, label: str, kind: str, required: bool, f: dict[str, An
 def _row(section: dict[str, Any], layout: str) -> list[_Control]:
     """The fields of a repeatable section's first entry: `<section>.<field>`, its month
     range as a start and an end. A box ("Currently pursuing") hides the range's end once
-    ticked, so it comes first and the end is asked when it is clear."""
+    ticked, so it comes first, clear before any answer, and the end shows while it is."""
     tabular = next(f for f in section["fields"] if f["data_type"] == "tabular")
     fields = tabular.get("fields") or [f for f in section["fields"] if f is not tabular]
     fields = [f for f in fields if f.get("visible", True)]
@@ -347,7 +346,8 @@ def _row(section: dict[str, Any], layout: str) -> list[_Control]:
     heading = section.get("display_label") or tabular["field_label"]
     add = f"crc-tabular-add-btn-{layout}_{section['id']}"
     label = lambda f: f"{heading}: {f['field_label'].strip()}"  # noqa: E731
-    current = next((label(f) for f in fields if f["data_type"] == "boolean"), None)
+    box = next((f for f in fields if f["data_type"] == "boolean"), None)
+    current = f"{tabular['api_name']}.{box['api_name']}" if box else None
     out = []
     for f in fields:
         field_id, dom = f"{tabular['api_name']}.{f['api_name']}", f"{f['id']}_1"
@@ -356,13 +356,15 @@ def _row(section: dict[str, Any], layout: str) -> list[_Control]:
             continue
         if kind != "month":
             field = _field(field_id, label(f), kind, f.get("required"), f)
+            if field_id == current:
+                field = replace(field, default=YES_NO[1])
             out.append(_Control(field, kind, _id(dom), add))
             continue
         start = _field(f"{field_id}.from", f"{label(f)} start", kind, f.get("required"), f)
         out.append(_Control(start, kind, _id(f"{dom}_from"), add))
         end = _field(f"{field_id}.to", f"{label(f)} end", kind, f.get("required"), f)
         if current:
-            end = Field(end.id, f"{end.label} (asked when {current!r} is No)", end.type, False)
+            end = replace(end, shown_when=Is(current, [YES_NO[1]]))
         out.append(_Control(end, kind, _id(f"{dom}_to"), add, shown_by=current is not None))
     return out
 

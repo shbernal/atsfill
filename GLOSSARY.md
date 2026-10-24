@@ -101,7 +101,10 @@ _Avoid_: code, verification code, PIN
 What a hiring system keeps about an account and prefills its forms from.
 
 **Prefilled**:
-Said of a field that holds a value before any answer, from the account profile.
+Said of a field that holds a value before any answer, from the account profile, or one the page sets and takes no other for (today's date, read-only). A required field prefilled may go unanswered.
+
+**Default**:
+The value a page starts a field with, not from the account profile: the employer's country, today's date on a signature. Conditions read it; it does not answer a required field.
 
 ## Answers and read-back
 

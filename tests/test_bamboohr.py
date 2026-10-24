@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.bamboohr import BambooHR, _form, _from_page, _to_page
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/bamboohr"
@@ -111,13 +111,11 @@ def test_read_form(page):
         "Western Australia",
         "Aberdeen City",
     ]
-    assert by_id["countryId"].prefilled
+    assert by_id["countryId"].default == "United States" and by_id["countryId"].prefilled is None
     assert by_id["question_13"].options == ["Yes", "No"]
     assert by_id["question_14"].options == ["She/Her", "They/Them", "Other"]
-    assert by_id["question_14_other"].label == (
-        "Which pronouns do you use?: please specify"
-        " (asked when 'Which pronouns do you use?' is Other)"
-    )
+    assert by_id["question_14_other"].label == "Which pronouns do you use?: please specify"
+    assert by_id["question_14_other"].shown_when == Is("question_14", ["Other"])
     assert by_id["question_15"].required
     assert by_id["question_16"].type is FieldType.FILE
     assert by_id["veteranStatusId"].options == [
@@ -181,7 +179,7 @@ def test_a_country_without_a_list_takes_a_typed_state(page):
 def test_the_test_user_keeps_the_page_country(tmp_path):
     fields = [f for f, _ in _form(DETAIL, LISTS, None)]
     answers = testuser.answers(fields, tmp_path / "cv.pdf")
-    assert "countryId" not in answers
+    assert answers["countryId"] == "United States"  # the page's, which the state list follows
     assert answers["state"] == "District of Columbia"
     assert answers["veteranStatusId"] == "Decline to Answer"
     assert "question_14_other" not in answers

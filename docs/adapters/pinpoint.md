@@ -7,13 +7,13 @@ Pinpoint's career sites, observed on live postings, last on 2026-10-22. The fixt
 - An employer is on `<account>.pinpointhq.com` or on its own career domain; either way a posting is `/<lang>/postings/<uuid>` and its form `/<lang>/postings/<uuid>/applications/new`, which the adapter opens from the posting page. The adapter claims a URL by that path, on any host. The double-send key is the posting's `/en/` URL on its host.
 - The apply page is rendered on the server (Rails, React on Rails). The standard fields are native controls; every other field is a React component whose props sit in a `script.js-react-on-rails-component` JSON next to its empty root, the scripts staying in the page once React has rendered. `read_api` fetches that HTML over HTTP, `read_form` takes the page's form, and one parser lists the fields from both, from the controls outside the components and from the props: parity holds by construction.
 - A document is uploaded as soon as it is attached (an Active Storage direct upload to S3): it reaches Pinpoint before the submit.
-- The country of the address starts on the visitor's country, guessed by the page.
+- The country of the address starts on the visitor's country, guessed by the page: `read_form` lists it as the country's `default`; `read_api` cannot.
 - Some career domains carry the employer's OneTrust banner, whose backdrop would cover the form; the blocker's lists hide it.
 - 3 of 35 forms load an invisible reCAPTCHA Enterprise that puts its token in a hidden input; the others none.
 
 ## Reading the form
 
-A field's id is its control's attribute (`first_name`, `phone`, `cv`, `country`), `question_<question id>` for a custom question, and `equality_monitoring_<name>` for a diversity question. A label is the control's `label[for]`, a question's title, or a document's label block; a required one carries `required` or the `--required` label class. A question shown only after an earlier answer (`conditionalQuestionParentQuestionId`, `equals` or `not_equals` an option, `true` or `false` for a yes/no) is optional, its label ending `(asked when "<earlier question>" is <option>)`. An option is its label with runs of whitespace as one space: some labels end in a space. A control or a question component outside the table below is `unhandled_rendering`.
+A field's id is its control's attribute (`first_name`, `phone`, `cv`, `country`), `question_<question id>` for a custom question, and `equality_monitoring_<name>` for a diversity question. A label is the control's `label[for]`, a question's title, or a document's label block; a required one carries `required` or the `--required` label class. A question shown only after an earlier answer (`conditionalQuestionParentQuestionId`, `equals` or `not_equals` an option, `true` or `false` for a yes/no) has `shown_when` `Is` that question on the options' labels, negated for `not_equals`, and keeps its own `required`. Its component renders nothing until then: a `not_equals` one stays hidden while the earlier question is unanswered (observed on a live posting). An option is its label with runs of whitespace as one space: some labels end in a space. A control or a question component outside the table below is `unhandled_rendering`.
 
 Each rendering, and in how many of 35 postings it shows (2026-10-22):
 
@@ -34,7 +34,7 @@ Each rendering, and in how many of 35 postings it shows (2026-10-22):
 | `Equalitymonitoring::Tsselect`: a diversity react-select, not searchable | `choice` | 28 |
 | a question shown after an earlier answer | as its rendering | 23 |
 
-The address lines are listed once each with both layouts' labels: `address1` (Address Line 1, Street Address), `address2` (asked when the country is not the United States) and `city` (when it is), both on the second line, `town` and `state` on the town's input, `postcode` (Postcode, Zipcode).
+The address lines are listed once each with both layouts' labels: `address1` (Address Line 1, Street Address), `address2` (shown when the country is not the United States, or none is picked) and `city` (when it is), both on the second line, `town` and `state` on the town's input, each with its `shown_when`, `postcode` (Postcode, Zipcode).
 
 ## Filling
 
@@ -44,6 +44,7 @@ The address lines are listed once each with both layouts' labels: `address1` (Ad
 - A document is attached to its component's file input and waited for until its name shows as a tag.
 - A question kept hidden by an earlier answer is skipped, after waiting a moment for it to show.
 - The address lines of the layout the country does not show are skipped.
+- Once filled, the fields shown are the form's controls outside the components, each component that renders a control, and the address lines of the layout shown.
 
 ## Read-back and submit
 

@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 from atsfill.core import matching
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, PageRequest, Request, Response, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
 JOBS_HOST = re.compile(r"^(?P<tenant>[a-z0-9-]+)\.(?P<dc>wd\d+)\.myworkdayjobs\.com$")
 SITE_HOST = re.compile(r"^(?P<dc>wd\d+)\.myworkdaysite\.com$")
@@ -63,9 +63,9 @@ PHONE_CODES = "/values/phone/countryCodes"
 # An answer to a question posts the questionnaire's definition; the page renders its reply
 # over the answers given meanwhile
 DEFINITION = "/definition?"
-# A field whose value is the site's default before any answer, not the account's: the
-# country's default is the browser's locale's, the user's, and decides the address fields read
-SITE_DEFAULTS = {PHONE_CODE_ID}
+# A field whose value before any answer is the site's, not the account's: the country is the
+# browser's locale's, and decides the address fields read
+SITE_DEFAULTS = {"country--country", PHONE_CODE_ID}
 PHONE_NUMBER = "phoneNumber--phoneNumber"
 RESUME_ID = "resumeAttachments--attachments"
 REVIEW = "Review"
@@ -112,6 +112,14 @@ ENTRY_ID = re.compile(r"^(workExperience|education)-(\d+)--")
 ADD = "[data-automation-id=add-button]"
 ENTRIES = re.compile(r"(work|education|skill|website|language|certification|portfolio)", re.I)
 ENTRY_PART = re.compile(r"number|date|attachments", re.I)  # a field of an entry, not a list
+QUESTION_TYPES = {  # by a question's type's descriptor
+    "Multiple Choice - Single Select": FieldType.CHOICE,
+    "Multiple Choice - Multi Select": FieldType.MULTI_CHOICE,
+    "Text": FieldType.TEXT,
+    "Number": FieldType.TEXT,
+    "Date": FieldType.DATE,
+    "Upload Attachments": FieldType.FILE,
+}
 KINDS = {
     "text": FieldType.TEXT,
     "list": FieldType.CHOICE,
@@ -335,7 +343,7 @@ class Workday:
             detail = f"the country answered shows fields the read did not: {labels}"
             raise Unsupported(known_gap(self, "other_country", detail))
         if step == MY_INFORMATION:
-            raise NotTaken(f"{step} shows fields the read did not: {labels}; an answer opened them")
+            raise Unsupported(f"unhandled_rendering: an answer showed {labels}, not listed")
         raise NotTaken(f"{step} shows fields the read did not: {labels}; read again")
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -555,8 +563,12 @@ def _field(raw: dict[str, Any]) -> Field | None:
     if kind is None:
         reason = f"unhandled_rendering: {raw['label'] or raw['id']!r} is a {raw['kind']}"
         return Field(raw["id"], raw["label"], FieldType.TEXT, raw["required"], unfillable=reason)
-    prefilled = raw["value"] not in (None, "", [], "No") and raw["id"] not in SITE_DEFAULTS
-    return Field(raw["id"], raw["label"], kind, raw["required"], options, prefilled=prefilled)
+    value = raw["value"] if raw["value"] not in (None, "", [], "No") else None
+    site = raw["id"] in SITE_DEFAULTS
+    return Field(
+        raw["id"], raw["label"], kind, raw["required"], options,
+        prefilled=None if site else value, default=value if site else None,
+    )  # fmt: skip
 
 
 def _experience(adapter: Workday, page: Page, flow: dict[str, Any], values: str) -> list[Field]:
@@ -599,21 +611,21 @@ def _entry(
     is and the part is, `<list>--<part>` as its id."""
     prefix, _, parts = entry
     name = {"workExperience": "Work Experience", "education": "Education"}[prefix]
+    ids = {f"{prefix}--{p}" for p, _, _, section in parts if section is None or section in shown}
     fields = []
     for part, label, kind, section in parts:
         if section is not None and section not in shown:
             continue
         needed = required and (section is None or shown[section])
         fid, label = f"{prefix}--{part}", f"{name}: {label}"
+        current = f"{prefix}--currentlyWorkHere"
         match kind:
             case "month" | "year":
                 suffix = " (MM/YYYY)" if kind == "month" else " (year)"
-                if part == "endDate":
-                    asked = f"{name}: I currently work here"
-                    suffix, needed = f'{suffix} (asked when "{asked}" is "No")', False
-                fields.append(Field(fid, label + suffix, FieldType.TEXT, needed))
-            case "box":
-                fields.append(Field(fid, label, FieldType.CHOICE, False, YES_NO))
+                ended = Is(current, ["No"]) if part == "endDate" and current in ids else None
+                fields.append(Field(fid, label + suffix, FieldType.TEXT, needed, shown_when=ended))
+            case "box":  # unticked before any answer
+                fields.append(Field(fid, label, FieldType.CHOICE, False, YES_NO, default="No"))
             case "school":
                 fields.append(Field(fid, label, FieldType.TYPEAHEAD, needed))
             case "degrees" | "fieldsOfStudy":  # a dropdown, a prompt: the API's list either way
@@ -632,49 +644,37 @@ def _entry(
 
 
 def _questions(kind: str, items: list[dict[str, Any]]) -> list[Field]:
-    """A questionnaire's questions. One an answer branches to is asked only after it: optional,
-    its label naming the question as listed, itself a follow-up at times, and the answers."""
-    by_id = {item["id"]: item for item in items}
-    asked_when: dict[str, tuple[str, list[str]]] = {}
+    """A questionnaire's questions. One an answer branches to is asked only after it: shown
+    when any question branching to it holds one of those answers, itself a follow-up at
+    times."""
+    branches: dict[str, dict[str, list[str]]] = {}  # a follow-up's parents and their answers
     for item in items:
         for answer in item.get("possibleAnswers") or []:
             if follow_up := (answer.get("branchingQuestion") or {}).get("id"):
-                parent, values = asked_when.setdefault(follow_up, (item["id"], []))
-                if parent == item["id"]:
-                    values.append(answer["answerText"])
-    labels: dict[str, str] = {}
-
-    def label(qid: str) -> str:
-        if qid not in labels:
-            item = by_id[qid]
-            text = _text(item.get("body") or "")
-            if item.get("type", {}).get("descriptor") == "Number":
-                text += " (a number)"
-            if qid in asked_when and asked_when[qid][0] in by_id:
-                parent, values = asked_when[qid]
-                text += f' (asked when "{label(parent)}" is "{" or ".join(values)}")'
-            labels[qid] = text
-        return labels[qid]
-
+                picks = branches.setdefault(follow_up, {}).setdefault(item["id"], [])
+                picks.append(answer["answerText"])
     fields = []
     for item in items:
-        fid, text = f"{kind}Questionnaire--{item['id']}", label(item["id"])
+        fid, text = f"{kind}Questionnaire--{item['id']}", _text(item.get("body") or "")
+        descriptor = item.get("type", {}).get("descriptor")
+        if descriptor == "Number":
+            text += " (a number)"
+        held: list[Condition] = [
+            Is(f"{kind}Questionnaire--{parent}", picks)
+            for parent, picks in branches.get(item["id"], {}).items()
+        ]
+        when = None if not held else held[0] if len(held) == 1 else AnyOf(held)
         options = [a["answerText"] for a in item.get("possibleAnswers") or []] or None
-        required = bool(item.get("required")) and item["id"] not in asked_when
-        match item.get("type", {}).get("descriptor"):
-            case "Multiple Choice - Single Select":
-                fields.append(Field(fid, text, FieldType.CHOICE, required, options))
-            case "Multiple Choice - Multi Select":
-                fields.append(Field(fid, text, FieldType.MULTI_CHOICE, required, options))
-            case "Text" | "Number":
-                fields.append(Field(fid, text, FieldType.TEXT, required))
-            case "Date":
-                fields.append(Field(fid, text, FieldType.DATE, required))
-            case "Upload Attachments":
-                fields.append(Field(fid, text, FieldType.FILE, required))
-            case other:
-                reason = f"unhandled_rendering: {fid} is a question of type {other}"
-                fields.append(Field(fid, text, FieldType.TEXT, required, unfillable=reason))
+        required = bool(item.get("required"))
+        field_type = QUESTION_TYPES.get(descriptor)
+        if field_type is None:
+            reason = f"unhandled_rendering: {fid} is a question of type {descriptor}"
+            fields.append(Field(fid, text, FieldType.TEXT, required, unfillable=reason,
+                                shown_when=when))  # fmt: skip
+            continue
+        if field_type not in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
+            options = None
+        fields.append(Field(fid, text, field_type, required, options, shown_when=when))
     return fields
 
 

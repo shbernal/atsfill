@@ -24,14 +24,14 @@ Each rendering, and in how many of 325 postings' detail answers it shows (2026-1
 | state: a Fabric select of full names for the United States, Canada, Australia and the United Kingdom, a text input for any other country; the page refetches it when the country changes | `choice` of every list, the page's country's first | 241 select, 59 text |
 | masked date input, its format the employer's (`yyyy-mm-dd`, `mm/dd/yyyy`, `dd/mm/yyyy`, `dd mon yyyy`), read from its placeholder | `date` | 295 |
 | radio group, the input inside its `label`: custom `yes_no`, custom `multi` (option ids as values) | `choice` | 528, 110 questions |
-| a `multi` question's Other: an `other` radio that shows a `<name>_other` text input | `choice` with `Other`, then an optional `text` asked when it is Other | 36 |
+| a `multi` question's Other: an `other` radio that shows a `<name>_other` text input | `choice` with `Other`, then a `text` `shown_when` it is Other, optional as the page marks it | 36 |
 | checkbox, custom `checkbox` (an acknowledgement, usually required) | `choice` `Yes`/`No` | 34 |
 | `textarea`: custom `long`, references | `text` | 200, 41 |
 | veteran status: a radio (Decline to Answer, Not a Veteran, Veteran); Veteran shows a multi-select `role=listbox` of the kinds the JSON lists | `choice`: the two radios, then each kind | 38 |
 
 A key or question type outside this table, or a field the JSON lists and the page does not show, is listed as `unhandled_rendering`.
 
-The page shows a country before any answer, the employer's; the country field is `prefilled`, so the Test user keeps it and answers the state from that country's list.
+The page shows a country before any answer, the employer's: the country field's `default`, which a required country still needs answered. The Test user answers it, and the state from that country's list.
 
 ## Filling
 

@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = re.compile(r"^[\w-]+\.bamboohr\.com$")
 JOB = re.compile(r"^/careers/(\d+)(?:/|$)")
@@ -407,7 +407,10 @@ def _form(
         label, required = entry["label"].strip(), entry["isRequired"]
         options = [o["text"] for o in entry.get("options") or []] or None
         extra: Any = None
-        prefilled = key == "countryId" and bool(country)
+        shown = None  # the employer's country, the page's own before any answer
+        if key == "countryId" and country:
+            by_id = {str(o["id"]): o["text"] for o in entry.get("options") or []}
+            shown = by_id.get(str(country), country if country in by_id.values() else None)
         if key == "state" and options:
             options = _states(states, country)
         if key == "state" and not options:
@@ -416,7 +419,7 @@ def _form(
             extra = {o["id"]: o["text"] for o in entry["options"] if int(o["id"]) > 0}
             options = list(VETERAN) + list(extra.values())
         accept = FILE_TYPES if kind == "file" else None
-        field = Field(key, label, TYPES[kind], required, options, None, accept, prefilled)
+        field = Field(key, label, TYPES[kind], required, options, None, accept, default=shown)
         out.append((field, (kind, name, extra)))
     return out
 
@@ -451,11 +454,12 @@ def _custom(question: dict[str, Any]) -> list[tuple[Field, tuple[str, str | None
     field = Field(field_id, label, TYPES[kind], required, options, None, accept)
     out = [(field, (kind, name, extra))]
     if extra and OTHER in extra and question.get("hasOther") == "yes":
-        other = Field(
+        other = Field(  # its placeholder the page's only label; marked optional
             f"{field_id}_other",
-            f"{label}: please specify (asked when {label!r} is {OTHER})",
+            f"{label}: please specify",
             FieldType.TEXT,
             False,
+            shown_when=Is(field_id, [OTHER]),
         )
         out.append((other, ("text", f"{name}_other", None)))
     return out

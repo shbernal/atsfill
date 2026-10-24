@@ -46,8 +46,9 @@ _READ = """form => [...form.querySelectorAll("input[name], textarea[name], selec
               .replace(/\\s+/g, " ").trim() ?? "",
             required: e.required || label?.hasAttribute("required"),
             accept: e.accept ? e.accept.split(",") : null,
-            prefilled: e.type === "checkbox" ? e.checked
-              : e.type === "file" ? !!e.parentElement.querySelector("[data-id]") : !!e.value};
+            prefilled: (e.type === "checkbox" ? (e.checked ? "Yes" : null)
+              : e.type === "file" ? e.parentElement.querySelector("[data-id]")?.dataset.id
+              : e.value) || null};
   })"""
 
 _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {

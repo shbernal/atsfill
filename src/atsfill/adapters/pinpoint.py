@@ -11,7 +11,7 @@ import json
 import re
 import urllib.request
 from contextlib import suppress
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 from html.parser import HTMLParser
 from typing import Any
@@ -19,7 +19,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
 HOST = re.compile(r"(?:^|\.)pinpointhq\.com$")
 JOB = re.compile(
@@ -83,6 +83,16 @@ _READ_BACK = r"""(form, specs) => {
 }"""
 
 
+_SHOWN = r"""(form, specs) => specs.filter(s => {
+  const root = s.root ? form.querySelector(`[id="${s.root}"]`) : form;
+  if (!root?.querySelector("input, select, textarea")) return false;
+  const us = !!root.querySelector(`.react-select input[type=hidden][name$="[town]"]`);
+  if (s.kind === "line2" || s.kind === "town") return !us;
+  if (s.kind === "city" || s.kind === "state") return us;
+  return true;
+}).map(s => s.id)"""
+
+
 @dataclass
 class _Spec:
     """Where a field's control is: the component's root id (random per page load), the control's
@@ -139,6 +149,9 @@ class Pinpoint:
         _hydrated(page)
         listed = _form(_parse(page.locator(FORM).evaluate("f => f.outerHTML")), self)
         self._specs = {f.id: s for f, s in listed if not f.unfillable}
+        if "country" in self._specs:  # the visitor's, guessed by the page
+            held = self.read_back(page).get("country")
+            listed = [(replace(f, default=held) if f.id == "country" else f, s) for f, s in listed]
         self._fields = [f for f, _ in listed if not f.unfillable]
         return [f for f, _ in listed]
 
@@ -183,6 +196,13 @@ class Pinpoint:
                         _choose(root.locator(f'select[name="{spec.name}({n}i)]"]'), str(part))
                 case "file":
                     _attach(root, values[0])
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The fields of the filled page's form whose control shows: a question component
+        renders none while its parent's answer keeps it hidden, an address line one layout's."""
+        listed = _form(_parse(page.locator(FORM).evaluate("f => f.outerHTML")), self)
+        specs = [{"id": f.id, "kind": s.kind, "root": s.root} for f, s in listed]
+        return page.locator(FORM).evaluate(_SHOWN, specs)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         specs = [
@@ -356,7 +376,7 @@ def _form(form: _Node, adapter: Pinpoint) -> list[tuple[Field, _Spec]]:
     nodes = form.walk()
     labels = {n.attrs["for"]: n.text() for n in nodes if n.tag == "label" and "for" in n.attrs}
     out: list[tuple[Field, _Spec]] = []
-    titles: dict[int, tuple[str, dict[str, str]]] = {}  # a question's label, its values' words
+    titles: dict[int, tuple[str, dict[str, str]]] = {}  # a question's id, its values' labels
     for node in nodes:
         if node.tag == "script" and COMPONENT in node.classes():
             props = json.loads(node.text() or "{}")
@@ -482,23 +502,38 @@ def _component(
         field_type, spec = FieldType.FILE, _Spec("file", None, root)
     else:
         reason = f"unhandled_rendering: {field_id} is a {short}"
-        titles[qid] = (label, {})
+        titles[qid] = (field_id, {})
         return [(Field(field_id, label, FieldType.TEXT, required, unfillable=reason), _Spec(short))]
+    shown_when = None
     if parent := titles.get(props.get("conditionalQuestionParentQuestionId") or -1):
-        label += _asked_when(parent, props.get("conditionalQuestionConditions") or [])
-        required = False
-    words = dict(zip(("true", "false"), options or [], strict=False)) if short == "Boolean" else {}
-    titles[qid] = (label, words)
+        shown_when = _shown_when(parent, props.get("conditionalQuestionConditions") or [])
+    if short == "Boolean":
+        words = dict(zip(("true", "false"), options or [], strict=False))
+    else:
+        words = {str(o.get("value")): _text(o["label"]) for o in props.get("options", [])}
+    titles[qid] = (field_id, words)
     accept = _accept(props.get("accept")) if field_type is FieldType.FILE else None
-    return [(Field(field_id, label, field_type, required, options, accept=accept), spec)]
+    field = Field(
+        field_id, label, field_type, required, options, accept=accept, shown_when=shown_when
+    )
+    return [(field, spec)]
 
 
-def _asked_when(parent: tuple[str, dict[str, str]], conditions: list[dict]) -> str:
-    """` (asked when "<parent>" is <value>)`, a boolean's `true` in its words."""
-    label, words = parent
-    values = [words.get(str(c["value"]), str(c["value"])) for c in conditions]
-    negated = "not " if any(c.get("operator") == "not_equals" for c in conditions) else ""
-    return f' (asked when "{label}" is {negated}{" or ".join(values)})'
+def _shown_when(parent: tuple[str, dict[str, str]], conditions: list[dict]) -> Condition | None:
+    """The parent's answer `equals` or `not_equals` the values, each in its option's label (a
+    boolean's `true` in its words); a `not_equals` one stays hidden while the parent is
+    unanswered."""
+    field_id, words = parent
+    held: list[Condition] = []
+    for operator, negated in (("equals", False), ("not_equals", True)):
+        values = [
+            words.get(str(c["value"]), str(c["value"]))
+            for c in conditions
+            if c.get("operator", "equals") == operator
+        ]
+        if values:
+            held.append(Is(field_id, values, negated))
+    return None if not held else held[0] if len(held) == 1 else AnyOf(held)
 
 
 def _file_label(script: _Node, props: dict) -> tuple[str, bool]:
@@ -516,25 +551,27 @@ def _file_label(script: _Node, props: dict) -> tuple[str, bool]:
 
 def _address(props: dict, root: str | None) -> list[tuple[Field, _Spec]]:
     """The address: a country, then lines whose labels and kinds follow it. The United States
-    asks for a city in the second line and a state (a select) in the town's place."""
+    asks for a city in the second line and a state (a select) in the town's place; with no
+    country the lines are the others'."""
     names, words = props["fieldNames"], props.get("translations", {})
     country = words.get("country", "Country")
-    us, not_us = (f' (asked when "{country}" is {n}{US})' for n in ("", "not "))
+    us = Is("country", [US])
+    not_us = AnyOf([Is("country", [US], negated=True), Is("country", negated=True)])
     countries = [_text(o["label"]) for o in props.get("countryOptions", [])]
     states = [_text(o["label"]) for o in props.get("stateOptions", [])]
     line1 = f"{words.get('addressOne', 'Address Line 1')} ({words.get('streetAddress')})"
     postcode = f"{words.get('postcode', 'Postcode')} ({words.get('zipcode')})"
-    rows = [  # id, label, type, required, options, kind, name
-        ("country", country, FieldType.CHOICE, True, countries, "react", "country"),
-        ("address1", line1, FieldType.TEXT, True, None, "text", "addressOne"),
-        ("address2", f"{words.get('addressTwo')}{not_us}", FieldType.TEXT, False, None, "line2",
-         "addressTwo"),
-        ("city", f"{words.get('city')}{us}", FieldType.TEXT, False, None, "city", "addressTwo"),
-        ("town", f"{words.get('town')}{not_us}", FieldType.TEXT, False, None, "town", "town"),
-        ("state", f"{words.get('state')}{us}", FieldType.CHOICE, False, states, "state", "town"),
-        ("postcode", postcode, FieldType.TEXT, True, None, "text", "postcode"),
+    rows = [  # id, label, type, required, options, kind, name, shown when
+        ("country", country, FieldType.CHOICE, True, countries, "react", "country", None),
+        ("address1", line1, FieldType.TEXT, True, None, "text", "addressOne", None),
+        ("address2", words.get("addressTwo"), FieldType.TEXT, False, None, "line2", "addressTwo",
+         not_us),
+        ("city", words.get("city"), FieldType.TEXT, False, None, "city", "addressTwo", us),
+        ("town", words.get("town"), FieldType.TEXT, False, None, "town", "town", not_us),
+        ("state", words.get("state"), FieldType.CHOICE, False, states, "state", "town", us),
+        ("postcode", postcode, FieldType.TEXT, True, None, "text", "postcode", None),
     ]  # fmt: skip
     return [
-        (Field(i, label, t, required, options), _Spec(kind, names[name], root))
-        for i, label, t, required, options, kind, name in rows
+        (Field(i, str(label), t, required, options, shown_when=when), _Spec(kind, names[n], root))
+        for i, label, t, required, options, kind, n, when in rows
     ]

@@ -30,7 +30,7 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | state/province: disabled until a country is picked, its list the country's | `typeahead` | 27 |
 | mobile, home phone: dial code dropdown (`🇺🇸 +1`, no `title`) and number | `phone` | 27 mobile, 18 home |
 | fax, pager: number only, 7 to 15 characters | `phone` | 3, 4 |
-| "how did you hear" source asking for details (`requiresAdditionalExplanation`): `candidateSourceDescription` shows | `text`, conditional | 27 |
+| "how did you hear" source asking for details (`requiresAdditionalExplanation`): `candidateSourceDescription` shows | `text`, `shown_when` `Is` the source on those | 27 |
 | SMS consent dialog | `choice`, `No`/`Yes` | where enabled |
 | resume, cover letter, additional documents, `input[type=file]` | `file` | 25 |
 | history entry (employment, education): "Add …" (`[test-id=add-<section>-record]`), fields, Update | one entry, the fields' types, `max_length` read from an entry `read` adds; required only with the section | 16 each, required on 1 |
@@ -42,11 +42,9 @@ Each rendering, and on how many of the 27 surveyed postings' templates it shows 
 | type 3 text | `text` | 24 |
 | type 6 box (`…_isChecked`) | `choice`, `Yes`/`No` | 2 |
 | type 7 boxes (`…_selectedOptionIds`, `.ant-checkbox-group`) | `multi_choice` | 11 |
-| an option with `hasFollowUp`: "Enter additional comments here" shows, required (`…_answerFollowup`; one per ticked option on a box group, `…_answerFollowups_<option id>`) | `q<id>.followup`, `text`, conditional | 19 |
-| EEO, veteran (radios), disability form: name and date prefilled and disabled, employee id disabled for a guest, boxes | `choice`, `multi_choice`; its text questions prefilled | 5 |
+| an option with `hasFollowUp`: "Enter additional comments here" shows, required (`…_answerFollowup`; one per ticked option on a box group, `…_answerFollowups_<option id>`) | `q<id>.followup`, `text`, required, `shown_when` `Is` the question on those options; on a box group one per option, `q<id>.followup.<option id>` | 19 |
+| EEO, veteran (radios), disability form: name and date prefilled and disabled, employee id disabled for a guest, boxes | `choice`, `multi_choice`; its text questions, the page's own, are not fields | 5 |
 | candidate acknowledgement box on Submit (`#jobPostingApplication_userAcknowledged`) | `choice`, `Yes`/`No` | 26 |
-
-A conditional field is labelled `(asked when '<field>' is <option> or <option>)`.
 
 A template field, section or answer type outside this table is listed as `unhandled_rendering`.
 
@@ -57,6 +55,7 @@ A template field, section or answer type outside this table is listed as `unhand
 - A phone number picks the longest dial code its digits start with, the main country of a shared one (`+1` is the United States), and types the rest.
 - A section saves with its Update, the first submit button after its first field; a click while a dropdown is still closing is lost, so Update is clicked until the section closes. An open section keeps Next from going on.
 - Some sites refuse a history entry dated in the future without an error; the entry stays open and the wizard on Candidate Info.
+- A comment box is filled once its option is picked and the box shows, each of a box group's with its own answer. The wizard keeps only its last page, so the fields shown once filled are the comment boxes and source details each page showed before Next; a comment box showing that `read_form` did not list is reported by its element id.
 - Next can go unheeded right after a save; atsfill clicks it again, up to three times, until the step's controls change, the button reads Submit, or an error shows; an error adds its own `<id>_help` element, not a control. Submit is never pressed by `fill`.
 
 ## Read-back and submit
