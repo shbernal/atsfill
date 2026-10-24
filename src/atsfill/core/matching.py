@@ -123,7 +123,7 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
         if len(given) > 1:
             out.append(f"{key}: one of {', '.join(given)}, not both")
         elif form.group_required(key) and not given and all(m.prefilled is None for m in members):
-            labels = " or ".join(m.label for m in members)
+            labels = " or ".join(dict.fromkeys(m.label for m in members))
             out.append(f"no answer for required {key} ({labels})")
     out += [
         f"{i}: not asked, it shows when {describe(f.shown_when, by_id)}"

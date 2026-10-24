@@ -1,6 +1,6 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 
@@ -11,7 +11,7 @@ Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/
 
 ## Reading the form
 
-The Job Board API answers without a key: `boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true` (EU boards too). Its `questions` give the field names the page uses as input ids, the file's paste-in textarea aside, and its `location_questions` the location, `candidate-location` on the page beside hidden latitude and longitude. Its other sections do not map to the page for certain, so `read_api` returns `None` on a posting with any of them and `read` falls back to the page:
+The Job Board API answers without a key: `boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true` (EU boards too). Its `questions` give the field names the page uses as input ids, a file's paste-in textarea second (`resume_text`, `cover_letter_text`), and its `location_questions` the location, `candidate-location` on the page beside hidden latitude and longitude. Its other sections do not map to the page for certain, so `read_api` returns `None` on a posting with any of them and `read` falls back to the page:
 
 - `education` and `data_compliance` consents: the page adds education rows (`school--0`, …) and consent boxes the API does not list;
 - `compliance` (US EEOC): the page shows race only once Hispanic/Latino is answered No;
@@ -30,7 +30,7 @@ On the page, `form#application-form`, each field rendering and on how many of 18
 | react-select that suggests only as you type (location, some schools) | `typeahead` | 12 |
 | `fieldset.checkbox` with a box per option | `multi_choice` | 6 |
 | a lone checkbox (GDPR consent, an employment row's "Current role") | `choice`, `Yes`/`No` | 3 |
-| `.file-upload` group, with an "Enter manually" textarea behind a button | `file` | 18 |
+| `.file-upload` group, with an "Enter manually" textarea behind a button | `file` and `text` alternatives, `one_of` the file's id | 18 |
 
 Sections built of these: employment rows (company, title, month selects, four-character year inputs) on 2, education rows on 5, US EEOC selects on 9, demographic selects with a consent box on 1. A radio input has not been seen; one is listed as `unhandled_rendering`.
 
@@ -46,6 +46,7 @@ The form is server-rendered and goes live a second or two later. Until then a se
 - The phone is typed with its dial code: intl-tel-input picks the country from it (by area code too: `+1 514` is Canada), spaces the number and sets the Country select, which then shows only `+1` and a flag.
 - Location wants one of its suggestions; the first one for the typed text is taken.
 - The resume goes to `#resume`, which an attach replaces with the file's name. Attaching uploads the file to Greenhouse's S3 at once.
+- A resume or cover letter as text: `button[data-testid=<id>-text]` ("Enter manually") adds `textarea#<id>_text` inside the `.file-upload` group, beside the file input, which stays. The textarea carries `aria-required=false`; the group's flag is the pair's. Whether the server keeps the text or a file when it gets both has not been observed: the core never sends both.
 - "Autofill my application" is never used.
 
 ## Read-back and submit
