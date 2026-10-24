@@ -1,6 +1,6 @@
 # Workday
 
-Workday's candidate sites and their apply wizard, observed on live postings, last on 2026-10-23. The fixture pages are [tests/pages/workday/login.html](../../tests/pages/workday/login.html) and [apply.html](../../tests/pages/workday/apply.html), with the posting, apply flow and questionnaire JSON beside them, served as an Acme tenant in `tests/test_workday.py`: the login page's outcomes, and a wizard with one example of each rendering below.
+Workday's candidate sites and their apply wizard, observed on live postings, last on 2026-10-24. The fixture pages are [tests/pages/workday/login.html](../../tests/pages/workday/login.html) and [apply.html](../../tests/pages/workday/apply.html), with the posting, apply flow and questionnaire JSON beside them, served as an Acme tenant in `tests/test_workday.py`: the login page's outcomes, and a wizard with one example of each rendering below.
 
 ## Where the form is
 
@@ -15,7 +15,7 @@ Applying needs an account, one per tenant: the account scope is the tenant, the 
 - `login_url` is the posting's site's `/<site>/login`: sign-in, with Create Account behind `createAccountLink`. Some tenants offer Google, LinkedIn or Apple first, the email form behind `SignInWithEmailButton`.
 - The buttons take clicks through a `click_filter` overlay. The first press after typing often posts nothing: atsfill presses again until `POST /login` or `POST /register` goes out. A `beecatcher` input is a honeypot, left empty.
 - The signed-in check is `GET /wday/cxs/<tenant>/<any site>/userprofile`, which holds `emailAddress` for an account and is `{}` for a visitor, asked of the hosts the session's cookies are for. Sessions are cookies without an expiry; Workday ends them server side.
-- Sign-up answers `POST /register` with a redirect: to the posting or the site's home, signed in (12 of 15 tenants); to `/login/warning` after sending a verification email (2 of 15), `blocked: email_link`; to `/login`, signed out and saying nothing, when the email has an account, `refused: email_in_use`. Clicking the link lands on `/login/ok`, "Account Activated".
+- Sign-up answers `POST /register` with a redirect: to the posting or the site's home, signed in (20 of 29 tenants); to `/login/warning` after sending a verification email (7 of 29), `blocked: email_link`; to `/login`, signed out and saying nothing, when the email has an account, `refused: email_in_use`. Clicking the link lands on `/login/ok`, "Account Activated".
 - A wrong password shows `[data-automation-id=errorMessage]`; an account not verified yet, "Verify your account before you sign in", `blocked: email_link`; a password the tenant's rules refuse, an `inputAlert` under the field, `password_rule`. atsfill's generated passwords meet every tenant's rules seen.
 - No tenant asked for an OTP.
 
@@ -40,7 +40,7 @@ Each rendering, from 40 postings' questionnaires and the pages walked:
 | radio group: `previousWorker--candidateIsPreviousWorker` | `choice` | 13 |
 | checkboxes, a Multi Select question | `multi_choice` | 18 questions |
 | search prompt (`selectinput`) of one value: the source ("How Did You Hear About Us?", a tree of categories and items), the country phone code, a field of study | `choice`: the items, a category's in its place; the long lists from the API | 40 |
-| search prompt of many values: skills; of one, searched only: a school | `typeahead` | 40 |
+| search prompt of many values: skills; of one, searched only: a school, a city (`address--countryCity`, the cities of the form's country) | `typeahead` | 40; a city, 4 of 14 |
 | phone number beside the country phone code (`phoneNumber--phoneNumber`), typed without the code | `phone` | 40 |
 | date sections (`dateSectionMonth-input`, `Day`, `Year`): a Date question | `date` | 1 question |
 | month and year sections: a work entry's From and To | `text`, label `(MM/YYYY)` | 13 |
