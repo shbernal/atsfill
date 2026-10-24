@@ -56,8 +56,8 @@ Each rendering, from 40 postings' questionnaires and the pages walked:
 - A search prompt is driven from the keyboard, its input lying under the picked item and the page's sticky footer; a list is closed by Escape and a click outside it. Enter on an empty search opens the tree; after typing, it picks the only item that matches, at any depth, or lists them, and only the open list's rows count (`activeListContainer`), not the picked items. A search can miss an item the list holds (one with brackets in its name): the item is then looked for in the whole list. A one-value prompt has its item deleted (`DELETE_charm`) before another is picked.
 - The phone number is typed without the country code the form shows; a number with another code is refused, naming the code's field.
 - A list's first entry is added with its Add button when answers are given for it, in the group its name labels (`[role=group][aria-labelledby=Work-Experience-section]`, `Work-History-(Optional)-section` on some tenants). The page numbers each entry's fields its own way (`workExperience-8--jobTitle`), so the first entry's are read as `workExperience--jobTitle`.
-- An upload first deletes the files the draft or the profile holds (`delete-file`), then waits for the new file's name.
-- A page showing a required field the read did not list stops the fill before saving: on My Information, the `other_country` gap; on a later page, `refused: answer_not_taken` asking to read again, the pages before it now saved.
+- An upload first deletes the files the draft or the account profile holds (`delete-file`), then waits for the new file's name.
+- A page showing a required field the read did not list stops the fill before saving: on My Information, the `other_country` known gap; on a later page, `refused: answer_not_taken` asking to read again, the pages before it now saved.
 - Save and Continue (`pageFooterNextButton`) is pressed again when the page neither moves nor shows an error. A page that shows errors (`errorHeading`, `inputAlert`) stops the fill: `refused: answer_not_taken`, with the page's message.
 
 ## Read-back and submit

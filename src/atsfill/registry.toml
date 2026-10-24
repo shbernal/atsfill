@@ -13,7 +13,7 @@
 #           send_verified
 # unsupported
 #           date, version, commit, by, reason: a round that ended without the adapter passing
-#           the gate (ADR 0013), the known gap that stopped it
+#           the adapter gate (ADR 0013), the known gap that stopped it
 # out_of_scope
 #           reason, date: a system atsfill will never fill, it needs the user live (ADR 0014)
 # send_broken
@@ -315,7 +315,7 @@ dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", 
 [isolvedhire]
 kind = "ats"
 share = 0.0047
-account = "to_read"  # Apply now first verifies the email or phone with a one-time code, then creates an account on the employer's careers site; the application wizard (/apply/<job>-0.php) redirects to that site's login until then
+account = "to_read"  # Apply now first verifies the email or phone with an OTP, then creates an account on the employer's careers site; the application wizard (/apply/<job>-0.php) redirects to that site's login until then
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 

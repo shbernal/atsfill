@@ -56,7 +56,7 @@ def test_read_form_waits_for_the_account(opened):
     assert by_id["questions.ab12"].label == "Why this role?"
     assert by_id["resume"].required and by_id["resume"].accept == ["application/pdf"]
     prefilled = [f.id for f in fields if f.prefilled]
-    assert prefilled == ["firstname", "phone", "location", "resume"]  # from the profile
+    assert prefilled == ["firstname", "phone", "location", "resume"]  # from the account profile
 
 
 def test_every_answer_reads_back(opened, page, resume, monkeypatch):

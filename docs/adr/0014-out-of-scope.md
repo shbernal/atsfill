@@ -8,7 +8,7 @@ atsfill aims to cover as many forms as it can while staying close to the standar
 
 **The test.** A field is out of scope when its answer cannot come from stored answers and files, because it needs the user present for the content of the answer: a video recorded in a live recorder, a timed or proctored assessment. The line is drawn narrow on purpose, and the postings that ask for such a field are given up.
 
-In scope, even where rare: a pre-recorded video given as a file, an untimed written assessment (text), a video link (text), booking an interview slot, an emailed or SMS code (plumbing, not the content of an answer).
+In scope, even where rare: a pre-recorded video given as a file, an untimed written assessment (text), a video link (text), booking an interview slot, an OTP (plumbing, not the content of an answer).
 
 **Three cases.** A form atsfill cannot fill falls in one of three, each telling at run time:
 
@@ -30,4 +30,4 @@ In scope, even where rare: a pre-recorded video given as a file, an untimed writ
 
 ## Consequences
 
-A consumer can tell a posting atsfill will never fill from one it may fill later, and a documented gap from a surprise. Every known gap has a doc entry a reader finds. The postings that need the user live are lost for good, unless this test changes.
+A consumer can tell a posting atsfill will never fill from one it may fill later, and a known gap from an unhandled case. Every known gap has a doc entry a reader finds. The postings that need the user live are lost for good, unless this test changes.

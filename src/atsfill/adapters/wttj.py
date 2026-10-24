@@ -1,7 +1,7 @@
 """Welcome to the Jungle (`welcometothejungle.com` jobs and their `easyapply.jobs` links), as
 docs/adapters/wttj.md observes.
 
-Applying needs an account: the form opens in a modal, prefilled from the profile. Nothing is
+Applying needs an account: the form opens in a modal, prefilled from the account profile. Nothing is
 sent before submit, so the read-back is the form's inputs and the CV's shown name.
 """
 
@@ -118,7 +118,7 @@ class WelcomeToTheJungle:
         while location.count() and not location.input_value() and time.monotonic() < deadline:
             page.wait_for_timeout(
                 LOCATION_POLL_MS
-            )  # the profile's location comes last, a second later
+            )  # the account profile's location comes last, a second later
         fields: dict[str, Field] = {}
         for raw in form.evaluate(_READ):
             if raw["id"] not in fields and (field := _field(raw)) is not None:
@@ -135,7 +135,7 @@ class WelcomeToTheJungle:
                     box = target.locator("xpath=..")
                     remove = box.locator("button[title=Remove]")
                     if remove.count():
-                        remove.click()  # the profile's CV; never made the default
+                        remove.click()  # the account profile's CV; never made the default
                     target.set_input_files(answer)
                     box.locator(f'[data-id="{answer.rsplit("/", 1)[-1]}"]').wait_for()
                 case FieldType.CHOICE, str():
@@ -175,7 +175,7 @@ def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
     options = page.locator("[role=option]:visible").filter(has_not=page.locator("svg"))
     for _ in range(SUGGEST_TRIES):
         box.click()
-        box.press("Control+a")  # `fill("")`, select-all and Delete, leaves the profile's value
+        box.press("Control+a")  # `fill("")` (select-all, Delete) leaves the account profile's value
         box.press("Backspace")
         box.press_sequentially(answer, delay=KEY_DELAY_MS)
         deadline = time.monotonic() + SUGGEST_TIMEOUT_S

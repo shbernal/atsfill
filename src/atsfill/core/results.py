@@ -34,7 +34,7 @@ class Field:
     options: list[str] | None = None
     max_length: int | None = None
     accept: list[str] | None = None
-    prefilled: bool = False  # holds a value before any answer, from the account's profile
+    prefilled: bool = False  # holds a value before any answer, from the account profile
     unfillable: str | None = None  # why atsfill cannot fill it, a reason (ADR 0014)
 
 

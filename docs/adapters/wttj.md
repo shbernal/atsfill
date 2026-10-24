@@ -17,7 +17,7 @@ The job page is rendered for a visitor first: the apply button is a link to `/en
 
 ## Reading and filling
 
-The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with the form holding `[data-testid=apply-form-submit]`, prefilled from the profile. Field ids are the input names. Every form is the profile's fields, the ones the employer picked, and the employer's questions; the inventory, on 15 employers, then 10 at the adapter gate:
+The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with the form holding `[data-testid=apply-form-submit]`, prefilled from the account profile. Field ids are the input names. Every form is the account profile's fields, the ones the employer picked, and the employer's questions; the inventory, on 15 employers, then 10 at the adapter gate:
 
 | Name | Field type | Rendering | Postings |
 |---|---|---|---|
@@ -27,16 +27,16 @@ The apply button (`[data-testid="job_header-button-apply"]`) opens a modal with 
 | `questions.<hash>` | `text` | textarea, required, one to three | 5 |
 | `phone` | `phone` | text input | 15 |
 | `location` | `typeahead` | downshift combobox | 15 |
-| `resume` | `file` | PDF only, behind the profile's CV | 25 |
+| `resume` | `file` | PDF only, behind the account profile's CV | 25 |
 | `portfolio` | `file` | PDF only | 1 |
 | `consent` | `choice`, `Yes`/`No` | checkbox | 15 |
 
 No question rendered as a checkbox, a radio or a select: those, and any other checkbox, are listed as `unhandled_rendering`. A page that is not a job, or an apply button that opens no form, is an `adapter_error`.
 
 - The email comes from the account and is disabled; the avatar is not read.
-- A field holding a value when the form opens is `prefilled`; one not answered keeps what the profile put there, required or not. The profile's location arrives up to a second after the rest, so the form is read once it has, or after 3 seconds.
-- The profile's CV shows first, with a Remove button: remove it, then upload the tailored PDF. "Utiliser comme CV par défaut", which would replace the profile's CV, is never ticked.
-- Location suggestions load only while typing key by key, into a box cleared by select-all and Backspace: Playwright's `fill("")` (select-all and Delete) leaves the profile's value in it, and the answer lands after it. The first suggestion, "Position actuelle", geolocates and is skipped. Suggestions read `Paris, Île-de-France, France`. The first answer typed on a page sometimes loads none, "Position actuelle" alone, for good: it is typed again.
+- A field holding a value when the form opens is `prefilled`; one not answered keeps what the account profile put there, required or not. The account profile's location arrives up to a second after the rest, so the form is read once it has, or after 3 seconds.
+- The account profile's CV shows first, with a Remove button: remove it, then upload the tailored PDF. "Utiliser comme CV par défaut", which would replace the account profile's CV, is never ticked.
+- Location suggestions load only while typing key by key, into a box cleared by select-all and Backspace: Playwright's `fill("")` (select-all and Delete) leaves the account profile's value in it, and the answer lands after it. The first suggestion, "Position actuelle", geolocates and is skipped. Suggestions read `Paris, Île-de-France, France`. The first answer typed on a page sometimes loads none, "Position actuelle" alone, for good: it is typed again.
 - Nothing is sent before submit, the CV included, so the read-back is the form's inputs and the CV's shown name (`[data-id]`).
 
 ## Submitting

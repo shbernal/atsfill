@@ -236,7 +236,7 @@ class Phenom:
         SideEffect(
             "fill",
             "hiring_system",
-            "each step is submitted to Phenom on Next, which keeps a candidate profile from the"
+            "each step is submitted to Phenom on Next, which keeps an account profile from the"
             " first step",
         ),
         SideEffect("submit", "employer", "the application reaches the employer"),

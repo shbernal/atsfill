@@ -703,7 +703,7 @@ def _fill(page: Page, field: Field, raw: dict[str, Any], answer: Answer) -> None
         case "file", _:
             files = [answer] if isinstance(answer, str) else answer
             delete = box.locator(DELETE_FILE)
-            while (count := delete.count()) > 0:  # the draft's or the profile's files
+            while (count := delete.count()) > 0:  # the draft's or the account profile's files
                 delete.first.click()
                 deadline = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000
                 while delete.count() == count and time.monotonic() < deadline:
