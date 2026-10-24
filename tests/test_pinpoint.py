@@ -1,6 +1,7 @@
 """The Pinpoint adapter on tests/pages/pinpoint, served as an employer's apply page."""
 
 import io
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -8,7 +9,7 @@ import pytest
 from atsfill.adapters.pinpoint import Pinpoint, _form, _parse
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, AnyOf, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/pinpoint"
@@ -98,19 +99,22 @@ def test_read_form(page):
         "United States Minor Outlying Islands",
         "United States",
     ]
-    assert by_id["state"].label == 'State (asked when "Country" is United States)'
-    assert by_id["town"].label == 'Town (asked when "Country" is not United States)'
+    assert by_id["country"].default == "United Kingdom"  # the visitor's, guessed by the page
+    assert by_id["state"].label == "State"
+    assert by_id["state"].shown_when == Is("country", ["United States"])
+    assert by_id["town"].label == "Town"
+    assert by_id["town"].shown_when == AnyOf(
+        [Is("country", ["United States"], negated=True), Is("country", negated=True)]
+    )
     assert by_id["cv"].type is FieldType.FILE and by_id["cv"].required
     assert by_id["cv"].label == "Résumé / CV"
     assert by_id["cv"].accept == [".doc", ".docx", ".pdf"]
     assert by_id["question_1003"].label == "Years of experience (a number)"
     assert by_id["question_1005"].options == ["Yes", "No"]
     follow_up = by_id["question_1006"]
-    assert (
-        follow_up.label
-        == 'Which adjustments? (asked when "Do you require any adjustments?" is Yes)'
-    )
-    assert not follow_up.required
+    assert follow_up.label == "Which adjustments?"
+    assert follow_up.shown_when == Is("question_1005", ["Yes"])
+    assert follow_up.required  # whenever shown
     assert by_id["question_1004"].type is FieldType.URL
     assert by_id["question_1007"].type is FieldType.CHOICE
     assert by_id["question_1008"].type is FieldType.MULTI_CHOICE
@@ -134,7 +138,8 @@ def test_read_api_lists_the_same_fields(page, monkeypatch):
         return Response(HTML.encode())
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
-    assert Pinpoint().read_api(f"{JOB}?utm_source=x") == fields
+    by_api = Pinpoint().read_api(f"{JOB}?utm_source=x")
+    assert by_api == [replace(f, default=None) for f in fields]  # the country the page guesses
     assert fetched == [APPLY]
 
 
@@ -169,6 +174,8 @@ def test_every_answer_reads_back(page, resume):
     adapter.fill(page, answers)
     read_back = adapter.read_back(page)
     assert "town" not in read_back and "address2" not in read_back
+    shown = adapter.shown_fields(page)
+    assert "question_1006" in shown and "state" in shown and "town" not in shown
     checks = matching.check(fields, answers, read_back)
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
@@ -194,6 +201,14 @@ def test_the_test_user_answers_every_field(page, tmp_path):
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
+
+
+def test_a_follow_up_its_parent_keeps_hidden_is_not_shown(page):
+    adapter, _ = opened(page)
+    adapter.fill(page, {"question_1005": "No"})
+    shown = adapter.shown_fields(page)
+    assert "question_1006" not in shown and "question_1005" in shown
+    assert "town" in shown and "state" not in shown
 
 
 def test_an_option_the_page_lacks_is_not_taken(page):

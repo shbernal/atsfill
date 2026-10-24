@@ -118,7 +118,7 @@
     h("span", {class: "external-form__label--title"}, d.title));
 
   // A react-select: a control that opens a menu of options, a hidden input with the pick.
-  function select(options, {multi = false, name = "selectBox", searchable = false, onPick} = {}) {
+  function select(options, {multi = false, name = "selectBox", searchable = false, onPick, initial} = {}) {
     const hidden = h("input", {type: "hidden", name, value: ""});
     const value = h("div", {class: "react-select__value-container"});
     const input = h("input", {class: "react-select__input", role: "combobox", value: ""});
@@ -147,6 +147,11 @@
       }
       box.append(menu);
     };
+    if (initial) {  // shown picked before any answer
+      picked = [initial];
+      value.replaceChildren(h("div", {class: "react-select__single-value"}, initial.label));
+      hidden.value = initial.value;
+    }
     control.addEventListener("click", () => menu ? close() : open());
     input.addEventListener("input", () => open(input.value));
     input.addEventListener("keydown", e => e.key === "Escape" && close());
@@ -180,8 +185,9 @@
         h("label", {class: "external-form__label"}, us ? t.zipcode : t.postcode),
         h("input", {type: "text", name: names.postcode, id: "postcode"}));
       layout(false);
+      // the country starts on the visitor's, guessed by the page
       const country = select(p.countryOptions, {name: names.country, searchable: true,
-        onPick: o => layout(o.value === "US")});
+        onPick: o => layout(o.value === "US"), initial: p.countryOptions[0]});
       return [h("div", {id: "address-country"}, h("label", {}, t.country), country), lines];
     },
     "Shared::Form::Filefield": p => file(p.name, p.name, p.accept),

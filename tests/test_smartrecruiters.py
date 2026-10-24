@@ -6,7 +6,7 @@ import pytest
 
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.core import browser, matching
-from atsfill.core.results import FieldType
+from atsfill.core.results import FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/smartrecruiters/apply.html"
 JOB = "https://jobs.smartrecruiters.com/Acme/123456-engineer"
@@ -79,8 +79,10 @@ def test_read_form_lists_both_pages(page):
     assert by_id["q-text"].label == "Middle name (optional)"
     assert by_id["q-radio"].options == ["Yes", "No"]
     assert by_id["q-multi"].type is FieldType.MULTI_CHOICE
-    assert not by_id["q-multi"].required  # asked only on one answer
-    assert by_id["q-multi"].label == "Which entities? (asked when 'Did you work for Acme?' is Yes)"
+    assert by_id["q-multi"].required  # whenever shown
+    assert by_id["q-multi"].label == "Which entities?"
+    assert by_id["q-multi"].shown_when == Is("q-select", ["Yes"])
+    assert [f.id for f in fields if f.shown_when] == ["q-multi"]
     assert by_id["q-box"].options == ["Yes", "No"]
     assert by_id["q-eeo.gender"].label == "Gender, Race and Ethnicity: Gender"
     assert (
@@ -134,6 +136,15 @@ def test_a_conditional_question_left_hidden_reads_back_empty(page):
     read_back = adapter.read_back(page)
     assert "q-multi" not in read_back
     assert read_back["q-radio"] == "Yes"  # the next containers still map to their questions
+    assert "q-multi" not in adapter.shown_fields(page)
+
+
+def test_a_conditional_question_shown_is_listed_shown(page):
+    adapter, _ = opened(page, FORM)
+    adapter.fill(page, {"q-select": "Yes"})
+    shown = adapter.shown_fields(page)
+    assert "q-multi" in shown and "q-eeo.gender" in shown
+    assert not [i for i in shown if i.startswith("question #")]
 
 
 def test_submit_returns_the_page_it_lands_on(page):
