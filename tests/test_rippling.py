@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.rippling import DATA, Rippling, _api, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/rippling"
@@ -99,9 +99,9 @@ def test_read_form(page):
     assert by_id[f"{Q}salary"].max_length == 15
     assert by_id[f"{Q}start"].type is FieldType.DATE
     assert by_id[f"{Q}source"].options == ["Job board", "Referral", "Other"]
-    assert by_id[f"{Q}source_other"].label == (
-        "How did you hear about us?: Other (asked when 'How did you hear about us?' is Other)"
-    )
+    assert by_id[f"{Q}source_other"].label == "How did you hear about us?: Other"
+    assert by_id[f"{Q}source_other"].shown_when == Is(f"{Q}source", ["Other"])
+    assert by_id[f"{Q}source_other"].required  # marked so, as its list is
     assert not by_id[f"{Q}degree_comment"].required
     assert by_id[f"{Q}authorized"].type is FieldType.CHOICE
     assert by_id[f"{Q}shifts"].type is FieldType.MULTI_CHOICE
@@ -156,7 +156,7 @@ def test_every_answer_reads_back(page, resume):
 def test_the_test_user_dry_run_reads_back(page, tmp_path):
     adapter, fields = opened(page)
     answers = testuser.answers(fields, testuser.resume(tmp_path / "cv.pdf"))
-    assert f"{Q}source_other" not in answers  # the Test user picks the first option
+    assert answers[f"{Q}source"] == "Other" and f"{Q}source_other" in answers  # shows the most
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []

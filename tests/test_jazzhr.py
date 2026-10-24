@@ -7,7 +7,7 @@ import pytest
 from atsfill.adapters.jazzhr import JazzHR, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/jazzhr/apply.html"
 JOB = "https://acme.applytojob.com/apply/AbCdE12345/Software-Engineer"
@@ -98,8 +98,12 @@ def test_read_form(page):
     assert by_id["eeoc_veteran"].label == "Veteran status"
     assert by_id["eeoc_disability"].options == [
         "YES, I HAVE A DISABILITY, OR HAVE HAD ONE IN THE PAST",
+        "NO, I DON'T HAVE A DISABILITY AND HAVE NOT HAD ONE IN THE PAST",
         "I DO NOT WANT TO ANSWER",
     ]
+    declared = Is("eeoc_disability", ["YES, I HAVE A DISABILITY, OR HAVE HAD ONE IN THE PAST"])
+    for signed in ("eeoc_disability_signature", "eeoc_disability_date"):
+        assert not by_id[signed].required and by_id[signed].required_when == declared
     assert by_id["eeoc_disability_date"].label == "Disability status, Date"
     assert by_id["sms-consent"].options == ["Yes", "No"]
     assert not by_id["sms-consent"].required

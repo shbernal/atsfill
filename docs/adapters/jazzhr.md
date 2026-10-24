@@ -31,7 +31,7 @@ The form is server-rendered HTML in a Bootstrap layout: each field a `.form-grou
 | SMS consent, one checkbox | `choice`, `Yes`/`No` | 2 |
 | reCAPTCHA v2 checkbox ("Human Check") | not a field; ticked on submit | 12 |
 
-Every other control is hidden and not a field. The disability name and date are required by the page only when a disability is declared.
+Every other control is hidden and not a field. The disability name and date are required by the page only when a disability is declared: their `required_when` is the status on its `YES` option.
 
 ## Filling
 

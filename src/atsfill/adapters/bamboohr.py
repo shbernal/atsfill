@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = re.compile(r"^[\w-]+\.bamboohr\.com$")
 JOB = re.compile(r"^/careers/(\d+)(?:/|$)")
@@ -454,11 +454,12 @@ def _custom(question: dict[str, Any]) -> list[tuple[Field, tuple[str, str | None
     field = Field(field_id, label, TYPES[kind], required, options, None, accept)
     out = [(field, (kind, name, extra))]
     if extra and OTHER in extra and question.get("hasOther") == "yes":
-        other = Field(
+        other = Field(  # its placeholder the page's only label; marked optional
             f"{field_id}_other",
-            f"{label}: please specify (asked when {label!r} is {OTHER})",
+            f"{label}: please specify",
             FieldType.TEXT,
             False,
+            shown_when=Is(field_id, [OTHER]),
         )
         out.append((other, ("text", f"{name}_other", None)))
     return out

@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Blocked, Gap, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Page
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = "www.careers-page.com"
 API = f"https://{HOST}/api/v1.0/"
@@ -333,10 +333,11 @@ class Manatal:
         )
 
     def _other_field(self, field: Field) -> Field:
-        """The text box an answer of Other opens, asked only then."""
+        """The text box an answer of Other opens, required where its list is."""
         fid = f"{field.id}.other"
         gap = known_gap(self, "other", f"{fid} is the text box an answer of {OTHER} opens")
-        return Field(fid, f"{field.label}: {OTHER}", FieldType.TEXT, False, unfillable=gap)
+        return Field(fid, f"{field.label}: {OTHER}", FieldType.TEXT, field.required,
+                     unfillable=gap, shown_when=Is(field.id, [OTHER]))  # fmt: skip
 
     @staticmethod
     def _shown(page: Page, entry: dict[str, Any]) -> list[str] | None:

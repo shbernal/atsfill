@@ -8,13 +8,14 @@ by which boxes are checked.
 
 import re
 from contextlib import suppress
+from dataclasses import replace
 from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = re.compile(r"^[\w-]+\.applytojob\.com$")
 JOB = re.compile(r"^/apply/([A-Za-z0-9]{10})\b")
@@ -23,6 +24,9 @@ CAPTCHA = "#resumator-recaptcha iframe[title=reCAPTCHA]"
 CHALLENGE = "iframe[src*='recaptcha/api2/bframe']"
 RESUME_TYPES = [".pdf", ".doc", ".docx", ".odt", ".txt", ".rtf"]  # as the page states them
 YES_NO = ["Yes", "No"]
+DISABILITY = "eeoc_disability"  # form CC-305: its name and date are signed once one is declared
+SIGNED = ("eeoc_disability_signature", "eeoc_disability_date")
+DECLARED = re.compile(r"^\s*YES\b", re.IGNORECASE)
 FORM_TIMEOUT_MS = 20_000
 CAPTCHA_TIMEOUT_MS = 20_000
 SUBMIT_TIMEOUT_MS = 90_000
@@ -143,7 +147,7 @@ class JazzHR:
         for raw in form.evaluate(_READ):
             fields.append(_field(raw))
             self._fields[raw["id"]] = (raw["kind"], raw["selector"])
-        return fields
+        return _signed_on_disability(fields)
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
@@ -215,6 +219,17 @@ def _job(url: str) -> tuple[str, str] | None:
         return None
     match = JOB.match(parts.path)
     return (host, match[1]) if match else None
+
+
+def _signed_on_disability(fields: list[Field]) -> list[Field]:
+    """The disability form's name and date, required by the page once a disability is
+    declared."""
+    status = next((f for f in fields if f.id == DISABILITY), None)
+    declared = [o for o in (status.options if status else None) or [] if DECLARED.match(o)]
+    if not declared:
+        return fields
+    signed = Is(DISABILITY, declared)
+    return [replace(f, required_when=signed) if f.id in SIGNED else f for f in fields]
 
 
 def _field(raw: dict[str, Any]) -> Field:

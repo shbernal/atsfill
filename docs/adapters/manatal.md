@@ -37,7 +37,7 @@ The options of a select, a radio or a checkbox list are read from the page, labe
 
 A salary's currency and frequency selects (`#expected_currency`, `#expected_frequency`, `#current_…`) have no placeholder: unanswered, they send their first option, a currency that depends on the order `currencies/` returns.
 
-A radio or checkbox list with an `Other` option opens a text box (`.custom-other-val-input`) under it once `Other` is picked; Apply sends that text in place of `Other`, and refuses an empty one on a required list. It is listed as `<id>.other`, optional, a known gap.
+A radio or checkbox list with an `Other` option opens a text box (`.custom-other-val-input`) under it once `Other` is picked; Apply sends that text in place of `Other`, and refuses an empty one on a required list. It is listed as `<id>.other`, `shown_when` the list holds `Other`, required where the list is, a known gap.
 
 A number input (`min="0"`) holds no text: an answer that is not a number is left out, reads back empty and the dry run refuses it.
 
