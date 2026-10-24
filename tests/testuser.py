@@ -37,6 +37,8 @@ DECLINE = re.compile(
 ANSWER_NO = re.compile(
     r"employee of|employed by|worked (for|at)|relative|sponsor|preferred name", re.IGNORECASE
 )
+# An option that opens a field the form did not list: who referred or contacted, which other.
+OPENS_FIELD = re.compile(r"referr|contacted by|\bother\b", re.IGNORECASE)
 PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
 # A field's label that says it is asked only after another's answer.
 ASKED_WHEN = re.compile(
@@ -120,7 +122,7 @@ def _option(field: Field) -> str:
         return REGION
     if ANSWER_NO.search(field.label) and "No" in options:
         return "No"
-    return options[0]
+    return next((o for o in options if not OPENS_FIELD.search(o)), options[0])
 
 
 def _text(field: Field) -> str:

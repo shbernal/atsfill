@@ -87,6 +87,7 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("m", "CV", FieldType.FILE, False, accept=["application/pdf"]),
         Field("i", "Avatar", FieldType.FILE, False, accept=["image/png"]),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
+        Field("h", "Source", FieldType.CHOICE, True, ["Contacted by a recruiter", "Other", "Web"]),
         Field("t", "City", FieldType.TYPEAHEAD, True),
         Field("w", "Town", FieldType.TYPEAHEAD, False),  # the form's country's towns only
         Field("z", "Postal code / zip code", FieldType.TYPEAHEAD, True),
@@ -103,6 +104,7 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         "s": testuser.SALARY,
         "q": testuser.TEXT,
         "d": answers["d"],
+        "h": "Web",
         "t": testuser.CITY,
         "z": testuser.ZIP,
         "c": str(cv),

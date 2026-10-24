@@ -56,6 +56,7 @@ PICKED = "[data-automation-id=selectedItem]"
 DELETE_PICK = "[data-automation-id=DELETE_charm]"
 SEARCH = "input[data-uxi-widget-type=selectinput]"
 BACK = "[data-automation-id=backButton]:visible"
+ADDRESS = "address--"
 PHONE_CODE_ID = "phoneNumber--countryPhoneCode"
 PHONE_CODE = f'[data-fkit-id="{PHONE_CODE_ID}"]'
 PHONE_CODES = "/values/phone/countryCodes"
@@ -324,16 +325,17 @@ class Workday:
 
     def _unread(self, page: Page) -> None:
         """Stops on required fields the read did not list: on My Information, the address of a
-        country other than the form's; on a later page, one the read could not reach."""
-        unread = [
-            r["label"] for r in _page_fields(page) if r["required"] and r["id"] not in self._fields
-        ]
+        country other than the form's, or a follow-up an answer opened (a referral's name); on a
+        later page, one the read could not reach."""
+        unread = [r for r in _page_fields(page) if r["required"] and r["id"] not in self._fields]
         if not unread:
             return
-        step, labels = _step(page), ", ".join(unread)
-        if step == MY_INFORMATION:
+        step, labels = _step(page), ", ".join(r["label"] for r in unread)
+        if step == MY_INFORMATION and any(r["id"].startswith(ADDRESS) for r in unread):
             detail = f"the country answered shows fields the read did not: {labels}"
             raise Unsupported(known_gap(self, "other_country", detail))
+        if step == MY_INFORMATION:
+            raise NotTaken(f"{step} shows fields the read did not: {labels}; an answer opened them")
         raise NotTaken(f"{step} shows fields the read did not: {labels}; read again")
 
     def read_back(self, page: Page) -> dict[str, Answer]:

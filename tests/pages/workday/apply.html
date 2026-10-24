@@ -27,7 +27,9 @@
        options: ["Yes", "No"]},
       {id: "source--source", label: "How Did You Hear About Us?*", kind: "prompt", single: true,
        tree: {"Job Board": ["LinkedIn", "Indeed", "Linked Jobs", "Job Fair (Acme)"],
-              "Corporate Website": null}},
+              "Corporate Website": null, "Employee Referral": null}},
+      {id: "referral--name", label: "What's their name?*", kind: "text",
+       when: ["source--source", "Employee Referral"]},  // a follow-up of the source
       {id: "phoneNumber--countryPhoneCode", label: "Country Phone Code*", kind: "prompt", single: true,
        value: ["United Kingdom (+44)"], size: 250,
        tree: {"United Kingdom (+44)": null, "United States of America (+1)": null}},
@@ -69,7 +71,7 @@
   let step = 0;
   const el = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstChild; };
   const live = {};  // what the page holds before it is saved
-  const shown = f => !f.when || (live[f.when[0]] ?? valueOf(PAGES["My Information"][0])) === f.when[1];
+  const shown = f => !f.when || [].concat(valueOf(PAGES[STEPS[step]].find(g => g.id === f.when[0]))).includes(f.when[1]);
   const valueOf = f => live[f.id] ?? draft[f.id] ?? f.value ?? (["boxes", "prompt", "file"].includes(f.kind) ? [] : f.kind === "box" ? false : "");
 
   const closeLists = () => document.querySelectorAll("[data-automation-id=activeListContainer]").forEach(e => e.remove());
@@ -159,6 +161,12 @@
           picked.append(item);
         };
         value.forEach(pick);
+        const choose = name => {  // a pick that opens a follow-up renders the page again
+          pick(name);
+          if (!PAGES[STEPS[step]].some(g => g.when && g.when[0] === f.id)) return;
+          Object.assign(live, values());
+          render();
+        };
         const input = el(`<input type="text" id="${f.id}-in" data-uxi-widget-type="selectinput">`);
         const leaves = Object.entries(f.tree).flatMap(([k, v]) => v || [k]);
         const show = (rows, back) => {
@@ -172,7 +180,7 @@
           for (const name of rows) {
             const nested = !back && Array.isArray(f.tree[name]);
             const row = el(`<div role="option" aria-setsize="${f.size || rows.length}"><div data-automation-id="promptLeafNode" data-uxi-multiselectlistitem-hassidecharm="${nested}"><div data-automation-id="promptOption">${name}</div></div></div>`);
-            row.onclick = () => nested ? show(f.tree[name], true) : pick(name);
+            row.onclick = () => nested ? show(f.tree[name], true) : choose(name);
             list.append(row);
           }
           document.body.append(list);
@@ -185,7 +193,7 @@
           if (!input.value) return show(Object.keys(f.tree), false);
           const found = leaves.filter(o =>
             !o.includes("(") && o.toLowerCase().includes(input.value.toLowerCase()));
-          if (found.length === 1) { pick(found[0]); input.value = ""; } else show(found, false);
+          if (found.length === 1) { input.value = ""; choose(found[0]); } else show(found, false);
         };
         box.append(picked, input);
       } else if (f.kind === "month") {

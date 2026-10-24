@@ -223,6 +223,7 @@ def test_a_fresh_draft_lists_the_pages_up_to_the_first_it_cannot_save(opened):
         "Linked Jobs",
         "Job Fair (Acme)",
         "Corporate Website",
+        "Employee Referral",
     ]
     code = by_id["phoneNumber--countryPhoneCode"]
     assert code.options == ["United Kingdom (+44)", "United States of America (+1)"]  # the API's
@@ -295,6 +296,14 @@ def test_another_country_renders_fields_the_read_did_not(opened, page):
     answers = {"country--country": "United States of America"}
     with pytest.raises(Unsupported, match="^unsupported_flow: other_country: .*: State$"):
         adapter.fill(page, answers)
+
+
+def test_a_follow_up_an_answer_opens_on_my_information_is_named(opened, page):
+    adapter, _ = opened
+    with pytest.raises(
+        NotTaken, match="^My Information shows fields the read did not: What's their name.; an"
+    ):
+        adapter.fill(page, {"source--source": "Employee Referral"})
 
 
 def test_a_follow_up_of_a_follow_up_names_its_question_as_listed():
