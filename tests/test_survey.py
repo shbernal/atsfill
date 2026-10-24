@@ -121,12 +121,11 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
 
 def test_a_follow_up_is_answered_when_its_trigger_option_holds_or(tmp_path):
     current = "Currently working as a student, contingent, or contractor"
-    asked = "(asked when 'Have you worked at Acme?' is"
     fields = [
         Field("w", "Have you worked at Acme?", FieldType.CHOICE, True, [current, "Never"]),
-        Field("i", f"Your ID {asked} {current})", FieldType.TEXT, False),
-        Field("r", f"Why? {asked} Never or Unsure)", FieldType.TEXT, False),
-    ]
+        Field("i", "Your ID", FieldType.TEXT, False, shown_when=Is("w", [current])),
+        Field("r", "Why?", FieldType.TEXT, False, shown_when=Is("w", ["Never or Unsure"])),
+    ]  # an option holding " or " is one value
     answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
     assert answers == {"w": current, "i": testuser.TEXT}
 
