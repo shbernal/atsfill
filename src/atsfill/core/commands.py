@@ -425,13 +425,15 @@ def login(
     password: str | None = None,
     window: bool = False,
     create: bool = False,
+    name: str | None = None,
     data_dir: Path | None = None,
 ) -> SessionReport:
     """Signs in with the account's password source, headless, and stores the session; without
     a source, or with `window`, opens a window on the system's login page for a person.
 
     `email` is remembered for the account; `password` is used for this sign-in only. `create`
-    creates the account with a password atsfill generates and stores first (a side effect)."""
+    creates the account with a password atsfill generates and stores first (a side effect),
+    giving `name` where the sign-up asks it."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
     mine = paths.user_dir(data, user)
@@ -443,7 +445,7 @@ def login(
         accounts.remember(mine, adapter, scope, email)
     if create:
         assert email
-        return _create(report, account, url, mine, email, data)
+        return _create(report, account, url, mine, (email, name), data)
     if password and not (isinstance(account, SignsIn) and accounts.email(mine, adapter, scope)):
         raise ValueError(f"signing in to {adapter} with a password needs --email")
     try:
@@ -473,7 +475,7 @@ def _create(
     account: NeedsAccount,
     url: str | None,
     mine: Path,
-    email: str,
+    who: tuple[str, str | None],
     data: Path,
 ) -> SessionReport:
     """Creates the account: the generated password is stored before the click, and deleted
@@ -482,13 +484,16 @@ def _create(
         report.status = Status.UNSUPPORTED
         report.reason = f"no_sign_up: atsfill cannot create a {account.name} account"
         return report
+    email, name = who
+    if account.asks_name and not name:
+        raise ValueError(f"creating a {account.name} account needs --name")
     password = passwords.generate()
     try:
         passwords.store(mine, account.name, report.scope, password)
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
-    result = _headless(data, account, report.scope, (email, password), report.path, create=True)
+    result = _headless(data, account, report.scope, (email, password), report.path, True, name)
     command = login_command(account.name, report.user, url)
     report.status, report.reason = result.status, _email_link(result.reason, email, command)
     report.password = "stored"
@@ -507,6 +512,7 @@ def _headless(
     credentials: Credentials,
     session: Path,
     create: bool = False,
+    name: str | None = None,
 ) -> Result:
     """Signs in, or creates the account, through the adapter: `ready` once the session is
     stored."""
@@ -516,7 +522,7 @@ def _headless(
     def run(_: list[str]) -> Result:
         result = Result(Status.READY, url, account.name)
         with open_page(data, None) as page, _stops(result):
-            accounts.sign_in(page, account, scope, *credentials, session, create)
+            accounts.sign_in(page, account, scope, *credentials, session, create, name)
         return result
 
     return _in_budget(url, run)

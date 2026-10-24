@@ -148,7 +148,7 @@ def test_an_account_not_verified_yet_blocks(workday, page):
 
 
 def test_sign_up(workday, page):
-    workday.sign_up(page, "new@example.com", "Right-123!")
+    workday.sign_up(page, "new@example.com", "Right-123!", None)
     assert signed_in(page)
 
 
@@ -162,7 +162,7 @@ def test_sign_up(workday, page):
 )
 def test_what_sign_up_is_told(workday, page, email, password, error, reason):
     with pytest.raises(error, match=f"^{reason}"):
-        workday.sign_up(page, email, password)
+        workday.sign_up(page, email, password, None)
 
 
 @pytest.fixture

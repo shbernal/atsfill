@@ -105,6 +105,7 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="create the account with --email and a password atsfill generates and stores",
     )
+    login.add_argument("--name", help="the user's name, for a sign-up that asks it")
     for name in ("read", "fill", "send", "status", "login", "logout"):
         sub.choices[name].add_argument(
             "-v", "--verbose", action="store_true", help="the whole result, every key, indented"
@@ -170,6 +171,7 @@ def run(args: argparse.Namespace) -> int:
                         password=password,
                         window=args.window,
                         create=args.create,
+                        name=args.name,
                         **where,
                     )
             except ValueError as e:

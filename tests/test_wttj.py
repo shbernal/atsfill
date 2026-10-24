@@ -1,4 +1,5 @@
-"""The Welcome to the Jungle adapter on tests/pages/wttj, served as a signed-in job page."""
+"""The Welcome to the Jungle adapter on tests/pages/wttj: a signed-in job page, and the sign-in
+and sign-up forms."""
 
 from pathlib import Path
 
@@ -7,16 +8,47 @@ import pytest
 from atsfill.adapters import wttj
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.core import browser, matching
+from atsfill.core.adapter import Blocked, Refused, Unsupported
 
-PAGE = Path(__file__).parent / "pages/wttj/job.html"
+PAGES = Path(__file__).parent / "pages/wttj"
+PAGE = PAGES / "job.html"
 JOB = "https://www.welcometothejungle.com/en/companies/acme/jobs/ai-engineer_paris"
+CORS = {
+    "access-control-allow-origin": "https://www.welcometothejungle.com",
+    "access-control-allow-headers": "x-csrf-token",
+}
+TAKEN = "ada@example.com"  # the account that exists, its password `Right-Password-1`
 
 
 def serve(route) -> None:
-    if route.request.url.endswith("/api/v1/applications"):
+    request = route.request
+    path = request.url.split("?")[0]
+    if request.method == "OPTIONS":
+        route.fulfill(status=204, headers=CORS)
+    elif path.endswith(("/api/v1/sessions", "/api/v3/registrations")):
+        status = _account(request)
+        taken = {"errors": {"email": [{"options": {"validation": "unsafe_unique"}}]}}
+        route.fulfill(status=status, headers=CORS, json=taken if status == 422 else {})
+    elif path.endswith("/api/v1/applications"):
         route.fulfill(status=201, json={"application": {"reference": "REF-1"}})
+    elif path.endswith(("/en/signin", "/en/authenticate/signup")):
+        route.fulfill(path=PAGES / "account.html")
+    elif path.endswith("/en/busy"):
+        route.fulfill(status=429, body="Too Many Requests", content_type="text/plain")
+    elif "/complete-profile/" in path:
+        route.fulfill(body="<!doctype html><title>Onboarding</title>", content_type="text/html")
     else:
         route.fulfill(path=PAGE)
+
+
+def _account(request) -> int:
+    """403 without the page's CSRF token; 401 for a wrong password, 422 for a taken email."""
+    if not request.headers.get("x-csrf-token"):
+        return 403
+    sent = request.post_data_json
+    if request.url.endswith("/sessions"):
+        return 201 if (sent["email"], sent["password"]) == (TAKEN, "Right-Password-1") else 401
+    return 422 if sent["email"] == TAKEN else 201
 
 
 @pytest.fixture(scope="module")
@@ -96,3 +128,47 @@ def test_an_unknown_input_is_listed_unhandled():
     field = wttj._field(raw)
     assert field and field.unfillable == "unhandled_rendering: 'Remote?' is a radio input"
     assert wttj._field({**raw, "type": "hidden"}) is None
+
+
+@pytest.fixture
+def signing_in(page) -> WelcomeToTheJungle:
+    page.context.clear_cookies()
+    adapter = WelcomeToTheJungle()
+    page.goto(adapter.login_url(None))
+    return adapter
+
+
+def test_sign_in_waits_for_the_csrf_token(signing_in, page):
+    signing_in.sign_in(page, TAKEN, "Right-Password-1")
+    assert "/complete-profile/" in page.url
+
+
+def test_a_wrong_password_is_refused(signing_in, page):
+    with pytest.raises(Refused, match="^wrong_password"):
+        signing_in.sign_in(page, TAKEN, "Wrong-Password-1")
+
+
+def test_a_login_page_answering_too_many_requests_blocks(page, monkeypatch):
+    monkeypatch.setattr(wttj, "ACCOUNT_TIMEOUT_MS", 1_000)
+    page.goto("https://www.welcometothejungle.com/en/busy")
+    with pytest.raises(Blocked, match="^rate_limited"):
+        WelcomeToTheJungle().sign_in(page, TAKEN, "Right-Password-1")
+
+
+def test_sign_up_waits_for_the_confirmation_link(signing_in, page):
+    with pytest.raises(Blocked, match="^email_link"):
+        signing_in.sign_up(page, "new@example.com", "Right-Password-1", "Jane")
+    assert "/complete-profile/" in page.url  # created, signed in
+
+
+@pytest.mark.parametrize(
+    ("email", "password", "name", "error", "reason"),
+    [
+        (TAKEN, "Right-Password-1", "Jane", Refused, "email_in_use"),
+        ("new@example.com", "short", "Jane", Refused, "password_rule: Your password must"),
+        ("new@example.com", "Right-Password-1", "", Unsupported, "unhandled_rendering"),
+    ],
+)
+def test_what_sign_up_is_told(signing_in, page, email, password, name, error, reason):
+    with pytest.raises(error, match=f"^{reason}"):
+        signing_in.sign_up(page, email, password, name)

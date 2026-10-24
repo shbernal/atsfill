@@ -178,6 +178,7 @@ def _profile_hosts(request: Request, scope: str | None) -> list[str]:
 class Workday:
     name = "workday"
     per_employer = True
+    asks_name = False
     known_gaps = {
         "experience_entries": Gap.FLOW,
         "long_wizard": Gap.FLOW,
@@ -234,7 +235,7 @@ class Workday:
         _email_form(page)
         _submit(page, "signInSubmitButton", email, password)
 
-    def sign_up(self, page: Page, email: str, password: str) -> None:
+    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
         _email_form(page)
         page.locator("[data-automation-id=createAccountLink]").click()
         page.locator("[data-automation-id=verifyPassword]").fill(password)

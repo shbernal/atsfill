@@ -1,6 +1,6 @@
 # Welcome to the Jungle
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/wttj/job.html](../../tests/pages/wttj/job.html), served as a signed-in job page in `tests/test_wttj.py`.
+Observed on live postings, last on 2026-10-19; the account on 2026-10-24. The fixture pages are [tests/pages/wttj/job.html](../../tests/pages/wttj/job.html), served as a signed-in job page in `tests/test_wttj.py`, and [tests/pages/wttj/account.html](../../tests/pages/wttj/account.html), the sign-in and sign-up forms.
 
 ## Where the form is
 
@@ -11,7 +11,14 @@ Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/
 
 ## Account
 
-Applying needs a signed-in account: `atsfill login wttj` opens `/en/signin`. The signed-in check is `GET https://api.welcometothejungle.com/api/v2/users/me`: 200 for an account, 204 for a visitor. A session saved from Chromium works in Camoufox.
+Applying needs a signed-in account, one per user for the whole system. The signed-in check is `GET https://api.welcometothejungle.com/api/v2/users/me`: 200 for an account, 204 for a visitor. A session saved from Chromium works in Camoufox.
+
+- Sign-in: `/en/signin` (it becomes `/en/authenticate/signin`), email and password, posted to `POST api.welcometothejungle.com/api/v1/sessions`: 201, then the page leaves for the profile's onboarding (`/en/complete-profile/…`). A wrong password is 401, "Email or password incorrect": `refused: wrong_password`.
+- Sign-up (`login wttj --create --email <address> --name <first name>`): `/en/authenticate/signup`, a first name (required), email, password, and a newsletter box left unticked; posted to `POST /api/v3/registrations`: 201, signed in, on the onboarding, which need not be finished to apply. A taken email is 422 with `errors.email`: `refused: email_in_use`. The page checks the password's strength as it is typed (`POST /api/v3/passwords/validate`) and refuses one under 12 characters without posting: `refused: password_rule`. The page loads an invisible reCAPTCHA v3; headless Camoufox passed it.
+- The page gets its CSRF token (cookie `csrf-token`) about a second after it renders. A form posted before then is answered 403 and the page shows nothing, so both forms wait for it.
+- The account is created unconfirmed and a "Confirm your new account" email follows: `login --create` ends `blocked: email_link`. Clicking its link signs every session out (`users/me` answers `{"info": "wttj-forced-signed-out"}`), so `login wttj` runs once more after it. Whether an unconfirmed account can apply is unobserved.
+- Sign-ins in a burst from one address make `/en/signin` answer 429, "Too Many Requests", for a while: `blocked: rate_limited`.
+- With a password source, a form command that finds the session signed out signs in again on its own.
 
 The job page is rendered for a visitor first: the apply button is a link to `/en/authenticate/signin` until the page knows the account, a moment later.
 

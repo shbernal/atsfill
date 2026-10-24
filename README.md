@@ -109,7 +109,7 @@ A dry run or a `send` through an adapter no send was verified on carries a `warn
 
 One home can send for more than one user: `--user <name>` gives each their own sessions, double-send guard and `[users.<name>]` section in the config file ([ADR 0015](docs/adr/0015-users-and-accounts.md)).
 Given an account's email (`atsfill login <adapter> --email`) and a password source (a `[password-commands]` entry such as `rbw get example.com {email}`, or `--password -` on stdin), atsfill signs in by itself, and again whenever a form command finds the session signed out.
-Where a system's sign-up allows it, `atsfill login <adapter> --create --email <address>` creates the account with a password atsfill generates and keeps in the system's secret store, never printed; creating an account is a side effect, never part of `fill` or `send`.
+Where a system's sign-up allows it, `atsfill login <adapter> --create --email <address>` (with `--name` where the sign-up asks the user's name) creates the account with a password atsfill generates and keeps in the system's secret store, never printed; creating an account is a side effect, never part of `fill` or `send`.
 
 ## How it works
 
