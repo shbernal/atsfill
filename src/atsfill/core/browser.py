@@ -124,7 +124,7 @@ def _build_blocker() -> None:
             local = f"assets/{BLOCKER_LISTS}/{key}.txt"
             (build / local).parent.mkdir(exist_ok=True)
             (build / local).write_text(_filter_list([*urls, *entry.get("cdnURLs", [])]))
-            entry.pop("off", None)  # on from the start, the way a fresh profile reads it
+            entry.pop("off", None)  # on from the start, the way a fresh browser profile reads it
             entry["contentURL"] = [local, *urls]
         entries["atsfill"] = {"content": "filters", "group": "custom", "title": "atsfill",
                               "contentURL": [FILTERS]}  # fmt: skip

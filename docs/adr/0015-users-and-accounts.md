@@ -53,4 +53,4 @@ The keys `submit` and `ack_side_effects` are an error naming their replacement.
 
 ## Consequences
 
-A hiring system with an account per employer is served without a person at each employer's window. A user's double-send guard, sessions and submit permission are theirs alone; a home applying for two people keeps them apart. Every user of a home shares its device identity (ADR 0004). A generated password lost with the secret store costs a password reset per account.
+A hiring system with an account per employer is served without a person at each employer's window. A user's double-send guard, sessions and submit permission are theirs alone; a home sending for two users keeps them apart. Every user of a home shares its device identity (ADR 0004). A generated password lost with the secret store costs a password reset per account.

@@ -53,7 +53,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 
 class MemoryKeyring(keyring.backend.KeyringBackend):
-    """A secret store held in memory: no test reaches the machine's, and CI has none."""
+    """A secret store held in memory: no test reaches the home's, and CI has none."""
 
     priority = 1
 

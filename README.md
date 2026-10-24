@@ -39,7 +39,7 @@ It is built for agents with a shell: every command prints one JSON document and 
 | Teamtailor | no | no |
 | Welcome to the Jungle | yes, `atsfill login wttj` | no |
 
-Any other system returns `unsupported`, so the caller can fall back to driving a browser itself.
+Any other system returns `unsupported`, so the consumer can fall back to driving a browser itself.
 
 ## Why atsfill?
 
@@ -107,7 +107,7 @@ A dry run is not invisible: some systems save answers or the resume as they are 
 `atsfill status` lists each system's side effects, whether it is allowed to submit, and how far atsfill has verified it: [the systems](docs/adapters/README.md).
 A dry run or a `send` through an adapter no send was verified on carries a `warning`; the send goes ahead anyway.
 
-One home can apply for more than one person: `--user <name>` gives each their own sessions, double-send guard and `[users.<name>]` section in the config file ([ADR 0015](docs/adr/0015-users-and-accounts.md)).
+One home can send for more than one user: `--user <name>` gives each their own sessions, double-send guard and `[users.<name>]` section in the config file ([ADR 0015](docs/adr/0015-users-and-accounts.md)).
 Given an account's email (`atsfill login <adapter> --email`) and a password source (a `[password-commands]` entry such as `rbw get example.com {email}`, or `--password -` on stdin), atsfill signs in by itself, and again whenever a form command finds the session signed out.
 Where a system's sign-up allows it, `atsfill login <adapter> --create --email <address>` creates the account with a password atsfill generates and keeps in the system's secret store, never printed; creating an account is a side effect, never part of `fill` or `send`.
 
