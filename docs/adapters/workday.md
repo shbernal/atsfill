@@ -67,7 +67,7 @@ Each rendering, from 40 postings' questionnaires and the pages walked:
 
 ## Development
 
-The Test user's accounts are created with `atsfill login workday --user test --url <posting> --create --email <address>`, one per tenant, from a mailbox the developer reads. `scripts.gate --fresh` cannot create them, so the adapter gate's postings are surveyed with `--data-dir` set to the data directory holding them, twice: a fresh draft's first dry run stops at the disclosures.
+The Test user's accounts are one per tenant, created by the round (ADR 0013): `atsfill login workday --user test --url <posting> --create --email <address>`. Each posting is surveyed twice with `--data-dir`: a fresh draft's first dry run stops at the disclosures.
 
 ## Known gaps
 

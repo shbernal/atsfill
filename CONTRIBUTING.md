@@ -39,7 +39,7 @@ Tests run in one process by default. The whole suite in parallel, as CI runs it,
 
 `uv run python -m scripts.gate <system> [--fresh]` says whether an adapter is done: the fixture page and doc, lint, types and the system's tests (the whole suite is CI's), a dry run `ready` on five employers at the current code (a commit to docs, tests or the registry keeps it), `read_api` parity. On PASS it commits `dry_run_verified` to the registry; `--broken "<reason>" --cause <cause>` commits `send_broken` ([ADR 0012](docs/adr/0012-systems-registry.md)). Its output names no employer or posting, so it can go in a pull request.
 
-The survey and the adapter gate take `--session ADAPTER=PATH` for a system that needs an account: the dry runs fill under that account. The target is a dedicated test account per system, never a personal one.
+For a system that needs an account, the survey and the adapter gate take `--data-dir` set to the data directory holding the Test user's account, and the dry runs fill under it. A round creates that account with `atsfill login <adapter> --user test --create`, never a personal one ([ADR 0013](docs/adr/0013-survey-and-adapter-rounds.md)).
 
 `uv run python -m scripts.backlog` regenerates [docs/adapters/README.md](docs/adapters/README.md) and the README's adapter badges from the registry.
 
