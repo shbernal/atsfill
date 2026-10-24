@@ -6,12 +6,12 @@ Hiring systems differ in the details that decide whether a send works: a combobo
 
 ## Decision
 
-An adapter is one module per hiring system with five steps the core calls in order, and an optional `read_api(url)` that lists the fields without a browser (ADR 0011):
+An adapter is one module per hiring system with five steps the core calls in order, an optional `read_api(url)` that lists the fields without a browser (ADR 0011), and an optional `shown_fields(page)` that lists, once filled, the fields the page shows (ADR 0005):
 
 | Step | Does |
 |---|---|
 | `detect(url, page)` | says whether the form belongs to its system, from the host, else from the page (a Teamtailor footer, a Greenhouse embed) |
-| `read_form(page)` | lists the fields: id, label, type, required, options, length limit, accepted files |
+| `read_form(page)` | lists the fields: id, label, type, required, options, length limit, accepted files, conditions |
 | `fill(page, answers)` | types the answers through the system's quirks |
 | `read_back(page)` | reads what the system will receive, from the server's response where it has one, else from the form state |
 | `submit(page)` | clicks submit and returns the evidence of the send |

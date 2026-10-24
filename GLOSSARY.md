@@ -53,6 +53,13 @@ The application form behind a posting.
 One input on a form, identified by a stable id taken from the form. Its label is for display only.
 _Avoid_: input, question
 
+**Follow-up**:
+A field the form shows only once other fields' answers meet its condition.
+_Avoid_: dependent field, branching question, conditional question
+
+**Condition**:
+What decides, from other fields' answers, whether a field shows (`shown_when`) or is required (`required_when`): `Is`, `AnyOf`, `AllOf`.
+
 **Field type**:
 How a field's answer is written and matched: `text`, `url`, `date`, `choice`, `multi_choice`, `typeahead`, `file` or `phone`. A field is `url` only where its hiring system declares it one, never from its label.
 
@@ -230,6 +237,7 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 ## Flagged ambiguities
 
 - "Gate" meant both the submit gate and the adapter gate. Always qualify it.
+- "Dependent" meant both a follow-up, which shows on an answer, and a dependent list, whose options change with an answer and which always shows. The first is a follow-up; a dependent list is not one.
 - "Inventory" meant both a round's surveyed postings (now the sample) and the field type × rendering table (still the inventory).
 - "Adapter state" meant both the verification and the whole `status` row for an adapter. The ladder is the verification; "state" is left to the session (`signed_in`, `signed_out`, `missing`).
 - "Session" meant both the stored browser state and an agent's working session. The agent's is an agent run.

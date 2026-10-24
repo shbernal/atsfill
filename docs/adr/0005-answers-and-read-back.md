@@ -18,6 +18,12 @@ An answer the form's fields already rule out refuses the command before any typi
 
 A field is `url` only where its hiring system declares a URL (a question type, an `input type=url`). A label such as "LinkedIn Profile" on a plain text field stays `text`: whether it wants a URL or a handle is the answer's author's reading, not a rule atsfill adds to the form.
 
+A follow-up is a field the form shows only once other answers meet its condition, `shown_when`; `required_when` holds where an answer makes a field required. A condition is a tree: `Is(field_id, values, negated)` holds when the field's answer is one of `values` (one of them ticked, for a `multi_choice`), compared exactly, or without `values` when the field is answered; `AnyOf` and `AllOf` combine conditions. Against values, an `Is` never holds for an unanswered field, negated or not; an adapter whose system shows a follow-up on an empty answer says so with `AnyOf`. A follow-up the answers keep hidden counts as unanswered for the conditions on it. `required` is the system's own flag, required whenever the field shows, never an adapter's opinion; labels are the page's, the condition is only in `shown_when`.
+
+The core decides from the answers alone, before typing: a required follow-up they show and leave unanswered refuses (`invalid_answers`), and so does an answer to a follow-up they keep hidden. An adapter's conditions name listed fields, never in a loop, else the command ends `adapter_error`.
+
+`read` lists every field, follow-ups included. An adapter whose form can show a field after an answer implements `ListsShownFields`: once filled, the ids of the fields the page shows. A field it did not list ends the fill `unhandled_rendering`, to be fixed in the adapter; a follow-up the page shows though its condition is unmet ends it `mismatch`: its condition was read wrong. An adapter whose source lists every field whatever the answers (an API) need not implement it, and says so in its doc.
+
 The read-back is compared to the answers by field type:
 
 | Type | Matches when |
@@ -29,4 +35,4 @@ The read-back is compared to the answers by field type:
 | `file` | the base names are equal |
 | `phone` | the digits and the country are equal |
 
-The response lists each mismatch with its field id and read-back; with `-v`, every field with its answer, its read-back and `match`.
+The read-back holds only the fields the page shows. A follow-up the answers keep hidden that reads back a value is a mismatch. The response lists each mismatch with its field id and read-back; with `-v`, every field with its answer, its read-back and `match`.

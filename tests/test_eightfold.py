@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.eightfold import Eightfold, _form
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/eightfold"
@@ -94,10 +94,9 @@ def test_read_form(page):
     assert by_id["country"].options == ["Canada", "United States"]
     assert by_id["state"].type is FieldType.TYPEAHEAD
     assert by_id["state"].required
-    assert by_id["Q_EVENTS"].label == (
-        "Which event? (asked when 'How did you hear about us?' is Events)"
-    )
-    assert not by_id["Q_EVENTS"].required
+    assert by_id["Q_EVENTS"].label == "Which event?"
+    assert by_id["Q_EVENTS"].shown_when == Is("Q_HEAR_ABOUT_US", ["Events"])
+    assert by_id["Q_EVENTS"].required  # once shown
     assert by_id["app_Summary"].label == "Tell us about yourself"
     assert by_id["1443109865728"].label == "What's your overall experience? (a number)"
     assert by_id["636668-1"].options == ["Yes", "No"]
@@ -187,10 +186,7 @@ def test_a_question_rendered_by_a_hidden_one_is_left_out(tmp_path):
         question("local_name", "Local name", "name_us", "y"),
     ]}]}  # fmt: skip
     fields = {f.field.id: f.field for f in _form(data)}
-    assert fields["local_name"].label == (
-        "Local name (asked when \"I have a preferred name (asked when 'Do you live in the US?'"
-        ' is No)" is Yes)'
-    )
+    assert fields["local_name"].shown_when == Is("name_us", ["Yes"])
     answers = testuser.answers(list(fields.values()), tmp_path / "cv.pdf")
     assert answers == {"country_us": "Yes", "name_fr": "No"}
 

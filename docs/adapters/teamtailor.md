@@ -14,7 +14,7 @@ Observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/
 - `form#job-application-form`. Standard fields are named `candidate[first_name]`, `candidate[last_name]`, `candidate[email]`, `candidate[phone]`, `candidate[job_applications_attributes][0][cover_letter]`, and the consent boxes `candidate[consent_given]` and `candidate[consent_given_future_jobs]`, which atsfill reads as `Yes`/`No` choices. Which of them a form shows, and which are required, depends on the company.
 - A required field's label holds `<sup data-asterisk>`; the translated "Required" next to it is screen-reader text. Inputs carry no `required` attribute.
 - The resume is a drop zone over `input[type=file]#candidate_resume_remote_url`; "Additional files" is `#candidate_file_remote_url`.
-- Custom questions are `.question` blocks with `data-question-mandatory`, a hidden `[question_id]` (the field id is `question:<question id>`) and an answer input whose name ends in its kind. A qualifying question is a `[data-careersite--form-target=qualifyingAnswers]` block of the same make, always required. A follow-up question carries `data-question-show-if-uuid` (its earlier question's `data-question-uuid`) and `data-question-show-if-value` (the option value that shows it); it is read as optional, its label ending in `(asked when "<earlier question>" is "<option>")`.
+- Custom questions are `.question` blocks with `data-question-mandatory`, a hidden `[question_id]` (the field id is `question:<question id>`) and an answer input whose name ends in its kind. A qualifying question is a `[data-careersite--form-target=qualifyingAnswers]` block of the same make, always required. A follow-up question carries `data-question-show-if-uuid` (its earlier question's `data-question-uuid`) and `data-question-show-if-value` (the option value that shows it); its condition is `Is` that question and that option, its `data-question-mandatory` kept. A follow-up stays in the page hidden until it shows.
 
 Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
@@ -37,14 +37,14 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 | question `[range]`, a slider with `min`, `max`, `step` | `choice` of each step | 0, seen before |
 | question `[date]` (`input[type=date]`) | `date` | 0, seen before |
 | qualifying question | `choice` | 1 |
-| follow-up question | as its kind, optional | 2 |
+| follow-up question | as its kind, with its condition | 2 |
 | video question (`[picked_video_attributes]`), its "Upload video" input; recording is never used | `file`, a clip | 3, required on 2 |
 
 ## Filling
 
 - The cookie banner is a non-modal `<dialog data-controller="common--cookies--alert">` over the form. The blocker's lists hide it on every domain, custom ones included.
 - Qualifying questions are answered first. While one is unanswered, or answered with what the employer does not accept, the rest of the form sits under `[data-careersite--form-target=formContentWrapper].cursor-not-allowed` and takes no clicks; atsfill then stops with `not_qualified`.
-- A follow-up question shows once its earlier question has the answer it waits for. An answer to one that stays hidden is not filled, so it reads back as a mismatch; a required one that shows without an answer stops the fill with `missing_answer`.
+- A follow-up question shows once its earlier question has the answer it waits for, and is filled once shown. Once filled, the adapter lists the questions the page shows (`checkVisibility()`), for the core to compare with its conditions.
 - Click the consent box's label.
 - A picked file uploads at once: `POST /uploads/presigned_data`, then to Teamtailor's S3. The form then holds the file's address in `candidate[resume_remote_url]`, whose last path segment is the file name as Teamtailor stores it: ASCII, lowercase, each run of characters other than letters, digits, `.` and `-` one `_` (`CV Élodie (2026).pdf` is `cv_elodie_2026_.pdf`). The read-back gives the answer's name back when the stored one is its rewrite.
 - The phone field (intl-tel-input) takes an international number and keeps it as `+<digits>`.
@@ -56,7 +56,7 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
 ## Read-back and submit
 
-- Nothing reaches the employer before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, for a video question the `file_file_name` Teamtailor gives back for the video id the form keeps, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`.
+- Nothing reaches the employer before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, for a video question the `file_file_name` Teamtailor gives back for the video id the form keeps, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`, a text input the upload adds: an address, not a field.
 - Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, the id a UUID, titled "Applied to <role>". An optional "Connect" step that follows is skipped.
 
 ## Known gaps

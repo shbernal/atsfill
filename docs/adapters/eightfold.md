@@ -22,7 +22,7 @@ Each rendering, and in how many of the 13 employers whose forms were read it sho
 | resume (`resumeUpload`), behind the privacy dialog; accepted extensions from the API | `file` | 13 |
 | phone: a country code combobox (`🇺🇸 (+1) United States of America`) beside the number; the code picked by the number's dial code, the longest that fits, where several countries share it its main one | `phone` | 13 |
 | dropdown (`select`: `dropdown`, `dropdown-textbox`): a combobox whose listbox renders at the end of the page when opened | `choice` | 13 |
-| a question another one's answer renders (`parentDependencies` with values), up to three levels deep, several parents at times | optional, the label says `(asked when '<label>' is <value>)`, a parent another one renders named with its own condition, so that variants of one question for different countries stay apart | 7 |
+| a question another one's answer renders (`parentDependencies`), up to three levels deep, several parents at times: any of them shows it, any answer where it lists no values; variants of one question for different countries are told apart by their conditions | as its kind, its condition `Is` each parent's values, `AnyOf` them for several, its `required` kept | 7 |
 | state (`select` with an `apiEndpoint`): options loaded for the country picked | `typeahead`, the option that starts with the answer | 6 |
 | radio group (`radio`, `choice`, `section-radio`): the input lies over its label | `choice` | 8 |
 | other file (`fileUpload`): cover letter, attachments; listed by name once attached | `file` | 5 |
@@ -34,7 +34,7 @@ Instructions (`instruction`) are not fields. A question of another type is liste
 
 ## Filling
 
-- The resume first, then the questions in the API's order. A question rendered by another's answer is filled once one of its parents was given an answer that renders it, and waited for briefly.
+- The resume first, then the questions in the API's order. A follow-up is filled once the answers filled before it meet its condition, and waited for briefly. The API lists every question whatever the answers, so the adapter does not list the fields a fill shows.
 - Text inputs are filled; a dropdown is opened and its option clicked; a radio or a box is clicked through its input; a date is paged to in the picker and clicked; a pill not in the answer is removed and one missing picked.
 
 ## Read-back and submit

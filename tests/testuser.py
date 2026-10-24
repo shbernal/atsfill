@@ -7,6 +7,7 @@ import zlib
 from datetime import date, timedelta
 from pathlib import Path
 
+from atsfill.core.conditions import Form
 from atsfill.core.results import Answer, Field, FieldType
 
 FIRST, LAST = "Ada", "Placeholder"
@@ -40,7 +41,7 @@ ANSWER_NO = re.compile(
 # An option that opens a field the form did not list: who referred or contacted, which other.
 OPENS_FIELD = re.compile(r"referr|contacted by|\bother\b", re.IGNORECASE)
 PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
-# A field's label that says it is asked only after another's answer.
+# The label of a follow-up whose adapter names its condition there, not in `shown_when`.
 ASKED_WHEN = re.compile(
     r"""\(asked when (["'])(?P<trigger>.+)\1 is (?P<negated>not )?"?(?P<value>.+?)"?\)$"""
 )
@@ -200,18 +201,45 @@ def _asked(field: Field, given: dict[str, Answer], hidden: set[str]) -> bool:
     return shown != bool(match["negated"])
 
 
+def _showing_most(
+    field: Field, fields: list[Field], given: dict[str, Answer], cv: Path, picture: Path | None
+) -> Answer:
+    """The choice that shows the most follow-ups, so that the dry run reaches them, never one
+    that shows a required follow-up it has no answer for: the usual answer among equals, and
+    always for a sensitive question."""
+    usual = answer(field, cv, picture)
+    assert usual is not None
+    if SENSITIVE.search(field.label) or not field.options:
+        return usual
+
+    def shows(a: Answer) -> tuple[int, int]:
+        form = Form(fields, {**given, field.id: a})
+        shown = [f for f in fields if f.shown_when and form.shown(f)]
+        unanswerable = [
+            f
+            for f in shown
+            if form.required(f) and (f.unfillable or answer(f, cv, picture) is None)
+        ]
+        return -len(unanswerable), len(shown)
+
+    picks = [o if field.type is FieldType.CHOICE else [o] for o in field.options]
+    return max([usual, *picks], key=shows)
+
+
 def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
     prefilled to the account, a résumé aside, a field its own answers keep hidden, and one
-    atsfill cannot fill."""
-    out, by_label, hidden = {}, {}, set()
+    atsfill cannot fill. A choice that shows follow-ups takes the one that shows the most."""
+    out, given, by_label, hidden = {}, {}, {}, set()
     for f in fields:
-        if not _asked(f, by_label, hidden):
+        if not Form(fields, given).shown(f) or not _asked(f, by_label, hidden):
             hidden.add(f.label)
             continue
         if f.unfillable or (a := answer(f, cv, picture)) is None:
             continue
-        by_label[f.label] = a
+        if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
+            a = _showing_most(f, fields, given, cv, picture)
+        given[f.id], by_label[f.label] = a, a
         if not (f.prefilled and f.type is not FieldType.FILE):
             out[f.id] = a
     return out

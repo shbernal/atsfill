@@ -27,6 +27,30 @@ type Answer = str | list[str]
 
 
 @dataclass(frozen=True)
+class Is:
+    """Holds when the field's answer is one of `values` (one of them ticked, for a
+    multi_choice), or, without `values`, when the field is answered. Against values, it never
+    holds for an unanswered field, negated or not."""
+
+    field_id: str
+    values: list[str] | None = None
+    negated: bool = False
+
+
+@dataclass(frozen=True)
+class AnyOf:
+    any_of: list[Condition]
+
+
+@dataclass(frozen=True)
+class AllOf:
+    all_of: list[Condition]
+
+
+type Condition = Is | AnyOf | AllOf
+
+
+@dataclass(frozen=True)
 class Field:
     id: str
     label: str
@@ -37,6 +61,8 @@ class Field:
     accept: list[str] | None = None
     prefilled: bool = False  # holds a value before any answer, from the account profile
     unfillable: str | None = None  # why atsfill cannot fill it, a reason (ADR 0014)
+    shown_when: Condition | None = None  # a follow-up: shown only when it holds (ADR 0005)
+    required_when: Condition | None = None  # required once shown when it holds, if not always
 
 
 @dataclass(frozen=True)

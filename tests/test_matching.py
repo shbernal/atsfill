@@ -1,8 +1,9 @@
 import pytest
 
 from atsfill.core import attempts
-from atsfill.core.matching import matches, problems
-from atsfill.core.results import Field, FieldType, Status
+from atsfill.core.conditions import Form, faults
+from atsfill.core.matching import check, matches, problems
+from atsfill.core.results import AllOf, AnyOf, Field, FieldType, Is, Status
 
 LEVELS = ["Native-level fluency", "Full professional fluency"]
 
@@ -78,3 +79,67 @@ def test_a_click_without_outcome_blocks_the_next_send(tmp_path):
     attempts.record(tmp_path, "p", Status.SUBMITTED)
     assert attempts.blocks_send(tmp_path, "p")
     assert not attempts.blocks_send(tmp_path, "other")
+
+
+VISA = Field("visa", "Need a visa?", FieldType.CHOICE, True, ["Yes", "No"])
+WHICH = Field("which", "Which visa?", FieldType.TEXT, True, shown_when=Is("visa", ["Yes"]))
+
+
+def test_a_required_follow_up_is_required_once_its_condition_holds():
+    assert problems([VISA, WHICH], {"visa": "No"}) == []
+    assert problems([VISA, WHICH], {"visa": "Yes"}) == [
+        "no answer for required which (Which visa?)"
+    ]
+
+
+def test_an_answer_to_a_follow_up_kept_hidden_refuses():
+    assert problems([VISA, WHICH], {"visa": "No", "which": "H-1B"}) == [
+        'which: not asked, it shows when "Need a visa?" is "Yes"'
+    ]
+
+
+def test_a_follow_up_of_a_hidden_follow_up_stays_hidden():
+    since = Field("since", "Since?", FieldType.TEXT, True, shown_when=Is("which"))
+    assert problems([VISA, WHICH, since], {"visa": "No"}) == []
+    assert problems([VISA, WHICH, since], {"visa": "Yes", "which": "H-1B"}) == [
+        "no answer for required since (Since?)"
+    ]
+
+
+@pytest.mark.parametrize(
+    "condition, answers, shown",
+    [
+        (Is("visa", ["Yes"], negated=True), {"visa": "No"}, True),
+        (Is("visa", ["Yes"], negated=True), {}, False),  # against values, never unanswered
+        (Is("visa", negated=True), {}, True),  # unanswered
+        (Is("langs", ["Fr"]), {"langs": ["En", "Fr"]}, True),
+        (AnyOf([Is("visa", ["Yes"]), Is("langs")]), {"langs": ["En"]}, True),
+        (AllOf([Is("visa", ["Yes"]), Is("langs")]), {"langs": ["En"]}, False),
+    ],
+)
+def test_conditions(condition, answers, shown):
+    langs = Field("langs", "Languages", FieldType.MULTI_CHOICE, False, ["En", "Fr"])
+    follow_up = Field("f", "F", FieldType.TEXT, False, shown_when=condition)
+    assert Form([VISA, langs, follow_up], answers).shown(follow_up) is shown
+
+
+def test_required_when_an_answer_asks_it():
+    name = Field("n", "Name", FieldType.TEXT, False, required_when=Is("visa", ["Yes"]))
+    assert problems([VISA, name], {"visa": "No"}) == []
+    assert problems([VISA, name], {"visa": "Yes"}) == ["no answer for required n (Name)"]
+
+
+def test_a_hidden_follow_up_that_reads_back_a_value_is_a_mismatch():
+    checks = check([VISA, WHICH], {"visa": "No"}, {"visa": "No", "which": "H-1B"})
+    assert [(c.field_id, c.match) for c in checks] == [("visa", True), ("which", False)]
+
+
+def test_conditions_name_listed_fields_without_a_loop():
+    loop = Field("a", "A", FieldType.TEXT, False, shown_when=Is("b"))
+    back = Field("b", "B", FieldType.TEXT, False, shown_when=Is("a"))
+    stray = Field("c", "C", FieldType.TEXT, False, shown_when=Is("x"))
+    assert faults([loop, back, stray]) == [
+        "c: its condition names no field x",
+        "a: shown by its own answer",
+        "b: shown by its own answer",
+    ]

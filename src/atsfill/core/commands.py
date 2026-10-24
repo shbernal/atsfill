@@ -5,11 +5,21 @@ from importlib.metadata import version
 from pathlib import Path
 
 from atsfill.adapters import adapters
-from atsfill.core import accounts, attempts, browser, matching, passwords, paths, registry
+from atsfill.core import (
+    accounts,
+    attempts,
+    browser,
+    conditions,
+    matching,
+    passwords,
+    paths,
+    registry,
+)
 from atsfill.core.adapter import (
     Adapter,
     Blocked,
     CreatesAccount,
+    ListsShownFields,
     NeedsAccount,
     NotTaken,
     ReadsOverHttp,
@@ -21,6 +31,7 @@ from atsfill.core.browser import OutOfTime, Overlaid, Page, open_page
 from atsfill.core.results import (
     AdapterStatus,
     Answer,
+    Field,
     Result,
     SessionReport,
     Status,
@@ -160,15 +171,49 @@ def _result(adapter: Adapter, url: str, user: str) -> Result:
     return Result(Status.READY, url, adapter.name, side_effects=shown)
 
 
-def _unfillable(result: Result) -> bool:
+def _unfillable(result: Result, answers: dict[str, Answer] | None = None) -> bool:
     """Stops the form on a required field atsfill cannot fill; an optional one stays listed,
-    left empty (ADR 0014)."""
+    left empty (ADR 0014). A follow-up counts once the answers show it and require it, and
+    without answers never."""
+    form = conditions.Form(result.fields, answers or {})
     field = next(
-        (f for f in result.fields if f.unfillable and f.required and not f.prefilled), None
+        (
+            f
+            for f in result.fields
+            if f.unfillable
+            and not f.prefilled
+            and (form.required(f) if answers is not None else f.required and not f.shown_when)
+        ),
+        None,
     )
     if field:
         result.status, result.reason = Status.UNSUPPORTED, field.unfillable
     return field is not None
+
+
+def _listed(result: Result, fields: list[Field]) -> None:
+    """Sets the fields `read_form` or `read_api` listed; their conditions must name listed
+    fields, never a loop."""
+    if faults := conditions.faults(fields):
+        raise ValueError("; ".join(faults))
+    result.fields = fields
+
+
+def _shown_as_listed(
+    page: Page, adapter: Adapter, result: Result, answers: dict[str, Answer]
+) -> None:
+    """Stops a fill that showed a field `read_form` did not list, or a follow-up whose
+    condition the answers leave unmet: that condition was read wrong (ADR 0005)."""
+    if not isinstance(adapter, ListsShownFields):
+        return
+    by_id, form = {f.id: f for f in result.fields}, conditions.Form(result.fields, answers)
+    shown = adapter.shown_fields(page)
+    if new := [i for i in shown if i not in by_id]:
+        result.status = Status.UNSUPPORTED
+        result.reason = f"unhandled_rendering: an answer showed {', '.join(new)}, not listed"
+    elif wrong := [i for i in shown if not form.shown(by_id[i])]:
+        result.status = Status.REFUSED
+        result.reason = f"mismatch: {', '.join(wrong)} shows though its condition is unmet"
 
 
 def _no_adapter(url: str) -> Result:
@@ -210,13 +255,16 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
     """Fills and reads back; `ready` when every answer reads back as given."""
     result = _result(adapter, url, user)
     with _stops(result):
-        result.fields = adapter.read_form(page)
-        if _unfillable(result):
+        _listed(result, adapter.read_form(page))
+        if _unfillable(result, answers):
             return result
         if problems := matching.problems(result.fields, answers):
             result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
             return result
         adapter.fill(page, answers)
+        _shown_as_listed(page, adapter, result, answers)
+        if result.status is not Status.READY:
+            return result
         result.checks = matching.check(result.fields, answers, adapter.read_back(page))
         if mismatched := [c.field_id for c in result.checks if not c.match]:
             result.status, result.reason = Status.REFUSED, f"mismatch: {', '.join(mismatched)}"
@@ -232,7 +280,7 @@ def _read_page(
         page, adapter = opened
         result = _result(adapter, url, user)
         with _stops(result):
-            result.fields = adapter.read_form(page)
+            _listed(result, adapter.read_form(page))
             _unfillable(result)
         return result
 
@@ -301,7 +349,10 @@ def read(
             continue
         if (fields := adapter.read_api(url)) is not None:
             result = _result(adapter, url, user)
-            result.fields = fields
+            try:
+                _listed(result, fields)
+            except ValueError as e:
+                return Result(Status.UNSUPPORTED, url, adapter.name, f"adapter_error: {e}")
             _unfillable(result)
             return result
     data = paths.data_dir(data_dir)
