@@ -84,6 +84,8 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("c", "Resume", FieldType.FILE, True, prefilled=True),
         Field("a", "Photo", FieldType.FILE, True, accept=[".jpg", ".png"]),
         Field("b", "Scan", FieldType.FILE, False, accept=[".tiff"]),
+        Field("m", "CV", FieldType.FILE, False, accept=["application/pdf"]),
+        Field("i", "Avatar", FieldType.FILE, False, accept=["image/png"]),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
         Field("t", "City", FieldType.TYPEAHEAD, True),
         Field("z", "Postal code / zip code", FieldType.TYPEAHEAD, True),
@@ -104,6 +106,8 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         "z": testuser.ZIP,
         "c": str(cv),
         "a": str(picture),
+        "m": str(cv),
+        "i": str(picture),
     }
     assert date.fromisoformat(str(answers["d"])) > date.today()
     assert cv.read_bytes().startswith(b"%PDF-1.4")

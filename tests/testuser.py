@@ -128,12 +128,17 @@ def _text(field: Field) -> str:
     return value[: field.max_length] if field.max_length else value
 
 
+def _accepts(field: Field, extension: str, mime: str) -> bool:
+    """Whether a file field takes a file by its extension or its media type."""
+    return not field.accept or extension in field.accept or mime in field.accept
+
+
 def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None:
     """The Test user's answer to one field; None for a choice with no options to pick from, or
     a file that takes neither a PDF nor, given a `picture`, a PNG."""
     match field.type:
-        case FieldType.FILE if field.accept and ".pdf" not in field.accept:
-            return str(picture) if picture and ".png" in field.accept else None
+        case FieldType.FILE if not _accepts(field, ".pdf", "application/pdf"):
+            return str(picture) if picture and _accepts(field, ".png", "image/png") else None
         case FieldType.FILE:
             return str(cv)
         case FieldType.PHONE:
