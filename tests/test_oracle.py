@@ -7,7 +7,7 @@ import pytest
 from atsfill.adapters.oracle import Oracle
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked
-from atsfill.core.results import FieldType
+from atsfill.core.results import FieldType, Is, OptionSet
 
 PAGES = Path(__file__).parent / "pages/oracle"
 JOB = "https://acme.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/1234"
@@ -106,7 +106,10 @@ def test_browser_read(opened):
     assert fields["country"].options == ["France", "Poland", "United Kingdom"]
     assert fields["city"].type is FieldType.TEXT  # an address search, left unpicked
     assert fields["postalCode"].required  # the state is not, the postal code is
-    assert fields["postalCode"].options == ["0200, Acton, ACT", "2000, Sydney, NSW"]
+    assert fields["postalCode"].options is None  # under another country, a request each
+    assert fields["postalCode"].option_sets == [
+        OptionSet(Is("country", ["United Kingdom"]), ["0200, Acton, ACT", "2000, Sydney, NSW"])
+    ]
     assert fields["siteLink-1"].type is FieldType.URL
     assert fields["dateOfBirth"].type is FieldType.DATE
     assert fields["3002"].type is FieldType.MULTI_CHOICE

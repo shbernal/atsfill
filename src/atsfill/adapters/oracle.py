@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, OptionSet, SideEffect
 
 JOB = re.compile(r"/hcmUI/CandidateExperience/[\w-]+/sites/[^/]+/job/(\d+)")
 EMAIL = "email"
@@ -517,15 +517,24 @@ def _click(page: Page, target: Locator) -> None:
 def _geography(described: list[tuple[dict, Field]]) -> list[tuple[dict, Field]]:
     """Leaves one field of the address's geography (state, city, postal code), the most
     specific: its items name the levels above (`0200, Acton, ACT`), and picking one fills
-    them. It is required when any level is."""
+    them. It is required when any level is, and a dependent list of the country."""
     levels = [(r, f) for r, f in described if r.get("geo") and f.id != COUNTRY]
     if len(levels) < 2 or not any(f.options for _, f in levels):
         return described
     parts = lambda f: max(len(o.split(",")) for o in f.options or [""])  # noqa: E731
     kept = max(levels, key=lambda rf: parts(rf[1]))
     required = any(f.required for _, f in levels)
+    asked = replace(kept[1], required=required)
+    country = next((f.default for _, f in described if f.id == COUNTRY), None)
+    if isinstance(country, str):
+        # its items are the country's the page shows; another's cost a request
+        asked = replace(
+            asked,
+            options=None,
+            option_sets=[OptionSet(Is(COUNTRY, [country]), asked.options or [])],
+        )
     return [
-        (r, replace(f, required=required) if (r, f) == kept else f)
+        (r, asked if (r, f) == kept else f)
         for r, f in described
         if (r, f) == kept or (r, f) not in levels
     ]
