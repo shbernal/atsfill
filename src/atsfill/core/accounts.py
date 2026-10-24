@@ -54,14 +54,16 @@ def sign_in(
     password: str,
     session: Path,
     create: bool = False,
+    name: str | None = None,
 ) -> None:
-    """Signs in, or creates the account, from the system's login page and stores the session.
+    """Signs in, or creates the account (with the user's `name` where it asks one), from the
+    system's login page and stores the session.
     Raises what the adapter raises, without the password in it."""
     page.goto(adapter.login_url(scope))
     try:
         if create:
             assert isinstance(adapter, CreatesAccount)
-            adapter.sign_up(page, address, password)
+            adapter.sign_up(page, address, password, name)
         else:
             adapter.sign_in(page, address, password)
     except Exception as e:

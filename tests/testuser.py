@@ -37,6 +37,8 @@ DECLINE = re.compile(
 ANSWER_NO = re.compile(
     r"employee of|employed by|worked (for|at)|relative|sponsor|preferred name", re.IGNORECASE
 )
+# An option that opens a field the form did not list: who referred or contacted, which other.
+OPENS_FIELD = re.compile(r"referr|contacted by|\bother\b", re.IGNORECASE)
 PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
 # A field's label that says it is asked only after another's answer.
 ASKED_WHEN = re.compile(
@@ -120,7 +122,7 @@ def _option(field: Field) -> str:
         return REGION
     if ANSWER_NO.search(field.label) and "No" in options:
         return "No"
-    return options[0]
+    return next((o for o in options if not OPENS_FIELD.search(o)), options[0])
 
 
 def _text(field: Field) -> str:
@@ -128,12 +130,18 @@ def _text(field: Field) -> str:
     return value[: field.max_length] if field.max_length else value
 
 
+def _accepts(field: Field, extension: str, mime: str) -> bool:
+    """Whether a file field takes a file by its extension or its media type."""
+    return not field.accept or extension in field.accept or mime in field.accept
+
+
 def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None:
-    """The Test user's answer to one field; None for a choice with no options to pick from, or
-    a file that takes neither a PDF nor, given a `picture`, a PNG."""
+    """The Test user's answer to one field; None for a choice with no options to pick from, an
+    optional search of places, or a file that takes neither a PDF nor, given a `picture`, a
+    PNG."""
     match field.type:
-        case FieldType.FILE if field.accept and ".pdf" not in field.accept:
-            return str(picture) if picture and ".png" in field.accept else None
+        case FieldType.FILE if not _accepts(field, ".pdf", "application/pdf"):
+            return str(picture) if picture and _accepts(field, ".png", "image/png") else None
         case FieldType.FILE:
             return str(cv)
         case FieldType.PHONE:
@@ -168,7 +176,10 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
                 return f"Citizen ({COUNTRY_NAMES[1]})"
             if re.search(r"nationalit|country", field.label, re.I):
                 return COUNTRY
-            return REGION if re.search(r"state|province|region", field.label, re.I) else CITY
+            if re.search(r"state|province|region", field.label, re.I):
+                return REGION
+            # an optional search of places is left: it may list only the form's country's (Workday)
+            return CITY if field.required else None
         case _:
             return _text(field)
 

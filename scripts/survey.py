@@ -2,7 +2,7 @@
 
     uv run python -m scripts.survey URL...
     uv run python -m scripts.survey --source greenhouse --employers 5
-    uv run python -m scripts.survey --session wttj=PATH URL...
+    uv run python -m scripts.survey --data-dir ~/.local/state/atsfill URL...
 
 Never sends. A row records the commit it ran at, or null on a tree with uncommitted changes,
 and each failing check with its answer and read-back.
@@ -24,11 +24,8 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from atsfill import core
-from atsfill.adapters import adapters
-from atsfill.cli import session as session_arg
 from atsfill.core import browser, paths
 from atsfill.core.browser import Page, Response
-from atsfill.core.commands import Sessions
 from atsfill.core.results import Status
 from tests import testuser
 from tests.checkout import MAIN
@@ -144,24 +141,19 @@ def commit() -> str | None:
     return None if git("status", "--porcelain").strip() else git("rev-parse", "HEAD").strip()
 
 
-def survey(
-    url: str, employer: str, source: str | None, data: Path, cv: Path, sessions: Sessions
-) -> dict:
+def survey(url: str, employer: str, source: str | None, data: Path, cv: Path) -> dict:
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
-    session = next(
-        (sessions[a.name] for a in adapters() if a.name in sessions and a.detect(url, None)), None
-    )
-    with browser.open_page(data, session) as page:
+    with browser.open_page(data) as page:
         response = page.goto(url)
         with suppress(browser.Timeout):  # a page that keeps polling is still labelled
             page.wait_for_load_state("networkidle", timeout=IDLE_MS)
         found = probe(page, url, response)
         evidence = _evidence(page, response, key)
-    read = core.read(url, user=paths.TEST_USER, data_dir=data, sessions=sessions)
+    read = core.read(url, user=paths.TEST_USER, data_dir=data)
     result = read
     if read.status is Status.READY:
         answers = testuser.answers(read.fields, cv, cv.with_name("photo.png"))
-        result = core.fill(url, answers, user=paths.TEST_USER, data_dir=data, sessions=sessions)
+        result = core.fill(url, answers, user=paths.TEST_USER, data_dir=data)
     step = None
     if found.label == "block":
         step = "posting"
@@ -239,7 +231,6 @@ def run(
     data_dir: Path = CORPUS / "data",
     delay: float = DELAY_S,
     echo: bool = True,
-    sessions: Sessions | None = None,
     out: str | None = None,
 ) -> list[dict]:
     """Surveys each (URL, employer), appending its row to .tmp/corpus/<out or source>.jsonl."""
@@ -252,7 +243,7 @@ def run(
         if n:
             time.sleep(delay)
         try:
-            row = survey(url, employer, source, data, cv, sessions or {})
+            row = survey(url, employer, source, data, cv)
         except Exception as e:  # one posting's failure is a row, not the end of the survey
             row = {"source": source, "employer": employer, "url": url, "label": "unclear",
                    "reason": f"survey_error: {type(e).__name__}: {e}",
@@ -272,17 +263,16 @@ def main() -> None:
     p.add_argument("urls", nargs="*")
     p.add_argument("--source", help="a freehire source to sample")
     p.add_argument("--employers", type=int, default=5, help="distinct employers to sample")
-    p.add_argument("--data-dir", type=Path, default=CORPUS / "data")
-    p.add_argument("--delay", type=float, default=DELAY_S, help="seconds between postings")
     p.add_argument(
-        "--session", type=session_arg, action="append", default=[], metavar="ADAPTER=PATH",
-        help="a stored session for an adapter that needs an account",
+        "--data-dir", type=Path, default=CORPUS / "data",
+        help="the data directory holding the Test user's accounts, for a system that needs one",
     )  # fmt: skip
+    p.add_argument("--delay", type=float, default=DELAY_S, help="seconds between postings")
     args = p.parse_args()
     if not args.urls and not args.source:
         p.error("give URLs or --source")
     postings = [(u, _host(u)) for u in args.urls] or freehire(args.source, args.employers)
-    run(postings, args.source, args.data_dir, args.delay, sessions=dict(args.session))
+    run(postings, args.source, args.data_dir, args.delay)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # Workday
 
-Workday's candidate sites and their apply wizard, observed on live postings, last on 2026-10-23. The fixture pages are [tests/pages/workday/login.html](../../tests/pages/workday/login.html) and [apply.html](../../tests/pages/workday/apply.html), with the posting, apply flow and questionnaire JSON beside them, served as an Acme tenant in `tests/test_workday.py`: the login page's outcomes, and a wizard with one example of each rendering below.
+Workday's candidate sites and their apply wizard, observed on live postings, last on 2026-10-24. The fixture pages are [tests/pages/workday/login.html](../../tests/pages/workday/login.html) and [apply.html](../../tests/pages/workday/apply.html), with the posting, apply flow and questionnaire JSON beside them, served as an Acme tenant in `tests/test_workday.py`: the login page's outcomes, and a wizard with one example of each rendering below.
 
 ## Where the form is
 
@@ -15,7 +15,7 @@ Applying needs an account, one per tenant: the account scope is the tenant, the 
 - `login_url` is the posting's site's `/<site>/login`: sign-in, with Create Account behind `createAccountLink`. Some tenants offer Google, LinkedIn or Apple first, the email form behind `SignInWithEmailButton`.
 - The buttons take clicks through a `click_filter` overlay. The first press after typing often posts nothing: atsfill presses again until `POST /login` or `POST /register` goes out. A `beecatcher` input is a honeypot, left empty.
 - The signed-in check is `GET /wday/cxs/<tenant>/<any site>/userprofile`, which holds `emailAddress` for an account and is `{}` for a visitor, asked of the hosts the session's cookies are for. Sessions are cookies without an expiry; Workday ends them server side.
-- Sign-up answers `POST /register` with a redirect: to the posting or the site's home, signed in (12 of 15 tenants); to `/login/warning` after sending a verification email (2 of 15), `blocked: email_link`; to `/login`, signed out and saying nothing, when the email has an account, `refused: email_in_use`. Clicking the link lands on `/login/ok`, "Account Activated".
+- Sign-up answers `POST /register` with a redirect: to the posting or the site's home, signed in (20 of 29 tenants); to `/login/warning` after sending a verification email (7 of 29), `blocked: email_link`; to `/login`, signed out and saying nothing, when the email has an account, `refused: email_in_use`. Clicking the link lands on `/login/ok`, "Account Activated".
 - A wrong password shows `[data-automation-id=errorMessage]`; an account not verified yet, "Verify your account before you sign in", `blocked: email_link`; a password the tenant's rules refuse, an `inputAlert` under the field, `password_rule`. atsfill's generated passwords meet every tenant's rules seen.
 - No tenant asked for an OTP.
 
@@ -40,7 +40,7 @@ Each rendering, from 40 postings' questionnaires and the pages walked:
 | radio group: `previousWorker--candidateIsPreviousWorker` | `choice` | 13 |
 | checkboxes, a Multi Select question | `multi_choice` | 18 questions |
 | search prompt (`selectinput`) of one value: the source ("How Did You Hear About Us?", a tree of categories and items), the country phone code, a field of study | `choice`: the items, a category's in its place; the long lists from the API | 40 |
-| search prompt of many values: skills; of one, searched only: a school | `typeahead` | 40 |
+| search prompt of many values: skills; of one, searched only: a school, a city (`address--countryCity`, the cities of the form's country) | `typeahead` | 40; a city, 4 of 14 |
 | phone number beside the country phone code (`phoneNumber--phoneNumber`), typed without the code | `phone` | 40 |
 | date sections (`dateSectionMonth-input`, `Day`, `Year`): a Date question | `date` | 1 question |
 | month and year sections: a work entry's From and To | `text`, label `(MM/YYYY)` | 13 |
@@ -57,17 +57,17 @@ Each rendering, from 40 postings' questionnaires and the pages walked:
 - The phone number is typed without the country code the form shows; a number with another code is refused, naming the code's field.
 - A list's first entry is added with its Add button when answers are given for it, in the group its name labels (`[role=group][aria-labelledby=Work-Experience-section]`, `Work-History-(Optional)-section` on some tenants). The page numbers each entry's fields its own way (`workExperience-8--jobTitle`), so the first entry's are read as `workExperience--jobTitle`.
 - An upload first deletes the files the draft or the account profile holds (`delete-file`), then waits for the new file's name.
-- A page showing a required field the read did not list stops the fill before saving: on My Information, the `other_country` known gap; on a later page, `refused: answer_not_taken` asking to read again, the pages before it now saved.
+- A page showing a required field the read did not list stops the fill before saving. On My Information, an address field is the `other_country` known gap; another is a follow-up an answer opened (a source item asking who referred or contacted the user), `refused: answer_not_taken`. On a later page, `refused: answer_not_taken` asks to read again, the pages before it now saved.
 - Save and Continue (`pageFooterNextButton`) is pressed again when the page neither moves nor shows an error. A page that shows errors (`errorHeading`, `inputAlert`) stops the fill: `refused: answer_not_taken`, with the page's message.
 
 ## Read-back and submit
 
-- Each page's values are read before it is saved: an input's value, a dropdown's text, the picked prompt items, the checked option's label, a box as `Yes`/`No`, the uploaded file's name, a date as `YYYY-MM-DD`, the phone with the country code beside it (`+44 1234567890`). Every page is saved as it is left, so the read-back is what the draft holds, read from the page, not from the server. Review repeats it without field ids.
+- Each page's values are read before it is saved, once each answered field shows one (a picked item can leave the page for a moment): an input's value, a dropdown's text, the picked prompt items, the checked option's label, a box as `Yes`/`No`, the uploaded file's name, a date as `YYYY-MM-DD`, the phone with the country code beside it (`+44 1234567890`). Every page is saved as it is left, so the read-back is what the draft holds, read from the page, not from the server. Review repeats it without field ids.
 - Submit is Review's `pageFooterNextButton`, which atsfill expects to post the application (`…/submit`); no send was made.
 
 ## Development
 
-The Test user's accounts are created with `atsfill login workday --user test --url <posting> --create --email <address>`, one per tenant, from a mailbox the developer reads. `scripts.gate --fresh` cannot create them, so the adapter gate's postings are surveyed with `--data-dir` set to the data directory holding them, twice: a fresh draft's first dry run stops at the disclosures.
+The Test user's accounts are one per tenant, created by the round (ADR 0013): `atsfill login workday --user test --url <posting> --create --email <address>`. Each posting is surveyed twice with `--data-dir`: a fresh draft's first dry run stops at the disclosures.
 
 ## Known gaps
 

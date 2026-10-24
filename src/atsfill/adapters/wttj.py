@@ -1,8 +1,9 @@
 """Welcome to the Jungle (`welcometothejungle.com` jobs and their `easyapply.jobs` links), as
 docs/adapters/wttj.md observes.
 
-Applying needs an account: the form opens in a modal, prefilled from the account profile. Nothing is
-sent before submit, so the read-back is the form's inputs and the CV's shown name.
+Applying needs an account, which atsfill can sign in to and create: the form opens in a modal,
+prefilled from the account profile. Nothing is sent before submit, so the read-back is the form's
+inputs and the CV's shown name.
 """
 
 import re
@@ -11,14 +12,18 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
-from atsfill.core.browser import Locator, Page, Request, Timeout
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported
+from atsfill.core.browser import Locator, Page, Request, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "www.welcometothejungle.com"
 JOB = re.compile(r"^/(?:[a-z]{2}/)?companies/([^/]+)/jobs/([^/?#]+)")
 FORM = "form:has([data-testid=apply-form-submit])"
 ME = "https://api.welcometothejungle.com/api/v2/users/me"
+SIGN_UP = f"https://{HOST}/en/authenticate/signup"
+ACCOUNT_TIMEOUT_MS = 20_000
+ACCOUNT_TIMEOUT_S = 20
+ACCOUNT_POLL_MS = 250
 FORM_TIMEOUT_MS = 20_000
 SIGNED_IN_TIMEOUT_S = 10
 SUBMIT_TIMEOUT_MS = 90_000
@@ -58,8 +63,12 @@ _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
 class WelcomeToTheJungle:
     name = "wttj"
     per_employer = False
+    asks_name = True  # the profile's first name
     known_gaps: dict[str, Gap] = {}
-    side_effects = [SideEffect("submit", "employer", "the application reaches the employer")]
+    side_effects = [
+        SideEffect("sign_up", "hiring_system", "login --create creates the account"),
+        SideEffect("submit", "employer", "the application reaches the employer"),
+    ]
 
     def __init__(self) -> None:
         self._fields: dict[str, Field] = {}
@@ -84,6 +93,17 @@ class WelcomeToTheJungle:
     def signed_in(self, request: Request, scope: str | None) -> bool:
         """`users/me` answers 200 for an account, 204 for a visitor."""
         return request.get(ME).status == 200
+
+    def sign_in(self, page: Page, email: str, password: str) -> None:
+        _account_form(page, "sign-in-form", {"email": email, "password": password}, "/sessions")
+
+    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+        """Creates the account, signed in, then waits for its confirmation link: clicking it
+        signs every session out."""
+        page.goto(SIGN_UP)
+        values = {"firstname": name or "", "email": email, "password": password}
+        _account_form(page, "sign-up-form", values, "/registrations")
+        raise Blocked("email_link: the sign-up sent a confirmation link")
 
     def read_form(self, page: Page) -> list[Field]:
         """Opens the apply modal; a job that applies on another site has no form here."""
@@ -166,6 +186,63 @@ class WelcomeToTheJungle:
             reference = response.json().get("application", {}).get("reference")
             return f"POST {urlsplit(response.url).path} {response.status}, reference {reference}"
         raise RuntimeError(f"POST {response.url} answered {response.status}")
+
+
+def _account_form(page: Page, form: str, values: dict[str, str], posts: str) -> None:
+    """Fills the sign-in or sign-up form, submits it and returns once the system took it; raises
+    what the system answered, or what the form says under a field it refused without posting."""
+    try:
+        page.locator(f"[data-testid={form}-submit-button]").wait_for(timeout=ACCOUNT_TIMEOUT_MS)
+    except Timeout:
+        if "too many requests" in page.locator("body").inner_text().lower():
+            reason = f"rate_limited: {urlsplit(page.url).path} answers too many requests"
+            raise Blocked(reason) from None
+        raise Unsupported(f"unhandled_rendering: no {form} on {page.url}") from None
+    for field, value in values.items():
+        page.locator(f"[data-testid={form}-{field}-input]").fill(value)
+    # posted before the page has its CSRF token, the form is answered 403 and says nothing
+    page.wait_for_function(
+        "() => document.cookie.includes('csrf-token=')", timeout=ACCOUNT_TIMEOUT_MS
+    )
+    answered: list[Response] = []
+
+    def on_response(response: Response) -> None:
+        if response.request.method == "POST" and urlsplit(response.url).path.endswith(posts):
+            answered.append(response)
+
+    page.on("response", on_response)
+    on_form = page.url
+    page.locator(f"[data-testid={form}-submit-button]").click()
+    said = page.locator(f"[data-testid^={form}-][data-testid$=-error]")
+    deadline = time.monotonic() + ACCOUNT_TIMEOUT_S
+    try:
+        while time.monotonic() < deadline:
+            if answered:
+                _account_answer(answered[0])
+                # the page leaves the form on its own: a navigation before then is aborted
+                page.wait_for_url(lambda url: url != on_form, timeout=ACCOUNT_TIMEOUT_MS)
+                return
+            if said.count():
+                field = said.first.get_attribute("data-testid") or ""
+                text = said.first.inner_text().strip()
+                if field.endswith("-password-error"):
+                    raise Refused(f"password_rule: {text}")
+                raise Unsupported(f"unhandled_rendering: the form says {text!r}")
+            page.wait_for_timeout(ACCOUNT_POLL_MS)
+    finally:
+        page.remove_listener("response", on_response)
+    raise Unsupported("unhandled_rendering: the form answered nothing")
+
+
+def _account_answer(response: Response) -> None:
+    match response.status:
+        case 200 | 201:
+            return
+        case 401:
+            raise Refused("wrong_password")
+        case 422 if "email" in response.json().get("errors", {}):
+            raise Refused("email_in_use")
+    raise RuntimeError(f"POST {urlsplit(response.url).path} answered {response.status}")
 
 
 def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:

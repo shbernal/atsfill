@@ -160,9 +160,9 @@ def test_create_stores_the_password_before_the_click(creates, config, data, caps
     stored_first = []
     sign_up = creates.sign_up
 
-    def watched(page, email, password):
+    def watched(page, email, password, name):
         stored_first.append(passwords.stored(data / "users/test", "fakeaccount", None) == password)
-        sign_up(page, email, password)
+        sign_up(page, email, password, name)
 
     creates.sign_up = watched
     code, report = login(data, capsys, "--user", "test", "--create", "--email", EMAIL)
@@ -197,6 +197,16 @@ def test_create_keeps_the_password_while_the_account_may_exist(
     assert (stored is not None) == kept
 
 
+def test_create_signs_in_with_a_password_already_stored(creates, config, data, capsys):
+    login(data, capsys, "--create", "--email", EMAIL)
+    first = creates.created
+    code, report = login(data, capsys, "--create", "--email", "other@example.com")
+    assert (code, report["status"], report["password"]) == (0, "signed_in", "kept")
+    assert creates.created == first
+    assert passwords.stored(data / "users/default", "fakeaccount", None) == first
+    assert core.accounts.email(data / "users/default", "fakeaccount", None) == EMAIL
+
+
 def test_a_verification_link_names_the_address_and_the_command(creates, config, data, capsys):
     creates.stops = Blocked("email_link")
     code, report = login(data, capsys, "--user", "test", "--create", "--email", EMAIL)
@@ -205,6 +215,14 @@ def test_a_verification_link_names_the_address_and_the_command(creates, config, 
         "`atsfill login fakeaccount --user test`"
     )
     assert report["password"] == "stored"
+
+
+def test_a_sign_up_that_asks_a_name_needs_it(creates, config, data, capsys, secret_store):
+    creates.asks_name = True
+    args = ["--data-dir", str(data), "login", "fakeaccount", "--create", "--email", EMAIL]
+    assert run(parser().parse_args(args)) == 2
+    assert "needs --name" in capsys.readouterr().err
+    assert passwords.stored(data / "users/default", "fakeaccount", None) is None
 
 
 def test_create_needs_an_adapter_with_sign_up(account, config, data, capsys):

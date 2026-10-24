@@ -1,6 +1,6 @@
 """Whether an adapter is done (ADR 0013): one line per criterion, then PASS or FAIL.
 
-    uv run python -m scripts.gate <system> [--fresh] [--employers N] [--session ADAPTER=PATH]
+    uv run python -m scripts.gate <system> [--fresh] [--employers N] [--data-dir PATH]
     uv run python -m scripts.gate <system> --broken "<reason>" [--cause system|code|unknown]
     uv run python -m scripts.gate <system> --cause system|code|unknown
 
@@ -27,8 +27,7 @@ from importlib.metadata import version
 from pathlib import Path
 
 from atsfill.adapters import adapters
-from atsfill.cli import session as session_arg
-from atsfill.core import browser, registry
+from atsfill.core import browser, paths, registry
 from atsfill.core.adapter import ReadsOverHttp
 from scripts import survey
 
@@ -136,8 +135,8 @@ def main() -> None:
     p.add_argument("--fresh", action="store_true", help="survey new employers first")
     p.add_argument("--employers", type=int, default=2 * EMPLOYERS, help="employers to sample")
     p.add_argument(
-        "--session", type=session_arg, action="append", default=[], metavar="ADAPTER=PATH",
-        help="a stored session, the dry runs fill under it",
+        "--data-dir", type=Path, default=survey.CORPUS / "data",
+        help="the data directory holding the Test user's accounts, for a system that needs one",
     )  # fmt: skip
     p.add_argument("--broken", metavar="REASON", help="record that sending is broken")
     p.add_argument(
@@ -197,8 +196,7 @@ def main() -> None:
             postings = survey.freehire(
                 source.name, args.employers, lambda u: adapter.detect(u, None), sample
             )
-            survey.run(postings, source.name, echo=False, sessions=dict(args.session),
-                       out=f"gate-{source.name}")  # fmt: skip
+            survey.run(postings, source.name, args.data_dir, echo=False, out=f"gate-{source.name}")
         counted = [
             r
             for r in rows(sorted(corpus.glob("*.jsonl")), head)
@@ -224,7 +222,7 @@ def main() -> None:
             line(True, "read_api parity", "not applicable: read_api returned nothing for these")
         else:
             for url in over_http:
-                problem = parity(adapter, url, corpus / "data")
+                problem = parity(adapter, url, paths.data_dir(args.data_dir))
                 line(
                     problem is None, "read_api parity", f"{handle(url)}: {problem or 'same fields'}"
                 )

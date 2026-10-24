@@ -144,8 +144,10 @@ class FakeSignUp(FakeSignIn):
         super().__init__(server)
         self.created: str | None = None  # the password the account was created with
 
-    def sign_up(self, page: Page, email: str, password: str) -> None:
+    asks_name = False
+
+    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
         if self.stops:
             raise self.stops
-        self.created = password
+        self.created = self.password = password
         page.evaluate("document.cookie = 'session=ok; path=/'")

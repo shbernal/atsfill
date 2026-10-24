@@ -56,6 +56,7 @@ PICKED = "[data-automation-id=selectedItem]"
 DELETE_PICK = "[data-automation-id=DELETE_charm]"
 SEARCH = "input[data-uxi-widget-type=selectinput]"
 BACK = "[data-automation-id=backButton]:visible"
+ADDRESS = "address--"
 PHONE_CODE_ID = "phoneNumber--countryPhoneCode"
 PHONE_CODE = f'[data-fkit-id="{PHONE_CODE_ID}"]'
 PHONE_CODES = "/values/phone/countryCodes"
@@ -178,6 +179,7 @@ def _profile_hosts(request: Request, scope: str | None) -> list[str]:
 class Workday:
     name = "workday"
     per_employer = True
+    asks_name = False
     known_gaps = {
         "experience_entries": Gap.FLOW,
         "long_wizard": Gap.FLOW,
@@ -234,7 +236,7 @@ class Workday:
         _email_form(page)
         _submit(page, "signInSubmitButton", email, password)
 
-    def sign_up(self, page: Page, email: str, password: str) -> None:
+    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
         _email_form(page)
         page.locator("[data-automation-id=createAccountLink]").click()
         page.locator("[data-automation-id=verifyPassword]").fill(password)
@@ -315,7 +317,7 @@ class Workday:
                         _until_rendered(page, pending)
                 page.wait_for_timeout(SETTLE_MS)
             self._unread(page)
-            self._values |= {r["id"]: r["value"] for r in _page_fields(page)}
+            self._values |= {r["id"]: r["value"] for r in _filled(page, answers)}
             if self._values.get(PHONE_NUMBER) and (code := _phone_code(page)):
                 self._values[PHONE_NUMBER] = f"+{code} {self._values[PHONE_NUMBER]}"
             _save_and_continue(page)
@@ -323,16 +325,17 @@ class Workday:
 
     def _unread(self, page: Page) -> None:
         """Stops on required fields the read did not list: on My Information, the address of a
-        country other than the form's; on a later page, one the read could not reach."""
-        unread = [
-            r["label"] for r in _page_fields(page) if r["required"] and r["id"] not in self._fields
-        ]
+        country other than the form's, or a follow-up an answer opened (a referral's name); on a
+        later page, one the read could not reach."""
+        unread = [r for r in _page_fields(page) if r["required"] and r["id"] not in self._fields]
         if not unread:
             return
-        step, labels = _step(page), ", ".join(unread)
-        if step == MY_INFORMATION:
+        step, labels = _step(page), ", ".join(r["label"] for r in unread)
+        if step == MY_INFORMATION and any(r["id"].startswith(ADDRESS) for r in unread):
             detail = f"the country answered shows fields the read did not: {labels}"
             raise Unsupported(known_gap(self, "other_country", detail))
+        if step == MY_INFORMATION:
+            raise NotTaken(f"{step} shows fields the read did not: {labels}; an answer opened them")
         raise NotTaken(f"{step} shows fields the read did not: {labels}; read again")
 
     def read_back(self, page: Page) -> dict[str, Answer]:
@@ -525,6 +528,17 @@ def _rendered(page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
     for _ in range(RENDER_TRIES):
         raws = _page_fields(page)
         if all(r["kind"] for r in raws if r["id"] in answers):
+            break
+        page.wait_for_timeout(SETTLE_MS)
+    return raws
+
+
+def _filled(page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
+    """The page's fields once each answered one shows a value: a picked item can leave the
+    page for a moment as it renders again."""
+    for _ in range(RENDER_TRIES):
+        raws = _page_fields(page)
+        if all(r["value"] not in (None, "", []) for r in raws if r["id"] in answers):
             break
         page.wait_for_timeout(SETTLE_MS)
     return raws

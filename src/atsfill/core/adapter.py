@@ -128,7 +128,9 @@ class CreatesAccount(SignsIn, Protocol):
     """An adapter atsfill can create an account through, where the system's sign-up allows it.
     Account creation is a side effect it declares (ADR 0008)."""
 
-    def sign_up(self, page: Page, email: str, password: str) -> None:
+    asks_name: bool  # the sign-up asks the user's name
+
+    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
         """Creates the account from the page `login_url` loaded, signed in once it returns.
         Raises as `sign_in` does; `Refused` names the rule a `password_rule` page showed."""
         ...

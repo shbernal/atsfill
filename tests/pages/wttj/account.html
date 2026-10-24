@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- Welcome to the Jungle's sign-in (/en/signin) and sign-up (/en/authenticate/signup) forms as
+     the adapter meets them: the page gets its CSRF token a moment after it renders, and the API
+     answers 403 to a post without it; a field the form refuses shows its error under it without
+     posting; a taken email or a wrong password is the API's answer, shown on the page; a post
+     taken leaves for the onboarding. -->
+<form id="form" novalidate></form>
+<div id="said"></div>
+<script>
+  const form = document.getElementById("form");
+  const up = location.pathname.endsWith("/signup");
+  const name = up ? "sign-up-form" : "sign-in-form";
+  const fields = up ? ["firstname", "email", "password"] : ["email", "password"];
+  for (const field of fields) {
+    form.insertAdjacentHTML("beforeend",
+      `<label>${field}<input data-testid="${name}-${field}-input"
+         type="${field === "firstname" ? "text" : field}"></label>
+       <span data-testid="${name}-${field}-error-slot"></span>`);
+  }
+  form.insertAdjacentHTML("beforeend",
+    `<button type="submit" data-testid="${name}-submit-button">Go</button>`);
+  setTimeout(() => { document.cookie = "csrf-token=t0k3n; path=/"; }, 500);
+
+  const value = field => form.querySelector(`[data-testid=${name}-${field}-input]`).value;
+  const refuse = (field, text) => {
+    form.querySelector(`[data-testid=${name}-${field}-error-slot]`).outerHTML =
+      `<span role="alert" data-testid="${name}-${field}-error">${text}</span>`;
+  };
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (up && !value("firstname")) return refuse("firstname", "First name is required.");
+    if (up && value("password").length < 12) {
+      return refuse("password", "Your password must be at least 12 characters.");
+    }
+    const csrf = document.cookie.match(/csrf-token=([^;]+)/)?.[1];
+    const response = await fetch(
+      `https://api.welcometothejungle.com/api/${up ? "v3/registrations" : "v1/sessions"}`, {
+        method: "POST",
+        headers: csrf ? {"x-csrf-token": csrf} : {},
+        body: JSON.stringify(Object.fromEntries(fields.map(f => [f, value(f)]))),
+      });
+    if (response.ok) {
+      location.assign("/en/complete-profile/cv-upload?flow=onboarding");
+    } else if (response.status === 422) {
+      refuse("email", "This email address is already taken.");
+    } else {
+      document.getElementById("said").textContent = "Email or password incorrect";
+    }
+  });
+</script>

@@ -84,8 +84,12 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("c", "Resume", FieldType.FILE, True, prefilled=True),
         Field("a", "Photo", FieldType.FILE, True, accept=[".jpg", ".png"]),
         Field("b", "Scan", FieldType.FILE, False, accept=[".tiff"]),
+        Field("m", "CV", FieldType.FILE, False, accept=["application/pdf"]),
+        Field("i", "Avatar", FieldType.FILE, False, accept=["image/png"]),
         Field("x", "Pick one", FieldType.CHOICE, False, []),
+        Field("h", "Source", FieldType.CHOICE, True, ["Contacted by a recruiter", "Other", "Web"]),
         Field("t", "City", FieldType.TYPEAHEAD, True),
+        Field("w", "Town", FieldType.TYPEAHEAD, False),  # the form's country's towns only
         Field("z", "Postal code / zip code", FieldType.TYPEAHEAD, True),
         Field("p", "Phone", FieldType.PHONE, True, prefilled=True),  # left to the account
         Field("o", "Video", FieldType.FILE, False, unfillable="out_of_scope: o is a video"),
@@ -100,10 +104,13 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         "s": testuser.SALARY,
         "q": testuser.TEXT,
         "d": answers["d"],
+        "h": "Web",
         "t": testuser.CITY,
         "z": testuser.ZIP,
         "c": str(cv),
         "a": str(picture),
+        "m": str(cv),
+        "i": str(picture),
     }
     assert date.fromisoformat(str(answers["d"])) > date.today()
     assert cv.read_bytes().startswith(b"%PDF-1.4")
