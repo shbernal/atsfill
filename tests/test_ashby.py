@@ -107,7 +107,7 @@ def test_read_form_lists_the_visible_fields_of_every_form(ashby, page):
     types = {f.id: f.type for f in fields}
     assert types["start"] is FieldType.DATE
     assert types["_systemfield_location"] is FieldType.TYPEAHEAD
-    assert types["site"] is FieldType.TEXT
+    assert types["site"] is FieldType.URL
     assert next(f for f in fields if f.id == "right").options == ["Yes", "No"]
 
 

@@ -34,7 +34,7 @@ TYPES = {
     "String": FieldType.TEXT,
     "Email": FieldType.TEXT,
     "LongText": FieldType.TEXT,
-    "Url": FieldType.TEXT,
+    "Url": FieldType.URL,
     "Date": FieldType.DATE,
     "Number": FieldType.TEXT,
     "Phone": FieldType.PHONE,
@@ -146,7 +146,7 @@ class Ashby:
             entry = page.locator(f'[data-field-path="{field_id}"]')
             entry.scroll_into_view_if_needed()
             match fields[field_id].type, answer:
-                case FieldType.TEXT | FieldType.DATE | FieldType.PHONE, str():
+                case FieldType.TEXT | FieldType.URL | FieldType.DATE | FieldType.PHONE, str():
                     box = entry.locator("input, textarea").first
                     box.fill(answer)
                     if fields[field_id].type is FieldType.DATE:

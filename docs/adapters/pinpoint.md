@@ -25,7 +25,7 @@ Each rendering, and in how many of 35 postings it shows (2026-10-22):
 | consent checkbox `process_information`, required | `choice`, `Yes`/`No` | 35 |
 | `Address`: a searchable react-select country, then text lines; with the United States the second line is the city and the town a react-select of states | `choice` country and state, `text` lines | 22 |
 | `Filefield`: the résumé, a cover letter | `file` | 34, 3 |
-| `Shorttext`, `Longtext`, `Url` questions; `Numberinput`, its label ending `(a number)` | `text` | 29; 5 |
+| `Shorttext`, `Longtext`, `Url` questions; `Numberinput`, its label ending `(a number)` | `text`, `url` for `Url` | 29; 5 |
 | `Boolean` question: two radios, `true` and `false`, labelled in the page's words | `choice` | 31 |
 | `Singleselect` question: a react-select | `choice` | 20 |
 | `Multiselect` question: a react-select taking several | `multi_choice` | 9 |

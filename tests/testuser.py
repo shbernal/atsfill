@@ -138,6 +138,8 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
             return str(cv)
         case FieldType.PHONE:
             return PHONE
+        case FieldType.URL:  # a handle by its label is no answer to a field declared a URL
+            return value if (value := _text(field)).startswith("https://") else WEBSITE
         case FieldType.DATE if re.search(r"birth", field.label, re.IGNORECASE):
             return BIRTH_DATE
         case FieldType.DATE:  # an end date after a start date; a past one in a history entry

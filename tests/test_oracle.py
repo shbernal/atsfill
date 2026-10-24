@@ -106,6 +106,7 @@ def test_read_form(opened):
     assert fields["city"].type is FieldType.TEXT  # an address search, left unpicked
     assert fields["postalCode"].required  # the state is not, the postal code is
     assert fields["postalCode"].options == ["0200, Acton, ACT", "2000, Sydney, NSW"]
+    assert fields["siteLink-1"].type is FieldType.URL
     assert fields["dateOfBirth"].type is FieldType.DATE
     assert fields["3002"].type is FieldType.MULTI_CHOICE
     assert fields["3003"].options == ["Job board", "Employee referral", "Social media"]

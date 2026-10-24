@@ -32,6 +32,7 @@ def field(kind: FieldType, options: list[str] | None = None, required: bool = Tr
         (FieldType.FILE, None, "/a/resume.pdf", "cv.pdf", False),
         (FieldType.PHONE, None, "+33 6 12 34 56 78", "+33612345678", True),
         (FieldType.PHONE, None, "+33 6 12 34 56 78", "+44612345678", False),
+        (FieldType.URL, None, "https://example.com ", "https://example.com", True),
         (FieldType.TEXT, None, "a", None, False),
     ],
 )
@@ -61,6 +62,12 @@ def test_problems_before_filling():
     name = Field("n", "Name", FieldType.TEXT, True, max_length=5)
     assert problems([name], {"n": "Jane Doe"}) == ["n: 8 characters, over the limit of 5"]
     assert problems([name], {"n": " Jane "}) == []  # trimmed, as the read-back is
+    site = Field("s", "LinkedIn", FieldType.URL, False)
+    assert problems([site], {"s": "janedoe"}) == ["s: a url answer is an absolute http(s) URL"]
+    assert problems([site], {"s": "linkedin.com/in/janedoe"}) == [
+        "s: a url answer is an absolute http(s) URL"
+    ]
+    assert problems([site], {"s": " https://www.linkedin.com/in/janedoe "}) == []
 
 
 def test_a_click_without_outcome_blocks_the_next_send(tmp_path):
