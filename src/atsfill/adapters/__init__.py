@@ -20,6 +20,7 @@ from atsfill.adapters.rippling import Rippling
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.workable import Workable
+from atsfill.adapters.workday import Workday
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.adapters.zohorecruit import ZohoRecruit
 from atsfill.core.adapter import Adapter, Filtered
@@ -51,6 +52,7 @@ def adapters() -> list[Adapter]:
         Pinpoint(),
         HiringThing(),
         Eightfold(),
+        Workday(),
         Phenom(),  # last: it claims a URL by its path alone
     ]
 

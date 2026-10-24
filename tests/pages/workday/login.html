@@ -1,0 +1,95 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Acme Careers</title>
+<style>
+  .wrapper { position: relative; width: 200px; }
+  [data-automation-id=click_filter] { position: absolute; inset: 0; }
+</style>
+<div id="social" hidden>
+  <button data-automation-id="GoogleSignInButton">Sign in with Google</button>
+  <button data-automation-id="SignInWithEmailButton">Sign in with email</button>
+</div>
+<div data-automation-id="signInContent">
+  <h2 id="heading">Sign In</h2>
+  <div id="alert"></div>
+  <form data-automation-id="signInFormo" onsubmit="return false">
+    <label>Email Address* <input type="text" data-automation-id="email"></label>
+    <label>Password* <input type="password" data-automation-id="password"></label>
+    <div id="create" hidden>
+      <label>Verify New Password* <input type="password" data-automation-id="verifyPassword"></label>
+      <label><input type="checkbox" data-automation-id="createAccountCheckbox"> I acknowledge the privacy policy.</label>
+      <div class="wrapper" data-automation-id="noCaptchaWrapper">
+        <button type="submit" data-automation-id="createAccountSubmitButton">Create Account</button>
+        <div data-automation-id="click_filter" aria-label="Create Account"></div>
+      </div>
+    </div>
+    <div id="signin" class="wrapper" data-automation-id="noCaptchaWrapper">
+      <button type="submit" data-automation-id="signInSubmitButton">Sign In</button>
+      <div data-automation-id="click_filter" aria-label="Sign In"></div>
+    </div>
+  </form>
+  <input type="text" data-automation-id="beecatcher" name="website" style="display:none">
+  <button id="link" data-automation-id="createAccountLink">Create Account</button>
+</div>
+<script>
+  // The account the fixture knows: ada@example.com, its password Right-123!
+  // `?social` offers social accounts first, the email form behind a button.
+  if (location.search === "?social") {
+    document.getElementById("social").hidden = false;
+    document.querySelector("[data-automation-id=signInContent]").hidden = true;
+    document.querySelector("[data-automation-id=SignInWithEmailButton]").onclick = () => {
+      document.getElementById("social").hidden = true;
+      document.querySelector("[data-automation-id=signInContent]").hidden = false;
+    };
+  }
+  const $ = id => document.querySelector(`[data-automation-id=${id}]`);
+  const say = (id, text) => {
+    document.getElementById("alert").innerHTML =
+      `<div data-automation-id="${id}" role="alert"><p>${text}</p></div>`;
+  };
+  const signedIn = () => {
+    document.cookie = "PLAY_SESSION=ok; path=/";
+    location.href = location.pathname.replace(/\/login$/, "");
+  };
+  $("createAccountLink").onclick = () => {
+    document.getElementById("create").hidden = false;
+    document.getElementById("signin").hidden = true;
+    document.getElementById("link").hidden = true;
+    document.getElementById("heading").textContent = "Create Account";
+  };
+  // The first press after typing posts nothing, as on live tenants.
+  let typed = false;
+  document.addEventListener("input", () => { typed = true; });
+  const post = (path, email) =>
+    fetch(location.pathname.replace(/\/login$/, path), {method: "POST", body: email});
+  for (const filter of document.querySelectorAll("[data-automation-id=click_filter]")) {
+    filter.onclick = async () => {
+      if (typed) { typed = false; return; }
+      const email = $("email").value, password = $("password").value;
+      if (!document.getElementById("create").hidden) {
+        if (!/[^A-Za-z0-9]/.test(password) || password.length < 8) {
+          say("inputAlert", "Error: Password must include: - A special character");
+          return;
+        }
+        // An email that has an account is redirected to the login page, one the tenant must
+        // verify to `/login/warning`: both land signed out.
+        const registered = await post("/register", email);
+        if (new URL(registered.url).pathname.includes("/login")) {
+          location.href = location.pathname.replace(/\/login$/, "/userHome");
+        } else {
+          signedIn();
+        }
+        return;
+      }
+      await post("/login", email);
+      if (email === "ada@example.com" && password === "Right-123!") {
+        signedIn();
+      } else if (email === "unverified@example.com") {
+        say("errorMessage", "Verify your account before you sign in or request a verification email.");
+      } else {
+        say("errorMessage",
+          "You may have entered the wrong email address or password or your account might be locked.");
+      }
+    };
+  }
+</script>

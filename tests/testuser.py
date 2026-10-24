@@ -17,6 +17,8 @@ WEBSITE = "https://example.com"
 SALARY = "50000"
 TEXT = "Placeholder answer for a dry run."
 CITY = "London"
+SKILL = "Python"
+SCHOOL = "Aa"  # the start of the first school an alphabetical list of them gives
 BIRTH_DATE = "1990-01-31"
 COUNTRY = "United States"
 COUNTRY_NAMES = (COUNTRY, "United States of America")  # the names a country list gives it
@@ -114,6 +116,8 @@ def _option(field: Field) -> str:
         # where the Test user's phone and zip code are; `United States of America (+1)`
         mentioned = sorted((o for o in options if COUNTRY in o), key=len)
         return next((o for o in options if o in COUNTRY_NAMES), next(iter(mentioned), options[0]))
+    if re.search(r"state|province|region", field.label, re.IGNORECASE) and REGION in options:
+        return REGION
     if ANSWER_NO.search(field.label) and "No" in options:
         return "No"
     return options[0]
@@ -156,6 +160,14 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
                 return field.options[0]
             if re.search(r"zip|postal", field.label, re.I):
                 return ZIP
+            if re.search(r"skill", field.label, re.I):
+                return SKILL
+            if re.search(r"school|university", field.label, re.I):
+                return SCHOOL
+            if re.search(r"citizen", field.label, re.I):
+                return f"Citizen ({COUNTRY_NAMES[1]})"
+            if re.search(r"nationalit|country", field.label, re.I):
+                return COUNTRY
             return REGION if re.search(r"state|province|region", field.label, re.I) else CITY
         case _:
             return _text(field)

@@ -27,6 +27,7 @@ from camoufox.sync_api import Camoufox
 from playwright.sync_api import APIRequestContext as Request
 from playwright.sync_api import Browser, Locator, Page, Response, sync_playwright
 from playwright.sync_api import Error as BrowserError
+from playwright.sync_api import Request as PageRequest  # one the page sent, unlike `Request`
 from playwright.sync_api import TimeoutError as Timeout
 
 __all__ = [
@@ -36,6 +37,7 @@ __all__ = [
     "Locator",
     "OutOfTime",
     "Page",
+    "PageRequest",
     "Request",
     "Response",
     "Timeout",

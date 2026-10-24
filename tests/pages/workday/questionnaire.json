@@ -1,0 +1,20 @@
+{
+  "id": "qn1",
+  "questions": [
+    {"id": "q1", "body": "<p>Are you authorized to work in the UK?</p>", "order": "a", "required": true,
+     "type": {"descriptor": "Multiple Choice - Single Select"},
+     "possibleAnswers": [
+       {"id": "a1", "answerText": "Yes", "order": "a"},
+       {"id": "a2", "answerText": "No", "order": "b",
+        "branchingQuestion": {"id": "q5", "body": "Which visa do you need?", "required": true,
+                              "type": {"descriptor": "Text"}}}
+     ]},
+    {"id": "q2", "body": "Which languages do you speak?", "order": "b", "required": true,
+     "type": {"descriptor": "Multiple Choice - Multi Select"},
+     "possibleAnswers": [{"id": "a3", "answerText": "English"}, {"id": "a4", "answerText": "French"}]},
+    {"id": "q3", "body": "Why Acme?", "order": "c", "required": true, "type": {"descriptor": "Text"}},
+    {"id": "q4", "body": "When can you start?", "order": "d", "required": true, "type": {"descriptor": "Date"}},
+    {"id": "q5", "body": "Which visa do you need?", "order": "a.a", "required": true, "type": {"descriptor": "Text"}},
+    {"id": "q6", "body": "Years of experience", "order": "e", "required": false, "type": {"descriptor": "Number"}}
+  ]
+}
