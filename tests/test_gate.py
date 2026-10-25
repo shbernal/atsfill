@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 
-from atsfill.core import registry
+from atsfill.core import browser, registry
 from scripts import gate
 
 
@@ -65,3 +65,23 @@ def test_a_row_counts_at_a_commit_with_the_same_code(monkeypatch):
     assert gate.same_code("same", "head")
     assert not gate.same_code("other", "head")
     assert not gate.same_code(None, "head")
+
+
+def test_an_embedded_form_is_claimed_once_its_page_is_open(tmp_path, monkeypatch):
+    embed = "https://job-boards.greenhouse.io/embed/job_app?for=acme&token=1234"
+    pages = {
+        "https://www.example.com/careers/1": f'<iframe id="grnhse_iframe" src="{embed}"></iframe>',
+        "https://www.example.com/careers/2": "<p>Our openings</p>",
+    }
+    monkeypatch.setattr("atsfill.adapters.greenhouse.EMBED_TIMEOUT_MS", 500)
+    with browser.open_page(tmp_path) as page:
+        page.context.route(
+            "https://www.example.com/**",
+            lambda route: route.fulfill(content_type="text/html", body=pages[route.request.url]),
+        )
+        keep = gate.claims("greenhouse", page)
+        assert keep("https://job-boards.greenhouse.io/acme/jobs/1234")  # by its URL, unopened
+        assert not keep("https://jobs.ashbyhq.com/acme/1234")  # another adapter's
+        assert keep("https://www.example.com/careers/1")
+        assert not keep("https://www.example.com/careers/2")
+    assert not gate.claims("greenhouse", None)("https://www.example.com/careers/1")
