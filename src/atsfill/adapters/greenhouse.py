@@ -61,6 +61,7 @@ _READ = """form => {
   const found = [];
   for (const el of form.querySelectorAll("input, textarea")) {
     if (!el.id || ["hidden", "search", "file", "checkbox"].includes(el.type)) continue;
+    if (el.closest(".file-upload")) continue;  // a file's paste-in textarea, listed with the file
     const combo = el.getAttribute("role") === "combobox";
     if (combo && el.closest(".phone-input")) continue;  // the phone's country, set by its number
     const shell = el.closest(".select");
@@ -84,10 +85,14 @@ _READ = """form => {
   }
   for (const group of form.querySelectorAll(".file-upload")) {
     const input = group.querySelector("input[type=file]");
-    found.push([group, {id: group.getAttribute("aria-labelledby").replace(/^upload-label-/, ""),
-      kind: "file", label: text(group.querySelector(".upload-label")),
-      required: group.getAttribute("aria-required") === "true",
+    const id = group.getAttribute("aria-labelledby").replace(/^upload-label-/, "");
+    const label = text(group.querySelector(".upload-label"));
+    const required = group.getAttribute("aria-required") === "true";
+    const manual = group.querySelector(`button[data-testid="${id}-text"]`);
+    found.push([group, {id, kind: "file", label, required, oneOf: manual ? id : null,
       accept: input?.accept ? input.accept.split(",") : null}]);
+    const pasted = {id: `${id}_text`, kind: "pasted", label, required, oneOf: id};
+    if (manual) found.push([manual, pasted]);
   }
   const before = (a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
   found.sort(([a], [b]) => before(a, b) ? -1 : 1);
@@ -196,6 +201,15 @@ class Greenhouse:
                     upload.locator("input[type=file]").set_input_files(values[0])
                     with suppress(Timeout):
                         upload.locator(".file-upload__filename").wait_for(timeout=ANSWER_TIMEOUT_MS)
+                case "pasted":  # "Enter manually" adds the textarea beside the file input
+                    text = page.locator(_by_id(field_id))
+                    if not text.count():
+                        browser.click(
+                            page.locator(
+                                f"button[data-testid='{field_id.removesuffix('_text')}-text']"
+                            )
+                        )
+                    text.fill(values[0])
                 case "consent":
                     box = page.locator(f"{FORM} input[type=checkbox][name='{field_id}']").first
                     if box.is_checked() != (answer == "Yes"):
@@ -227,7 +241,7 @@ class Greenhouse:
     def _field(self, page: Page, raw: dict[str, Any]) -> Field:
         kind, options = raw["kind"], raw.get("options")
         match kind:
-            case "text" | "number":
+            case "text" | "number" | "pasted":
                 field_type = FieldType.TEXT
             case "tel":
                 field_type = FieldType.PHONE
@@ -256,6 +270,7 @@ class Greenhouse:
             options,
             raw.get("maxLength"),
             raw.get("accept"),
+            one_of=raw.get("oneOf"),
         )
 
     def _education(self, page: Page, field_id: str) -> list[str] | None:
@@ -343,15 +358,26 @@ def _api_fields(job: dict[str, Any]) -> list[Field] | None:
         return None
     fields = []
     for question in job["questions"] + (job.get("location_questions") or []):
-        entry = question["fields"][0]  # a file's paste-in textarea comes second
-        if entry["type"] == "input_hidden":  # a location's latitude and longitude
-            continue
-        name = entry["name"]
-        field_type = FieldType.PHONE if name == "phone" else API_TYPES[entry["type"]]
-        if name == "location":
-            name, field_type = "candidate-location", FieldType.TYPEAHEAD
-        options = [v["label"] for v in entry.get("values") or []] or None
-        fields.append(Field(name, question["label"], field_type, question["required"], options))
+        entries = question["fields"]  # a file's paste-in textarea comes second, its alternative
+        one_of = entries[0]["name"] if len(entries) > 1 else None
+        for entry in entries:
+            if entry["type"] == "input_hidden":  # a location's latitude and longitude
+                continue
+            name = entry["name"]
+            field_type = FieldType.PHONE if name == "phone" else API_TYPES[entry["type"]]
+            if name == "location":
+                name, field_type = "candidate-location", FieldType.TYPEAHEAD
+            options = [v["label"] for v in entry.get("values") or []] or None
+            fields.append(
+                Field(
+                    name,
+                    question["label"],
+                    field_type,
+                    question["required"],
+                    options,
+                    one_of=one_of,
+                )
+            )
     return fields
 
 

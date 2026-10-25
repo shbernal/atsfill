@@ -4,8 +4,8 @@
      react-selects that open only once the page is live and pick the option focused with the arrow
      keys (Location suggests as you type, one takes several values, School shows only its first
      page until typed into), a phone whose typed dial code sets its Country select, a textarea, a
-     number input, a checkbox group, a consent box that appears with the live page, and an attach
-     that swaps its input for the file's name. -->
+     number input, a checkbox group, a consent box that appears with the live page, and attaches
+     that swap their input for the file's name or, entered manually, add a textarea beside it. -->
 <style>.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; }</style>
 <form id="application-form">
   <div class="field-wrapper">
@@ -30,6 +30,18 @@
       <button type="button">Attach</button>
       <label class="visually-hidden" for="resume">Attach</label>
       <input id="resume" class="visually-hidden" type="file" accept=".pdf,.doc">
+      <button type="button" data-testid="resume-text">Enter manually</button>
+      <label class="visually-hidden" for="resume_text">Enter manually</label>
+    </div>
+  </div>
+  <div role="group" aria-labelledby="upload-label-cover_letter" aria-required="false" class="file-upload">
+    <div id="upload-label-cover_letter" class="label upload-label">Cover Letter</div>
+    <div class="file-upload__wrapper">
+      <button type="button">Attach</button>
+      <label class="visually-hidden" for="cover_letter">Attach</label>
+      <input id="cover_letter" class="visually-hidden" type="file">
+      <button type="button" data-testid="cover_letter-text">Enter manually</button>
+      <label class="visually-hidden" for="cover_letter_text">Enter manually</label>
     </div>
   </div>
   <div class="select" data-options="Yes|No">
@@ -127,11 +139,19 @@
     if (dial && country.pick) country.pick([dial[1] === "1" ? "United States +1" : "France +33"]);
     if (dial) e.target.value = e.target.value.replace(/^\+(33|1)\s*/, `+${dial[1]} `);
   });
-  document.getElementById("resume").addEventListener("change", e => {
-    const name = e.target.files[0].name;
-    e.target.closest(".file-upload__wrapper").innerHTML =
-      `<div class="file-upload__filename"><p>${name}</p><button type="button" aria-label="Remove file"></button></div>`;
-  });
+  for (const id of ["resume", "cover_letter"]) {
+    document.getElementById(id).addEventListener("change", e => {
+      const name = e.target.files[0].name;
+      e.target.closest(".file-upload__wrapper").innerHTML =
+        `<div class="file-upload__filename"><p>${name}</p><button type="button" aria-label="Remove file"></button></div>`;
+    });
+    // "Enter manually" adds a textarea after the buttons; the file input stays.
+    document.querySelector(`[data-testid=${id}-text]`).addEventListener("click", e => {
+      if (document.getElementById(`${id}_text`)) return;
+      e.target.closest(".file-upload").insertAdjacentHTML("beforeend",
+        `<div class="text-input-wrapper"><textarea id="${id}_text" aria-required="false" rows="6"></textarea></div>`);
+    });
+  }
   document.getElementById("application-form").onsubmit = e => {
     e.preventDefault();
     location.href = location.pathname + "/confirmation";

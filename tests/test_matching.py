@@ -154,3 +154,32 @@ def test_conditions_name_listed_fields_without_a_loop():
         "a: shown by its own answer",
         "b: shown by its own answer",
     ]
+
+
+CV = Field("cv", "Resume", FieldType.FILE, True, one_of="resume")
+CV_TEXT = Field("cv_text", "Resume text", FieldType.TEXT, True, one_of="resume")
+
+
+def test_a_required_group_takes_one_alternative(tmp_path):
+    path = tmp_path / "cv.pdf"
+    path.write_text("")
+    assert problems([CV, CV_TEXT], {"cv_text": "Jane Doe, engineer"}) == []
+    assert problems([CV, CV_TEXT], {"cv": str(path)}) == []
+    assert problems([replace(CV, prefilled="cv.pdf"), CV_TEXT], {}) == []
+    assert problems([CV, CV_TEXT], {}) == ["no answer for required resume (Resume or Resume text)"]
+    assert problems([CV, CV_TEXT], {"cv": str(path), "cv_text": "Jane Doe"}) == [
+        "resume: one of cv, cv_text, not both"
+    ]
+
+
+def test_an_optional_group_takes_none():
+    optional = [replace(CV, required=False), replace(CV_TEXT, required=False)]
+    assert problems(optional, {}) == []
+
+
+def test_a_group_has_alternatives_agreeing_on_required():
+    assert faults([CV, CV_TEXT]) == []
+    assert faults([CV]) == ["resume: one alternative, cv"]
+    assert faults([CV, replace(CV_TEXT, required=False)]) == [
+        "resume: alternatives disagree on required"
+    ]

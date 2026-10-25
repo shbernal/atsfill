@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from dataclasses import replace
 
 import pytest
 
@@ -193,6 +194,20 @@ def test_an_answer_to_an_unfillable_field_refuses(fake, config, url, answers, da
     result = core.fill(url, answers | {"extra": answers["cv"]}, data_dir=data)
     assert result.status is Status.REFUSED
     assert result.reason == f"invalid_answers: extra: cannot be filled ({UNFILLABLE[0]})"
+
+
+def test_a_required_group_stops_the_form_only_when_no_alternative_can_be_filled(
+    fake, config, url, answers, data
+):
+    name = replace(FIELDS[0], one_of="intro")
+    video = Field("video", "Video", FieldType.FILE, True, unfillable=UNFILLABLE[0], one_of="intro")
+    fake.fields = [name, *FIELDS[1:], video]
+    assert core.read(url, data_dir=data).status is Status.READY
+    result = core.fill(url, answers, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    fake.fields = [replace(name, unfillable=UNFILLABLE[2]), *FIELDS[1:], video]
+    result = core.read(url, data_dir=data)
+    assert (result.status, result.reason) == (Status.UNSUPPORTED, UNFILLABLE[2])  # the first
 
 
 def test_a_field_a_fill_shows_that_read_did_not_list_stops_it(fake, config, url, answers, data):

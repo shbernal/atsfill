@@ -71,6 +71,9 @@ def test_read_form_waits_for_the_live_page(page):
         "phone",
         "candidate-location",
         "resume",
+        "resume_text",
+        "cover_letter",
+        "cover_letter_text",
         "question_1",
         "question_3",
         "school--0",
@@ -88,6 +91,9 @@ def test_read_form_waits_for_the_live_page(page):
     assert by_id["question_2[]"].type is FieldType.MULTI_CHOICE
     assert by_id["gdpr_processing_consent_given"].label == "I agree to the processing of my data."
     assert by_id["resume"].accept == [".pdf", ".doc"]
+    text = by_id["resume_text"]
+    assert (text.type, text.required, text.one_of) == (FieldType.TEXT, True, "resume")
+    assert by_id["resume"].one_of == "resume" and not by_id["cover_letter_text"].required
     assert not by_id["4000952002"].required
 
 
@@ -98,6 +104,7 @@ def test_every_answer_reads_back(page, resume):
         "phone": "+15145550100",
         "candidate-location": "Paris",
         "resume": resume,
+        "cover_letter_text": "Dear Acme,",  # entered manually
         "question_1": "No",
         "question_3": "Placeholder answer.",
         "school--0": "Other",  # second of the options typing it shows, past the menu's first page
@@ -111,6 +118,14 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_a_resume_entered_manually_leaves_the_file_input(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"resume_text": "Jane Doe, engineer"}
+    adapter.fill(page, answers)
+    assert matching.check(fields, answers, adapter.read_back(page))[0].match
+    assert page.locator("input#resume").count() == 1
 
 
 def test_education_options_from_the_menu_without_the_endpoint(page, monkeypatch):
@@ -200,11 +215,12 @@ def test_api_fields():
             },
         ],
     }
-    assert [(f.id, f.type, f.required) for f in _api_fields(job) or []] == [
-        ("first_name", FieldType.TEXT, True),
-        ("phone", FieldType.PHONE, True),
-        ("resume", FieldType.FILE, True),
-        ("question_1", FieldType.CHOICE, True),
+    assert [(f.id, f.type, f.required, f.one_of) for f in _api_fields(job) or []] == [
+        ("first_name", FieldType.TEXT, True, None),
+        ("phone", FieldType.PHONE, True, None),
+        ("resume", FieldType.FILE, True, "resume"),
+        ("resume_text", FieldType.TEXT, True, "resume"),
+        ("question_1", FieldType.CHOICE, True, None),
     ]
     location = [
         {

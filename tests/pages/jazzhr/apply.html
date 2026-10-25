@@ -156,6 +156,11 @@
 </footer>
 <script>
 setTimeout(() => { document.getElementById("tracking-consent-banner").style.display = "block"; }, 300);
+document.getElementById("resumator-choose-paste").onclick = () => {
+  document.getElementById("resumator-resume-paste-wrapper").classList.remove("none");
+  document.getElementById("resumator-resume-options").style.display = "none";
+  return false;
+};
 document.getElementById("resumator-choose-upload").onclick = () => {
   document.getElementById("resumator-resume-upload-wrapper").classList.remove("none");
   document.getElementById("resumator-resume-options").style.display = "none";

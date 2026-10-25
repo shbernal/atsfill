@@ -64,6 +64,7 @@ class Field:
     unfillable: str | None = None  # why atsfill cannot fill it, a reason (ADR 0014)
     shown_when: Condition | None = None  # a follow-up: shown only when it holds (ADR 0005)
     required_when: Condition | None = None  # required once shown when it holds, if not always
+    one_of: str | None = None  # an alternative: one of the fields with this key answers (ADR 0005)
 
 
 @dataclass(frozen=True)

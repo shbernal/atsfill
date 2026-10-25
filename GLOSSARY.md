@@ -57,6 +57,10 @@ _Avoid_: input, question
 A field the form shows only once other fields' answers meet its condition.
 _Avoid_: dependent field, branching question, conditional question
 
+**Alternative**:
+One of a group of fields that take the same thing in different shapes (a resume as a file or as a text), sharing a key in `one_of`. The form expects exactly one; the group, not the field, is required.
+_Avoid_: exclusive field, either-or field
+
 **Condition**:
 What decides, from other fields' answers, whether a field shows (`shown_when`) or is required (`required_when`): `Is`, `AnyOf`, `AllOf`.
 

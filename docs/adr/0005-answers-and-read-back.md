@@ -22,6 +22,8 @@ A follow-up is a field the form shows only once other answers meet its condition
 
 The core decides from the answers alone, before typing: a required follow-up they show and leave unanswered refuses (`invalid_answers`), and so does an answer to a follow-up they keep hidden. An adapter's conditions name listed fields, never in a loop, else the command ends `adapter_error`.
 
+An alternative is a field that takes the same thing as others in a different shape, a document as a file or as a text: each keeps its system's own id, and the group shares a key, `one_of`. The group is required when its members carry the system's `required` flag; a member never is on its own. A required group with no member answered nor prefilled refuses (`no answer for required <key>`), and so does more than one member answered, required or not (`invalid_answers`). The answers decide which side goes, never a preference in the config. A group of one member, or members disagreeing on `required`, ends the command `adapter_error`. A required field atsfill cannot fill stops the form; an alternative it cannot fill stops it only when none of its group can be filled.
+
 `read` lists every field, follow-ups included. An adapter whose form can show a field after an answer implements `ListsShownFields`: once filled, the ids of the fields the page shows. A field it did not list ends the fill `unhandled_rendering`, to be fixed in the adapter; a follow-up the page shows though its condition is unmet ends it `mismatch`: its condition was read wrong. An adapter whose source lists every field whatever the answers (an API) need not implement it, and says so in its doc.
 
 The read-back is compared to the answers by field type:

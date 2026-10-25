@@ -172,17 +172,21 @@ def _result(adapter: Adapter, url: str, user: str) -> Result:
 
 
 def _unfillable(result: Result, answers: dict[str, Answer] | None = None) -> bool:
-    """Stops the form on a required field atsfill cannot fill; an optional one stays listed,
-    left empty (ADR 0014). A follow-up counts once the answers show it and require it, and
-    without answers never."""
+    """Stops the form on a required field atsfill cannot fill, or a required group none of whose
+    alternatives it can; an optional one stays listed, left empty (ADR 0014). A follow-up counts
+    once the answers show it and require it, and without answers never."""
     form = conditions.Form(result.fields, answers or {})
+
+    def stuck(f: Field) -> bool:
+        return f.unfillable is not None and f.prefilled is None
+
     field = next(
         (
             f
             for f in result.fields
-            if f.unfillable
-            and f.prefilled is None
-            and (form.required(f) if answers is not None else f.required and not f.shown_when)
+            if stuck(f)
+            and (form.asked(f) if answers is not None else f.required and not f.shown_when)
+            and all(stuck(m) for m in form.groups.get(f.one_of or "", [f]))
         ),
         None,
     )
