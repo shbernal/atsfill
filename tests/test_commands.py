@@ -422,7 +422,7 @@ class Remembers(Fake):
         super().__init__()
         self.read_on: str | None = None
 
-    def read_form(self, page):
+    def browser_read(self, page):
         if self.read_on:
             raise Unsupported(f"carried: {self.read_on}")
         self.read_on = page.url

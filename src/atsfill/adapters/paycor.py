@@ -3,7 +3,7 @@
 The apply page is server-rendered. Before the form it may show pages of their own: the
 federal contractor's self-identification (VEVRAA) and the Yes/No qualifying questions. Each
 posts its answers to the next, which carries them as hidden inputs; the form posts everything
-to `ApplyJob.action` on Submit. `read_form` walks those pages to the form, `fill` walks them
+to `ApplyJob.action` on Submit. `browser_read` walks those pages to the form, `fill` walks them
 again with the answers.
 """
 
@@ -171,7 +171,7 @@ class Paycor:
         job = (query.get("id") or query.get("gni") or [url])[0]
         return f"{CAREER}JobIntroduction.action?id={job}"
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         self._before, self._codes = [], {}
         self._walk(page, None)
         controls = [(_field(c), c["kind"]) for c in page.evaluate(_CONTROLS)]

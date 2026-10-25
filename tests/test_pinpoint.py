@@ -51,10 +51,10 @@ def opened(page, url: str = JOB) -> tuple[Pinpoint, list]:
     adapter = Pinpoint()
     page.goto(url)
     assert adapter.detect(url, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     assert page.url == APPLY  # the posting's form is on its apply page
     by_id = {f.id: f for f in fields}
@@ -125,7 +125,7 @@ def test_read_form(page):
     assert by_id["process_information"].required
 
 
-def test_read_api_lists_the_same_fields(page, monkeypatch):
+def test_request_read_lists_the_same_fields(page, monkeypatch):
     _, fields = opened(page)
     fetched = []
 
@@ -138,7 +138,7 @@ def test_read_api_lists_the_same_fields(page, monkeypatch):
         return Response(HTML.encode())
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
-    by_api = Pinpoint().read_api(f"{JOB}?utm_source=x")
+    by_api = Pinpoint().request_read(f"{JOB}?utm_source=x")
     assert by_api == [replace(f, default=None) for f in fields]  # the country the page guesses
     assert fetched == [APPLY]
 

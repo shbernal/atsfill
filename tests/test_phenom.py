@@ -54,7 +54,7 @@ def opened(page) -> tuple[Phenom, list]:
     adapter = Phenom()
     page.goto(JOB)
     assert adapter.detect(page.url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def test_detection_and_posting():
     assert adapter.posting(JOB) == adapter.posting(APPLY + "&step=2&stepname=agreement")
 
 
-def test_read_form_lists_every_step_from_the_configuration(opened):
+def test_browser_read_lists_every_step_from_the_configuration(opened):
     adapter, read = opened
     fields = {f.id: f for f in read}
     assert list(fields) == [
@@ -132,14 +132,14 @@ def test_read_form_lists_every_step_from_the_configuration(opened):
     assert fields["comments"].type is FieldType.TEXT and not fields["comments"].required
 
 
-def test_read_api_lists_the_same_fields(opened, monkeypatch):
+def test_request_read_lists_the_same_fields(opened, monkeypatch):
     def open_(opener, request, timeout):
         if (body := served(request.full_url, request.data)) is None:
             raise OSError(f"404 from {request.full_url}")
         return io.BytesIO(body)
 
     monkeypatch.setattr("urllib.request.OpenerDirector.open", open_)
-    assert Phenom().read_api(JOB) == opened[1]
+    assert Phenom().request_read(JOB) == opened[1]
 
 
 def answers(resume: str) -> dict:
@@ -206,7 +206,7 @@ def test_an_apply_link_to_another_system_is_unsupported(page):
     try:
         page.goto(JOB)
         with pytest.raises(Unsupported, match="external_step: .*myworkdayjobs"):
-            Phenom().read_form(page)
+            Phenom().browser_read(page)
     finally:
         page.unroute(JOB)
 
@@ -226,7 +226,7 @@ def test_a_closed_posting_is_gone(page):
         adapter = Phenom()
         assert adapter.detect(page.url, page)
         with pytest.raises(Unsupported, match="posting_gone"):
-            adapter.read_form(page)
+            adapter.browser_read(page)
     finally:
         page.unroute(at_gone)
 
@@ -238,7 +238,7 @@ def test_a_first_step_other_than_the_form_is_a_known_gap(page, monkeypatch):
     try:
         page.goto(APPLY)
         with pytest.raises(Unsupported, match="unsupported_flow: first_step: .*'login'"):
-            Phenom().read_form(page)
+            Phenom().browser_read(page)
     finally:
         page.unroute(APPLY)
 

@@ -52,10 +52,10 @@ def opened(page) -> tuple[Workable, list]:
     adapter = Workable()
     page.goto(JOB)
     assert adapter.detect(JOB, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form_opens_the_application(page):
+def test_browser_read_opens_the_application(page):
     _, fields = opened(page)
     assert page.url == POSTING + "/apply/"
     by_id = {f.id: f for f in fields}
@@ -139,14 +139,14 @@ def test_a_number_input_keeps_digits_only(page):
 def test_a_required_entry_is_listed_required(page):
     page.goto(POSTING + "/apply/")
     page.evaluate("() => document.querySelector('#education_label small').remove()")
-    education = next(f for f in Workable().read_form(page) if f.id == "education")
+    education = next(f for f in Workable().browser_read(page) if f.id == "education")
     assert education.required and education.unfillable
 
 
 def test_a_posting_gone(page):
     page.goto("https://apply.workable.com/j/GONE")
     with pytest.raises(Unsupported, match="posting_gone"):
-        Workable().read_form(page)
+        Workable().browser_read(page)
 
 
 def test_submit_returns_the_apply_answer(page):

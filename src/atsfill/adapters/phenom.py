@@ -4,7 +4,7 @@ as docs/adapters/phenom.md observes.
 The job page's Apply link leads to Phenom's own wizard (`/apply?jobSeqNo=`) or to another
 system. The wizard renders one step at a time from the employer's configuration, a form schema
 on Phenom's CDN, and the parts its loaders serve (the job's questionnaires, the country's
-fields, dependent lists): reading interprets them, over HTTP or from the page, without passing a
+fields, dependent lists): a request read or a browser read interprets them without passing a
 step. Filling walks the wizard on a fresh session, each step's answers read back before Next.
 """
 
@@ -260,7 +260,7 @@ class Phenom:
         seq = _seq(url)
         return f"https://{parts.hostname}/apply?jobSeqNo={seq}" if seq else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         """The fields from the job's apply page and the configuration it names, over HTTP;
         None for a job applied to on another system, or a page it does not understand."""
         parts = urlsplit(url)
@@ -297,7 +297,7 @@ class Phenom:
         except OSError, ValueError, KeyError, TypeError, RuntimeError, Unsupported:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         _check_open(page)
         self._apply = _apply_url(page)
         self._open(page)

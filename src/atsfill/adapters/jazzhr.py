@@ -140,7 +140,7 @@ class JazzHR:
         job = _job(url)
         return f"https://{job[0]}/apply/{job[1]}" if job else url
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         form = page.locator(FORM)
         try:
             form.wait_for(state="attached", timeout=FORM_TIMEOUT_MS)

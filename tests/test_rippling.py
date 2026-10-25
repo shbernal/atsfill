@@ -57,10 +57,10 @@ def opened(page, url: str = JOB) -> tuple[Rippling, list]:
     adapter = Rippling()
     page.goto(url)
     assert adapter.detect(url, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     assert page.url == f"{JOB}/apply"
     by_id = {f.id: f for f in fields}
@@ -109,7 +109,7 @@ def test_read_form(page):
     assert not by_id["eeoc.race"].required
 
 
-def test_read_api_lists_the_same_fields(page):
+def test_request_read_lists_the_same_fields(page):
     _, fields = opened(page)
     shape = lambda fs: [(f.id, f.label, f.type, f.required, f.options) for f in fs]  # noqa: E731
     assert shape(_form(_api(DATA_JSON))) == shape(fields)
@@ -180,7 +180,7 @@ def test_a_place_is_picked_from_the_settled_suggestions(page):
 def test_a_posting_gone(page):
     page.goto(GONE)
     with pytest.raises(Unsupported, match="posting_gone"):
-        Rippling().read_form(page)
+        Rippling().browser_read(page)
 
 
 def test_unknown_question_types_are_unhandled():
@@ -208,7 +208,7 @@ def test_a_live_video_question_is_out_of_scope():
 def test_a_field_missing_from_the_page_is_unhandled(page):
     page.goto(f"{JOB}/apply")
     page.evaluate("() => document.querySelector(\"[data-testid='eeoc.gender']\").remove()")
-    fields = {f.id: f for f in Rippling().read_form(page)}
+    fields = {f.id: f for f in Rippling().browser_read(page)}
     assert fields["eeoc.gender"].unfillable == (
         "unhandled_rendering: eeoc.gender is missing on the page"
     )

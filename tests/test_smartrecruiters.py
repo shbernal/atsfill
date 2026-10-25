@@ -39,10 +39,10 @@ def opened(page, url: str = JOB) -> tuple[SmartRecruiters, list]:
     adapter = SmartRecruiters()
     page.goto(url)
     assert adapter.detect(url, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form_lists_both_pages(page):
+def test_browser_read_lists_both_pages(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert page.url == FORM
@@ -161,7 +161,7 @@ def test_required_experience_is_listed_required(page):
         """() => document.querySelector("oc-experience").insertAdjacentHTML("beforeend",
         '<span data-test="section-required-mark">*</span>')"""
     )
-    experience = next(f for f in SmartRecruiters().read_form(page) if f.id == "experience")
+    experience = next(f for f in SmartRecruiters().browser_read(page) if f.id == "experience")
     assert experience.required and experience.unfillable
 
 

@@ -88,10 +88,10 @@ def resume(tmp_path) -> str:
     return str(path)
 
 
-def test_read_form_lists_the_visible_fields_of_every_form(ashby, page):
+def test_browser_read_lists_the_visible_fields_of_every_form(ashby, page):
     adapter, _ = ashby
     page.goto(URL)
-    fields = adapter.read_form(page)
+    fields = adapter.browser_read(page)
     assert [f.id for f in fields] == [
         "_systemfield_name",
         "_systemfield_resume",
@@ -117,7 +117,7 @@ def test_a_known_gap_and_an_unknown_type_are_listed_unfillable(ashby, page):
     for path, kind in [("schools", "EducationHistory"), ("mood", "Slider")]:
         entries.append({"isRequired": False, "field": {"path": path, "title": path, "type": kind}})
     page.goto(URL)
-    unfillable = {f.id: f.unfillable for f in adapter.read_form(page) if f.unfillable}
+    unfillable = {f.id: f.unfillable for f in adapter.browser_read(page) if f.unfillable}
     assert unfillable == {
         "schools": "unsupported_rendering: education_history: schools is a list of schools",
         "mood": "unhandled_rendering: mood is an Ashby Slider field",
@@ -127,7 +127,7 @@ def test_a_known_gap_and_an_unknown_type_are_listed_unfillable(ashby, page):
 def test_every_answer_reads_back_from_ashby(ashby, page, resume):
     adapter, _ = ashby
     page.goto(URL)
-    fields = adapter.read_form(page)
+    fields = adapter.browser_read(page)
     answers = {
         "_systemfield_name": "Ada Lovelace",
         "_systemfield_resume": resume,
@@ -149,7 +149,7 @@ def test_every_answer_reads_back_from_ashby(ashby, page, resume):
 def test_submit_returns_the_evidence(ashby, page):
     adapter, _ = ashby
     page.goto(URL)
-    adapter.read_form(page)
+    adapter.browser_read(page)
     assert "FormSubmitSuccess" in (adapter.submit(page) or "")
 
 
@@ -157,7 +157,7 @@ def test_a_low_recaptcha_score_is_blocked(ashby, page):
     adapter, api = ashby
     api.submit = "RECAPTCHA_SCORE_BELOW_THRESHOLD"
     page.goto(URL)
-    adapter.read_form(page)
+    adapter.browser_read(page)
     with pytest.raises(Blocked, match="captcha_score"):
         adapter.submit(page)
 
@@ -167,7 +167,7 @@ def test_posting_and_detection():
     assert adapter.detect(URL + "/application?utm_source=x", None)
     assert adapter.posting(URL + "/application?utm_source=x") == URL
     assert not adapter.detect("https://example.com/careers?ashby_jid=1", None)
-    assert adapter.read_api("https://example.com/careers?ashby_jid=1") is None
+    assert adapter.request_read("https://example.com/careers?ashby_jid=1") is None
 
 
 def test_a_career_page_embedding_ashby(page):
@@ -191,7 +191,7 @@ def test_a_career_page_embedding_ashby(page):
 def test_an_overlaid_submit_ends_overlaid(ashby, page):
     adapter, _ = ashby
     page.goto(URL)
-    adapter.read_form(page)
+    adapter.browser_read(page)
     page.evaluate("""() => {
         const cover = document.createElement("div");
         cover.className = "sheet";

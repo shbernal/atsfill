@@ -1,8 +1,8 @@
 """BambooHR (`<employer>.bamboohr.com/careers/<job>`), as docs/adapters/bamboohr.md observes.
 
 The job page renders its application form, behind Apply for This Job, from a public JSON
-answer that lists every field with its label, requirement and options. `read_api` fetches it
-over HTTP, `read_form` through the page's own browser context, and both list the fields from
+answer that lists every field with its label, requirement and options. `request_read` fetches it
+over HTTP, `browser_read` through the page's own browser context, and both list the fields from
 it. Dropdowns are Fabric menus over a hidden `select`; a file is uploaded once attached.
 """
 
@@ -159,7 +159,7 @@ class BambooHR:
         job = _job(url)
         return f"https://{job[0]}/careers/{job[1]}" if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if (job := _job(url)) is None:
             return None
         try:
@@ -169,7 +169,7 @@ class BambooHR:
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         host, job = _job(page.url) or ("", "")
         form = page.locator(FORM)
         try:

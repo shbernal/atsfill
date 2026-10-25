@@ -4,7 +4,7 @@ observes.
 The job page carries the posting's configuration in a React component's props, and its Apply
 button renders the form from them in the page: MUI inputs named by field id, radios and boxes,
 react-select comboboxes for the country and state, Dropzone areas that upload a file as soon as
-it is attached. `read_form` lists the rendered controls; there is no `read_api`, since which
+it is attached. `browser_read` lists the rendered controls; there is no `request_read`, since which
 controls render is the page's logic over the props, not the props alone.
 """
 
@@ -157,7 +157,7 @@ class HiringThing:
         job = JOB.match(parts.path)
         return f"https://{parts.hostname}/job/{job[1]}" if job else url
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         props = page.locator(PROPS).first
         try:
             props.wait_for(state="attached", timeout=PAGE_TIMEOUT_MS)

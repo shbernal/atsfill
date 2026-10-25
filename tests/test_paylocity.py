@@ -34,7 +34,7 @@ def opened(page) -> tuple[Paylocity, list]:
     adapter = Paylocity()
     page.goto(JOB + "?utm_source=board")
     assert adapter.detect(page.url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def test_detection_and_posting():
     assert adapter.posting(apply) == adapter.posting(JOB + "?utm_source=board")
 
 
-def test_read_form(opened):
+def test_browser_read(opened):
     fields = {f.id: f for f in opened[1]}
     assert list(fields) == [
         "resume",
@@ -114,11 +114,11 @@ def test_read_form(opened):
     assert fields["applyAcknowledgement"].required
 
 
-def test_read_api_lists_the_same_fields(opened, monkeypatch):
+def test_request_read_lists_the_same_fields(opened, monkeypatch):
     monkeypatch.setattr(
         paylocity.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(PAGE.read_bytes())
     )
-    assert Paylocity().read_api(JOB) == opened[1]
+    assert Paylocity().request_read(JOB) == opened[1]
 
 
 def test_every_answer_reads_back_across_steps(opened, page, resume):

@@ -197,7 +197,7 @@ class Dayforce:
         found = _job(url)
         return f"https://{HOST}/{found[1]}/{found[2]}/jobs/{found[3]}" if found else url
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         found = _job(page.url)
         if found is None:
             raise Unsupported("posting_gone: not a Dayforce job page")
@@ -481,7 +481,7 @@ class Dayforce:
             option = box_id.removeprefix(f"{base}answerFollowup").removeprefix("s_")
             followup = f"{field_id}.followup" + (f".{option}" if option else "")
             if box.is_visible() and followup not in self._fields:
-                self._shown.append(box_id)  # a comment box `read_form` did not list
+                self._shown.append(box_id)  # a comment box `browser_read` did not list
 
     def _set_question(
         self, page: Page, target: Locator, field: Field, question: dict[str, Any], answer: Answer

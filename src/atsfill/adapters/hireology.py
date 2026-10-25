@@ -2,7 +2,7 @@
 docs/adapters/hireology.md observes.
 
 The job page renders its application form from a public form API, which lists every field by
-id, type and requirement. `read_api` fetches it over HTTP, `read_form` through the page's own
+id, type and requirement. `request_read` fetches it over HTTP, `browser_read` through the page's own
 browser context, and both list the fields from it. Each field renders as one control whose id is
 `<field id>-<n>`; nothing but the submit reaches Hireology.
 """
@@ -202,7 +202,7 @@ class Hireology:
         job = _job(url)
         return API.format(job=job) if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if (job := _job(url)) is None:
             return None
         request = urllib.request.Request(API.format(job=job), headers={"User-Agent": "atsfill"})
@@ -212,7 +212,7 @@ class Hireology:
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         job = _job(page.url)
         try:
             page.locator(SUBMIT).wait_for(state="attached", timeout=FORM_TIMEOUT_MS)

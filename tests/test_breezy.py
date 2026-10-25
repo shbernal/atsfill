@@ -52,10 +52,10 @@ def opened(page, url: str = POSTING) -> tuple[Breezy, list]:
     adapter = Breezy()
     page.goto(url)
     assert adapter.detect(url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form_opens_the_application(page):
+def test_browser_read_opens_the_application(page):
     _, fields = opened(page)
     assert page.url == POSTING + "/apply"
     by_id = {f.id: f for f in fields}
@@ -163,24 +163,24 @@ def test_a_step_breezy_keeps_stops_the_fill(page):
 def test_a_video_question_is_out_of_scope(page):
     page.goto(APPLY)
     page.locator(".video-response .required").evaluate("e => e.classList.remove('ng-hide')")
-    video = next(f for f in Breezy().read_form(page) if f.unfillable)
+    video = next(f for f in Breezy().browser_read(page) if f.unfillable)
     assert (video.label, video.required) == ("Introduce yourself on video", True)
     assert video.unfillable == f"out_of_scope: {video.id} is a video recorded live"
 
 
 def test_a_video_question_keeps_its_id_when_a_field_is_added_before_it(page):
     page.goto(APPLY)
-    video = next(f.id for f in Breezy().read_form(page) if f.unfillable)
+    video = next(f.id for f in Breezy().browser_read(page) if f.unfillable)
     page.locator("[name=cSummary]").evaluate(
         "e => e.insertAdjacentHTML('afterend', '<input type=text name=cExtra>')"
     )
-    assert next(f.id for f in Breezy().read_form(page) if f.unfillable) == video
+    assert next(f.id for f in Breezy().browser_read(page) if f.unfillable) == video
 
 
 def test_a_posting_gone(page):
     page.goto("https://acme.breezy.hr/p/000000000000-closed/apply")
     with pytest.raises(Unsupported, match="posting_gone"):
-        Breezy().read_form(page)
+        Breezy().browser_read(page)
 
 
 def test_submit_returns_the_application_response(page):

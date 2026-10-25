@@ -131,7 +131,7 @@ def opened(page) -> tuple[Dayforce, list]:
     adapter = Dayforce()
     assert adapter.detect(JOB, None)
     page.goto(JOB)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 def test_posting_key_drops_the_culture_and_the_step():
@@ -142,7 +142,7 @@ def test_posting_key_drops_the_culture_and_the_step():
     assert not adapter.detect("https://jobs.dayforcehcm.com/en-US/acme/careers", None)
 
 
-def test_read_form_lists_every_page(page):
+def test_browser_read_lists_every_page(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
@@ -325,7 +325,7 @@ def test_a_closed_posting_is_gone(page):
     try:
         page.goto(JOB)
         with pytest.raises(Unsupported, match="posting_gone"):
-            Dayforce().read_form(page)
+            Dayforce().browser_read(page)
     finally:
         page.context.unroute("https://jobs.dayforcehcm.com/**")
         page.context.route("https://jobs.dayforcehcm.com/**", serve)

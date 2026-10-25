@@ -266,7 +266,7 @@ class Oracle:
         assert match, url
         return f"https://{parts.hostname}/hcmUI/CandidateExperience/job/{match[1]}"
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         parts = urlsplit(page.url)
         match = JOB.search(parts.path)
         assert match, page.url  # detected on a job URL

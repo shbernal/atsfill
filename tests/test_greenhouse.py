@@ -60,10 +60,10 @@ def opened(page, url: str = JOB) -> tuple[Greenhouse, list]:
     adapter = Greenhouse()
     page.goto(url)
     assert adapter.detect(url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form_waits_for_the_live_page(page):
+def test_browser_read_waits_for_the_live_page(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
@@ -150,7 +150,7 @@ def test_a_radio_is_listed_unhandled(page):
         """() => document.getElementById("application-form").insertAdjacentHTML("afterbegin",
         '<label for="r1">Remote</label><input type="radio" id="r1" name="remote">')"""
     )
-    radio = next(f for f in Greenhouse().read_form(page) if f.id == "r1")
+    radio = next(f for f in Greenhouse().browser_read(page) if f.id == "r1")
     assert radio.unfillable == "unhandled_rendering: r1 is a radio"
 
 

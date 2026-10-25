@@ -52,10 +52,10 @@ def opened(page) -> tuple[Hireology, list]:
     adapter = Hireology()
     page.goto(JOB)
     assert adapter.detect(JOB, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
@@ -102,7 +102,7 @@ def test_read_form(page):
     assert by_id["signature"].label == "Signature"
 
 
-def test_read_api_lists_the_same_fields(page):
+def test_request_read_lists_the_same_fields(page):
     _, fields = opened(page)
     shape = lambda fs: [(f.id, f.label, f.type, f.required, f.options) for f in fs]  # noqa: E731
     assert shape(f for f, _ in _form(FORM)) == shape(fields)
@@ -161,7 +161,7 @@ def test_the_test_user_answers_what_shows_the_most(tmp_path):
 def test_a_posting_gone(page):
     page.goto("https://careers.hireology.com/acme/7654321/description")
     with pytest.raises(Unsupported, match="posting_gone"):
-        Hireology().read_form(page)
+        Hireology().browser_read(page)
 
 
 def test_an_unknown_field_type_is_unhandled():
@@ -174,7 +174,7 @@ def test_an_unknown_field_type_is_unhandled():
 def test_a_field_missing_from_the_page_is_unhandled(page):
     page.goto(JOB)
     page.evaluate("() => document.getElementById('company_name-0').remove()")
-    fields = {f.id: f for f in Hireology().read_form(page)}
+    fields = {f.id: f for f in Hireology().browser_read(page)}
     assert fields["company_name"].unfillable == (
         "unhandled_rendering: company_name is not on the page"
     )

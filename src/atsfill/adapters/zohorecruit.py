@@ -3,7 +3,7 @@ docs/adapters/zohorecruit.md observes.
 
 The job page names its application form, which "I'm interested" renders from a public form
 API: sections of fields by id, type and requirement, and the pre-screening questions a form
-may ask with them. `read_api` fetches it over HTTP, `read_form` through the page's browser
+may ask with them. `request_read` fetches it over HTTP, `browser_read` through the page's browser
 context, and both list the fields from it. Each field renders as a Lyte component whose id
 derives from the field's; nothing but the submit reaches Zoho.
 """
@@ -143,7 +143,7 @@ class ZohoRecruit:
         parts, job = urlsplit(url), _job(url)
         return POSTING.format(host=parts.hostname, job=job[2]) if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if _job(url) is None:
             return None
         try:
@@ -155,7 +155,7 @@ class ZohoRecruit:
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         job = _job(page.url)
         if job is None:
             raise Unsupported(f"posting_gone: {page.url} is not a job page")

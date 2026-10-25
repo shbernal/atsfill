@@ -2,8 +2,8 @@
 docs/adapters/pinpoint.md observes.
 
 The apply page is rendered on the server: the standard fields as native controls, every other
-field as a React component whose props sit in a JSON script next to it. `read_api` fetches that
-HTML over HTTP, `read_form` takes the page's form, and both list the fields from it with one
+field as a React component whose props sit in a JSON script next to it. `request_read` fetches that
+HTML over HTTP, `browser_read` takes the page's form, and both list the fields from it with one
 parser. A document is uploaded to Pinpoint once attached.
 """
 
@@ -125,7 +125,7 @@ class Pinpoint:
         job = _job(url)
         return f"https://{urlsplit(url).hostname}/en/postings/{job[1]}" if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if _job(url) is None:
             return None
         request = urllib.request.Request(_apply(url), headers={"User-Agent": "atsfill"})
@@ -139,7 +139,7 @@ class Pinpoint:
         )
         return [f for f, _ in _form(form, self)] if form else None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         if _job(page.url) and not urlsplit(page.url).path.rstrip("/").endswith("/new"):
             page.goto(_apply(page.url))
         try:

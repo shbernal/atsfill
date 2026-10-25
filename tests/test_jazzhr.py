@@ -45,10 +45,10 @@ def opened(page) -> tuple[JazzHR, list]:
     adapter = JazzHR()
     page.goto(JOB)
     assert adapter.detect(JOB, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
@@ -162,7 +162,7 @@ def test_an_unknown_rendering_is_listed_unhandled():
 def test_a_posting_gone(page):
     page.goto("https://acme.applytojob.com/apply/GONEGONE00/Nothing")
     with pytest.raises(Unsupported, match="posting_gone"):
-        JazzHR().read_form(page)
+        JazzHR().browser_read(page)
 
 
 def test_submit_returns_the_posted_page(page):

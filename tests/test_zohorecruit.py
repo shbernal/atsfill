@@ -52,10 +52,10 @@ def opened(page) -> tuple[ZohoRecruit, list]:
     adapter = ZohoRecruit()
     page.goto(JOB)
     assert adapter.detect(JOB, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
@@ -102,7 +102,7 @@ def test_read_form(page):
     assert by_id["100000000000000054"].type is FieldType.CHOICE
 
 
-def test_read_api_lists_the_same_fields(page):
+def test_request_read_lists_the_same_fields(page):
     _, fields = opened(page)
     shape = lambda fs: [(f.id, f.label, f.type, f.required, f.options) for f in fs]  # noqa: E731
     assert shape(c.field for c in _form(FORM)[0]) == shape(fields)
@@ -161,7 +161,7 @@ def test_the_test_user_answers_what_shows_the_most(tmp_path):
 def test_a_posting_gone(page):
     page.goto("https://acme.zohorecruit.com/jobs/Careers/7654321")
     with pytest.raises(Unsupported, match="posting_gone"):
-        ZohoRecruit().read_form(page)
+        ZohoRecruit().browser_read(page)
 
 
 def test_an_unknown_field_type_is_listed_unfillable():
@@ -175,7 +175,7 @@ def test_an_unknown_field_type_is_listed_unfillable():
 def test_a_field_missing_from_the_page_is_listed_unfillable(page):
     page.goto(JOB)
     page.evaluate("() => document.getElementById('rec-form_100000000000000012').remove()")
-    fields = {f.id: f for f in ZohoRecruit().read_form(page)}
+    fields = {f.id: f for f in ZohoRecruit().browser_read(page)}
     assert fields["Last_Name"].unfillable == "unhandled_rendering: Last_Name is not on the page"
     assert fields["First_Name"].unfillable is None
 

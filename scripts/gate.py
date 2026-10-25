@@ -28,7 +28,7 @@ from pathlib import Path
 
 from atsfill.adapters import adapters
 from atsfill.core import browser, paths, registry
-from atsfill.core.adapter import ReadsOverHttp
+from atsfill.core.adapter import ReadsByRequest
 from scripts import survey
 
 ROOT = Path(__file__).parents[1]
@@ -78,15 +78,15 @@ def same_code(commit: str | None, head: str) -> bool:
     return commit == head or subprocess.run(diff, capture_output=True, cwd=ROOT).returncode == 0
 
 
-def parity(adapter: ReadsOverHttp, url: str, data: Path) -> str | None:
-    """None when the fields read over HTTP and from the page match; else what differs."""
-    over_http = adapter.read_api(url) or []
+def parity(adapter: ReadsByRequest, url: str, data: Path) -> str | None:
+    """None when the request read and the browser read list the same fields; else what differs."""
+    by_request = adapter.request_read(url) or []
     with browser.open_page(data) as page:
         page.goto(url)
         adapter.detect(url, page)
-        from_page = adapter.read_form(page)
+        in_browser = adapter.browser_read(page)
     shape = lambda fields: {(f.id, f.type, f.required) for f in fields}  # noqa: E731
-    if diff := shape(over_http) ^ shape(from_page):
+    if diff := shape(by_request) ^ shape(in_browser):
         return "differ on " + ", ".join(sorted(f[0] for f in diff))
     return None
 
@@ -214,18 +214,17 @@ def main() -> None:
             )
 
         urls = [r["url"] for r in list(ready.values())[:EMPLOYERS]]
-        if not isinstance(adapter, ReadsOverHttp):
-            line(True, "read_api parity", "not applicable: no read_api")
+        if not isinstance(adapter, ReadsByRequest):
+            line(True, "request read parity", "not applicable: no request read")
         elif not urls:
-            line(True, "read_api parity", "not applicable: no ready posting")
-        elif not (over_http := [u for u in urls if adapter.read_api(u) is not None]):
-            line(True, "read_api parity", "not applicable: read_api returned nothing for these")
+            line(True, "request read parity", "not applicable: no ready posting")
+        elif not (by_request := [u for u in urls if adapter.request_read(u) is not None]):
+            line(True, "request read parity", "not applicable: nothing for these postings")
         else:
-            for url in over_http:
+            for url in by_request:
                 problem = parity(adapter, url, paths.data_dir(args.data_dir))
-                line(
-                    problem is None, "read_api parity", f"{handle(url)}: {problem or 'same fields'}"
-                )
+                outcome = problem or "same fields"
+                line(problem is None, "request read parity", f"{handle(url)}: {outcome}")
 
     passed = all(results)
     if passed and source and short:

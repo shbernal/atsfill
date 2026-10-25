@@ -36,10 +36,10 @@ class Fake:
     def posting(self, url: str) -> str:
         return url.split("?")[0]
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         return self.fields if urlsplit(url).query == "api" else None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         return self.fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:

@@ -46,7 +46,7 @@ def opened(page) -> tuple[Teamtailor, list]:
     adapter = Teamtailor()
     page.goto(JOB + "?utm_source=LinkedIn")
     assert adapter.detect(page.url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 @pytest.fixture
@@ -66,7 +66,7 @@ def test_detection_and_posting():
     )
 
 
-def test_read_form(opened):
+def test_browser_read(opened):
     fields = {f.id: f for f in opened[1]}
     assert list(fields) == [
         "candidate[first_name]",
