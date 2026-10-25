@@ -39,6 +39,7 @@ Each rendering and on how many of 14 postings (2026-10-20):
 | questions | `select` with `multipleChoice`, `spl-multiselect-autocomplete` | `multi_choice` | 4 |
 | questions | `checkbox`, one "Confirmed" box | `choice`, `Yes`/`No` | 4 |
 | questions | `eeo`, gender and ethnicity selects in one question | one `choice` per select | 1 |
+| questions | `work_shifts`, day, from and to selects (`question_<id>-0-day`); repeatable, the first entry filled | one `choice` per select | 1 |
 | questions | consent boxes (`SINGLE`, or `RECRUIT`, `CRM`, `TEXTING`, `WHATSAPP` under a "Select all") | `choice`, `Yes`/`No` | 12 |
 | questions | a consent notice with no box | not listed | 3 |
 
@@ -55,7 +56,7 @@ Each question renders as a `[data-test=question-container]` in `sr-screening-que
 - Phone: typed with its dial code, which sets the country (`+1…` is US).
 - Resume: set on the profile's own dropzone, never Easy Apply's, which parses the file and fills the profile. Attaching uploads it at once (`POST …/oneclick-ui/api/company/<id>/attachment/resume`).
 - Next validates the profile in the browser and sends nothing. A click right after the last answer can go unheeded; atsfill clicks up to three times. The footer's buttons are named in the posting's language ("Suivant", "Siguiente"), so they are found by `data-test`: Next is `footer-next`, Submit `footer-submit`. Only `footer-next` is clicked: Submit is never pressed by `fill`.
-- Select: typed to filter, then the `spl-select-option` whose `value` is the option's id is clicked; a multi-select repeats this per value.
+- Select: typed to filter, then the `spl-select-option` whose `value` is the option's id is clicked, looked up in the select's own `spl-autocomplete`: the selects of one question (work shifts, EEO) share option ids. A multi-select repeats this per value. Closed with no pick, a select drops what was typed.
 - Radio: the `spl-radio` whose `value` is the option's id. Checkbox and consents: the box is clicked when its state differs. Consent boxes are matched to scopes by order, after the "Select all" box when there is one.
 - The page validates social profiles: LinkedIn must be a linkedin.com URL, Facebook and X a profile or handle. An invalid one keeps Next from going on, and every question reads back empty.
 
