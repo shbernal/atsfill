@@ -1,9 +1,10 @@
-import fcntl
 import os
 import platform
 import re
 import tomllib
 from pathlib import Path
+
+from filelock import FileLock
 
 LINUX = platform.system() == "Linux"
 DEFAULT_USER = "default"
@@ -50,8 +51,7 @@ def _move_to_default(data: Path) -> None:
     user, once, under the lock."""
     if not any((data / name).exists() for name in MOVED):
         return
-    with (data / "lock").open("w") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with FileLock(data / "lock"):
         default = data / "users" / DEFAULT_USER
         default.mkdir(mode=0o700, parents=True, exist_ok=True)
         for name in MOVED:
