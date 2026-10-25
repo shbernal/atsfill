@@ -152,7 +152,9 @@ def survey(url: str, employer: str, source: str | None, data: Path, cv: Path) ->
     read = core.read(url, user=paths.TEST_USER, data_dir=data)
     result = read
     if read.status is Status.READY:
-        answers = testuser.answers(read.fields, cv, cv.with_name("photo.png"))
+        answers = testuser.answers(
+            read.fields, cv, cv.with_name("photo.png"), cv.with_name("clip.mp4")
+        )
         result = core.fill(url, answers, user=paths.TEST_USER, data_dir=data)
     step = None
     if found.label == "block":
@@ -237,6 +239,7 @@ def run(
     CORPUS.mkdir(parents=True, exist_ok=True)
     cv = testuser.resume(CORPUS / "resume.pdf")
     testuser.photo(CORPUS / "photo.png")
+    testuser.clip(CORPUS / "clip.mp4")
     data = paths.data_dir(data_dir)
     path, rows = CORPUS / f"{out or source or 'urls'}.jsonl", []
     for n, (url, employer) in enumerate(postings):

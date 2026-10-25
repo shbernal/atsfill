@@ -70,6 +70,7 @@ def test_an_unsupported_reason_is_labelled_by_its_case(reason, label):
 def test_the_test_user_answers_from_the_fields(tmp_path):
     cv = testuser.resume(tmp_path / "resume.pdf")
     picture = testuser.photo(tmp_path / "photo.png")
+    video = testuser.clip(tmp_path / "clip.mp4")
     fields = [
         Field("e", "Email address", FieldType.TEXT, True),
         Field("n", "Full name", FieldType.TEXT, True, max_length=5),
@@ -93,9 +94,10 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         Field("z", "Postal code / zip code", FieldType.TYPEAHEAD, True),
         Field("p", "Phone", FieldType.PHONE, True, prefilled="+33 600000000"),  # the account's
         Field("o", "Video", FieldType.FILE, False, unfillable="out_of_scope: o is a video"),
+        Field("u", "Introduce yourself", FieldType.FILE, True, accept=[".mov", ".mp4"]),
         Field("k", "Country", FieldType.CHOICE, True, ["France", "Spain"], default="Spain"),
     ]
-    answers = testuser.answers(fields, cv, picture)
+    answers = testuser.answers(fields, cv, picture, video)
     assert answers == {
         "e": testuser.EMAIL,
         "n": "Ada P",
@@ -112,11 +114,13 @@ def test_the_test_user_answers_from_the_fields(tmp_path):
         "a": str(picture),
         "m": str(cv),
         "i": str(picture),
+        "u": str(video),
         "k": "Spain",  # the page's, which the lists after it follow
     }
     assert date.fromisoformat(str(answers["d"])) > date.today()
     assert cv.read_bytes().startswith(b"%PDF-1.4")
     assert picture.read_bytes().startswith(b"\x89PNG")
+    assert video.read_bytes()[4:8] == b"ftyp"
 
 
 def test_a_follow_up_is_answered_when_its_trigger_option_holds_or(tmp_path):

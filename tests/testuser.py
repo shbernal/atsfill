@@ -2,6 +2,7 @@
 
 import re
 import secrets
+import shutil
 import struct
 import zlib
 from datetime import date, timedelta
@@ -107,6 +108,15 @@ def photo(path: Path) -> Path:
     return path
 
 
+def clip(path: Path) -> Path:
+    """Writes the Test user's video clip to `path`: one grey second, 64x64 H.264 in MP4, the
+    least a transcoder takes (a file that only names itself MP4 fails Teamtailor's). Made with
+    `ffmpeg -f lavfi -i color=gray:s=64x64:r=1 -t 1 -c:v libx264 -pix_fmt yuv420p -crf 51
+    -movflags +faststart -map_metadata -1 -fflags +bitexact clip.mp4`."""
+    shutil.copyfile(Path(__file__).with_name("clip.mp4"), path)
+    return path
+
+
 def _option(field: Field) -> str:
     options = field.options or []
     if SENSITIVE.search(field.label):
@@ -132,13 +142,17 @@ def _accepts(field: Field, extension: str, mime: str) -> bool:
     return not field.accept or extension in field.accept or mime in field.accept
 
 
-def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None:
+def answer(
+    field: Field, cv: Path, picture: Path | None = None, video: Path | None = None
+) -> Answer | None:
     """The Test user's answer to one field; None for a choice with no options to pick from, an
-    optional search of places, or a file that takes neither a PDF nor, given a `picture`, a
-    PNG."""
+    optional search of places, or a file that takes neither a PDF nor, given a `picture` or a
+    `video`, a PNG or an MP4."""
     match field.type:
         case FieldType.FILE if not _accepts(field, ".pdf", "application/pdf"):
-            return str(picture) if picture and _accepts(field, ".png", "image/png") else None
+            if picture and _accepts(field, ".png", "image/png"):
+                return str(picture)
+            return str(video) if video and _accepts(field, ".mp4", "video/mp4") else None
         case FieldType.FILE:
             return str(cv)
         case FieldType.PHONE:
@@ -184,12 +198,17 @@ def answer(field: Field, cv: Path, picture: Path | None = None) -> Answer | None
 
 
 def _showing_most(
-    field: Field, fields: list[Field], given: dict[str, Answer], cv: Path, picture: Path | None
+    field: Field,
+    fields: list[Field],
+    given: dict[str, Answer],
+    cv: Path,
+    picture: Path | None,
+    video: Path | None,
 ) -> Answer:
     """The choice that shows the most follow-ups, so that the dry run reaches them, never one
     that shows a required follow-up it has no answer for: among equals the page's own pick,
     else the usual answer, and always the usual for a sensitive question."""
-    usual = answer(field, cv, picture)
+    usual = answer(field, cv, picture, video)
     assert usual is not None
     if SENSITIVE.search(field.label) or not field.options:
         return usual
@@ -210,7 +229,9 @@ def _showing_most(
     return max([usual, *picks], key=shows)
 
 
-def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[str, Answer]:
+def answers(
+    fields: list[Field], cv: Path, picture: Path | None = None, video: Path | None = None
+) -> dict[str, Answer]:
     """Answers every field it can, so the dry run reaches each one, but leaves what the account
     prefilled to the account, a résumé aside, a field its own answers keep hidden, and one
     atsfill cannot fill. A choice that shows follow-ups takes the option that shows the most.
@@ -224,10 +245,10 @@ def answers(fields: list[Field], cv: Path, picture: Path | None = None) -> dict[
             f.one_of in answered or (f.type is not FieldType.FILE and f.one_of in files)
         ):
             continue
-        if f.unfillable or (a := answer(f, cv, picture)) is None:
+        if f.unfillable or (a := answer(f, cv, picture, video)) is None:
             continue
         if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
-            a = _showing_most(f, fields, given, cv, picture)
+            a = _showing_most(f, fields, given, cv, picture, video)
         given[f.id] = a
         answered.add(f.one_of)
         if f.prefilled is None or f.type is FieldType.FILE:
