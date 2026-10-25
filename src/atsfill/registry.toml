@@ -119,6 +119,7 @@ kind = "ats"
 share = 0.0190
 account = "to_read"
 hosting = ["hosted"]
+block = { vendor = "hCaptcha", signal = "image challenge on the email step that starts sign-in and sign-up, before the form, 4 employers headless, Next disabled on 2 more", step = "form", date = 2026-10-26, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [manatal]
