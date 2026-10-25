@@ -84,6 +84,7 @@ def test_browser_read_lists_both_pages(page):
     assert by_id["q-multi"].shown_when == Is("q-select", ["Yes"])
     assert [f.id for f in fields if f.shown_when] == ["q-multi"]
     assert by_id["q-box"].options == ["Yes", "No"]
+    assert by_id["q-currency"].label == "Expected salary? (a number)"
     assert by_id["q-eeo.gender"].label == "Gender, Race and Ethnicity: Gender"
     assert (
         by_id["consent.RECRUIT"].label
@@ -137,6 +138,14 @@ def test_a_conditional_question_left_hidden_reads_back_empty(page):
     assert "q-multi" not in read_back
     assert read_back["q-radio"] == "Yes"  # the next containers still map to their questions
     assert "q-multi" not in adapter.shown_fields(page)
+
+
+def test_text_in_a_number_input_reads_back_empty(page):
+    adapter, _ = opened(page, FORM)
+    adapter.fill(page, {"q-currency": "https://example.com", "q-radio": "Yes"})
+    read_back = adapter.read_back(page)
+    assert "q-currency" not in read_back
+    assert read_back["q-radio"] == "Yes"
 
 
 def test_a_conditional_question_shown_is_listed_shown(page):
