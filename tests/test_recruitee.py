@@ -1,5 +1,6 @@
 """The Recruitee adapter on tests/pages/recruitee, served as a posting's application page."""
 
+import io
 from pathlib import Path
 
 import pytest
@@ -104,6 +105,24 @@ def test_browser_read_opens_the_application(page):
     assert by_id[f"{Q}.112.flag"].label == "I agree with the privacy statement"
     assert by_id[f"{Q}.112.flag"].options == ["Yes", "No"] and by_id[f"{Q}.112.flag"].required
     assert by_id["candidate.agreements.0.consent"].label.startswith("By submitting my CV")
+
+
+def test_request_read_lists_the_same_fields(page, monkeypatch):
+    _, fields = opened(page)
+    fetched = []
+
+    class Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+    def urlopen(request, timeout):
+        fetched.append(request.full_url)
+        return Response(PAGE.read_bytes())
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    assert Recruitee().request_read(CUSTOM) is None  # a custom domain is known by its page
+    assert Recruitee().request_read(f"{POSTING}?source=x") == fields
+    assert fetched == [f"{POSTING}/c/new"]
 
 
 def test_every_answer_reads_back(page, resume):
