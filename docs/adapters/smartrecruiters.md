@@ -1,6 +1,6 @@
 # SmartRecruiters
 
-Observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/smartrecruiters/apply.html](../../tests/pages/smartrecruiters/apply.html), served behind a job page in `tests/test_smartrecruiters.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/smartrecruiters/apply.html](../../tests/pages/smartrecruiters/apply.html), served behind a job page in `tests/test_smartrecruiters.py`.
 
 ## Where the form is
 
@@ -33,7 +33,7 @@ Each rendering and on how many of 14 postings (2026-10-20):
 | questions | `info`, text only | not listed | 5 |
 | questions | `text` in `spl-input` | `text` | 11 |
 | questions | `textarea` | `text` | 1 |
-| questions | `currency`, an `spl-number-field` with its currency beside | `text`, a number | 1 |
+| questions | `currency`, an `spl-number-field` (`input[type=number]`) with its currency beside | `text`, labelled `(a number)` | 1 |
 | questions | `radio`, `spl-radio-group` | `choice` | 13 |
 | questions | `select`, `spl-autocomplete` showing its options on focus | `choice` | 10 |
 | questions | `select` with `multipleChoice`, `spl-multiselect-autocomplete` | `multi_choice` | 4 |
@@ -50,7 +50,7 @@ Each question renders as a `[data-test=question-container]` in `sr-screening-que
 
 ## Filling
 
-- Text: typed into the inner `input`/`textarea`.
+- Text: typed into the inner `input`/`textarea`. A number input holds no text: an answer that is not a number is left out, reads back empty and the dry run refuses it.
 - City: typed, then the first `spl-select-option` starting with the answer is clicked. Some postings label the same field "Postal code / zip code" from the start: it is still `location`, its label says what to type, and a city there finds no suggestion (`20001` lists "20001, Washington, DC, USA"). Clicking anything else (an empty search's last row) switches the field to a country search and a postal code; atsfill presses Escape instead, and the city reads back empty.
 - Phone: typed with its dial code, which sets the country (`+1…` is US).
 - Resume: set on the profile's own dropzone, never Easy Apply's, which parses the file and fills the profile. Attaching uploads it at once (`POST …/oneclick-ui/api/company/<id>/attachment/resume`).

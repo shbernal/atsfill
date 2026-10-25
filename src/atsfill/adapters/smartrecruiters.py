@@ -35,6 +35,7 @@ KEY_DELAY_MS = 20
 LOCATION_KEY_DELAY_MS = 30
 NEXT_TRIES = 3
 YES_NO = ["Yes", "No"]
+NUMBER = re.compile(r"-?\d+([.,]\d+)?")  # what an `input[type=number]` takes
 
 # The profile page: (field id, the input, the element carrying `label` and `required`).
 PROFILE = [
@@ -221,6 +222,8 @@ class SmartRecruiters:
         if kind in SKIPPED:
             return []
         label = _plain(question["label"])
+        if kind == "currency":  # an `input[type=number]`, its currency beside
+            label += " (a number)"
         shown_when = self._shown_when(question["id"])
         required = bool(question["required"])
         unfillable = None
@@ -453,7 +456,10 @@ def _fill_question(
                     continue
                 option.click()
         case _:
-            _inputs(box, entry, question).fill(values[0])
+            target = _inputs(box, entry, question)
+            if target.get_attribute("type") == "number" and not NUMBER.fullmatch(values[0]):
+                return  # a number input holds no text: it reads back empty
+            target.fill(values[0])
 
 
 def _read_question(box: Locator, question: dict[str, Any], entry: dict[str, Any]) -> Answer | None:
