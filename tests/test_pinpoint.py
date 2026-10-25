@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.pinpoint import Pinpoint, _form, _parse
-from atsfill.core import browser, matching
+from atsfill.adapters.pinpoint import Pinpoint, _form
+from atsfill.core import browser, html, matching
 from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import Answer, AnyOf, FieldType, Is
 from tests import testuser
@@ -223,10 +223,10 @@ def test_a_posting_gone(page):
 
 
 def test_an_unknown_control_is_unhandled():
-    html = HTML.replace('type="email"', 'type="color"').replace(
+    source = HTML.replace('type="email"', 'type="color"').replace(
         "Questions::Url", "Questions::Video"
     )
-    form = next(n for n in _parse(html).walk() if n.attrs.get("id") == "application-form")
+    form = next(n for n in html.parse(source).walk() if n.attrs.get("id") == "application-form")
     fields = {f.id: f for f, _ in _form(form, Pinpoint())}
     assert fields["email"].unfillable == "unhandled_rendering: email is a color"
     assert fields["question_1004"].unfillable == "unhandled_rendering: question_1004 is a Video"

@@ -11,12 +11,12 @@ import json
 import re
 import urllib.request
 from contextlib import suppress
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from datetime import date
-from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import urlsplit
 
+from atsfill.core import html
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
@@ -43,7 +43,6 @@ JOB_PREFERENCES = "job_preferences"
 TEXT_QUESTIONS = {"Shorttext", "Longtext", "Url", "Numberinput"}  # Url is a `url` field
 FILE_QUESTIONS = {"Document", "Multipledocuments"}
 NOT_FIELDS = {"New", "Chatbot", "Stagescarousel"}  # components without a field, by last name
-VOID = {"input", "br", "img", "hr", "meta", "link", "source", "wbr", "col", "area"}
 
 # What each field holds, by how it renders: a control's value, a react-select's shown value(s),
 # a radio's label, a date's three selects, a document's uploaded names.
@@ -131,12 +130,10 @@ class Pinpoint:
         request = urllib.request.Request(_apply(url), headers={"User-Agent": "atsfill"})
         try:
             with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
-                html = response.read().decode()
+                page = html.parse(response.read().decode())
         except OSError, ValueError:
             return None
-        form = next(
-            (n for n in _parse(html).walk() if n.attrs.get("id") == "application-form"), None
-        )
+        form = next((n for n in page.walk() if n.attrs.get("id") == "application-form"), None)
         return [f for f, _ in _form(form, self)] if form else None
 
     def browser_read(self, page: Page) -> list[Field]:
@@ -147,7 +144,7 @@ class Pinpoint:
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
         _hydrated(page)
-        listed = _form(_parse(page.locator(FORM).evaluate("f => f.outerHTML")), self)
+        listed = _form(html.parse(page.locator(FORM).evaluate("f => f.outerHTML")), self)
         self._specs = {f.id: s for f, s in listed if not f.unfillable}
         if "country" in self._specs:  # the visitor's, guessed by the page
             held = self.read_back(page).get("country")
@@ -200,7 +197,7 @@ class Pinpoint:
     def shown_fields(self, page: Page) -> list[str]:
         """The fields of the filled page's form whose control shows: a question component
         renders none while its parent's answer keeps it hidden, an address line one layout's."""
-        listed = _form(_parse(page.locator(FORM).evaluate("f => f.outerHTML")), self)
+        listed = _form(html.parse(page.locator(FORM).evaluate("f => f.outerHTML")), self)
         specs = [{"id": f.id, "kind": s.kind, "root": s.root} for f, s in listed]
         return page.locator(FORM).evaluate(_SHOWN, specs)
 
@@ -297,66 +294,6 @@ def _attach(root: Locator, path: str) -> None:
         root.locator(".bp3-tag a.link", has_text=name).first.wait_for(timeout=UPLOAD_TIMEOUT_MS)
 
 
-@dataclass
-class _Node:
-    tag: str
-    attrs: dict[str, str]
-    parent: _Node | None = None
-    children: list[_Node | str] = field(default_factory=list)
-
-    def walk(self) -> list[_Node]:
-        out = []
-        for child in self.children:
-            if isinstance(child, _Node):
-                out += [child, *child.walk()]
-        return out
-
-    def text(self) -> str:
-        return " ".join(
-            "".join(c if isinstance(c, str) else c.text() for c in self.children).split()
-        )
-
-    def classes(self) -> list[str]:
-        return self.attrs.get("class", "").split()
-
-    def in_component(self) -> bool:
-        node = self.parent
-        while node is not None and "-react-component-" not in node.attrs.get("id", ""):
-            node = node.parent
-        return node is not None
-
-
-class _Tree(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.root = self.open = _Node("", {})
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        node = _Node(tag, {k: v or "" for k, v in attrs}, self.open)
-        self.open.children.append(node)
-        if tag not in VOID:
-            self.open = node
-
-    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        self.open.children.append(_Node(tag, {k: v or "" for k, v in attrs}, self.open))
-
-    def handle_endtag(self, tag: str) -> None:
-        node: _Node | None = self.open
-        while node is not None and node.tag != tag:
-            node = node.parent
-        if node is not None and node.parent is not None:
-            self.open = node.parent
-
-    def handle_data(self, data: str) -> None:
-        self.open.children.append(data)
-
-
-def _parse(html: str) -> _Node:
-    tree = _Tree()
-    tree.feed(html)
-    return tree.root
-
-
 def _key(name: str) -> str:
     """A control's attribute: `first_name` for `application_form[application][first_name]`."""
     return re.findall(r"\w+", re.sub(r"\(\di\)", "", name))[-1]
@@ -367,27 +304,36 @@ def _text(label: object) -> str:
     return " ".join(str(label).split())
 
 
+def _in_component(node: html.Node) -> bool:
+    """Whether a control is one a React component renders, read from its props instead."""
+    return node.parent is not None and bool(
+        node.parent.closest(lambda n: "-react-component-" in n.attrs.get("id", ""))
+    )
+
+
 def _accept(extensions: list[str] | None) -> list[str] | None:
     return [f".{e}" for e in extensions] if extensions else None
 
 
-def _form(form: _Node, adapter: Pinpoint) -> list[tuple[Field, _Spec]]:
+def _form(form: html.Node, adapter: Pinpoint) -> list[tuple[Field, _Spec]]:
     """Each field of the form, in its order, with where its control is."""
     nodes = form.walk()
-    labels = {n.attrs["for"]: n.text() for n in nodes if n.tag == "label" and "for" in n.attrs}
+    labels = {
+        n.attrs["for"]: _text(n.text()) for n in nodes if n.tag == "label" and "for" in n.attrs
+    }
     out: list[tuple[Field, _Spec]] = []
     titles: dict[int, tuple[str, dict[str, str]]] = {}  # a question's id, its values' labels
     for node in nodes:
         if node.tag == "script" and COMPONENT in node.classes():
-            props = json.loads(node.text() or "{}")
+            props = json.loads(_text(node.text()) or "{}")
             name = node.attrs.get("data-component-name", "")
             out += _component(name, props, node, labels, titles, adapter)
-        elif node.tag in ("input", "select", "textarea") and not node.in_component():
+        elif node.tag in ("input", "select", "textarea") and not _in_component(node):
             out += _plain(node, labels, out)
     return out
 
 
-def _plain(node: _Node, labels: dict[str, str], listed: list) -> list[tuple[Field, _Spec]]:
+def _plain(node: html.Node, labels: dict[str, str], listed: list) -> list[tuple[Field, _Spec]]:
     """A server-rendered control: a name, the email, the summary, a date of birth, the consent."""
     name, kind = node.attrs.get("name", ""), node.attrs.get("type", node.tag)
     if not name or kind in ("hidden", "submit", "button") or "g-recaptcha" in name:
@@ -417,7 +363,7 @@ def _plain(node: _Node, labels: dict[str, str], listed: list) -> list[tuple[Fiel
 def _component(
     name: str,
     props: dict[str, Any],
-    script: _Node,
+    script: html.Node,
     labels: dict[str, str],
     titles: dict[int, tuple[str, dict[str, str]]],
     adapter: Pinpoint,
@@ -536,17 +482,17 @@ def _shown_when(parent: tuple[str, dict[str, str]], conditions: list[dict]) -> C
     return None if not held else held[0] if len(held) == 1 else AnyOf(held)
 
 
-def _file_label(script: _Node, props: dict) -> tuple[str, bool]:
+def _file_label(script: html.Node, props: dict) -> tuple[str, bool]:
     """A document's label, from the `external-form__label` block before its component."""
     parent = script.parent
-    siblings = [c for c in parent.children if isinstance(c, _Node)] if parent else []
+    siblings = [c for c in parent.children if isinstance(c, html.Node)] if parent else []
     before = siblings[: siblings.index(script)] if script in siblings else []
     block = next((n for n in reversed(before) if "external-form__label" in n.classes()), None)
     if block is None:
         return props.get("labelText") or _key(props["name"]), False
     title = next((n for n in block.walk() if n.tag == "div"), block)
     required = any("external-form__label--required" in n.classes() for n in [block, *block.walk()])
-    return title.text(), required
+    return _text(title.text()), required
 
 
 def _address(props: dict, root: str | None) -> list[tuple[Field, _Spec]]:

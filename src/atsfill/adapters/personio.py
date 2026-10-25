@@ -9,10 +9,9 @@ list the fields from it with one parser. A document is uploaded to Personio once
 import re
 import urllib.request
 from contextlib import suppress
-from dataclasses import dataclass, field
-from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
+from atsfill.core import html
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
@@ -35,7 +34,6 @@ KINDS = {
     "select": FieldType.CHOICE,
     "file": FieldType.FILE,
 }
-VOID = {"input", "br", "img", "hr", "meta", "link", "source", "wbr", "col", "area"}
 
 # What each control holds: a value, a select's option value, a document's uploaded names.
 _READ_BACK = """(form, ids) => {
@@ -78,10 +76,10 @@ class Personio:
         request = urllib.request.Request(_apply(url), headers={"User-Agent": "atsfill"})
         try:
             with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
-                html = response.read().decode()
+                page = html.parse(response.read().decode())
         except OSError, ValueError:
             return None
-        form = next((n for n in _parse(html).walk() if n.tag == "form"), None)
+        form = next((n for n in page.walk() if n.tag == "form"), None)
         return [f for f, _ in _form(form)] if form else None
 
     def browser_read(self, page: Page) -> list[Field]:
@@ -91,7 +89,7 @@ class Personio:
             page.locator(SUBMIT).wait_for(state="attached", timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
-        listed = _form(_parse(page.locator(FORM).evaluate("f => f.outerHTML")))
+        listed = _form(html.parse(page.locator(FORM).evaluate("f => f.outerHTML")))
         self._options = {f.id: o for f, o in listed if o and not f.unfillable}
         self._fields = [f for f, _ in listed if not f.unfillable]
         return [f for f, _ in listed]
@@ -165,73 +163,7 @@ def _apply(url: str) -> str:
     return f"https://{parts.hostname}/job/{job[1]}/apply{query}"
 
 
-@dataclass
-class _Node:
-    tag: str
-    attrs: dict[str, str]
-    parent: _Node | None = None
-    children: list[_Node | str] = field(default_factory=list)
-
-    def walk(self) -> list[_Node]:
-        out = []
-        for child in self.children:
-            if isinstance(child, _Node):
-                out += [child, *child.walk()]
-        return out
-
-    def text(self) -> str:
-        return "".join(c if isinstance(c, str) else c.text() for c in self.children)
-
-    def label(self) -> str:
-        """The text, without the spans that mark it required or optional."""
-        own = (c for c in self.children if isinstance(c, str) or c.tag != "span")
-        return " ".join("".join(c if isinstance(c, str) else c.text() for c in own).split())
-
-    def starred(self) -> bool:
-        return any(
-            isinstance(c, _Node) and c.tag == "span" and c.text().strip() == "*"
-            for c in self.children
-        )
-
-    def ancestor(self, role: str) -> _Node | None:
-        node = self.parent
-        while node is not None and node.attrs.get("role") != role:
-            node = node.parent
-        return node
-
-
-class _Tree(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.root = self.open = _Node("", {})
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        node = _Node(tag, {k: v or "" for k, v in attrs}, self.open)
-        self.open.children.append(node)
-        if tag not in VOID:
-            self.open = node
-
-    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        self.open.children.append(_Node(tag, {k: v or "" for k, v in attrs}, self.open))
-
-    def handle_endtag(self, tag: str) -> None:
-        node: _Node | None = self.open
-        while node is not None and node.tag != tag:
-            node = node.parent
-        if node is not None and node.parent is not None:
-            self.open = node.parent
-
-    def handle_data(self, data: str) -> None:
-        self.open.children.append(data)
-
-
-def _parse(html: str) -> _Node:
-    tree = _Tree()
-    tree.feed(html)
-    return tree.root
-
-
-def _form(form: _Node) -> list[tuple[Field, dict[str, str] | None]]:
+def _form(form: html.Node) -> list[tuple[Field, dict[str, str] | None]]:
     """Each named control of the form, with a choice's option texts by value."""
     nodes = form.walk()
     by_id = {n.attrs["id"]: n for n in nodes if "id" in n.attrs}
@@ -244,11 +176,11 @@ def _form(form: _Node) -> list[tuple[Field, dict[str, str] | None]]:
         kind = node.attrs.get("type", "text") if node.tag == "input" else node.tag
         if kind == "hidden":
             continue
-        group = node.ancestor("group")
+        group = node.closest(lambda n: n.attrs.get("role") == "group")
         group_label = by_id.get(group.attrs.get("aria-labelledby", "")) if group else None
         own = labels.get(node.attrs.get("id", ""))
-        label = (own.label() if own else "") or (group_label.label() if group_label else "") or name
-        required = any(n is not None and n.starred() for n in (own, group_label))
+        label = (_label(own) if own else "") or (_label(group_label) if group_label else "") or name
+        required = any(n is not None and _starred(n) for n in (own, group_label))
         if kind not in KINDS or "multiple" in node.attrs and kind == "select":
             reason = f"unhandled_rendering: {name} is a {kind}"
             out.append((Field(name, label, FieldType.TEXT, required, unfillable=reason), None))
@@ -280,6 +212,19 @@ def _form(form: _Node) -> list[tuple[Field, dict[str, str] | None]]:
             )
         )
     return out
+
+
+def _label(node: html.Node) -> str:
+    """A label's text, without the spans that mark it required or optional."""
+    own = (c for c in node.children if isinstance(c, str) or c.tag != "span")
+    return " ".join("".join(c if isinstance(c, str) else c.text() for c in own).split())
+
+
+def _starred(node: html.Node) -> bool:
+    return any(
+        isinstance(c, html.Node) and c.tag == "span" and c.text().strip() == "*"
+        for c in node.children
+    )
 
 
 def _attach(control: Locator, path: str) -> None:
