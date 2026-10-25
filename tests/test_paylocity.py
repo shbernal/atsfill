@@ -183,6 +183,14 @@ def test_a_known_gap_and_an_unknown_field_are_listed_unfillable():
     }
 
 
+def test_the_address_block_is_left_out_without_its_line_1():
+    data = paylocity._page_data(PAGE.read_text())
+    info = data["customJobApplication"]["sections"][0]["fields"]
+    next(f for f in info if f["name"] == "address")["isIncluded"] = False
+    listed = [f.id for f, _ in paylocity._form(data)]
+    assert [i for i in listed if i.startswith("public-site-address") or i == "info.country"] == []
+
+
 def test_a_graduation_date_is_a_month_asked_once_graduated():
     data = paylocity._page_data(PAGE.read_text())
     education = data["customJobApplication"]["sections"][2]

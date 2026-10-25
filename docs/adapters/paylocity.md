@@ -1,6 +1,6 @@
 # Paylocity
 
-Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/paylocity/apply.html](../../tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
+Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/paylocity/apply.html](../../tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
 
 ## Where the form is
 
@@ -22,7 +22,7 @@ Each rendering, and in how many of 60 postings' configurations it shows (2026-10
 | `input`, `textarea` by id (name, email, LinkedIn, referred by, company website…) | `text` | 60 |
 | mobile, home, company, reference phones: plain text inputs | `phone` | 60 |
 | react-widgets dropdown (`.rw-dropdownlist`, list `[id=<id>__listbox] [role=option]` once clicked): Yes/No questions (the SMS consent's Yes reads `Yes*`), school type, degree, EEO, reference type, years known | `choice` | 60 |
-| address block (`public-site-address-*`, a work entry's `public-candidate-work-history-address-0-*`): line 1 is a suggestion combobox that drops keys while it loads, county, city, zip, line 2 | `text` | 60 |
+| address block (`public-site-address-*`, a work entry's `public-candidate-work-history-address-0-*`): line 1 is a suggestion combobox that drops keys while it loads, county, city, zip, line 2; the applicant's block renders only when line 1 (`address`) is included, whatever its other fields say | `text` | 60 |
 | state in the address block: a `pcty-input-select` listing codes (`[role=listitem][title=DC]`) | `choice`, the code | 60 |
 | radio group by `name` (how did you hear) | `choice` | 54 |
 | date (`info.dateAvailableToStart`, prior employment dates): a native date input, `MM/DD/YYYY` typed | `date` | 43 |
