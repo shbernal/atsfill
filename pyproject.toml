@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "camoufox==0.5.8",
+    "filelock==4.1.1",
     "keyring==25.7.0",
     "packaging==26.3",
 ]

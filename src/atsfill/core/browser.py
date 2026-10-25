@@ -1,7 +1,6 @@
 """The browser launcher, the only module that imports camoufox and playwright (ADR 0002)."""
 
 import asyncio
-import fcntl
 import json
 import locale
 import platform
@@ -24,6 +23,8 @@ from camoufox.exceptions import CamoufoxNotInstalled
 from camoufox.fingerprints import Screen, generate_fingerprint
 from camoufox.pkgman import installed_verstr
 from camoufox.sync_api import Camoufox
+from filelock import FileLock
+from filelock import Timeout as LockTimeout
 from playwright.sync_api import APIRequestContext as Request
 from playwright.sync_api import Browser, Locator, Page, Response, sync_playwright
 from playwright.sync_api import Error as BrowserError
@@ -107,8 +108,7 @@ def _build_blocker() -> None:
     from disk: fetched by each launch, they would hold its first page for seconds, and each
     list on is compiled by each launch before the blocker starts."""
     ADDONS_DIR.mkdir(parents=True, exist_ok=True)
-    with (ADDONS_DIR / f"{BLOCKER.name}.lock").open("w") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+    with FileLock(ADDONS_DIR / f"{BLOCKER.name}.lock"):
         build = BLOCKER.with_name(f"{BLOCKER.name}.build")
         shutil.rmtree(build, ignore_errors=True)
         shutil.copytree(get_addon_path(DefaultAddons.UBO.name), build)
@@ -171,19 +171,15 @@ def machine_locale() -> str | None:
 @contextmanager
 def lock(data_dir: Path, deadline: float) -> Generator[None]:
     """Holds the data directory; a second command waits here until its deadline."""
-    with (data_dir / "lock").open("w") as f:
-        while True:
-            try:
-                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() > deadline:
-                    raise OutOfTime("time budget ran out waiting for another command") from None
-                time.sleep(LOCK_POLL_S)
-        try:
-            yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+    held = FileLock(data_dir / "lock", poll_interval=LOCK_POLL_S)
+    try:
+        held.acquire(timeout=max(0.0, deadline - time.monotonic()))
+    except LockTimeout:
+        raise OutOfTime("time budget ran out waiting for another command") from None
+    try:
+        yield
+    finally:
+        held.release()
 
 
 @contextmanager

@@ -50,13 +50,23 @@ jobs:
           EOF
       - run: uv run pytest -n auto --dist loadscope --durations=20 --shard ${{ matrix.shard }}/3
 
-  # The check the ruleset requires: green only when lint and every shard are.
+  # Windows: the package imports and the data directory lock holds. No browser runs here.
+  windows:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: uv sync --locked
+      - run: uv run python -c "import atsfill.cli"
+      - run: uv run pytest tests/test_browser.py -k lock
+
+  # The check the ruleset requires: green only when lint, every shard and Windows are.
   check:
     if: always()
-    needs: [lint, test]
+    needs: [lint, test, windows]
     runs-on: ubuntu-26.04
     steps:
-      - run: test "${{ needs.lint.result }}" = success && test "${{ needs.test.result }}" = success
+      - run: test "${{ needs.lint.result }}" = success && test "${{ needs.test.result }}" = success && test "${{ needs.windows.result }}" = success
 
   commit-check:
     runs-on: ubuntu-26.04
