@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.personio import Personio, _form, _parse
-from atsfill.core import browser, matching
+from atsfill.adapters.personio import Personio, _form
+from atsfill.core import browser, html, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
 from tests import testuser
@@ -142,10 +142,10 @@ def test_a_posting_gone(page):
 
 
 def test_an_unknown_control_is_unhandled():
-    html = HTML.replace('type="email"', 'type="checkbox"').replace(
+    source = HTML.replace('type="email"', 'type="checkbox"').replace(
         '<select name="gender"', '<select multiple name="gender"'
     )
-    fields = {f.id: f for f, _ in _form(_parse(html))}
+    fields = {f.id: f for f, _ in _form(html.parse(source))}
     assert fields["email"].unfillable == "unhandled_rendering: email is a checkbox"
     assert fields["gender"].unfillable == "unhandled_rendering: gender is a select"
 
