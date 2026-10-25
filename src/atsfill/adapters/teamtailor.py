@@ -238,8 +238,9 @@ class Teamtailor:
                 host.locator("input[type=file]").set_input_files(answer)
             case FieldType.CHOICE, str() if host.locator("input[type=checkbox]").count():
                 box = host.locator("input[type=checkbox]")
-                if box.is_checked() != (answer == "Yes"):
-                    browser.click(page.locator(f"label[for='{box.get_attribute('id')}']"))
+                label = page.locator(f"label[for='{box.get_attribute('id')}']")
+                if box.is_checked() != (answer == "Yes"):  # an empty label has no box to click
+                    browser.click(label if label.is_visible() else box)
             case FieldType.CHOICE, str() if host.locator("input[type=range]").count():
                 host.locator("input[type=range]").fill(answer)
             case FieldType.TYPEAHEAD, str():
