@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 
 from atsfill.core import browser
-from atsfill.core.results import Field, FieldType, Is
+from atsfill.core.results import Field, FieldType, Is, OptionSet
 from scripts import survey
 from tests import testuser
 
@@ -150,3 +150,14 @@ def test_a_choice_never_shows_a_required_follow_up_without_an_answer(tmp_path):
     ]
     answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
     assert answers == {"w": "Never"}
+
+
+def test_a_parent_takes_the_value_a_required_dependent_lists_set_is_keyed_to(tmp_path):
+    fields = [
+        Field("s", "State", FieldType.CHOICE, True, [testuser.REGION, "Texas"]),
+        Field("u", "School", FieldType.CHOICE, True, option_sets=[
+            OptionSet(Is("s", ["Texas"]), ["Acme University"])
+        ]),
+    ]  # fmt: skip
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
+    assert answers == {"s": "Texas", "u": "Acme University"}
