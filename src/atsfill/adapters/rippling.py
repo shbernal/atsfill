@@ -3,7 +3,7 @@ observes.
 
 The job's apply page (`…/apply`) carries its form in the page data: the standard questions by
 id and type, the employer's question groups, and whether the EEO questionnaire is asked.
-`read_api` fetches the page over HTTP, `read_form` reads the data of the page it opened, and
+`request_read` fetches the page over HTTP, `browser_read` reads the data of the page it opened, and
 both list the fields from it. Each field renders in an element whose `data-testid` is the
 field's id; the résumé is uploaded and parsed as soon as it is attached.
 """
@@ -175,7 +175,7 @@ class Rippling:
         job = _job(url)
         return POSTING.format(board=job[0], job=job[1]) if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if (job := _job(url)) is None:
             return None
         request = urllib.request.Request(
@@ -189,7 +189,7 @@ class Rippling:
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         job = _job(page.url)
         assert job is not None
         apply = APPLY.format(board=job[0], job=job[1])

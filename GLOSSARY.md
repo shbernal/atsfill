@@ -128,7 +128,15 @@ One field's answer against its read-back, ending in a match or a mismatch.
 ## Commands and outcomes
 
 **Read**:
-Listing a form's fields, over HTTP when the adapter can, else from the page.
+Listing a form's fields, by a request read when the adapter has one and it answers, else by a browser read.
+
+**Request read**:
+Listing a form's fields with plain HTTP requests, no browser, from a public API, an undocumented API, hydration data or server-rendered HTML. An adapter has one or not; without one, a read is a browser read.
+_Avoid_: HTTP read, API read, read over HTTP
+
+**Browser read**:
+Listing a form's fields from the form in the browser, once its scripts have rendered it. Every adapter has one; `fill` and `send` always use it.
+_Avoid_: page read, read from the page
 
 **Dry run**:
 A fill followed by a read-back, never a submit. What the `fill` command does.
@@ -261,3 +269,5 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 - "Out of scope" also named a `custom` source and finding postings. As a term it means only what needs the user live.
 - "Company" and "employer" named the same organization. It is the employer. "Company" stays only where it is a hiring system's own word: a field label, a URL path.
 - "User" meant both the person applications are sent for and the person who owns the home, writes the config and answers the send prompt. The second is the home's owner.
+- "Read over HTTP" said nothing, since a browser talks HTTP too, and "API read" was wrong for adapters that parse HTML or hydration data. It is a request read.
+- "Page read" was wrong for the browser read, since a request read can fetch the page too.

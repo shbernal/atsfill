@@ -5,7 +5,7 @@ Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/
 ## Where the form is
 
 - Job pages: `www.careers-page.com/<client>/job/<code>`; the form is on `…/job/<code>/apply`, which atsfill opens. The double-send key is `https://www.careers-page.com/<client>/job/<code>`.
-- The apply page embeds the job's numeric id (`const selectedJobId`) and whether the terms box shows (`const isTCPPRequired`). `GET /api/v1.0/jobs/<id>/application-form/` lists the fields as JSON, with no session or token: `read_api` reads the id from the apply page, then that endpoint.
+- The apply page embeds the job's numeric id (`const selectedJobId`) and whether the terms box shows (`const isTCPPRequired`). `GET /api/v1.0/jobs/<id>/application-form/` an undocumented API, lists the fields as JSON, with no session or token: `request_read` reads the id from the apply page, then that endpoint.
 - An AWS WAF sits in front; a challenge answer (`x-amzn-waf-action: challenge`) is read as `captcha`. It has not shown on a dry run.
 
 ## Reading the form
@@ -33,7 +33,7 @@ Each rendering and on how many of 100 postings from 25 employers (2026-10-20, ov
 | checkbox list (`checkbox`), select2 multiple (`multiple_select_dropdown`) | `multi_choice` | 0, from the template |
 | terms and privacy box | `choice`, `Yes`/`No`, required | 100 |
 
-The options of a select, a radio or a checkbox list are read from the page, labels rather than values (`30 days`, not `30 00:00:00`). `read_api` takes them from the entries' `client_field_answer_choices`, the template's fixed lists (gender, notice period, years of experience, salary frequency) and the lists the page fetches apart (`/api/v1.0/nationalities/`, `languages/`, `clients/<client>/industries/`, `currencies/`), labelled as the page labels them.
+The options of a select, a radio or a checkbox list are read from the page, labels rather than values (`30 days`, not `30 00:00:00`). `request_read` takes them from the entries' `client_field_answer_choices`, the template's fixed lists (gender, notice period, years of experience, salary frequency) and the lists the page fetches apart (`/api/v1.0/nationalities/`, `languages/`, `clients/<client>/industries/`, `currencies/`), labelled as the page labels them.
 
 A salary's currency and frequency selects (`#expected_currency`, `#expected_frequency`, `#current_…`) have no placeholder: unanswered, they send their first option, a currency that depends on the order `currencies/` returns.
 

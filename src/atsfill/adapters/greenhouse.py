@@ -44,7 +44,7 @@ API_TYPES = {
 }
 YES_NO = ["Yes", "No"]
 # Sections the page adds or names its own way, or shows a question of only on another answer
-# (EEOC race after Hispanic/Latino): `read_api` declines a posting with any (ADR 0011).
+# (EEOC race after Hispanic/Latino): `request_read` declines a posting with any (ADR 0011).
 UNMAPPED = ("education", "compliance", "demographic_questions")
 
 # The fields in page order. A select's options are read by opening it, from Python.
@@ -167,7 +167,7 @@ class Greenhouse:
         board, job = _board_job(url) or _board_job(self._embed or "") or ("", url)
         return f"https://job-boards.greenhouse.io/{board}/jobs/{job}"
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         """The fields from the Job Board API, unless the page holds some the API leaves out."""
         found = _board_job(url)
         if found is None:
@@ -177,7 +177,7 @@ class Greenhouse:
         except OSError, ValueError, KeyError, TypeError:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         if self._embed:
             page.goto(self._embed)
         form = page.locator(FORM)

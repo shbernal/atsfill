@@ -22,7 +22,7 @@ from atsfill.core.adapter import (
     ListsShownFields,
     NeedsAccount,
     NotTaken,
-    ReadsOverHttp,
+    ReadsByRequest,
     Refused,
     SignsIn,
     Unsupported,
@@ -196,7 +196,7 @@ def _unfillable(result: Result, answers: dict[str, Answer] | None = None) -> boo
 
 
 def _listed(result: Result, fields: list[Field]) -> None:
-    """Sets the fields `read_form` or `read_api` listed; their conditions must name listed
+    """Sets the fields `browser_read` or `request_read` listed; their conditions must name listed
     fields, never a loop."""
     if faults := conditions.faults(fields):
         raise ValueError("; ".join(faults))
@@ -206,7 +206,7 @@ def _listed(result: Result, fields: list[Field]) -> None:
 def _shown_as_listed(
     page: Page, adapter: Adapter, result: Result, answers: dict[str, Answer]
 ) -> None:
-    """Stops a fill that showed a field `read_form` did not list, or a follow-up whose
+    """Stops a fill that showed a field `browser_read` did not list, or a follow-up whose
     condition the answers leave unmet: that condition was read wrong (ADR 0005)."""
     if not isinstance(adapter, ListsShownFields):
         return
@@ -259,7 +259,7 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
     """Fills and reads back; `ready` when every answer reads back as given."""
     result = _result(adapter, url, user)
     with _stops(result):
-        _listed(result, adapter.read_form(page))
+        _listed(result, adapter.browser_read(page))
         if _unfillable(result, answers):
             return result
         if problems := matching.problems(result.fields, answers):
@@ -275,7 +275,7 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
     return result
 
 
-def _read_page(
+def _browser_read(
     data: Path, user: str, url: str, sessions: Sessions | None, detected: list[str]
 ) -> Result:
     with _opened(data, user, url, sessions, detected) as opened:
@@ -284,7 +284,7 @@ def _read_page(
         page, adapter = opened
         result = _result(adapter, url, user)
         with _stops(result):
-            _listed(result, adapter.read_form(page))
+            _listed(result, adapter.browser_read(page))
             _unfillable(result)
         return result
 
@@ -347,11 +347,12 @@ def read(
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
-    """Lists the form's fields, over HTTP when an adapter can (ADR 0011), else from the page."""
+    """Lists the form's fields by a request read when an adapter has one (ADR 0011), else by a
+    browser read."""
     for adapter in adapters():
-        if not isinstance(adapter, ReadsOverHttp):
+        if not isinstance(adapter, ReadsByRequest):
             continue
-        if (fields := adapter.read_api(url)) is not None:
+        if (fields := adapter.request_read(url)) is not None:
             result = _result(adapter, url, user)
             try:
                 _listed(result, fields)
@@ -360,7 +361,7 @@ def read(
             _unfillable(result)
             return result
     data = paths.data_dir(data_dir)
-    return _in_budget(url, lambda seen: _read_page(data, user, url, sessions, seen))
+    return _in_budget(url, lambda seen: _browser_read(data, user, url, sessions, seen))
 
 
 def fill(

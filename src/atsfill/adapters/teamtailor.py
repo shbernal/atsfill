@@ -198,7 +198,7 @@ class Teamtailor:
         assert match, url
         return f"https://{parts.hostname}/jobs/{match[1]}"
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         """Opens the form's own page, never the overlay nor "Apply with LinkedIn"."""
         parts = urlsplit(page.url)
         job = JOB.search(parts.path)

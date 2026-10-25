@@ -52,10 +52,10 @@ def opened(page) -> tuple[Lever, list]:
     adapter = Lever()
     page.goto(POSTING)
     assert adapter.detect(POSTING, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form_opens_the_application(page):
+def test_browser_read_opens_the_application(page):
     _, fields = opened(page)
     assert page.url == POSTING + "/apply"
     by_id = {f.id: f for f in fields}
@@ -146,7 +146,7 @@ def test_an_unknown_rendering_is_listed_unhandled():
 def test_a_posting_gone(page):
     page.goto("https://jobs.lever.co/acme/00000000-0000-4000-8000-000000000000/apply")
     with pytest.raises(Unsupported, match="posting_gone"):
-        Lever().read_form(page)
+        Lever().browser_read(page)
 
 
 def test_submit_returns_the_thanks_page(page):

@@ -61,10 +61,10 @@ def opened(page, url: str = JOB) -> tuple[Eightfold, list]:
     adapter = Eightfold()
     page.goto(url)
     assert adapter.detect(url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     signature = "I accept the <a href=https://example.com>privacy notice</a>"
@@ -111,7 +111,7 @@ def test_read_form(page):
     assert not any(f.unfillable for f in fields if f.id != "q_signature")
 
 
-def test_read_api_lists_the_same_fields(page):
+def test_request_read_lists_the_same_fields(page):
     _, fields = opened(page)
     shape = lambda fs: [(f.id, f.label, f.type, f.required, f.options) for f in fs]  # noqa: E731
     assert shape(c.field for c in _form(QUESTIONS["data"])) == shape(fields)
@@ -196,13 +196,13 @@ def test_a_question_rendered_by_a_hidden_one_is_left_out(tmp_path):
 def test_an_application_on_another_system(page):
     page.goto(f"{SITE}/careers/job/7654321")
     with pytest.raises(Unsupported, match="external_step: .* acme.wd1.myworkdayjobs.com"):
-        Eightfold().read_form(page)
+        Eightfold().browser_read(page)
 
 
 def test_a_site_that_asks_to_sign_in(page):
     page.goto(f"{SITE}/careers/job/7777777")
     with pytest.raises(Blocked, match="login_required"):
-        Eightfold().read_form(page)
+        Eightfold().browser_read(page)
 
 
 def test_submit_returns_the_api_answer(page):

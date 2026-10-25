@@ -2,8 +2,8 @@
 docs/adapters/breezy.md observes.
 
 Two page engines, an AngularJS one and a React one, render the same markup: named controls
-under `h3` headings, the questionnaire's as `section_<section>_question_<n>`. The fields are
-read from the page. Files upload to Breezy when attached; the rest reaches it on submit.
+under `h3` headings, the questionnaire's as `section_<section>_question_<n>`. Only a browser
+read lists the fields. Files upload to Breezy when attached; the rest reaches it on submit.
 """
 
 import re
@@ -236,7 +236,7 @@ class Breezy:
         match = JOB.match(parts.path)
         return f"https://{parts.hostname}/p/{match[1]}" if match else url
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         if not urlsplit(page.url).path.rstrip("/").endswith("/apply"):
             page.goto(f"{self.posting(page.url)}/apply")
         form = page.locator(FORM)

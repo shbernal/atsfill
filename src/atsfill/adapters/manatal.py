@@ -191,7 +191,7 @@ class Manatal:
     def posting(self, url: str) -> str:
         return _posting(url)
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         """The fields from the endpoint the apply page fetches, its job id from that page."""
         client = urlsplit(url).path.strip("/").split("/")[0]
         try:
@@ -210,7 +210,7 @@ class Manatal:
         except OSError, ValueError, KeyError, TypeError:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         with page.expect_response(
             lambda r: r.request.method == "GET" and "/application-form/" in r.url,
             timeout=LOAD_TIMEOUT_MS,

@@ -48,10 +48,10 @@ def opened(page, url: str = POSTING) -> tuple[Recruitee, list]:
     adapter = Recruitee()
     page.goto(url)
     assert adapter.detect(url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form_opens_the_application(page):
+def test_browser_read_opens_the_application(page):
     _, fields = opened(page)
     assert page.url == POSTING + "/c/new"
     by_id = {f.id: f for f in fields}
@@ -151,7 +151,7 @@ def test_a_custom_domain_is_detected_by_its_page(page):
 def test_a_posting_gone(page):
     page.goto("https://acme.recruitee.com/o/gone")
     with pytest.raises(Unsupported, match="posting_gone"):
-        Recruitee().read_form(page)
+        Recruitee().browser_read(page)
 
 
 def test_submit_returns_the_thanks_panel(page):
@@ -179,6 +179,6 @@ def test_a_video_question_is_out_of_scope(page):
     adapter = Recruitee()
     page.goto(POSTING + "/c/new")
     page.locator("label[for$='111.content-31']").evaluate("l => l.append(' *')")
-    video = next(f for f in adapter.read_form(page) if f.unfillable)
+    video = next(f for f in adapter.browser_read(page) if f.unfillable)
     assert video.required
     assert video.unfillable == f"out_of_scope: {video.id} is a video recorded live"

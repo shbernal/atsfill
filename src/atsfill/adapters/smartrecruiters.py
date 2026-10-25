@@ -2,7 +2,7 @@
 docs/adapters/smartrecruiters.md observes.
 
 The form is two pages: the profile, then the screening questions and consents. The second
-page's questions come from the page's own `__OC_CONTEXT__`, so `read_form` lists them without
+page's questions come from the page's own `__OC_CONTEXT__`, so `browser_read` lists them without
 leaving the first page. Nothing but the resume reaches SmartRecruiters before submit, so the
 read-back is the page: the profile as it stood when `fill` left it, then the second page.
 """
@@ -136,7 +136,7 @@ class SmartRecruiters:
     def posting(self, url: str) -> str:
         return _key(url) or url
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         if not ONECLICK.match(urlsplit(page.url).path):
             link = page.locator(APPLY_LINK).first
             try:
@@ -252,7 +252,7 @@ class SmartRecruiters:
         return fields
 
     def _question_answers(self, question_id: str) -> list[tuple[str, dict[str, Any]]]:
-        """(field id, the question's field) for each field `read_form` listed."""
+        """(field id, the question's field) for each field `browser_read` listed."""
         entries = self._questions[question_id]["fields"]
         ids = [f"{question_id}.{e['id']}" if len(entries) > 1 else question_id for e in entries]
         return [

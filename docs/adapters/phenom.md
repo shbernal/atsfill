@@ -12,7 +12,7 @@ Phenom's apply wizard on employers' careers sites, observed on live postings, la
 
 ## Reading the form
 
-The apply page's HTML assigns `phApp` (`refNum`, `locale`), `phApp.ddo.response.response` (the backing system as `applyATS`, `jobCountry`, `jobData` with the questionnaires' ids and `has…Questionnaire` flags) and `phApp.sessionParams.csrfToken`. The page's scripts' world is out of the adapter's reach in the browser, so the read parses those literals from the HTML, over HTTP (`read_api`) or from the loaded page (`read_form`), and both then read the same way:
+The apply page's HTML assigns `phApp` (`refNum`, `locale`), `phApp.ddo.response.response` (the backing system as `applyATS`, `jobCountry`, `jobData` with the questionnaires' ids and `has…Questionnaire` flags) and `phApp.sessionParams.csrfToken`. The page's scripts' world is out of the adapter's reach in the browser, so both reads parse this hydration data from the HTML, fetched (`request_read`) or from the loaded page (`browser_read`), and both then read the same way:
 
 - The configuration is public on the CDN: `cdn-prod-static.phenompeople.com/CareerConnectResources/<refNum>/<applyATS, lowercased>/external/careersite/singlepage/schema/form_schema.json`, its labels in `bundles/Messages_<locale>.json` and `Messages_default.json` (`{{key}}` in titles and options).
 - `schema` and `uiSchema` describe every step's fields; a top-level property's `uiSchema.nav` names its step, a key of `stepConfig` (or its `stepId` or name). A step whose `stepRules` hold on `phApp` (no secondary questionnaire for the job) is not shown.

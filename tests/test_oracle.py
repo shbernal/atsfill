@@ -42,7 +42,7 @@ def opened(page) -> tuple[Oracle, list]:
     adapter = Oracle()
     page.goto(JOB + "?utm_source=board")
     assert adapter.detect(page.url, page)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_detection_and_posting():
     assert adapter.posting(other_site) == adapter.posting(JOB)
 
 
-def test_read_form(opened):
+def test_browser_read(opened):
     fields = {f.id: f for f in opened[1]}
     assert list(fields) == [
         "email",

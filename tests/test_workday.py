@@ -171,7 +171,7 @@ def opened(page) -> tuple[Workday, list]:
     page.goto(JOB)
     page.evaluate("sessionStorage.clear()")
     adapter = Workday()
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 @pytest.fixture
@@ -272,7 +272,7 @@ def test_the_disclosures_are_read_once_the_pages_before_them_are_saved(opened, p
         adapter.fill(page, ANSWERS | {"resumeAttachments--attachments": resume})
     page.goto(JOB)
     adapter = Workday()
-    fields = adapter.read_form(page)
+    fields = adapter.browser_read(page)
     by_id = {f.id: f for f in fields}
     assert by_id["personalInfoPerson--gender"].options == ["Female", "Male", "Not declared"]
     assert by_id["termsAndConditions--acceptTermsAndAgreements"].required

@@ -63,7 +63,7 @@ def page(tmp_path_factory):
 def opened(page) -> tuple[WelcomeToTheJungle, list]:
     adapter = WelcomeToTheJungle()
     page.goto(JOB)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 @pytest.fixture
@@ -73,7 +73,7 @@ def resume(tmp_path) -> str:
     return str(path)
 
 
-def test_read_form_waits_for_the_account(opened):
+def test_browser_read_waits_for_the_account(opened):
     _, fields = opened
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [

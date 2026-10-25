@@ -14,7 +14,7 @@ One file per decision, numbered in the order they were taken. A decision that ch
 | [0008](0008-side-effects.md) | Side effects declared per adapter |
 | [0009](0009-tests.md) | Hand-made fixture pages, live runs opt-in, a committed Test user |
 | [0010](0010-package-layout.md) | One package: a thin CLI over a core that owns every rule, adapters behind it |
-| [0011](0011-http-read.md) | `read` over HTTP where the system publishes its form, the page otherwise |
+| [0011](0011-request-read.md) | `read` by a request read where the system's form data is reachable without a browser, a browser read otherwise |
 | [0012](0012-systems-registry.md) | A committed registry of hiring systems: kind, share, account, block, verification |
 | [0013](0013-survey-and-adapter-rounds.md) | A survey script, an adapter gate script, and one agent round per system |
 | [0014](0014-out-of-scope.md) | Out of scope is what needs the user live; out of scope, known gap and unhandled told apart at run time |

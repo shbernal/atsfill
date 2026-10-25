@@ -48,10 +48,10 @@ def opened(page, url: str = JOB) -> tuple[HiringThing, list]:
     adapter = HiringThing()
     page.goto(url)
     assert adapter.detect(url, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
@@ -152,7 +152,7 @@ def test_an_option_the_list_does_not_hold(page):
 def test_an_unknown_control_is_unhandled(page):
     adapter, _ = opened(page)
     page.evaluate("() => document.getElementById('user.email').setAttribute('type', 'number')")
-    fields = {f.id: f for f in adapter.read_form(page)}
+    fields = {f.id: f for f in adapter.browser_read(page)}
     assert fields["user.email"].unfillable == "unhandled_rendering: user.email is a number"
 
 

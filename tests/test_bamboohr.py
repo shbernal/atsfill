@@ -65,10 +65,10 @@ def opened(page) -> tuple[BambooHR, list]:
     adapter = BambooHR()
     page.goto(JOB)
     assert adapter.detect(JOB, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
@@ -126,7 +126,7 @@ def test_read_form(page):
     ]
 
 
-def test_read_api_lists_the_same_fields(page):
+def test_request_read_lists_the_same_fields(page):
     _, fields = opened(page)
     shape = lambda fs: [(f.id, f.label, f.type, f.required, f.options) for f in fs]  # noqa: E731
     assert shape(f for f, _ in _form(DETAIL, LISTS, None)) == shape(fields)
@@ -196,7 +196,7 @@ def test_page_dates():
 def test_a_posting_gone(page):
     page.goto("https://acme.bamboohr.com/careers/4321")
     with pytest.raises(Unsupported, match="posting_gone"):
-        BambooHR().read_form(page)
+        BambooHR().browser_read(page)
 
 
 def test_an_unknown_question_type_or_field_is_unhandled():
@@ -215,7 +215,7 @@ def test_a_field_missing_from_the_page_is_unhandled(page):
     page.click("#apply")
     page.wait_for_selector("form #firstName")
     page.evaluate("() => document.querySelector('[name=references]').remove()")
-    fields = {f.id: f for f in BambooHR().read_form(page)}
+    fields = {f.id: f for f in BambooHR().browser_read(page)}
     assert fields["references"].unfillable == "unhandled_rendering: references is not on the page"
 
 

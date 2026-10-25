@@ -11,7 +11,7 @@ Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/
 
 ## Reading the form
 
-The Job Board API answers without a key: `boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true` (EU boards too). Its `questions` give the field names the page uses as input ids, a file's paste-in textarea second (`resume_text`, `cover_letter_text`), and its `location_questions` the location, `candidate-location` on the page beside hidden latitude and longitude. Its other sections do not map to the page for certain, so `read_api` returns `None` on a posting with any of them and `read` falls back to the page:
+The Job Board API answers without a key: `boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true` (EU boards too). Its `questions` give the field names the page uses as input ids, a file's paste-in textarea second (`resume_text`, `cover_letter_text`), and its `location_questions` the location, `candidate-location` on the page beside hidden latitude and longitude. Its other sections do not map to the page for certain, so `request_read` returns `None` on a posting with any of them and `read` falls back to the browser read:
 
 - `education` and `data_compliance` consents: the page adds education rows (`school--0`, …) and consent boxes the API does not list;
 - `compliance` (US EEOC): the page shows race only once Hispanic/Latino is answered No;

@@ -50,10 +50,10 @@ def opened(page, url: str = JOB) -> tuple[Personio, list]:
     adapter = Personio()
     page.goto(url)
     assert adapter.detect(url, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
-def test_read_form(page):
+def test_browser_read(page):
     _, fields = opened(page)
     assert page.url == f"{JOB}/apply"  # the job page's form is on its apply page
     by_id = {f.id: f for f in fields}
@@ -88,7 +88,7 @@ def test_read_form(page):
     assert ".pdf" in (by_id["documents.cv"].accept or [])
 
 
-def test_read_api_lists_the_same_fields(page, monkeypatch):
+def test_request_read_lists_the_same_fields(page, monkeypatch):
     _, fields = opened(page)
     fetched = []
 
@@ -101,7 +101,7 @@ def test_read_api_lists_the_same_fields(page, monkeypatch):
         return Response(HTML.encode())
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
-    assert Personio().read_api(f"{JOB}?language=de&utm_source=x") == fields
+    assert Personio().request_read(f"{JOB}?language=de&utm_source=x") == fields
     assert fetched == [f"{JOB}/apply?language=de"]
 
 

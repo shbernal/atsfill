@@ -19,7 +19,7 @@ from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "jobs.ashbyhq.com"
 GRAPHQL = f"https://{HOST}/api/non-user-graphql?op=ApiJobPosting"
-# The fields of the page's own ApiJobPosting query that `read_form` uses.
+# The fields of the page's own ApiJobPosting query that `browser_read` uses.
 JOB_POSTING = """query ApiJobPosting($org: String!, $job: String!) {
   jobPosting(organizationHostedJobsPageName: $org, jobPostingId: $job) {
     applicationForm { ...Form }
@@ -78,7 +78,7 @@ class Ashby:
 
     def __init__(self) -> None:
         self._forms: list[dict[str, Any]] = []  # the application form, then each survey
-        self._pending: set[Any] = set()  # GraphQL requests in flight, since `read_form`
+        self._pending: set[Any] = set()  # GraphQL requests in flight, since `browser_read`
         self._last_change = 0.0
         self._hosted: str | None = None  # the jobs.ashbyhq.com posting a custom domain embeds
 
@@ -100,7 +100,7 @@ class Ashby:
     def posting(self, url: str) -> str:
         return _hosted(url) if urlsplit(url).hostname == HOST else self._hosted or url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         """The fields from the GraphQL query the job page itself sends, for a hosted URL."""
         if urlsplit(url).hostname != HOST:
             return None
@@ -125,7 +125,7 @@ class Ashby:
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         page.on("request", self._on_request)
         page.on("requestfinished", self._on_finished)
         page.on("requestfailed", self._on_finished)

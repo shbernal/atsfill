@@ -253,7 +253,7 @@ class Workday:
             consent.check()
         _submit(page, "createAccountSubmitButton", email, password)
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         """Walks the wizard as far as its pages save with what they hold, reading each page
         it reaches: from the page, else My Experience from the apply flow's sections and the
         questions from the questionnaires, which also stand for those pages when they are not

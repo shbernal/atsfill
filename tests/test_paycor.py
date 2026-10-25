@@ -73,7 +73,7 @@ def opened(page, gone: bool = False) -> tuple[Paycor, list]:
     adapter = Paycor()
     assert adapter.detect(JOB, None)
     page.goto(JOB)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 @pytest.fixture
@@ -92,7 +92,7 @@ def test_detection_and_posting():
     assert not adapter.detect(framed, None)
 
 
-def test_read_form_lists_each_rendering(page):
+def test_browser_read_lists_each_rendering(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [

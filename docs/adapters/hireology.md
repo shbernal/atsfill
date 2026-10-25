@@ -5,7 +5,7 @@ Hireology's careers sites, observed on live postings, last on 2026-10-20. The fi
 ## Where the form is
 
 - Every employer is on `careers.hireology.com`. A job is `/<careers site>/<job id>/description`; the same job can be listed under a parent's and a location's careers site, so the double-send key is the form API URL, by job id.
-- The job page renders the form below the description, from `api.hireology.com/v2/public/application_forms/<job id>`: a public API, no session, listing the template's sections, fieldsets and fields with each one's type, `required`, `maxlength`, options and, for a custom question or the work authorisation question, its label. `read_api` fetches it over HTTP, `read_form` from inside the page as the page does, and both list the fields from it: parity holds by construction.
+- The job page renders the form below the description, from `api.hireology.com/v2/public/application_forms/<job id>`: a public API, no session, listing the template's sections, fieldsets and fields with each one's type, `required`, `maxlength`, options and, for a custom question or the work authorisation question, its label. `request_read` fetches it with a request, `browser_read` from the browser as the page does, and both list the fields from it: parity holds by construction.
 - Apply Now only scrolls to the form. A closed posting has no form.
 - Nothing reaches Hireology before Submit: an attached file stays in the page.
 

@@ -2,8 +2,8 @@
 docs/adapters/paylocity.md observes.
 
 The apply page carries the whole form's configuration in `window.pageData`: the sections and
-their fields, the screener questions and the option lists. `read_api` fetches it over HTTP,
-`read_form` takes it from the page, and both list the fields from it. The form is one page or
+their fields, the screener questions and the option lists. `request_read` fetches it over HTTP,
+`browser_read` takes it from the page, and both list the fields from it. The form is one page or
 a wizard of steps that render one at a time, so `fill` keeps each step's read-back before
 moving on; nothing reaches the employer before Submit.
 """
@@ -326,7 +326,7 @@ class Paylocity:
         job = _job(url)
         return f"https://{HOST}/Recruiting/Jobs/Details/{job}" if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if (job := _job(url)) is None:
             return None
         request = urllib.request.Request(APPLY + job, headers={"User-Agent": "atsfill"})
@@ -337,7 +337,7 @@ class Paylocity:
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         job = _job(page.url)
         if job and "/apply/" not in page.url.lower():
             page.goto(APPLY + job)

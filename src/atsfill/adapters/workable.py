@@ -2,7 +2,7 @@
 docs/adapters/workable.md observes.
 
 Every field sits under an element whose `data-ui` is its id in Workable's form API, which
-`read_api` reads. Nothing but an attached file reaches Workable before submit, so the
+`request_read` reads. Nothing but an attached file reaches Workable before submit, so the
 read-back is the page.
 """
 
@@ -159,7 +159,7 @@ class Workable:
     def posting(self, url: str) -> str:
         return f"https://apply.workable.com/j/{_code(url) or url}"
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         """The fields from the form API the page itself loads, unless it has a type it does not
         know."""
         code = _code(url)
@@ -174,7 +174,7 @@ class Workable:
         except OSError, ValueError, KeyError, TypeError:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         if "/apply" not in urlsplit(page.url).path:
             page.goto(f"{self.posting(page.url)}/apply/")
         form = page.locator(FORM)

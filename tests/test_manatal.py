@@ -57,7 +57,7 @@ def opened(page, form: list[dict] = FORM) -> tuple[Manatal, list]:
     adapter = Manatal()
     page.goto(JOB)
     assert adapter.detect(JOB, None)
-    return adapter, adapter.read_form(page)
+    return adapter, adapter.browser_read(page)
 
 
 def test_detect_and_posting():
@@ -67,7 +67,7 @@ def test_detect_and_posting():
     assert not adapter.detect("https://www.careers-page.com/acme", None)
 
 
-def test_read_form_lists_each_rendering(page):
+def test_browser_read_lists_each_rendering(page):
     _, fields = opened(page)
     by_id = {f.id: f for f in fields}
     ids = [str(i) for i in range(1, 23)]
@@ -111,7 +111,7 @@ def test_read_form_lists_each_rendering(page):
     assert by_id["terms_and_condition"].required
 
 
-def test_read_api_lists_the_same_fields(page, monkeypatch):
+def test_request_read_lists_the_same_fields(page, monkeypatch):
     adapter, fields = opened(page)
     html = (PAGES / "apply.html").read_bytes()
 
@@ -139,7 +139,7 @@ def test_read_api_lists_the_same_fields(page, monkeypatch):
         return Body(html)
 
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
-    over_http = adapter.read_api(JOB)
+    over_http = adapter.request_read(JOB)
     shape = lambda fs: [(f.id, f.type, f.required, f.options) for f in fs]  # noqa: E731
     assert over_http is not None and shape(over_http) == shape(fields)
 

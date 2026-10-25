@@ -106,7 +106,7 @@ class WelcomeToTheJungle:
         _account_form(page, "sign-up-form", values, "/registrations")
         raise Blocked("email_link: the sign-up sent a confirmation link")
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         """Opens the apply modal; a job that applies on another site has no form here."""
         if not JOB.match(urlsplit(page.url).path):
             raise RuntimeError(f"{page.url} is not a Welcome to the Jungle job")

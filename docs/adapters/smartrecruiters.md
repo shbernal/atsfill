@@ -6,7 +6,7 @@ Observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/
 
 - Job pages: `jobs.smartrecruiters.com/<employer>/<job id>-<slug>`. Their "I'm interested" link opens the One Click form, `jobs.smartrecruiters.com/oneclick-ui/company/<employer>/publication/<uuid>` (also served on `www.smartr.me`), which atsfill follows. The double-send key is `https://jobs.smartrecruiters.com/<employer>/<job id>`, or the form's URL when that is what was given.
 - A job page with no One Click link is read as `posting_gone`.
-- The form's host answers 403 (Cloudflare) to anything but a browser, so there is no `read_api`. The public Posting API (`api.smartrecruiters.com/v1/companies/<employer>/postings/<id>`) answers but carries no questions.
+- The form's host answers 403 (Cloudflare) to anything but a browser, so there is no request read. The public Posting API (`api.smartrecruiters.com/v1/companies/<employer>/postings/<id>`) answers but carries no questions.
 - The page loads DataDome's tag; it has not stopped a dry run.
 - OneTrust's cookie banner would cover the form; the blocker's lists hide it.
 
@@ -17,7 +17,7 @@ The form is two pages, an Angular app over SAP's Spark web components (`spl-*`, 
 1. **Profile**: name, email twice, city, phone, experience, education, social profiles, resume, a message, then Next.
 2. **Questions** (`…/screening`): the employer's screening questions, then the consents, then Submit.
 
-The profile is read from the page: which of its sections show and which are required varies by posting, and the `/config` endpoint does not say (it lists education where none shows). The questions and consents come from the `window.__OC_CONTEXT__` the page embeds (`screeningConfiguration`, `consent`), read as the script's text since page globals are out of reach, so `read_form` lists both pages without leaving the first. Question ids are SmartRecruiters' question UUIDs; a question with several fields (EEO) gives `<uuid>.<field>`; consents are `consent.<scope>`.
+The profile is read from the page: which of its sections show and which are required varies by posting, and the `/config` endpoint does not say (it lists education where none shows). The questions and consents come from the `window.__OC_CONTEXT__` the page embeds (`screeningConfiguration`, `consent`), read as the script's text since page globals are out of reach, so `browser_read` lists both pages without leaving the first. Question ids are SmartRecruiters' question UUIDs; a question with several fields (EEO) gives `<uuid>.<field>`; consents are `consent.<scope>`.
 
 Each rendering and on how many of 14 postings (2026-10-20):
 

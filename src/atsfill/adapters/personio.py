@@ -2,7 +2,7 @@
 
 The apply page is rendered on the server, its form whole in the HTML: every field is one native
 control named by its id, labelled by a `label[for]` or its group's label, a star marking it
-required. `read_api` fetches that HTML over HTTP, `read_form` takes the page's form, and both
+required. `request_read` fetches that HTML over HTTP, `browser_read` takes the page's form, and both
 list the fields from it with one parser. A document is uploaded to Personio once attached.
 """
 
@@ -72,7 +72,7 @@ class Personio:
         job = _job(url)
         return f"https://{job[0]}.jobs.personio.com/job/{job[1]}" if job else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if _job(url) is None:
             return None
         request = urllib.request.Request(_apply(url), headers={"User-Agent": "atsfill"})
@@ -84,7 +84,7 @@ class Personio:
         form = next((n for n in _parse(html).walk() if n.tag == "form"), None)
         return [f for f, _ in _form(form)] if form else None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         if _job(page.url) and not urlsplit(page.url).path.rstrip("/").endswith("/apply"):
             page.goto(_apply(page.url))
         try:

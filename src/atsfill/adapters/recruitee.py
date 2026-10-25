@@ -143,7 +143,7 @@ class Recruitee:
         match = JOB.match(parts.path)
         return f"https://{parts.hostname}/o/{match[1]}" if match else url
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         if not urlsplit(page.url).path.rstrip("/").endswith("/c/new"):
             page.goto(f"{self.posting(page.url)}/c/new")
         form = page.locator(FORM)

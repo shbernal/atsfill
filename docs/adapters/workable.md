@@ -11,9 +11,9 @@ Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/
 
 ## Reading the form
 
-The form API answers without a key: `apply.workable.com/api/v1/jobs/<shortcode>/form` lists the sections (Personal information, Profile, Details) and their fields, each with its id, type and `required`. `read_api` maps it; it declines a posting with a type it does not know.
+The form API answers without a key: `apply.workable.com/api/v1/jobs/<shortcode>/form` lists the sections (Personal information, Profile, Details) and their fields, each with its id, type and `required`. `request_read` maps it; it declines a posting with a type it does not know.
 
-On the page, every field sits under an element whose `data-ui` is that id, so `read_form` reads the page: each outermost `data-ui` element of a `[data-ui=section-fields]`, by what it holds. Required fields carry a `<strong>*</strong>`, optional ones "(Optional)". Each rendering and on how many of 15 postings (2026-10-20):
+On the page, every field sits under an element whose `data-ui` is that id, so `browser_read` reads the page: each outermost `data-ui` element of a `[data-ui=section-fields]`, by what it holds. Required fields carry a `<strong>*</strong>`, optional ones "(Optional)". Each rendering and on how many of 15 postings (2026-10-20):
 
 | API type | Rendering | Field type | Postings |
 |---|---|---|---|

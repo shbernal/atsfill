@@ -5,7 +5,7 @@ Personio's career sites, observed on live postings, last on 2026-10-22. The fixt
 ## Where the form is
 
 - Every employer is on `<account>.jobs.personio.com` (`.de` serves the same pages). A job is `/job/<id>`, its form `/job/<id>/apply`, which the adapter opens from the job page. The double-send key is the job URL on `.com`.
-- The apply page is rendered on the server with the whole form in its HTML, in the career site's language (a `?language=` in the URL picks another; `Accept-Language` does not). `read_api` fetches that HTML over HTTP, `read_form` takes the page's form, and one parser lists the fields from both: parity holds by construction.
+- The apply page is rendered on the server with the whole form in its HTML, in the career site's language (a `?language=` in the URL picks another; `Accept-Language` does not). `request_read` fetches that server-rendered HTML, `browser_read` takes the page's form, and one parser lists the fields from both: parity holds by construction.
 - The page builds the form from `/api/v1/jobs/<id>/application-form`, a public JSON API with English labels. It answers 429 for a while after some 180 requests in a burst from one address, while the pages keep answering, so the adapter does not use it.
 - A closed posting's apply page has no form.
 - A document is posted to `/api/v1/documents` as soon as it is attached: it reaches Personio before the submit.

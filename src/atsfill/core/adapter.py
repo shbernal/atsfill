@@ -17,7 +17,7 @@ class Unsupported(Exception):
     """What stops the form before any fill: a flow the adapter does not handle, or a fact about
     the posting (`posting_gone`, `external_step`). The message is `code: detail`.
 
-    A field atsfill cannot fill is not raised: `read_form` returns it with `unfillable` set.
+    A field atsfill cannot fill is not raised: `browser_read` returns it with `unfillable` set.
     """
 
 
@@ -68,7 +68,7 @@ class Adapter(Protocol):
         """The posting's key for the double-send guard: every URL of one posting gives the same."""
         ...
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         """Every field, one atsfill cannot fill included with its reason in `unfillable`."""
         ...
 
@@ -137,19 +137,19 @@ class CreatesAccount(SignsIn, Protocol):
 
 
 @runtime_checkable
-class ReadsOverHttp(Adapter, Protocol):
-    """An adapter that can list a form's fields over HTTP, without a browser (ADR 0011)."""
+class ReadsByRequest(Adapter, Protocol):
+    """An adapter with a request read: a form's fields listed without a browser (ADR 0011)."""
 
-    def read_api(self, url: str) -> list[Field] | None:
-        """The same fields as `read_form`; None when it cannot for this URL."""
+    def request_read(self, url: str) -> list[Field] | None:
+        """The same fields as `browser_read`; None when it cannot for this URL."""
         ...
 
 
 @runtime_checkable
 class ListsShownFields(Adapter, Protocol):
     """An adapter whose form can show fields after an answer: once filled, it says which the
-    page shows, so that one `read_form` did not list stops the fill (ADR 0005)."""
+    page shows, so that one `browser_read` did not list stops the fill (ADR 0005)."""
 
     def shown_fields(self, page: Page) -> list[str]:
-        """The ids of the fields the filled page shows, each as `read_form` would name it."""
+        """The ids of the fields the filled page shows, each as `browser_read` would name it."""
         ...

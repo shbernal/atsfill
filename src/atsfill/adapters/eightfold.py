@@ -3,7 +3,7 @@ the employer's own domain), as docs/adapters/eightfold.md observes.
 
 A posting's apply page (`/careers/apply?pid=<pid>`) renders its form from a questions API:
 sections of questions by id, type, requirement and options, and the questions whose answer
-shows each follow-up. `read_api` fetches it over HTTP, `read_form` through the page's browser
+shows each follow-up. `request_read` fetches it over HTTP, `browser_read` through the page's browser
 context, and both list the fields from it. Each question renders as a control whose element id
 is its section's title and its id, with every other character an underscore.
 """
@@ -162,7 +162,7 @@ class Eightfold:
         parts, pid = urlsplit(url), _pid(url)
         return f"https://{parts.hostname}/careers/job/{pid}" if pid else url
 
-    def read_api(self, url: str) -> list[Field] | None:
+    def request_read(self, url: str) -> list[Field] | None:
         if (pid := _pid(url)) is None:
             return None
         try:
@@ -185,7 +185,7 @@ class Eightfold:
         except OSError, ValueError, KeyError, TypeError, Unsupported, Blocked:
             return None
 
-    def read_form(self, page: Page) -> list[Field]:
+    def browser_read(self, page: Page) -> list[Field]:
         pid = _pid(page.url)
         if pid is None:
             raise Unsupported(f"posting_gone: {page.url} is not a job page")
