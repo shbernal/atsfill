@@ -105,7 +105,7 @@ def test_browser_read(opened):
     assert fields["question:108"].label == "À partir de quand ?"
     assert fields["question:108"].shown_when == Is("question:101", ["Oui"])
     assert fields["question:108"].required  # once shown
-    assert fields["question:105"].options == ["Samedi", "Dimanche"]
+    assert fields["question:105"].options == ["Samedi", "Jour d'astreinte"]
     assert fields["question:106"].options == [str(n) for n in range(11)]
 
 
@@ -168,7 +168,7 @@ def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume, tm
         "question:101": "Oui",
         "question:108": "Lundi",
         "question:102": "Site carrière",
-        "question:105": ["Samedi", "Dimanche"],
+        "question:105": ["Samedi", "Jour d'astreinte"],
         "question:106": "7",
         "question:103": ["Français", "Anglais"],
         "question:104": "2026-11-02",

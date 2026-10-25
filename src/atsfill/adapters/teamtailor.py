@@ -373,7 +373,11 @@ def _pick(question: Locator, value: str) -> None:
     trigger = question.locator("button[aria-haspopup]").first
     if trigger.get_attribute("aria-expanded") != "true":
         browser.click(trigger)
-    browser.click(question.locator(f"[role^=menuitem][data-search-text='{value}']").first)
+    items = question.locator("[role^=menuitem]")
+    for item in items.all():  # the text may hold a quote, which a selector would have to escape
+        if item.get_attribute("data-search-text") == value:
+            browser.click(item)
+            return
 
 
 def _is_question(node: Node) -> bool:
