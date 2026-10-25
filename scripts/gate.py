@@ -14,6 +14,7 @@ requires. A survey row counts when its commit's code is the current commit's.
 """
 
 import argparse
+import contextlib
 import functools
 import hashlib
 import json
@@ -21,6 +22,7 @@ import re
 import subprocess
 import sys
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import date
 from importlib.metadata import version
@@ -35,6 +37,7 @@ ROOT = Path(__file__).parents[1]
 REGISTRY = ROOT / "src/atsfill/registry.toml"
 GENERATED = [REGISTRY, ROOT / "docs/adapters/README.md", ROOT / "README.md"]
 EMPLOYERS = 5
+OPEN_TIMEOUT_MS = 30_000  # an employer's page, opened to find a form embedded in it
 # A skipped posting (ADR 0013): a fact about the posting or out of scope, not the adapter's job
 SKIPPED = ("posting_gone", "external_step", "out_of_scope")
 # The system's tests and the ones every adapter meets; the whole suite is CI's
@@ -89,6 +92,25 @@ def parity(adapter: ReadsByRequest, url: str, data: Path) -> str | None:
     if diff := shape(by_request) ^ shape(in_browser):
         return "differ on " + ", ".join(sorted(f[0] for f in diff))
     return None
+
+
+def claims(name: str, page: browser.Page | None) -> Callable[[str], bool]:
+    """Whether a posting is the adapter `name`'s: by its URL, or, given a page, once that page
+    is open, for a form embedded on an employer's site whose URL another adapter does not
+    claim."""
+
+    def keep(url: str) -> bool:
+        by_url = next((a for a in adapters() if a.detect(url, None)), None)
+        if by_url is not None or page is None:
+            return by_url is not None and by_url.name == name
+        try:
+            page.goto(url, timeout=OPEN_TIMEOUT_MS)
+        except browser.BrowserError:  # a timeout, an address that does not resolve
+            return False
+        adapter = next(a for a in adapters() if a.name == name)
+        return adapter.detect(page.url, page) or adapter.detect(url, page)
+
+    return keep
 
 
 def stops(counted: list[dict]) -> list[str]:
@@ -193,9 +215,11 @@ def main() -> None:
             if survey.employer(r)
         }
         if args.fresh:
-            postings = survey.freehire(
-                source.name, args.employers, lambda u: adapter.detect(u, None), sample
-            )
+            with contextlib.ExitStack() as stack:
+                page = None  # an embedded form is known only by its page: one browser for all
+                if "embedded" in source.hosting:
+                    page = stack.enter_context(browser.open_page(paths.data_dir(args.data_dir)))
+                postings = survey.freehire(source.name, args.employers, claims(name, page), sample)
             survey.run(postings, source.name, args.data_dir, echo=False, out=f"gate-{source.name}")
         counted = [
             r
