@@ -1,6 +1,6 @@
 # Recruitee
 
-Observed on live postings, last on 2026-10-21. The fixture page is [tests/pages/recruitee/apply.html](../../tests/pages/recruitee/apply.html), served as a posting's application page in `tests/test_recruitee.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/recruitee/apply.html](../../tests/pages/recruitee/apply.html), served as a posting's application page in `tests/test_recruitee.py`.
 
 ## Where the form is
 
@@ -32,7 +32,7 @@ Every field is a named control, and the name is the field's id: `candidate.name`
 
 Out of scope here: a video recorded live (Ziggeo), see ADR 0014.
 
-"Write it here instead" turns the cover letter upload into a textarea; atsfill keeps the upload.
+"Write it here instead" (`[data-cy=cover-letter-switch-button]`) swaps the cover letter upload for `textarea[name=candidate.coverLetter]`, required as the upload was; the button then reads "Clear and upload a cover letter instead". The two are alternatives, `one_of` `candidate.coverLetterFile`: one control at a time, so the page never holds both.
 
 ## Filling
 
@@ -40,6 +40,7 @@ Out of scope here: a video recorded live (Ziggeo), see ADR 0014.
 - The phone is typed after clearing the prefilled code; the country picker follows the number's prefix.
 - Radios and checkboxes are drawn hidden under styled boxes: atsfill finds the option by its label and dispatches a click on the input itself.
 - Files are attached and stay in the page; nothing reaches Recruitee before submit.
+- A cover letter written: the switch is clicked, then the textarea filled.
 
 ## Read-back and submit
 

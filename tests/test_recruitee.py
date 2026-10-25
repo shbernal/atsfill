@@ -62,6 +62,7 @@ def test_read_form_opens_the_application(page):
         "candidate.photo",
         "candidate.cv",
         "candidate.coverLetterFile",
+        "candidate.coverLetter",
         f"{Q}.101.content",
         f"{Q}.102.flag",
         f"{Q}.103.content",
@@ -83,6 +84,12 @@ def test_read_form_opens_the_application(page):
     assert by_id["candidate.cv"].type is FieldType.FILE and by_id["candidate.cv"].required
     assert ".pdf" in (by_id["candidate.cv"].accept or [])
     assert not by_id["candidate.coverLetterFile"].required
+    letter = by_id["candidate.coverLetter"]
+    assert (letter.type, letter.required, letter.one_of) == (
+        FieldType.TEXT,
+        False,
+        "candidate.coverLetterFile",
+    )
     assert by_id[f"{Q}.101.content"].label == "Which best describes your right to work?"
     assert by_id[f"{Q}.101.content"].options == ["Citizen", "I need a permit"]
     assert by_id[f"{Q}.102.flag"].options == ["Yes", "No"]
@@ -125,6 +132,14 @@ def test_every_answer_reads_back(page, resume):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
     assert page.locator(f"[name='{Q}.102.flag']:checked").get_attribute("value") == "false"
+
+
+def test_a_cover_letter_written_replaces_the_upload(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"candidate.coverLetter": "Dear Acme,"}
+    adapter.fill(page, answers)
+    assert matching.check(fields, answers, adapter.read_back(page))[0].match
+    assert not page.locator("[name='candidate.coverLetterFile']").count()
 
 
 def test_a_custom_domain_is_detected_by_its_page(page):

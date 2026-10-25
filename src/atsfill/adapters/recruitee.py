@@ -22,6 +22,8 @@ FORM_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 KEY_DELAY_MS = 20
 YES_NO = ["Yes", "No"]
+LETTER_FILE, LETTER = "candidate.coverLetterFile", "candidate.coverLetter"
+LETTER_SWITCH = "[data-cy=cover-letter-switch-button]"
 EXTENSIONS = {"image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"], "application/pdf": [".pdf"]}
 KINDS = {
     "text": FieldType.TEXT,
@@ -29,6 +31,7 @@ KINDS = {
     "phone": FieldType.PHONE,
     "date": FieldType.DATE,
     "file": FieldType.FILE,
+    "letter": FieldType.TEXT,
     "radio": FieldType.CHOICE,
     "legal": FieldType.CHOICE,
     "checkboxes": FieldType.MULTI_CHOICE,
@@ -36,8 +39,9 @@ KINDS = {
 
 # The fields in page order, one per control name: its question's label, and how it renders. A
 # labelled question without a named control (a video recorder, drawn late) comes as kind
-# `video`; one without a label is text only.
-_READ = """form => {
+# `video`; one without a label is text only. A cover letter upload the switch turns into a
+# textarea is followed by that textarea, its alternative.
+_READ = """(form, [letterFile, letter, letterSwitch]) => {
   const text = el => {
     if (!el) return "";
     const copy = el.cloneNode(true);
@@ -84,7 +88,16 @@ _READ = """form => {
     if (el.type === "radio" || el.type === "checkbox" && field.kind === "checkboxes")
       field.options.push(text(form.querySelector(`label[for="${el.id}"]`)) || el.value);
   }
-  return [...found.values()];
+  const out = [];
+  for (const field of found.values()) {
+    out.push(field);
+    if (field.id === letterFile && form.querySelector(letterSwitch)) {
+      field.oneOf = letterFile;
+      out.push({id: letter, kind: "letter", label: field.label, required: field.required,
+                options: [], accept: null, maxLength: null, oneOf: letterFile});
+    }
+  }
+  return out;
 }"""
 
 # What each field shows: a choice its checked option's text, a file its attached name.
@@ -139,7 +152,7 @@ class Recruitee:
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
         fields, self._kinds = [], {}
-        for raw in form.evaluate(_READ):
+        for raw in form.evaluate(_READ, [LETTER_FILE, LETTER, LETTER_SWITCH]):
             fields.append(_field(raw))
             if raw["kind"] != "video":
                 self._kinds[raw["id"]] = raw["kind"]
@@ -158,6 +171,10 @@ class Recruitee:
                             _set(option, True)
                 case "legal":
                     _set(controls.first, answer == "Yes")
+                case "letter":  # the switch swaps the upload for the textarea
+                    if not controls.count():
+                        browser.click(page.locator(f"{FORM} {LETTER_SWITCH}"))
+                    controls.first.fill(values[0])
                 case "phone":  # the country picker follows the number's own prefix
                     controls.first.fill("")
                     controls.first.press_sequentially(values[0], delay=KEY_DELAY_MS)
@@ -196,7 +213,14 @@ def _field(raw: dict[str, Any]) -> Field:
     if raw["accept"]:
         accept = [e for a in raw["accept"] for e in EXTENSIONS.get(a, [])] or None
     return Field(
-        raw["id"], label, KINDS[kind], raw["required"], options, raw.get("maxLength"), accept
+        raw["id"],
+        label,
+        KINDS[kind],
+        raw["required"],
+        options,
+        raw.get("maxLength"),
+        accept,
+        one_of=raw.get("oneOf"),
     )
 
 

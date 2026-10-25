@@ -33,7 +33,7 @@
   <div role="presentation" class="box"><input type="file" accept="application/msword, application/pdf, image/png, image/jpeg" required="" name="candidate.cv" id="input-candidate.cv-11" data-cy="fileInputField"><div aria-hidden="true"><span>Upload a file</span> or drag and drop here</div></div>
 </section>
 <section><label for="input-candidate.coverLetterFile-17">Cover letter</label>
-  <div role="presentation" class="box"><input type="file" accept="application/msword, application/pdf" name="candidate.coverLetterFile" id="input-candidate.coverLetterFile-17" data-cy="candidate.coverLetterFile"></div>
+  <div role="presentation" class="box"><input type="file" accept="application/msword, application/pdf" name="candidate.coverLetterFile" id="input-candidate.coverLetterFile-17" data-cy="candidate.coverLetterFile"><div aria-hidden="true"><span>Upload a file</span> or drag and drop here</div></div>
   <button type="button" data-cy="cover-letter-switch-button">Write it here instead</button>
 </section>
 <section data-testid="segment-open-questions"><fieldset><legend>Questions</legend><p>Please fill in additional questions</p>
@@ -101,6 +101,12 @@
 <script>
   // The career site posts the form, then shows the thanks panel, or the already-applied one
   // for a known address.
+  // "Write it here instead" swaps the cover letter upload for a textarea.
+  document.querySelector("[data-cy=cover-letter-switch-button]").addEventListener("click", e => {
+    e.target.parentElement.querySelector(".box").outerHTML =
+      '<textarea data-cy="candidate.coverLetterText" id="input-candidate.coverLetter-17" rows="6" name="candidate.coverLetter"></textarea>';
+    e.target.textContent = "Clear and upload a cover letter instead";
+  });
   document.getElementById("offer-application-form").addEventListener("submit", e => {
     e.preventDefault();
     const known = e.target.elements["candidate.email"].value === "known@example.com";
