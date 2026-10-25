@@ -7,13 +7,15 @@ to `ApplyJob.action` on Submit. `browser_read` walks those pages to the form, `f
 again with the answers.
 """
 
+import json
 import re
+from dataclasses import replace
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
 from atsfill.core.browser import Page
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, OptionSet, SideEffect
 
 HOST = "recruitingbypaycor.com"
 CAREER = f"https://{HOST}/career/"
@@ -120,6 +122,20 @@ _HIDDEN = """name => {
 }"""
 
 
+# Each country select with its state select, and the page scripts' text, which holds every
+# country's state list (`var ca_country_states = [...]`).
+_COUNTRIES = """() => ({
+  countries: [...document.querySelectorAll('#gnewtonForm select[data-state-id]')].map(c => ({
+    name: c.name,
+    state: document.getElementById(c.dataset.stateId)?.name,
+    options: [...c.options].filter(o => o.value)
+      .map(o => [o.value, o.textContent.replace(/\\s+/g, ' ').trim()]),
+  })),
+  scripts: [...document.scripts].map(s => s.textContent).join('\\n'),
+})"""
+STATE_LIST = re.compile(r"var (\w+)_country_states\s*=\s*(\[[^\]]*\])")
+
+
 def _ids(url: str) -> tuple[str, str] | None:
     """The client and job ids of a Paycor career URL, or of an employer page opening it."""
     query = parse_qs(urlsplit(url).query)
@@ -136,6 +152,36 @@ def _field(control: dict[str, Any]) -> Field:
         return Field(fid, label, FieldType.TEXT, control["required"], unfillable=reason)
     label += " (a number)" if kind == "number" else ""
     return Field(fid, label, KINDS[kind], control["required"], control["options"], control["max"])
+
+
+def _dependent(controls: list[tuple[Field, str]], page: dict[str, Any]) -> list[tuple[Field, str]]:
+    """A state select under its country: the page's list for each country that has one, none
+    for any other, where the page disables the state and drops its `required`. Unanswered, the
+    country leaves the list the page starts with."""
+    lists = {
+        code: [s if isinstance(s, str) else s.get("value", "") for s in json.loads(names)]
+        for code, names in STATE_LIST.findall(page["scripts"])
+    }
+    under = {c["state"]: c for c in page["countries"] if c["state"]}
+    out = []
+    for field, kind in controls:
+        if (country := under.get(field.id)) and kind == "select":
+            sets = [OptionSet(Is(country["name"], negated=True), field.options or [])]
+            sets += [
+                OptionSet(Is(country["name"], [text]), lists[code.lower()])
+                for code, text in country["options"]
+                if code.lower() in lists
+            ]
+            having = [text for code, text in country["options"] if code.lower() in lists]
+            field = replace(
+                field,
+                required=False,
+                required_when=Is(country["name"], having) if field.required else None,
+                options=[],
+                option_sets=sets,
+            )
+        out.append((field, kind))
+    return out
 
 
 class Paycor:
@@ -175,6 +221,7 @@ class Paycor:
         self._before, self._codes = [], {}
         self._walk(page, None)
         controls = [(_field(c), c["kind"]) for c in page.evaluate(_CONTROLS)]
+        controls = _dependent(controls, page.evaluate(_COUNTRIES))
         self._controls = [(f, kind) for f, kind in controls if not f.unfillable]
         return [f for f, _ in self._before] + [f for f, _ in controls]
 

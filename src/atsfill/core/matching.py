@@ -13,8 +13,16 @@ def _norm(value: str) -> str:
     return unicodedata.normalize("NFC", value).strip()
 
 
-def _in_options(field: Field, values: list[str]) -> bool:
-    return field.options is None or all(v in field.options for v in values)
+def _options(field: Field, form: Form | None) -> list[str] | None:
+    """The options an answer is one of; without the form, a dependent list's are unknown."""
+    if form is not None:
+        return form.options(field)
+    return None if field.option_sets else field.options
+
+
+def _in_options(field: Field, values: list[str], form: Form | None) -> bool:
+    options = _options(field, form)
+    return options is None or all(v in options for v in values)
 
 
 def _picked_from(answer: str, suggestion: str) -> bool:
@@ -32,14 +40,16 @@ def _absolute_url(value: str) -> bool:
     return parts.scheme in ("http", "https") and bool(parts.netloc)
 
 
-def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
+def matches(
+    field: Field, answer: Answer, read_back: Answer | None, form: Form | None = None
+) -> bool:
     if read_back is None:
         return False
     match field.type:
         case FieldType.MULTI_CHOICE:
             a, r = [answer] if isinstance(answer, str) else answer, read_back
             r = [r] if isinstance(r, str) else r
-            return sorted(a) == sorted(r) and _in_options(field, a)
+            return sorted(a) == sorted(r) and _in_options(field, a, form)
     if not isinstance(answer, str) or not isinstance(read_back, str):
         return False
     match field.type:
@@ -48,7 +58,7 @@ def matches(field: Field, answer: Answer, read_back: Answer | None) -> bool:
         case FieldType.DATE:
             return answer == read_back
         case FieldType.CHOICE:
-            return answer == read_back and _in_options(field, [answer])
+            return answer == read_back and _in_options(field, [answer], form)
         case FieldType.TYPEAHEAD:
             return _picked_from(answer, read_back)
         case FieldType.FILE:
@@ -65,7 +75,7 @@ def check(
     value is a mismatch too, its condition read wrong."""
     by_id, form = {f.id: f for f in fields}, Form(fields, answers)
     checks = [
-        Check(f.id, a, read_back.get(f.id), matches(f, a, read_back.get(f.id)))
+        Check(f.id, a, read_back.get(f.id), matches(f, a, read_back.get(f.id), form))
         for f_id, a in answers.items()
         if (f := by_id.get(f_id))
     ]
@@ -76,7 +86,7 @@ def check(
     ]
 
 
-def _answer_problem(field: Field, answer: object) -> str | None:
+def _answer_problem(field: Field, answer: object, form: Form) -> str | None:
     if field.type is FieldType.MULTI_CHOICE:
         if not (isinstance(answer, list) and all(isinstance(v, str) for v in answer)):
             return "a multi_choice answer is a list of strings"
@@ -85,8 +95,12 @@ def _answer_problem(field: Field, answer: object) -> str | None:
         return f"a {field.type} answer is a string"
     else:
         values = [answer]
-    if field.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE) and not _in_options(field, values):
-        return f"{answer!r} is not one of {field.options}"
+    if field.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE) and not _in_options(
+        field, values, form
+    ):
+        held = form.option_set(field)
+        under = f", the options when {describe(held.when, form.by_id)}" if held else ""
+        return f"{answer!r} is not one of {form.options(field)}{under}"
     length = len(_norm(values[0]))
     if (
         field.type in (FieldType.TEXT, FieldType.URL)
@@ -138,6 +152,8 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
     out += [
         f"{i}: {problem}"
         for i, a in answers.items()
-        if i in by_id and not by_id[i].unfillable and (problem := _answer_problem(by_id[i], a))
+        if i in by_id
+        and not by_id[i].unfillable
+        and (problem := _answer_problem(by_id[i], a, form))
     ]
     return out

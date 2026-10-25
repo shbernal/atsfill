@@ -1,6 +1,6 @@
 """Whether a field shows, and whether it is required, from the answers alone (ADR 0005)."""
 
-from atsfill.core.results import AllOf, Answer, AnyOf, Condition, Field, Is
+from atsfill.core.results import AllOf, Answer, AnyOf, Condition, Field, Is, OptionSet
 
 
 def _parents(condition: Condition) -> list[str]:
@@ -24,16 +24,21 @@ def alternatives(fields: list[Field]) -> dict[str, list[Field]]:
 
 def faults(fields: list[Field]) -> list[str]:
     """What makes the fields' conditions unusable: a field they name that is not listed, a
-    field shown by its own answer through any chain, a group of alternatives with one member or
-    members disagreeing on `required`."""
+    field shown by its own answer through any chain, options that follow their own field, a
+    group of alternatives with one member or members disagreeing on `required`."""
     by_id = {f.id: f for f in fields}
     out = [
         f"{f.id}: its condition names no field {p}"
         for f in fields
-        for c in (f.shown_when, f.required_when)
+        for c in (f.shown_when, f.required_when, *(s.when for s in f.option_sets or []))
         if c
         for p in _parents(c)
         if p not in by_id
+    ]
+    out += [
+        f"{f.id}: its options follow its own answer"
+        for f in fields
+        if any(f.id in _parents(s.when) for s in f.option_sets or [])
     ]
 
     def loops(field_id: str, seen: tuple[str, ...]) -> bool:
@@ -93,6 +98,14 @@ class Form:
             return False
         when = field.required_when
         return field.required or (when is not None and self.holds(when))
+
+    def option_set(self, field: Field) -> OptionSet | None:
+        """The first of a dependent list's sets that holds under the answers."""
+        return next((s for s in field.option_sets or [] if self.holds(s.when)), None)
+
+    def options(self, field: Field) -> list[str] | None:
+        held = self.option_set(field)
+        return field.options if held is None else held.options
 
     def _value(self, field_id: str) -> Answer | None:
         field = self.by_id[field_id]

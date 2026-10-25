@@ -5,7 +5,7 @@ import pytest
 from atsfill.core import attempts
 from atsfill.core.conditions import Form, faults
 from atsfill.core.matching import check, matches, problems
-from atsfill.core.results import AllOf, AnyOf, Field, FieldType, Is, Status
+from atsfill.core.results import AllOf, AnyOf, Field, FieldType, Is, OptionSet, Status
 
 LEVELS = ["Native-level fluency", "Full professional fluency"]
 
@@ -182,4 +182,74 @@ def test_a_group_has_alternatives_agreeing_on_required():
     assert faults([CV]) == ["resume: one alternative, cv"]
     assert faults([CV, replace(CV_TEXT, required=False)]) == [
         "resume: alternatives disagree on required"
+    ]
+
+
+COUNTRY = Field("country", "Country", FieldType.CHOICE, True, ["US", "CA", "FR"])
+STATE = Field(
+    "state",
+    "State",
+    FieldType.CHOICE,
+    True,
+    ["Elsewhere"],
+    option_sets=[
+        OptionSet(Is("country", ["US"]), ["Texas", "Ohio"]),
+        OptionSet(Is("country", ["CA"]), ["Ontario"]),
+        OptionSet(Is("country", ["FR"]), []),
+    ],
+)
+
+
+def test_a_dependent_list_takes_the_options_its_parent_leaves():
+    assert problems([COUNTRY, STATE], {"country": "CA", "state": "Ontario"}) == []
+    assert problems([COUNTRY, STATE], {"country": "CA", "state": "Texas"}) == [
+        "state: 'Texas' is not one of ['Ontario'], the options when \"Country\" is \"CA\""
+    ]
+    optional = replace(COUNTRY, required=False)
+    for country in (replace(optional, prefilled="US"), replace(optional, default="US")):
+        assert problems([country, STATE], {"state": "Texas"}) == []
+        assert problems([country, STATE], {"country": "CA", "state": "Texas"})  # the answer first
+
+
+def test_a_dependent_list_falls_back_to_its_options():
+    other = replace(COUNTRY, options=["US", "CA", "FR", "DE"])
+    assert problems([other, STATE], {"country": "DE", "state": "Elsewhere"}) == []
+    assert problems([other, STATE], {"country": "DE", "state": "Bavaria"}) == [
+        "state: 'Bavaria' is not one of ['Elsewhere']"
+    ]
+    unknown = replace(STATE, options=None)  # left to the read-back
+    assert problems([other, unknown], {"country": "DE", "state": "Bavaria"}) == []
+    checks = check([other, unknown], {"country": "DE", "state": "Bavaria"}, {"state": "Bayern"})
+    assert [c.match for c in checks] == [False, False]
+
+
+def test_an_empty_option_set_refuses_any_answer():
+    assert problems([COUNTRY, STATE], {"country": "FR", "state": "Paris"}) == [
+        'state: \'Paris\' is not one of [], the options when "Country" is "FR"'
+    ]
+
+
+def test_an_option_set_under_two_parents():
+    remote = Field("remote", "Remote?", FieldType.CHOICE, True, ["Yes", "No"])
+    office = Field(
+        "office",
+        "Office",
+        FieldType.CHOICE,
+        True,
+        option_sets=[OptionSet(AllOf([Is("country", ["US"]), Is("remote", ["No"])]), ["Austin"])],
+    )
+    fields = [COUNTRY, remote, office]
+    assert problems(fields, {"country": "US", "remote": "No", "office": "Paris"}) == [
+        "office: 'Paris' is not one of ['Austin'], the options when "
+        '("Country" is "US") and ("Remote?" is "No")'
+    ]
+    assert problems(fields, {"country": "US", "remote": "Yes", "office": "Paris"}) == []
+
+
+def test_option_sets_name_listed_fields_and_not_their_own():
+    stray = replace(STATE, option_sets=[OptionSet(Is("x"), [])])
+    own = replace(STATE, id="own", option_sets=[OptionSet(Is("own"), [])])
+    assert faults([stray, own]) == [
+        "state: its condition names no field x",
+        "own: its options follow its own answer",
     ]

@@ -25,7 +25,17 @@ from urllib.parse import parse_qs, urlsplit
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Locator, Overlaid, Page, Timeout
-from atsfill.core.results import AllOf, Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
+from atsfill.core.results import (
+    AllOf,
+    Answer,
+    AnyOf,
+    Condition,
+    Field,
+    FieldType,
+    Is,
+    OptionSet,
+    SideEffect,
+)
 
 JOB = re.compile(r"^(/[a-z]{2,8}/[a-z]{2})/(job|\w*apply)(?:/|$)")
 APPLY = re.compile(r"^/[a-z]{2,8}/[a-z]{2}/\w*apply$")  # `apply`, `hvhapply` for hourly roles
@@ -648,6 +658,18 @@ class _Config:
                  if isinstance(v, dict) and v.get("htmlType") == "sourceTypeSchema"),
                 None,
             )  # fmt: skip
+            if raw["parent"]:  # the sources under each "how you heard" answer
+                scope = path.rpartition(".")[0]
+                at = f"{scope}.{raw['parent']}" if scope else raw["parent"]
+                raw["option_sets"] = [
+                    OptionSet(Is(at, [self.text(parent.get("title"))]), _unique(
+                        self.text(child.get("key"))
+                        for child in parent.get("child") or []
+                        if child.get("show") is not False
+                    ))
+                    for parent in u.get("data") or []
+                ]  # fmt: skip
+                return None
             return _unique(
                 self.text(child.get("key"))
                 for parent in u.get("data") or []
@@ -672,7 +694,7 @@ class _Config:
             pairs = self.dependent_list(raw, u.get("dependentKey") or parents[0], api)
         elif html == "asyncselect" and api and api.get("payload"):
             pairs = self.loaded_list(u, api)
-        elif table := self.source_table(path.rsplit(".", 1)[-1]):
+        elif table := self.source_table(raw):
             pairs = table
         else:
             values = p.get("enum") or get(p, "items.enum") or []
@@ -685,6 +707,8 @@ class _Config:
         listed = ([v for v, _ in pairs], [t for _, t in pairs])
         self.listed[path] = listed
         self.listed.setdefault(path.rsplit(".", 1)[-1], listed)  # as a workflow names it
+        if raw.get("option_sets"):  # a dependent list's, under its parents' answers before any
+            return None
         return _unique(t for _, t in pairs) or None
 
     def loaded_list(self, u: dict, api: dict) -> list[tuple[Any, str]]:
@@ -723,10 +747,10 @@ class _Config:
 
     def dependent_list(self, raw: dict, parent: str, request: dict) -> list[tuple[Any, str]]:
         """A dependent list's options under its parent's answer before any: the parent's
-        default, else the job's country where the parent lists it, else its first option. The
-        label names that answer."""
-        scope = raw["id"].rpartition(".")[0]  # a parent in the same entry, else at the top
-        at = f"{scope}.{parent}" if f"{scope}.{parent}" in self.labels else parent
+        default, else the job's country where the parent lists it, else its first option. Its
+        one option set is keyed to that answer, and to another parent's where the page holds
+        one; under any other answer its options are unknown, each set costing a request."""
+        at = self.scoped(raw, parent)
         value, shown = self.prefilled(parent)
         values, texts = self.listed.get(at) or self.listed.get(parent) or ([], [])
         country = re.sub(r"\W", "", self.ddo.get("jobCountry") or "").lower()
@@ -744,8 +768,11 @@ class _Config:
         if value is None:
             return []
         payload = request.get("payload") or ""
+        when: list[Condition] = [Is(at, [shown])]
         for name in ANSWER.findall(payload):
-            held = value if name == parent else self.prefilled(name)[0]
+            held, held_shown = (value, shown) if name == parent else self.prefilled(name)
+            if name != parent and held is not None:
+                when.append(Is(self.scoped(raw, name), [held_shown]))
             payload = payload.replace(f"%%formData.{name}%%", str(held or ""))
         data = get(self.call(payload), "applyGetReferences.data")
         if isinstance(data, dict):
@@ -756,40 +783,54 @@ class _Config:
             if isinstance(d, dict)
         ]
         if pairs:
-            raw["label"] += f" (options for {self.labels.get(at, parent)!r} {shown!r})"
+            options = _unique(t for _, t in pairs if t)
+            raw["option_sets"] = [OptionSet(when[0] if len(when) == 1 else AllOf(when), options)]
             raw["parent"] = at
         return pairs
 
-    def source_table(self, name: str) -> list[tuple[Any, str]]:
+    def source_table(self, raw: dict) -> list[tuple[Any, str]]:
         """A list Phenom's applicant-source workflow fills from its own table: the sources,
-        or the sub-sources under every source, in order."""
+        or the sub-sources under every source, in order. A table keyed by the value of the
+        field the workflow follows is a dependent list: one option set per source."""
         for flow in self.config.get("workflow") or []:
             nodes = flow.get("workflows") or []
-            if name not in _targets(nodes):
+            if raw["id"].rsplit(".", 1)[-1] not in _targets(nodes):
                 continue
             for node in nodes:
                 for table in (
                     get(node, "data.config") or [] if node.get("type") == "temp_data" else []
                 ):
                     data = table.get("data") if table.get("key") == "jsonData" else None
-                    rows = (
-                        data
-                        if isinstance(data, list)
-                        else [
-                            row
-                            for rows in (data or {}).values()
-                            if isinstance(rows, list)
-                            for row in rows
+                    groups = data if isinstance(data, dict) else {None: data}
+                    pairs = {
+                        key: [
+                            (r.get("value"), self.text(r.get("display")))
+                            for r in rows
+                            if isinstance(r, dict)
                         ]
-                    )
-                    pairs = [
-                        (r.get("value"), self.text(r.get("display")))
-                        for r in rows
-                        if isinstance(r, dict)
-                    ]
-                    if pairs:
-                        return pairs
+                        for key, rows in groups.items()
+                        if isinstance(rows, list)
+                    }
+                    if not any(pairs.values()):
+                        continue
+                    parent = get(flow, "params.field")
+                    at = parent and self.scoped(raw, parent)
+                    values, texts = self.listed.get(at or "") or ([], [])
+                    shown = dict(zip(map(str, values), texts, strict=False))
+                    if isinstance(data, dict) and shown:
+                        raw["option_sets"] = [
+                            OptionSet(Is(at, [shown[key]]), _unique(t for _, t in rows if t))
+                            for key, rows in pairs.items()
+                            if key in shown
+                        ]
+                        raw["parent"] = at
+                    return [pair for rows in pairs.values() for pair in rows]
         return []
+
+    def scoped(self, raw: dict, name: str) -> str:
+        """A field `raw` names: in the same entry, else at the top."""
+        scope = raw["id"].rpartition(".")[0]
+        return f"{scope}.{name}" if f"{scope}.{name}" in self.labels else name
 
     def prefilled(self, name: str) -> tuple[Any, str]:
         """The answer a list holds before any: the page's value it names, else its default."""
@@ -1133,7 +1174,10 @@ def _field(raw: dict[str, Any]) -> Field:
     if kind == "checkbox":  # an optional box starts clear
         options = YES_NO if raw["required"] else NO_YES
     label = raw["label"] + {"month": MONTH, "year": YEAR}.get(kind, "")
-    field_type = FieldType.TYPEAHEAD if kind == "typeahead" and not options else TYPES[kind]
+    sets = raw.get("option_sets")
+    field_type = (
+        FieldType.TYPEAHEAD if kind == "typeahead" and not options and not sets else TYPES[kind]
+    )
     return Field(
         raw["id"],
         label,
@@ -1145,6 +1189,7 @@ def _field(raw: dict[str, Any]) -> Field:
         default=raw.get("default"),
         shown_when=raw.get("when"),
         required_when=raw.get("required_when"),
+        option_sets=sets,
     )
 
 

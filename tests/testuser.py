@@ -5,6 +5,7 @@ import secrets
 import shutil
 import struct
 import zlib
+from dataclasses import replace
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -197,6 +198,13 @@ def answer(
             return _text(field)
 
 
+def _as_listed(field: Field, form: Form) -> Field:
+    """A dependent list as a plain choice of the options its parents leave."""
+    if not field.option_sets:
+        return field
+    return replace(field, options=form.options(field), option_sets=None)
+
+
 def _showing_most(
     field: Field,
     fields: list[Field],
@@ -206,8 +214,9 @@ def _showing_most(
     video: Path | None,
 ) -> Answer:
     """The choice that shows the most follow-ups, so that the dry run reaches them, never one
-    that shows a required follow-up it has no answer for: among equals the page's own pick,
-    else the usual answer, and always the usual for a sensitive question."""
+    that shows a required follow-up, or leaves a required dependent list, it has no answer
+    for: among equals the page's own pick, else the usual answer, and always the usual for a
+    sensitive question."""
     usual = answer(field, cv, picture, video)
     assert usual is not None
     if SENSITIVE.search(field.label) or not field.options:
@@ -218,10 +227,11 @@ def _showing_most(
     def shows(a: Answer) -> tuple[int, int]:
         form = Form(fields, {**given, field.id: a})
         shown = [f for f in fields if f.shown_when and form.shown(f)]
+        lists = [f for f in fields if f.option_sets and not f.shown_when and form.shown(f)]
         unanswerable = [
             f
-            for f in shown
-            if form.required(f) and (f.unfillable or answer(f, cv, picture) is None)
+            for f in (_as_listed(f, form) for f in shown + lists)
+            if form.required(f) and (f.unfillable or answer(f, cv, picture, video) is None)
         ]
         return -len(unanswerable), len(shown)
 
@@ -239,12 +249,14 @@ def answers(
     out, given, answered = {}, {}, set()
     files = {f.one_of for f in fields if f.type is FieldType.FILE and not f.unfillable}
     for f in fields:
-        if not Form(fields, given).shown(f):
+        form = Form(fields, given)
+        if not form.shown(f):
             continue
         if f.one_of and (
             f.one_of in answered or (f.type is not FieldType.FILE and f.one_of in files)
         ):
             continue
+        f = _as_listed(f, form)  # a dependent list, answered from the options its parents leave
         if f.unfillable or (a := answer(f, cv, picture, video)) is None:
             continue
         if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):

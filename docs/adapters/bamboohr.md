@@ -21,7 +21,7 @@ Each rendering, and in how many of 325 postings' detail answers it shows (2026-1
 | text input for the phone | `phone` | 325 |
 | file: a button over a hidden `input[type=file]`, a hidden `*FileId` input the upload fills, the name shown in `[data-fabric-component=FileUploadList]` once done; a custom `file` question takes several | `file` | 325, 74 cover letter, 39 custom |
 | Fabric select: a button that opens a `role=menu` (`#<data-menu-id>`), over a hidden native `select`: country, education, gender, ethnicity | `choice`, the menu item's text | 300, 69, 38 |
-| state: a Fabric select of full names for the United States, Canada, Australia and the United Kingdom, a text input for any other country; the page refetches it when the country changes | `choice` of every list, the page's country's first | 241 select, 59 text |
+| state: a Fabric select of full names for the United States, Canada, Australia and the United Kingdom, a text input for any other country; the page refetches it when the country changes | a dependent list: `choice` with one option set per country the form lists that has a state list, `options` unknown under any other, typed | 241 select, 59 text |
 | masked date input, its format the employer's (`yyyy-mm-dd`, `mm/dd/yyyy`, `dd/mm/yyyy`, `dd mon yyyy`), read from its placeholder | `date` | 295 |
 | radio group, the input inside its `label`: custom `yes_no`, custom `multi` (option ids as values) | `choice` | 528, 110 questions |
 | a `multi` question's Other: an `other` radio that shows a `<name>_other` text input | `choice` with `Other`, then a `text` `shown_when` it is Other, optional as the page marks it | 36 |
