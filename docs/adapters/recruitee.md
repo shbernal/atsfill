@@ -6,7 +6,7 @@ Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/
 
 - Postings: `<account>.recruitee.com/o/<slug>`, or the same career site on the employer's own domain (`jobs.example.com/o/<slug>`), told apart by the career site's scripts (`/js/PublicApp/…`, `recruiteecdn.com`). The form is `…/o/<slug>/c/new`, which atsfill opens. The double-send key is the posting URL without `/c/new` or query.
 - A posting that is gone answers 404 with no `form#offer-application-form`, read as `posting_gone`.
-- The career site is a React app; no cookie banner was seen. Its offers API (`/api/offers/<slug>`) lists the questions (`open_questions`, `options_cv`, `options_photo`…) and could back a request read; there is none yet.
+- The career site is a React app rendered on the server; no cookie banner was seen. `c/new` comes with the whole form in its HTML, served without a session, so `request_read` fetches it and `browser_read` takes the loaded form's HTML, and one parser lists the fields from both. The request read covers `*.recruitee.com` hosts only, since a custom domain is known only by its page. The offers API (`/api/offers/<slug>`) lists the questions under other ids than the form's, and leaves out the legal agreements and the texting consent.
 
 ## Reading the form
 

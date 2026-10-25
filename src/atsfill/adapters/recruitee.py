@@ -7,23 +7,27 @@ field's id. Nothing reaches Recruitee before submit, so the read-back is the pag
 """
 
 import re
+import urllib.request
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core import browser
+from atsfill.core import browser, html
 from atsfill.core.adapter import Blocked, Gap, Unsupported, out_of_scope
-from atsfill.core.browser import Locator, Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Timeout
+from atsfill.core.html import Node
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 JOB = re.compile(r"^/o/([^/?#]+)")
 CAREER_SITE = "script[src*='/js/PublicApp/'], script[src*='recruiteecdn.com']"
-FORM = "form#offer-application-form"
+FORM_ID = "offer-application-form"
+FORM = f"form#{FORM_ID}"
 FORM_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 KEY_DELAY_MS = 20
 YES_NO = ["Yes", "No"]
 LETTER_FILE, LETTER = "candidate.coverLetterFile", "candidate.coverLetter"
-LETTER_SWITCH = "[data-cy=cover-letter-switch-button]"
+LETTER_SWITCH_CY = "cover-letter-switch-button"
+LETTER_SWITCH = f"[data-cy={LETTER_SWITCH_CY}]"
 EXTENSIONS = {"image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"], "application/pdf": [".pdf"]}
 KINDS = {
     "text": FieldType.TEXT,
@@ -36,69 +40,6 @@ KINDS = {
     "legal": FieldType.CHOICE,
     "checkboxes": FieldType.MULTI_CHOICE,
 }
-
-# The fields in page order, one per control name: its question's label, and how it renders. A
-# labelled question without a named control (a video recorder, drawn late) comes as kind
-# `video`; one without a label is text only. A cover letter upload the switch turns into a
-# textarea is followed by that textarea, its alternative.
-_READ = """(form, [letterFile, letter, letterSwitch]) => {
-  const text = el => {
-    if (!el) return "";
-    const copy = el.cloneNode(true);
-    copy.querySelectorAll("[aria-hidden=true]").forEach(e => e.remove());
-    return copy.textContent.replace(/\\s+/g, " ").trim();
-  };
-  const found = new Map();
-  const controls = form.querySelectorAll(
-    "input[name]:not([type=hidden]), textarea[name], input[name$='.openQuestionId']");
-  for (const el of controls) {
-    if (el.type === "hidden") {
-      const question = el.name.replace(/\\.openQuestionId$/, "");
-      const label = el.parentElement.querySelector("label");
-      if (label && !form.querySelector(
-          `[name^="${CSS.escape(question)}."]:not([type=hidden])`))
-        found.set(question, {id: question, kind: "video", label: text(label),
-                             required: /\\*/.test(label.textContent), options: []});
-      continue;
-    }
-    const name = el.name;
-    let field = found.get(name);
-    if (!field) {
-      const group = el.closest("fieldset");
-      field = {id: name, required: false, options: [], accept: null,
-               maxLength: el.maxLength > 0 ? el.maxLength : null};
-      if (el.type === "radio") field.kind = "radio";
-      else if (el.type === "checkbox" && /\\.(flag|consent)$/.test(name)) {
-        field.kind = "legal";
-        field.label = text(form.querySelector(`[id="${el.getAttribute("aria-labelledby")}"]`));
-      } else if (el.type === "checkbox") field.kind = "checkboxes";
-      else if (el.type === "file") {
-        field.kind = "file";
-        field.accept = el.accept ? el.accept.split(",").map(a => a.trim()) : null;
-      } else if (el.type === "tel") field.kind = "phone";
-      else if (el.type === "date") field.kind = "date";
-      else if (el.type === "number") field.kind = "number";
-      else field.kind = "text";
-      if (field.label === undefined) field.label = ["radio", "checkboxes"].includes(field.kind)
-        ? text(group?.querySelector("legend"))
-        : text(form.querySelector(`label[for="${el.id}"]`)) || el.placeholder;
-      found.set(name, field);
-    }
-    field.required ||= el.required;
-    if (el.type === "radio" || el.type === "checkbox" && field.kind === "checkboxes")
-      field.options.push(text(form.querySelector(`label[for="${el.id}"]`)) || el.value);
-  }
-  const out = [];
-  for (const field of found.values()) {
-    out.push(field);
-    if (field.id === letterFile && form.querySelector(letterSwitch)) {
-      field.oneOf = letterFile;
-      out.push({id: letter, kind: "letter", label: field.label, required: field.required,
-                options: [], accept: null, maxLength: null, oneOf: letterFile});
-    }
-  }
-  return out;
-}"""
 
 # What each field shows: a choice its checked option's text, a file its attached name.
 _READ_BACK = """(form, kinds) => {
@@ -151,8 +92,28 @@ class Recruitee:
             form.wait_for(state="attached", timeout=FORM_TIMEOUT_MS)
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
+        return self._listed(html.parse(form.evaluate("f => f.outerHTML")))
+
+    def request_read(self, url: str) -> list[Field] | None:
+        """The form's own page, server-rendered, on a `*.recruitee.com` host: a custom domain is
+        known only by its page."""
+        parts = urlsplit(url)
+        if not JOB.match(parts.path) or not (parts.hostname or "").endswith(".recruitee.com"):
+            return None
+        request = urllib.request.Request(
+            f"{self.posting(url)}/c/new", headers={"User-Agent": "atsfill"}
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
+                page = html.parse(response.read().decode())
+        except OSError, ValueError:
+            return None
+        form = page.find(lambda n: n.tag == "form" and n.attrs.get("id") == FORM_ID)
+        return self._listed(form) if form else None
+
+    def _listed(self, form: Node) -> list[Field]:
         fields, self._kinds = [], {}
-        for raw in form.evaluate(_READ, [LETTER_FILE, LETTER, LETTER_SWITCH]):
+        for raw in _read(form):
             fields.append(_field(raw))
             if raw["kind"] != "video":
                 self._kinds[raw["id"]] = raw["kind"]
@@ -239,3 +200,103 @@ def _option(page: Page, controls: Locator, value: str) -> Locator | None:
         if " ".join((text or "").split()) == value:
             return control
     return None
+
+
+def _text(node: Node | None) -> str:
+    """A node's text without what it hides from screen readers, its runs of whitespace one
+    space."""
+    if node is None:
+        return ""
+
+    def shown(n: Node) -> str:
+        return "".join(
+            c if isinstance(c, str) else shown(c)
+            for c in n.children
+            if isinstance(c, str) or c.attrs.get("aria-hidden") != "true"
+        )
+
+    return re.sub(r"[\s\ufeff]+", " ", shown(node)).strip()  # as JavaScript's `\s`
+
+
+def _read(form: Node) -> list[dict[str, Any]]:
+    """The fields in page order, one per control name: its question's label, and how it
+    renders. A labelled question without a named control (a video recorder, drawn late) comes as
+    kind `video`; one without a label is text only. A cover letter upload the switch turns into
+    a textarea is followed by that textarea, its alternative."""
+    nodes = form.walk()
+    by_id = {n.attrs["id"]: n for n in nodes if "id" in n.attrs}
+    labels: dict[str, Node] = {}
+    for n in nodes:
+        if n.tag == "label" and "for" in n.attrs:
+            labels.setdefault(n.attrs["for"], n)
+    found: dict[str, dict[str, Any]] = {}
+    for el in nodes:
+        name, kind = el.attrs.get("name"), el.attrs.get("type", "text").lower()
+        if el.tag not in ("input", "textarea") or not name:
+            continue
+        if el.tag == "textarea":
+            kind = "textarea"
+        if kind == "hidden":
+            if not name.endswith(".openQuestionId") or el.parent is None:
+                continue
+            question = name.removesuffix(".openQuestionId")
+            label = el.parent.find(lambda n: n.tag == "label")
+            answered = any(
+                n.attrs.get("name", "").startswith(f"{question}.")
+                and n.attrs.get("type") != "hidden"
+                for n in nodes
+            )
+            if label is not None and not answered:
+                found[question] = {"id": question, "kind": "video", "label": _text(label),
+                                   "required": "*" in label.text(), "options": []}  # fmt: skip
+            continue
+        field = found.get(name)
+        if field is None:
+            max_length = int(el.attrs.get("maxlength") or 0)
+            field: dict[str, Any] = {
+                "id": name,
+                "required": False,
+                "options": [],
+                "accept": None,
+                "maxLength": max_length if max_length > 0 else None,
+            }
+            if kind == "radio":
+                field["kind"] = "radio"
+            elif kind == "checkbox" and re.search(r"\.(flag|consent)$", name):
+                field["kind"] = "legal"
+                field["label"] = _text(by_id.get(el.attrs.get("aria-labelledby", "")))
+            elif kind == "checkbox":
+                field["kind"] = "checkboxes"
+            elif kind == "file":
+                field["kind"] = "file"
+                accept = el.attrs.get("accept")
+                field["accept"] = [a.strip() for a in accept.split(",")] if accept else None
+            else:
+                field["kind"] = {"tel": "phone", "date": "date", "number": "number"}.get(
+                    kind, "text"
+                )
+            if "label" not in field:
+                if field["kind"] in ("radio", "checkboxes"):
+                    group = el.closest(lambda n: n.tag == "fieldset")
+                    field["label"] = _text(
+                        group.find(lambda n: n.tag == "legend") if group else None
+                    )
+                else:
+                    own = labels.get(el.attrs.get("id", ""))
+                    field["label"] = _text(own) or el.attrs.get("placeholder", "")
+            found[name] = field
+        field["required"] = field["required"] or "required" in el.attrs
+        if kind == "radio" or (kind == "checkbox" and field["kind"] == "checkboxes"):
+            field["options"].append(
+                _text(labels.get(el.attrs.get("id", ""))) or el.attrs.get("value", "")
+            )
+    switch = any(n.attrs.get("data-cy") == LETTER_SWITCH_CY for n in nodes)
+    out = []
+    for field in found.values():
+        out.append(field)
+        if field["id"] == LETTER_FILE and switch:
+            field["oneOf"] = LETTER_FILE
+            out.append({"id": LETTER, "kind": "letter", "label": field["label"],
+                        "required": field["required"], "options": [], "accept": None,
+                        "maxLength": None, "oneOf": LETTER_FILE})  # fmt: skip
+    return out
