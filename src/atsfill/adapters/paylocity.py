@@ -264,6 +264,8 @@ SHOWN_WITH = {
     "priorFelony": "priorConviction",
     "priorMisdemeanor": "priorConviction",
     **{f"contactSupervisor{k}": "mayWeContact" for k in ("Name", "Position", "Phone", "Email")},
+    # the address block renders only with its line 1
+    **dict.fromkeys(("country", "address2", "city", "state", "postalCode"), "address"),
 }
 SECTIONS = {
     "info": INFO,
@@ -442,14 +444,14 @@ def _form(data: dict[str, Any]) -> list[tuple[Field, Control]]:
             for field in section["fields"]:
                 if not field["isIncluded"]:
                     continue
+                if SHOWN_WITH.get(field["name"], field["name"]) not in included:
+                    continue
                 specs = (vocabulary or {}).get(field["name"])
                 if field["name"] == "desiredSalary":
                     specs = SALARY.get(custom.get("desiredSalaryInputType"))
                 if specs is None:
                     if entries and field["name"] not in NOT_ANSWERS:
                         out.append(_unfillable(name, field, prefix, n, vocabulary is None))
-                    continue
-                if SHOWN_WITH.get(field["name"], field["name"]) not in included:
                     continue
                 for spec in specs:
                     if entries or not ENTRY.search(spec.dom):  # the section's own fields show
