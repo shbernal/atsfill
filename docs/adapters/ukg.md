@@ -1,0 +1,59 @@
+# UKG
+
+UKG Pro Recruiting's job boards and application form, observed on live postings, last on 2026-10-26. The fixture page is [tests/pages/ukg/apply.html](../../tests/pages/ukg/apply.html), served as an Acme tenant in `tests/test_ukg.py`: the form with one example of each rendering below.
+
+## Where the form is
+
+- A posting is `/<tenant>/JobBoard/<board>/OpportunityDetail?opportunityId=<id>` on `recruiting.ultipro.com`, `recruiting2.ultipro.com`, `recruiting.ultipro.ca` or `<employer>.rec.pro.ukg.net`. The tenant alias shows in either case (`acme1000acme`, `ACME1000ACME`); the double-send key is the detail URL with it in lowercase.
+- Apply goes to `…/Account/Login?redirectUrl=…/OpportunityApply?opportunityId=<id>`, the sign-in; signed in, the form is `…/OpportunityApply?opportunityId=<id>`.
+
+## Account
+
+Applying needs an account, one per tenant: the account scope is the tenant alias. The same address signs up on each tenant separately.
+
+- The sign-in is Auth0's Universal Login on `signin-<region>.ultipro.com` (`signin-us`), with the tenant as an Auth0 organization: `input#username`, `input#password`, and Sign up (`/u/signup`: `input#email`, `input#password`). No tenant sent a verification email or asked for a code.
+- After the sign-up the tenant asks its own details (`/AuthCode/Register`, "Almost there!"): first and last name, a phone number, and on some tenants a privacy policy box and a text-message box. Its inputs are UKG web components that take typed keys only; Create account stays disabled until the required ones are given. atsfill types the name from `--name` and ticks the privacy box, never the text-message one.
+- The phone number there is required on some tenants: that is the `sign_up_phone` known gap, raised before anything is typed. By then the Auth0 identity exists, signed up but with no tenant account: a later sign-in lands on the same step and stops with `unhandled_rendering`.
+- The signed-in check asks for the last posting's form: it loads, where a visitor or an account without its tenant details is redirected to the sign-in or the details step. Without a posting seen, it looks for the tenant host's `.AspNetCore.Cookies` session cookie, which lasts a day.
+- Auth0's error codes name the refusal: `user-exists` (`email_in_use`), wrong credentials (`wrong_password`), a password rule (`password_rule`).
+
+## Reading the form
+
+One page, a Knockout view: Contact Information, the profile sections (Work Experience, Education, Skills, Behaviors, Motivations, Licenses and Certifications, Links: collapsed editors, never required), Documents, Availability, Questions, Submit. The page holds the posting as JSON (`opportunity`: `ApplicationQuestions`, `IsResumeRequired`) and the contact fields' configuration; the read takes the controls the page shows. A field's id is its control's DOM id (`Phone`, `Country`, `ApplicantSource`, `TextResponse3`) or a radio group's name (`employeereferral`, `MultipleChoiceResponse0`), `documents` and `availability_days`.
+
+Each rendering, and how many of the sample's postings showed it:
+
+| Rendering | Field type | Postings |
+|---|---|---|
+| text input, `textarea`: address, city, zip, middle name, availability notes, a Text or Numeric question | `text` | all |
+| the account's name (`FirstName`, `FamilyName`): read-only, the account's value | `text`, `prefilled` | all |
+| `type=tel` (`Phone`, `SecondaryPhone`) | `phone` | all |
+| `select`: title, suffix, country, how did you hear (`ApplicantSource`) | `choice` | all |
+| state (`State`): a `select` shown once a country with states is picked, filled from `…/Candidate/GetStates?countryId=<id>` | `choice`, the states per country in `option_sets` | all |
+| radio group: referred by an employee, a Multiple Choice question | `choice` | all |
+| one checkbox (`WillingToRelocate`) | `choice` `Yes`/`No` | all |
+| date picker (`ukg-input type=date`, month, day and year inputs): when can you start, today by default | `date` | all |
+| day toggles (`[data-automation=day-btn]`) | `multi_choice` | |
+| Documents upload (`form[action*=/Documents/UploadFile]`), required with `IsResumeRequired` | `file` | all |
+
+A read-only field without a value (preferred name, former name) is listed `unsupported_rendering`; atsfill leaves it. The Upload Resume box at the top parses a resume into the profile and is not used.
+
+## Filling
+
+- A select is picked by its option's text; picking the country waits for its states. A radio or the checkbox is clicked to the answer, the date's month, day and year typed in turn, a day toggled when it differs.
+- The document is uploaded to the account's documents (`…/Documents/UploadFile`) and listed by its name once stored.
+
+## Read-back and submit
+
+- The read-back is the page: an input's value, a select's option text, the checked radio's label, the date picker's `value` (`YYYY-MM-DD`), the selected days, the last uploaded document's name.
+- Submit is `[data-automation=btn-submit]`, expected to move to `…/OpportunityApply/ApplicationSubmitted`; a tenant may turn on Cloudflare Turnstile for it (`enable-recruiting-signup-captcha-implementation`). No send was made.
+
+## Development
+
+The Test user's accounts are one per tenant, created by the round (ADR 0013): `atsfill login ukg --user test --url <posting> --create --email <address> --name "<name>"`.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `sign_up_phone` | the tenant's details step after the sign-up requires a phone number, which `login` does not take | `unsupported_flow` | 10 of 17 tenants |
