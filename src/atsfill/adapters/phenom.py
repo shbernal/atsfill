@@ -694,7 +694,7 @@ class _Config:
             pairs = self.dependent_list(raw, u.get("dependentKey") or parents[0], api)
         elif html == "asyncselect" and api and api.get("payload"):
             pairs = self.loaded_list(u, api)
-        elif table := self.source_table(path.rsplit(".", 1)[-1]):
+        elif table := self.source_table(raw):
             pairs = table
         else:
             values = p.get("enum") or get(p, "items.enum") or []
@@ -750,9 +750,7 @@ class _Config:
         default, else the job's country where the parent lists it, else its first option. Its
         one option set is keyed to that answer, and to another parent's where the page holds
         one; under any other answer its options are unknown, each set costing a request."""
-        scope = raw["id"].rpartition(".")[0]  # a parent in the same entry, else at the top
-        scoped = lambda name: f"{scope}.{name}" if f"{scope}.{name}" in self.labels else name  # noqa: E731
-        at = scoped(parent)
+        at = self.scoped(raw, parent)
         value, shown = self.prefilled(parent)
         values, texts = self.listed.get(at) or self.listed.get(parent) or ([], [])
         country = re.sub(r"\W", "", self.ddo.get("jobCountry") or "").lower()
@@ -774,7 +772,7 @@ class _Config:
         for name in ANSWER.findall(payload):
             held, held_shown = (value, shown) if name == parent else self.prefilled(name)
             if name != parent and held is not None:
-                when.append(Is(scoped(name), [held_shown]))
+                when.append(Is(self.scoped(raw, name), [held_shown]))
             payload = payload.replace(f"%%formData.{name}%%", str(held or ""))
         data = get(self.call(payload), "applyGetReferences.data")
         if isinstance(data, dict):
@@ -790,36 +788,49 @@ class _Config:
             raw["parent"] = at
         return pairs
 
-    def source_table(self, name: str) -> list[tuple[Any, str]]:
+    def source_table(self, raw: dict) -> list[tuple[Any, str]]:
         """A list Phenom's applicant-source workflow fills from its own table: the sources,
-        or the sub-sources under every source, in order."""
+        or the sub-sources under every source, in order. A table keyed by the value of the
+        field the workflow follows is a dependent list: one option set per source."""
         for flow in self.config.get("workflow") or []:
             nodes = flow.get("workflows") or []
-            if name not in _targets(nodes):
+            if raw["id"].rsplit(".", 1)[-1] not in _targets(nodes):
                 continue
             for node in nodes:
                 for table in (
                     get(node, "data.config") or [] if node.get("type") == "temp_data" else []
                 ):
                     data = table.get("data") if table.get("key") == "jsonData" else None
-                    rows = (
-                        data
-                        if isinstance(data, list)
-                        else [
-                            row
-                            for rows in (data or {}).values()
-                            if isinstance(rows, list)
-                            for row in rows
+                    groups = data if isinstance(data, dict) else {None: data}
+                    pairs = {
+                        key: [
+                            (r.get("value"), self.text(r.get("display")))
+                            for r in rows
+                            if isinstance(r, dict)
                         ]
-                    )
-                    pairs = [
-                        (r.get("value"), self.text(r.get("display")))
-                        for r in rows
-                        if isinstance(r, dict)
-                    ]
-                    if pairs:
-                        return pairs
+                        for key, rows in groups.items()
+                        if isinstance(rows, list)
+                    }
+                    if not any(pairs.values()):
+                        continue
+                    parent = get(flow, "params.field")
+                    at = parent and self.scoped(raw, parent)
+                    values, texts = self.listed.get(at or "") or ([], [])
+                    shown = dict(zip(map(str, values), texts, strict=False))
+                    if isinstance(data, dict) and shown:
+                        raw["option_sets"] = [
+                            OptionSet(Is(at, [shown[key]]), _unique(t for _, t in rows if t))
+                            for key, rows in pairs.items()
+                            if key in shown
+                        ]
+                        raw["parent"] = at
+                    return [pair for rows in pairs.values() for pair in rows]
         return []
+
+    def scoped(self, raw: dict, name: str) -> str:
+        """A field `raw` names: in the same entry, else at the top."""
+        scope = raw["id"].rpartition(".")[0]
+        return f"{scope}.{name}" if f"{scope}.{name}" in self.labels else name
 
     def prefilled(self, name: str) -> tuple[Any, str]:
         """The answer a list holds before any: the page's value it names, else its default."""

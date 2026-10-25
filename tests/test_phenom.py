@@ -230,6 +230,39 @@ def test_a_list_under_two_parents_keys_its_set_on_both():
     ]
 
 
+def test_a_source_table_keyed_by_source_is_one_option_set_per_source():
+    schema = {
+        "type": "object",
+        "properties": {
+            "source": {"title": "Source", "type": "string", "enum": ["web", "boards"],
+                       "enumNames": ["Our Website", "Job Boards"]},
+            "applicantSource": {"title": "Which one?", "type": "string"},
+        },
+    }  # fmt: skip
+    table = {"web": [{"display": "Acme Careers", "value": "S-1"}],
+             "boards": [{"display": "LinkedIn", "value": "S-2"}],
+             "fairs": [{"display": "Career Fair", "value": "S-3"}]}  # fmt: skip
+    flow = {
+        "events": ["onchange"],
+        "params": {"field": "source"},
+        "workflows": [
+            {"type": "temp_data", "data": {"config": [{"key": "jsonData", "data": table}]}},
+            {"type": "transform",
+             "data": {"config": [{"Path": "#schema.schema.properties.applicantSource"}]}},
+        ],
+    }  # fmt: skip
+    ui = {"source": {"htmlType": "choice"}, "applicantSource": {"htmlType": "choice"}}
+    config = {"schema": schema, "uiSchema": ui, "workflow": [flow]}
+    reader = _Config({"locale": "en_us"}, config, {}, lambda body: {})
+    raw = {r["id"]: r for r in reader.object(schema, ui, "", None, False, None)}
+    field = phenom._field(raw["applicantSource"])
+    assert field.options is None and raw["applicantSource"]["parent"] == "source"
+    assert field.option_sets == [  # a key the source list does not offer is no set
+        OptionSet(Is("source", ["Our Website"]), ["Acme Careers"]),
+        OptionSet(Is("source", ["Job Boards"]), ["LinkedIn"]),
+    ]
+
+
 def test_a_follow_up_its_trigger_hides_has_no_read_back(opened, page, resume):
     adapter, fields = opened
     given = answers(resume) | {"jsqData.Q1.a": "No"}
