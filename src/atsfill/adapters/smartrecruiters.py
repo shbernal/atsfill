@@ -429,6 +429,14 @@ def _inputs(box: Locator, entry: dict[str, Any], question: dict[str, Any]) -> Lo
     return box.locator("input:not([type=checkbox]), textarea").nth(n)
 
 
+def _select(box: Locator, entry: dict[str, Any], question: dict[str, Any]) -> Locator:
+    """The autocomplete of one of the question's selects, which holds its own options: the
+    selects of a group (work shifts, an EEO pair) share option ids."""
+    selects = [e["id"] for e in question["fields"] if e["type"] == "select"]
+    hosts = box.locator("spl-autocomplete, spl-multiselect-autocomplete")
+    return hosts.nth(selects.index(entry["id"]))
+
+
 def _fill_question(
     box: Locator, question: dict[str, Any], entry: dict[str, Any], answer: Answer
 ) -> None:
@@ -448,7 +456,11 @@ def _fill_question(
                     continue
                 target.click()
                 target.press_sequentially(value[:20], delay=KEY_DELAY_MS)
-                option = box.locator(f"spl-select-option[value='{option_id}']").first
+                option = (
+                    _select(box, entry, question)
+                    .locator(f"spl-select-option[value='{option_id}']")
+                    .first
+                )
                 try:
                     option.wait_for(timeout=OPTION_TIMEOUT_MS)
                 except Timeout:

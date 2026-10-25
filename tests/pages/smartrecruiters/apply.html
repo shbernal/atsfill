@@ -34,6 +34,13 @@
                  "values": [{"id": "g-1", "label": "Female"}, {"id": "g-2", "label": "Prefer not to answer"}]},
                 {"id": "ethnicity", "label": "Race/Ethnicity", "type": "select", "required": true, "multipleChoice": false,
                  "values": [{"id": "r-1", "label": "Asian"}, {"id": "r-2", "label": "White"}]}]},
+    {"id": "q-shifts", "type": "work_shifts", "label": "Preferred work shifts?", "required": false,
+     "fields": [{"id": "day", "label": "Day", "type": "select", "required": false, "multipleChoice": false,
+                 "values": [{"id": "0", "label": "Everyday"}, {"id": "1", "label": "Weekends"}]},
+                {"id": "from", "label": "From", "type": "select", "required": false, "multipleChoice": false,
+                 "values": [{"id": "0", "label": "00:00 AM"}, {"id": "1", "label": "01:00 AM"}]},
+                {"id": "to", "label": "To", "type": "select", "required": false, "multipleChoice": false,
+                 "values": [{"id": "0", "label": "00:00 AM"}, {"id": "1", "label": "01:00 AM"}]}]},
     {"id": "q-files", "type": "files", "label": "Additional attachments", "required": false, "fields": []},
     {"id": "q-textarea", "type": "textarea", "label": "Why Acme?", "required": false,
      "fields": [{"id": "value", "label": "Value", "type": "textarea", "required": false, "multipleChoice": false, "values": []}]}],
@@ -95,6 +102,11 @@
       <spl-autocomplete><input type="text" role="combobox"><div class="menu hidden"><spl-select-option value="g-1">Female</spl-select-option><spl-select-option value="g-2">Prefer not to answer</spl-select-option></div></spl-autocomplete>
       <spl-autocomplete><input type="text" role="combobox"><div class="menu hidden"><spl-select-option value="r-1">Asian</spl-select-option><spl-select-option value="r-2">White</spl-select-option></div></spl-autocomplete>
     </sr-question-field-eeo></div>
+    <div data-test="question-container"><sr-question-field-workshifts>
+      <spl-autocomplete id="question_q-shifts-0-day"><input type="text" role="combobox"><div class="menu hidden"><spl-select-option value="0">Everyday</spl-select-option><spl-select-option value="1">Weekends</spl-select-option></div></spl-autocomplete>
+      <spl-autocomplete id="question_q-shifts-0-from"><input type="text" role="combobox"><div class="menu hidden"><spl-select-option value="0">00:00 AM</spl-select-option><spl-select-option value="1">01:00 AM</spl-select-option></div></spl-autocomplete>
+      <spl-autocomplete id="question_q-shifts-0-to"><input type="text" role="combobox"><div class="menu hidden"><spl-select-option value="0">00:00 AM</spl-select-option><spl-select-option value="1">01:00 AM</spl-select-option></div></spl-autocomplete>
+    </sr-question-field-workshifts></div>
     <div data-test="question-container"><sr-question-field-files><spl-dropzone><input type="file"></spl-dropzone></sr-question-field-files></div>
     <div data-test="question-container"><sr-question-field-textarea><spl-textarea id="question_q-textarea"><textarea id="question_q-textarea"></textarea></spl-textarea></sr-question-field-textarea></div>
   </template></sr-screening-questions-form>
@@ -138,6 +150,9 @@ for (const host of root.querySelectorAll("spl-autocomplete, spl-multiselect-auto
   const input = host.querySelector("input"), menu = host.querySelector(".menu");
   const multi = host.tagName === "SPL-MULTISELECT-AUTOCOMPLETE";
   input.addEventListener("focus", () => menu.classList.remove("hidden"));
+  input.addEventListener("keydown", e => {  // closed with no pick, the select drops its search
+    if (e.key === "Escape" && !multi) input.value = host.dataset.picked || "";
+  });
   for (const option of host.querySelectorAll("spl-select-option")) {
     option.addEventListener("click", () => {
       menu.classList.add("hidden");
@@ -146,7 +161,7 @@ for (const host of root.querySelectorAll("spl-autocomplete, spl-multiselect-auto
         host.setAttribute("value", [...picked, option.getAttribute("value")].join(","));
         input.value = "";
       } else {
-        input.value = option.textContent;
+        input.value = host.dataset.picked = option.textContent;
       }
       if (host.id === "question_q-select") {  // a conditional question has no container until asked
         if (option.getAttribute("value") === "o-yes") host.closest("[data-test]").after(conditional);
