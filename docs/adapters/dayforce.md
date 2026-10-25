@@ -50,7 +50,7 @@ A template field, section or answer type outside this table is listed as `unhand
 
 ## Filling
 
-- The resume goes first: uploading it (`POST …/FileService/uploadresume`) imports it over the Test userl information, so nothing is typed until the upload answers.
+- The resume goes first: uploading it (`POST …/FileService/uploadresume`) imports it over the Test user's information, so nothing is typed until the upload answers.
 - The country goes before the state. A dropdown is opened from the middle of the window, the step's button bar covering the bottom; its option is clicked in the same script that finds it, the virtual list rendering its options anew as it moves. A searchable one is typed into first; a `readonly` one is scrolled to the option.
 - A phone number picks the longest dial code its digits start with, the main country of a shared one (`+1` is the United States), and types the rest.
 - A section saves with its Update, the first submit button after its first field; a click while a dropdown is still closing is lost, so Update is clicked until the section closes. An open section keeps Next from going on.
