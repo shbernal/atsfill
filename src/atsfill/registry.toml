@@ -104,6 +104,7 @@ account = "to_read"
 hosting = ["hosted"]
 adapter = "ukg"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "a60a17d", by = "agent", reason = "unsupported_flow: sign_up_phone: the tenant's details step after the sign-up requires a phone number, which login does not take (10 of 17 tenants)" }
 
 [paycom]
 kind = "ats"
