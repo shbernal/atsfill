@@ -6,7 +6,7 @@ Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/
 
 - Positions: `<employer>.breezy.hr/p/<position id>-<slug>`; some employers serve the same portal on their own domain, detected from the page by Breezy's portal scripts. The form is `…/apply`, which atsfill opens. The double-send key is `https://<host>/p/<position id>`.
 - A closed position redirects to the employer's openings, with no form: `posting_gone`.
-- Two page engines serve the portal, an AngularJS one and a React one (about half each); the React one copies the AngularJS markup, `ng-model` attributes included, so one reading covers both. The form's configuration sits in the page (`#portal-data` JSON on React, `data-position` and `#questions` on AngularJS), in two shapes and without the EEO and consent sections on AngularJS, so there is no `read_api`.
+- Two page engines serve the portal, an AngularJS one and a React one (about half each); the React one copies the AngularJS markup, `ng-model` attributes included, so one reading covers both. The form's configuration sits in the page (`#portal-data` JSON on React, `data-position` and `#questions` on AngularJS), in two shapes and without the EEO and consent sections on AngularJS, so there is no request read.
 
 ## Reading the form
 

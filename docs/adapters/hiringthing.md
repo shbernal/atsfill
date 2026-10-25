@@ -6,9 +6,9 @@ HiringThing's career sites, observed on live postings, last on 2026-10-22. The f
 
 - Every employer is on `<employer>.<domain>`, where the domain is `hiringthing.com` or one of the white-label domains HiringThing serves for HR and payroll resellers (`oasisrecruit.com`, `prismhr-hire.com` and the others listed in the adapter). A job is `/job/<id>/<slug>`; the double-send key is `/job/<id>` on its host. A host outside the list is claimed from the page, by the props of its `HiringThing.Components.ApplyButtonGroup`.
 - The job page is rendered on the server with the posting's configuration in that component's `data-react-props`: the standard fields switched on or off, required or not, and the questions with their type and options. The Apply button, rendered by React, renders the form below it in the page from these props.
-- There is no `read_api`: which controls render is the page's logic over the props (the referral source, a country's state list, the history entries' subfields), not the props alone. `read_form` lists the rendered controls.
+- There is no request read: which controls render is the page's logic over the props (the referral source, a country's state list, the history entries' subfields), not the props alone. `browser_read` lists the rendered controls.
 - A closed posting answers 404 and has no Apply button.
-- The country's state list is fetched from `/regions?parent_region=<country>` once the form shows; until it arrives the state is a plain input, so `read_form` waits for its combobox.
+- The country's state list is fetched from `/regions?parent_region=<country>` once the form shows; until it arrives the state is a plain input, so `browser_read` waits for its combobox.
 - A file is posted to `/client_api/add_file` as soon as it is attached: it reaches HiringThing before the submit.
 - A cookie banner (`.cookie-banner`) covers the bottom of the page; the blocker's lists hide it.
 

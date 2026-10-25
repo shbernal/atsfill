@@ -12,7 +12,7 @@ Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/
 
 The page asks `POST /api/non-user-graphql?op=ApiJobPosting` with `organizationHostedJobsPageName` and `jobPostingId`. Its `applicationForm` and `surveyForms` are form renders: sections of field entries, each with the field (`path`, `title`, `type`, `selectableValues`), `isRequired` and `isHidden`. The field id is the `path`.
 
-The endpoint answers without a session, so `read_api` sends the same query over HTTP. Cloudflare turns away Python's default user agent (error 1010), not a named one.
+The endpoint answers without a session, so `request_read` sends the same query to this undocumented API. Cloudflare turns away Python's default user agent (error 1010), not a named one.
 
 Each type, how the page renders it, and on how many of 15 employers' postings (2026-10-19):
 

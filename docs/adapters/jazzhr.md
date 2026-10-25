@@ -7,7 +7,7 @@ Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/
 - Postings: `<account>.applytojob.com/apply/<code>/<slug>`, the code ten letters and digits. The posting's page holds the form, `form#form_submit_new_resume`, under the description. The double-send key is `https://<account>.applytojob.com/apply/<code>`.
 - A posting that is gone answers 410 with the career page and no form, read as `posting_gone`.
 - A tracking banner (`#tracking-consent-banner`) shows a moment after the page, over its foot; the blocker's lists hide it on `applytojob.com`.
-- JazzHR's API takes the employer's key, so there is no `read_api`.
+- JazzHR's API takes the employer's key, so there is no request read.
 
 ## Reading the form
 

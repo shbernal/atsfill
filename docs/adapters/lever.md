@@ -6,7 +6,7 @@ Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/
 
 - Postings: `jobs.lever.co/<account>/<uuid>` (`jobs.eu.lever.co` for EU accounts); the form is `…/<uuid>/apply`, which atsfill opens. The double-send key is the posting URL without `/apply` or query.
 - A posting that is gone answers 404 with no `form#application-form`, read as `posting_gone`.
-- The page is server-rendered HTML; no cookie banner was seen. Lever's postings API (`api.lever.co/v0/postings/…`) leaves the application's questions out, so there is no `read_api`.
+- The page is server-rendered HTML; no cookie banner was seen. Lever's postings API (`api.lever.co/v0/postings/…`) leaves the application's questions out, so there is no request read.
 
 ## Reading the form
 

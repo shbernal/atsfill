@@ -5,7 +5,7 @@ BambooHR's careers sites, observed on live postings, last on 2026-10-21. The fix
 ## Where the form is
 
 - Every employer is on `<employer>.bamboohr.com`. A job is `/careers/<job id>`; that URL is the double-send key.
-- The job page renders the form behind Apply for This Job, from `/careers/<job id>/detail`: a public JSON answer, no session, listing each standard field by key (`firstName`, `countryId`, `resumeFileId`) with its label, `isRequired` and options, then the custom questions with their type. A demographic key the employer does not ask is an empty list. `read_api` fetches it over HTTP, `read_form` from inside the page, and both list the fields from it: parity holds by construction.
+- The job page renders the form behind Apply for This Job, from `/careers/<job id>/detail`: an undocumented API, no session, listing each standard field by key (`firstName`, `countryId`, `resumeFileId`) with its label, `isRequired` and options, then the custom questions with their type. A demographic key the employer does not ask is an empty list. `request_read` fetches it with a request, `browser_read` from the browser, and both list the fields from it: parity holds by construction.
 - A closed posting answers 404 on `/detail`.
 - An attached file is uploaded at once (`/ajax/files/attachTemporary.php`), and its id written to a hidden input; nothing else reaches BambooHR before Submit.
 

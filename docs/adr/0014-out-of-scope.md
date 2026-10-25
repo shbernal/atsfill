@@ -22,7 +22,7 @@ In scope, even where rare: a pre-recorded video given as a file, an untimed writ
 
 `posting_gone`, `external_step` and `not_qualified` are facts about the posting, outside the three cases.
 
-**Optional fields.** An optional field atsfill cannot fill, out of scope or a known gap, is left empty and reported; only a required one stops the form. `read_form` returns the field with its case attached, the core applies the rule, and `read` shows it before any fill.
+**Optional fields.** An optional field atsfill cannot fill, out of scope or a known gap, is left empty and reported; only a required one stops the form. `browser_read` returns the field with its case attached, the core applies the rule, and `read` shows it before any fill.
 
 **Registry.** A whole source can be out of scope (`out_of_scope = { reason, date }`, ADR 0012), a video-first system for instance: it leaves the backlog's main table for the side table. An `unsupported` entry stays wanted work and names its known gap.
 

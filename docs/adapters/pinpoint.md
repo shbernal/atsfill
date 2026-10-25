@@ -5,9 +5,9 @@ Pinpoint's career sites, observed on live postings, last on 2026-10-22. The fixt
 ## Where the form is
 
 - An employer is on `<account>.pinpointhq.com` or on its own career domain; either way a posting is `/<lang>/postings/<uuid>` and its form `/<lang>/postings/<uuid>/applications/new`, which the adapter opens from the posting page. The adapter claims a URL by that path, on any host. The double-send key is the posting's `/en/` URL on its host.
-- The apply page is rendered on the server (Rails, React on Rails). The standard fields are native controls; every other field is a React component whose props sit in a `script.js-react-on-rails-component` JSON next to its empty root, the scripts staying in the page once React has rendered. `read_api` fetches that HTML over HTTP, `read_form` takes the page's form, and one parser lists the fields from both, from the controls outside the components and from the props: parity holds by construction.
+- The apply page is rendered on the server (Rails, React on Rails). The standard fields are native controls; every other field is a React component whose props sit in a `script.js-react-on-rails-component` JSON next to its empty root, the scripts staying in the page once React has rendered. `request_read` fetches that HTML and its React on Rails props (hydration data), `browser_read` takes the page's form, and one parser lists the fields from both, from the controls outside the components and from the props: parity holds by construction.
 - A document is uploaded as soon as it is attached (an Active Storage direct upload to S3): it reaches Pinpoint before the submit.
-- The country of the address starts on the visitor's country, guessed by the page: `read_form` lists it as the country's `default`; `read_api` cannot.
+- The country of the address starts on the visitor's country, guessed by the page: `browser_read` lists it as the country's `default`; `request_read` cannot.
 - Some career domains carry the employer's OneTrust banner, whose backdrop would cover the form; the blocker's lists hide it.
 - 3 of 35 forms load an invisible reCAPTCHA Enterprise that puts its token in a hidden input; the others none.
 
