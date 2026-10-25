@@ -19,6 +19,7 @@ from atsfill.adapters.recruitee import Recruitee
 from atsfill.adapters.rippling import Rippling
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.teamtailor import Teamtailor
+from atsfill.adapters.ukg import UKG
 from atsfill.adapters.workable import Workable
 from atsfill.adapters.workday import Workday
 from atsfill.adapters.wttj import WelcomeToTheJungle
@@ -53,6 +54,7 @@ def adapters() -> list[Adapter]:
         HiringThing(),
         Eightfold(),
         Workday(),
+        UKG(),
         Phenom(),  # last: it claims a URL by its path alone
     ]
 
