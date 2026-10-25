@@ -1,5 +1,8 @@
 """The Teamtailor adapter on tests/pages/teamtailor, served as an employer's career site."""
 
+import io
+import re
+from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -104,6 +107,31 @@ def test_browser_read(opened):
     assert fields["question:108"].required  # once shown
     assert fields["question:105"].options == ["Samedi", "Dimanche"]
     assert fields["question:106"].options == [str(n) for n in range(11)]
+
+
+def test_request_read_lists_the_same_fields(opened, monkeypatch):
+    _, fields = opened
+    # As served: the drop zones' file inputs and the video's accepted types come from scripts.
+    served = re.sub(r'<input type="file"[^>]*id="candidate_\w+"[^>]*>', "", PAGE.read_text())
+    served = re.sub(r'(<div data-controller="forms--inputs--upload">)<input[^>]*>', r"\1", served)
+    served = served.replace(' accept=".mp4,.mov,.webm"', "")
+    fetched = []
+
+    class Response(io.BytesIO):
+        url = "https://acme.teamtailor.com/fr/jobs/1234567/applications/new"
+
+        def __enter__(self):
+            return self
+
+    def urlopen(request, timeout):
+        fetched.append(request.full_url)
+        return Response(served.encode())
+
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    assert Teamtailor().request_read(JOB) is None  # a custom domain is known by its page
+    by_request = Teamtailor().request_read("https://acme.teamtailor.com/fr/jobs/1234567-x?a=b")
+    assert fetched == ["https://acme.teamtailor.com/fr/jobs/1234567-x/applications/new"]
+    assert by_request == [replace(f, accept=None) if f.id == "question:107" else f for f in fields]
 
 
 def test_a_file_question_is_a_known_gap(opened):

@@ -1,12 +1,13 @@
 # Teamtailor
 
-Observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/teamtailor/new.html](../../tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
 
 ## Where the form is
 
 - Career sites live at `<employer>.teamtailor.com` or on the employer's domain (`careers.<employer>.com`, `jobs.<employer>.fr`), sometimes under a locale (`/fr/jobs/…`). A job is `/jobs/<id>-<slug>`; the double-send key is `https://<host>/jobs/<id>`.
 - On a custom domain, the page shows itself by the "powered by" link to `www.teamtailor.com` in its footer. The footer text is translated ("Career site by Teamtailor", "Outil de recrutement de Teamtailor"), the link is not. Some sites drop the link; they still load Teamtailor's `careersite-*.js` from `teamtailor-cdn.com`.
 - The form has its own page, `<job>/applications/new`. "Apply for this job" on the job page opens the same form in an overlay; "Apply with LinkedIn" sits above it and is never used.
+- `applications/new` is server-rendered HTML, served without a session, so `request_read` fetches it and `browser_read` takes the loaded form's HTML, and one parser lists the fields from both. The request read covers `*.teamtailor.com` hosts only, since a custom domain is known only by its page. Scripts add two things the server's HTML lacks: a drop zone's `input[type=file]` (the drop zone is read from its `forms--inputs--upload` controller, its label and `data-forms--inputs--upload-accepted-files-value`), and a video question's accepted types, which the request read leaves `null`.
 - A career site can send its applications elsewhere: `applications/new` then redirects to another host, and the posting is `unsupported` as applying on another site.
 
 ## Reading the form

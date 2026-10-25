@@ -9,14 +9,16 @@ video Teamtailor holds under the id the form keeps.
 import re
 import time
 import unicodedata
+import urllib.request
 from dataclasses import replace
 from pathlib import PurePath
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core import browser, matching
+from atsfill.core import browser, html, matching
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
-from atsfill.core.browser import Locator, Page, Response
+from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Response
+from atsfill.core.html import Node
 from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 FORM = "#job-application-form"
@@ -26,6 +28,7 @@ QUESTION = ".question, [data-careersite--form-target=qualifyingAnswers]"
 LOCKED = "[data-careersite--form-target=formContentWrapper].cursor-not-allowed"
 LOCATION = "candidate[location][query]"
 VIDEO = "[data-controller~='questions--tt-video-answer']"
+UPLOAD = "forms--inputs--upload"  # a drop zone's controller
 CAREER_SITE = "a[href*='//www.teamtailor.com'], script[src*='teamtailor-cdn.com/assets/careersite']"
 JOB = re.compile(r"/jobs/(\d+)[^/]*")
 SUBMIT_TIMEOUT_MS = 90_000
@@ -55,73 +58,13 @@ STANDARD_TYPES = {
 }
 CHECKBOX = ["Yes", "No"]
 
-# Every field of the form, described from the page. A custom question's id is
-# `question:<Teamtailor question id>`; the others are the input's name.
-_READ = """(form, QUESTION) => {
-  const label = el => {
-    if (!el) return "";
-    const copy = el.cloneNode(true);
-    copy.querySelectorAll("sup, .sr-only").forEach(e => e.remove());
-    return copy.textContent.replace(/\\s+/g, " ").trim();
-  };
-  const required = el => !!el?.querySelector("sup[data-asterisk]");
-  const PICKS = "input[type=radio], input[type=checkbox]";
-  const options = (box, inputs) => {
-    const item = value => box.querySelector(`[role^=menuitem][data-value="${value}"]`);
-    return [...inputs]
-      .map(e => label(e.labels?.[0]) || item(e.value)?.dataset.searchText || e.value);
-  };
-  const fields = [];
-  for (const el of form.querySelectorAll("input, textarea")) {
-    if (el.closest(QUESTION) || el.disabled || fields.some(f => f.id === el.name)) continue;
-    if (el.type !== "file" && /_remote_url\\]$/.test(el.name)) continue;  // an upload's address
-    const kind = el.tagName === "TEXTAREA" ? "textarea"
-      : el.name === "candidate[location][query]" ? "location"
-      : el.type === "checkbox" && el.name.endsWith("[]") ? "choices" : el.type;
-    let id = el.name;
-    if (kind === "file") id = `candidate[${el.id.replace(/^candidate_/, "")}]`;
-    if (!["text", "email", "tel", "textarea", "checkbox", "choices", "file", "location"]
-        .includes(kind) || !id) continue;
-    if (/linkedin|referrer|social_image/.test(id)) continue;
-    const box = kind === "choices" ? el.closest("fieldset") : null;
-    const host = box ? box.querySelector("legend")
-      : el.labels?.[0] ?? el.closest("[data-controller]")?.querySelector("label");
-    fields.push({id, kind, label: label(host), required: required(host),
-                 options: box ? options(box, form.querySelectorAll(`[name="${id}"]`)) : null,
-                 maxLength: el.maxLength > 0 ? el.maxLength : null,
-                 accept: el.accept ? el.accept.split(",") : null});
-  }
-  for (const q of form.querySelectorAll(QUESTION)) {
-    const qid = q.querySelector("input[name$='[question_id]']")?.value;
-    const qualifying = !q.matches(".question");
-    const named = q.querySelector("[name^='candidate[answers_attributes]']:not([type=hidden])");
-    const kind = /picked_video/.test(named?.name) ? "video"
-      : q.querySelector("input[type=file]") && !named ? "file"
-      : (named?.name.match(/\\]\\[(\\w+)\\](\\[\\])?$/)?.[1] ?? "unknown");
-    const picks = options(q, q.querySelectorAll(PICKS));
-    if (named?.type === "range") {
-      const step = Number(named.step) || 1;
-      for (let v = Number(named.min); v <= Number(named.max); v += step) picks.push(String(v));
-    }
-    const menu = [...q.querySelectorAll("[role^=menuitem]")].map(e => e.dataset.searchText);
-    const parent = q.dataset.questionShowIfUuid
-      && form.querySelector(`[data-question-uuid="${q.dataset.questionShowIfUuid}"]`);
-    const shownBy = parent && [...parent.querySelectorAll(PICKS)]
-      .find(e => e.value === q.dataset.questionShowIfValue);
-    const parentId = parent?.querySelector("input[name$='[question_id]']")?.value;
-    fields.push({id: `question:${qid}`, kind, question: true, qualifying,
-                 shownBy: parent && shownBy
-                   ? {id: `question:${parentId}`, option: options(parent, [shownBy])[0]} : null,
-                 visible: q.checkVisibility(),
-                 label: label(q.querySelector("legend, label")),
-                 required: qualifying || q.dataset.questionMandatory === "true",
-                 accept: kind === "video"
-                   ? q.querySelector("input[type=file]")?.accept.split(",").filter(Boolean) : null,
-                 options: picks.length ? picks : menu.length ? menu : null});
-  }
-  return fields;
-}"""
+# A standard field the form shows but no answer is asked for.
+NOT_ASKED = re.compile(r"linkedin|referrer|social_image")
+STANDARD_KINDS = ("text", "email", "tel", "textarea", "checkbox", "choices", "file", "location")
+ANSWER_KIND = re.compile(r"\]\[(\w+)\](\[\])?$")
 
+# Whether each custom or qualifying question shows, in the order `_read` lists them.
+_VISIBLE = "(form, QUESTION) => [...form.querySelectorAll(QUESTION)].map(q => q.checkVisibility())"
 # What the form will send: each field's value, a choice as its option's text, a file as the
 # uploaded file's name, an address once a suggestion is picked, a video question as the id of
 # the video it holds.
@@ -211,8 +154,32 @@ class Teamtailor:
             form.wait_for()
         except browser.Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
+        return self._listed(form.evaluate("f => f.outerHTML"))
+
+    def request_read(self, url: str) -> list[Field] | None:
+        """The form's own page, on a `*.teamtailor.com` host: a custom domain is known only by
+        its page."""
+        parts = urlsplit(url)
+        job = JOB.search(parts.path)
+        if not job or not (parts.hostname or "").endswith(".teamtailor.com"):
+            return None
+        new = f"https://{parts.hostname}{parts.path[: job.end()]}/applications/new"
+        request = urllib.request.Request(new, headers={"User-Agent": "atsfill"})
+        try:
+            with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
+                if urlsplit(response.url).hostname != parts.hostname:
+                    return None  # applies on another site
+                page = html.parse(response.read().decode())
+        except OSError, ValueError:
+            return None
+        form = page.find(lambda n: n.tag == "form" and n.attrs.get("id") == FORM[1:])
+        return self._listed(form) if form else None
+
+    def _listed(self, form: str | html.Node) -> list[Field]:
+        if isinstance(form, str):
+            form = html.parse(form)
         fields, self._qualifying, self._follow_ups = [], set(), set()
-        for raw in form.evaluate(_READ, QUESTION):
+        for raw in _read(form):
             if raw.get("qualifying"):
                 self._qualifying.add(raw["id"])
             field = self._field(raw)
@@ -242,8 +209,10 @@ class Teamtailor:
         self._wait_for_uploads(form)
 
     def shown_fields(self, page: Page) -> list[str]:
-        raws = page.locator(FORM).evaluate(_READ, QUESTION)
-        return [raw["id"] for raw in raws if raw.get("visible", True)]
+        form = page.locator(FORM)
+        raws = _read(html.parse(form.evaluate("f => f.outerHTML")))
+        visible = iter(form.evaluate(_VISIBLE, QUESTION))
+        return [raw["id"] for raw in raws if not raw.get("question") or next(visible)]
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, QUESTION)
@@ -330,7 +299,7 @@ class Teamtailor:
             return form.locator("[data-controller~='forms--inputs--location']")
         if field_id.endswith("_remote_url]"):
             dom_id = "candidate_" + field_id[len("candidate[") : -1]
-            return form.locator("[data-controller~='forms--inputs--upload']").filter(
+            return form.locator(f"[data-controller~='{UPLOAD}']").filter(
                 has=form.page.locator(f"#{dom_id}")
             )
         return form.locator(f"[name='{field_id}']").first.locator("xpath=..")
@@ -405,3 +374,205 @@ def _pick(question: Locator, value: str) -> None:
     if trigger.get_attribute("aria-expanded") != "true":
         browser.click(trigger)
     browser.click(question.locator(f"[role^=menuitem][data-search-text='{value}']").first)
+
+
+def _is_question(node: Node) -> bool:
+    """A custom question, or a qualifying one (QUESTION)."""
+    return (
+        "question" in node.classes()
+        or node.attrs.get("data-careersite--form-target") == "qualifyingAnswers"
+    )
+
+
+def _label_text(node: Node | None) -> str:
+    """A label's text, without its required mark and its screen-reader text."""
+    if node is None:
+        return ""
+    parts = [
+        c if isinstance(c, str) else _label_text(c)
+        for c in node.children
+        if isinstance(c, str) or (c.tag != "sup" and "sr-only" not in c.classes())
+    ]
+    return "".join(parts)
+
+
+def _plain(node: Node | None) -> str:
+    return " ".join(_label_text(node).split())
+
+
+def _required(node: Node | None) -> bool:
+    return (
+        node is not None
+        and node.find(lambda n: n.tag == "sup" and "data-asterisk" in n.attrs) is not None
+    )
+
+
+def _is_upload(node: Node) -> bool:
+    return UPLOAD in node.attrs.get("data-controller", "").split()
+
+
+def _upload(box: Node) -> list[dict[str, Any]]:
+    """A drop zone: its label names its field, `candidate_<name>`. Its `input[type=file]` is
+    added by the page's script, so the server's HTML holds none."""
+    label = box.find(lambda n: n.tag == "label" and n.attrs.get("for", "").startswith("candidate_"))
+    if label is None:
+        return []
+    field_id = f"candidate[{label.attrs['for'].removeprefix('candidate_')}]"
+    if NOT_ASKED.search(field_id):
+        return []
+    accept = box.attrs.get(f"data-{UPLOAD}-accepted-files-value")
+    return [{"id": field_id, "kind": "file", "label": _plain(label), "required": _required(label),
+             "options": None, "maxLength": None,
+             "accept": accept.split(",") if accept else None}]  # fmt: skip
+
+
+def _read(form: Node) -> list[dict[str, Any]]:
+    """Every field of the form, described from its HTML. A custom question's id is
+    `question:<Teamtailor question id>`; the others are the input's name."""
+    nodes = form.walk()
+    labels: dict[str, Node] = {}
+    for n in nodes:
+        if n.tag == "label" and n.attrs.get("for"):
+            labels.setdefault(n.attrs["for"], n)
+
+    def label_of(el: Node) -> Node | None:
+        wrapping = el.parent.closest(lambda n: n.tag == "label") if el.parent else None
+        if wrapping is not None and wrapping.attrs.get("for", el.attrs.get("id")) == el.attrs.get(
+            "id"
+        ):
+            return wrapping
+        return labels.get(el.attrs["id"]) if el.attrs.get("id") else None
+
+    def menu_item(box: Node, value: str) -> Node | None:
+        return box.find(
+            lambda n: (
+                n.attrs.get("role", "").startswith("menuitem")
+                and n.attrs.get("data-value") == value
+            )
+        )
+
+    def options(box: Node, inputs: list[Node]) -> list[str]:
+        out = []
+        for e in inputs:
+            value = e.attrs.get("value", "")
+            item = menu_item(box, value)
+            out.append(
+                _plain(label_of(e)) or (item.attrs.get("data-search-text") if item else "") or value
+            )
+        return out
+
+    def kind_of(el: Node) -> str:
+        return (
+            "textarea" if el.tag == "textarea" else el.attrs.get("type", "text").lower() or "text"
+        )
+
+    def picks(box: Node) -> list[Node]:
+        return [n for n in box.walk() if n.tag == "input" and kind_of(n) in ("radio", "checkbox")]
+
+    def disabled(el: Node) -> bool:
+        return (
+            "disabled" in el.attrs
+            or el.closest(lambda n: n.tag == "fieldset" and "disabled" in n.attrs) is not None
+        )
+
+    def question_id(q: Node) -> str | None:
+        hidden = q.find(
+            lambda n: n.tag == "input" and n.attrs.get("name", "").endswith("[question_id]")
+        )
+        return hidden.attrs.get("value") if hidden else None
+
+    fields: list[dict[str, Any]] = []
+    for el in nodes:
+        if _is_upload(el) and not el.closest(_is_question):
+            fields += _upload(el)
+            continue
+        if el.tag not in ("input", "textarea") or (
+            kind_of(el) == "file" and el.closest(_is_upload)
+        ):
+            continue
+        name = el.attrs.get("name", "")
+        if el.closest(_is_question) or disabled(el) or any(f["id"] == name for f in fields):
+            continue
+        kind = kind_of(el)
+        if kind != "file" and re.search(r"_remote_url\]$", name):  # an upload's address
+            continue
+        if name == LOCATION:
+            kind = "location"
+        elif kind == "checkbox" and name.endswith("[]"):
+            kind = "choices"
+        field_id = name
+        if kind == "file":
+            field_id = f"candidate[{el.attrs.get('id', '').removeprefix('candidate_')}]"
+        if kind not in STANDARD_KINDS or not field_id or NOT_ASKED.search(field_id):
+            continue
+        box = el.closest(lambda n: n.tag == "fieldset") if kind == "choices" else None
+        if box is not None:
+            host = box.find(lambda n: n.tag == "legend")
+        else:
+            controller = el.closest(lambda n: "data-controller" in n.attrs)
+            host = label_of(el) or (
+                controller.find(lambda n: n.tag == "label") if controller else None
+            )
+        same = [n for n in nodes if n.attrs.get("name") == field_id]
+        max_length = int(el.attrs.get("maxlength") or 0)
+        accept = el.attrs.get("accept")
+        fields.append({
+            "id": field_id, "kind": kind, "label": _plain(host), "required": _required(host),
+            "options": options(box, same) if box is not None else None,
+            "maxLength": max_length if max_length > 0 else None,
+            "accept": accept.split(",") if accept else None,
+        })  # fmt: skip
+    questions = [n for n in nodes if _is_question(n)]
+    for q in questions:
+        qualifying = "question" not in q.classes()
+        named = q.find(
+            lambda n: (
+                n.attrs.get("name", "").startswith("candidate[answers_attributes]")
+                and n.attrs.get("type") != "hidden"
+            )
+        )
+        file = q.find(lambda n: n.tag == "input" and kind_of(n) == "file")
+        name = named.attrs["name"] if named else ""
+        if "picked_video" in name:
+            kind = "video"
+        elif (file is not None or q.find(_is_upload)) and named is None:
+            kind = "file"
+        else:
+            kind = match[1] if (match := ANSWER_KIND.search(name)) else "unknown"
+        listed = options(q, picks(q))
+        if named is not None and kind_of(named) == "range":
+            step = float(named.attrs.get("step") or 1) or 1
+            value, top = float(named.attrs.get("min") or 0), float(named.attrs.get("max") or 0)
+            while value <= top:
+                listed.append(f"{value:g}")
+                value += step
+        menu = [
+            n.attrs.get("data-search-text", "")
+            for n in q.walk()
+            if n.attrs.get("role", "").startswith("menuitem")
+        ]
+        shown_by = None
+        if uuid := q.attrs.get("data-question-show-if-uuid"):
+            parent = next((n for n in nodes if n.attrs.get("data-question-uuid") == uuid), None)
+            value = q.attrs.get("data-question-show-if-value")
+            pick = (
+                next((e for e in picks(parent) if e.attrs.get("value") == value), None)
+                if parent
+                else None
+            )
+            if parent is not None and pick is not None:
+                shown_by = {
+                    "id": f"question:{question_id(parent)}",
+                    "option": options(parent, [pick])[0],
+                }
+        # a video's accepted types are set by the page's script: none in the server's HTML
+        accept = [a for a in (file.attrs.get("accept") or "").split(",") if a] if file else None
+        fields.append({
+            "id": f"question:{question_id(q)}", "kind": kind, "question": True,
+            "qualifying": qualifying, "shownBy": shown_by,
+            "label": _plain(q.find(lambda n: n.tag in ("legend", "label"))),
+            "required": qualifying or q.attrs.get("data-question-mandatory") == "true",
+            "accept": (accept or None) if kind == "video" else None,
+            "options": listed or menu or None,
+        })  # fmt: skip
+    return fields

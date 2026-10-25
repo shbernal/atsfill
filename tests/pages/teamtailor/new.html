@@ -35,11 +35,11 @@
     <label for="candidate_email">E-mail<sup data-asterisk="true">*</sup><span class="sr-only">Requis</span></label>
     <input type="email" name="candidate[email]" id="candidate_email">
   </div>
-  <div data-controller="forms--inputs--upload">
+  <div data-controller="forms--inputs--upload" data-forms--inputs--upload-accepted-files-value=".pdf,.docx">
     <label for="candidate_resume_remote_url">Importer un CV<sup data-asterisk="true">*</sup></label>
     <input type="file" accept=".pdf,.docx" id="candidate_resume_remote_url">
   </div>
-  <div data-controller="forms--inputs--upload">
+  <div data-controller="forms--inputs--upload" data-forms--inputs--upload-accepted-files-value="">
     <label for="candidate_file_remote_url">Autres fichiers</label>
     <input type="file" multiple accept="" id="candidate_file_remote_url">
   </div>
