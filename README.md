@@ -56,7 +56,7 @@ atsfill moves the quirks into one adapter per system and makes the check code: a
 
 ## Install
 
-atsfill runs on Linux and macOS with Python 3.14, which `uvx` fetches if needed.
+atsfill runs on Linux, macOS and Windows with Python 3.14, which `uvx` fetches if needed.
 
 ```sh
 uvx atsfill install-browser
