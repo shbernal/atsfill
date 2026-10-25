@@ -206,8 +206,9 @@ def freehire(
 ) -> list[tuple[str, str]]:
     """One posting, with its employer, from each of `employers` employers on a freehire source,
     sampling until enough postings pass `keep` or the source runs out; `exclude`d employers
-    are skipped."""
+    are skipped, and `keep` sees one posting per employer."""
     urls: dict[str, str] = {}
+    tried: set[str] = set()
     offset, page_size = 0, 50
     while len(urls) < employers:
         run = subprocess.run(
@@ -221,8 +222,12 @@ def freehire(
         if not jobs:
             break
         for job in jobs:
-            if job["company_slug"] not in exclude and keep(job["url"]):
-                urls.setdefault(job["company_slug"], job["url"])
+            employer = job["company_slug"]
+            if employer in exclude or employer in tried:
+                continue
+            tried.add(employer)  # an employer's postings render alike: its first decides
+            if keep(job["url"]):
+                urls[employer] = job["url"]
         offset += page_size
     return [(url, employer) for employer, url in urls.items()][:employers]
 
