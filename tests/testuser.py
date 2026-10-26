@@ -45,6 +45,7 @@ OPENS_FIELD = re.compile(r"referr|contacted by|\bother\b", re.IGNORECASE)
 PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
 BY_LABEL = [
     (re.compile(r"MM/YYYY"), "01/2020"),
+    (re.compile(r"^(name )?prefix$", re.IGNORECASE), "Dr."),
     (re.compile(r"zip|postal", re.IGNORECASE), ZIP),
     (re.compile(r"extension", re.IGNORECASE), "1"),
     (re.compile(r"e-?mail", re.IGNORECASE), EMAIL),
