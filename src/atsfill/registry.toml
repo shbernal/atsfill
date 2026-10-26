@@ -196,6 +196,7 @@ share = 0.0125
 account = "to_read"
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "284a5e5", by = "agent", reason = "unsupported_rendering: location_levels: a place's state and city list their options only once the level above is picked, so a fresh profile's are not listed (3 of 4 zones walked)" }
 
 [jazzhr]
 kind = "ats"
