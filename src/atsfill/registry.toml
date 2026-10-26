@@ -327,10 +327,11 @@ dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", 
 [isolvedhire]
 kind = "ats"
 share = 0.0047
-account = "to_read"  # one account for the whole system: Apply now verifies the email or phone with a one-time code, the sign-in's sign-up sets a password; the application wizard (/apply/<job>-0.php) redirects to the sign-in until then
+account = "to_read"  # one account for the whole system, signed in per employer's site; Apply now verifies the email or phone with a one-time code, the sign-in's sign-up sets a password instead
 hosting = ["hosted"]
+adapter = "isolvedhire"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "e48c78a", by = "agent", reason = "unsupported_flow: sign_up_otp: the posting page's Apply sends a one-time code to the email or phone; sign_up_fields: the sign-up with a password asks a phone number and a postal address, which login does not take (15 of 15 employers)" }
+dry_run_verified = { date = 2026-10-26, version = "0.0.3", by = "adapter_gate", commit = "867de7d" }
 
 [jobstreet]
 kind = "board"

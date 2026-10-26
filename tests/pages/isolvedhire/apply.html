@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Application - Acme</title>
+<style>.modal { display: none; } .modal.in { display: block; } .hidden { display: none; }</style>
+</head>
+<body>
+<nav>
+  <a href="/jobs/">Jobs</a>
+  <a href="/account/">My Account</a>
+  <a href="/account/logout.php">Logout</a>
+</nav>
+<form id="faq_bar_form" action="javascript:void(0);">
+  <input type="hidden" name="csrf_token" value="token-1">
+  <input type="text" name="searchCriteria" id="faq_bar_searchCriteria">
+</form>
+<div id="steps" data-orig-job-app="1001-5001">
+  <a class="list-group-item step complete current" data-file="instructions"><span>Instructions</span></a>
+  <a class="list-group-item step incomplete" data-file="screening"><span>Job Questions</span></a>
+  <a class="list-group-item step incomplete" data-file="resume"><span>Resume</span></a>
+  <a class="list-group-item step incomplete" data-file="eeoc"><span>Voluntary Disclosure</span></a>
+  <a class="list-group-item step incomplete" data-file="source"><span>Source</span></a>
+  <a class="list-group-item step incomplete" data-file="submit"><span>Submit Application</span></a>
+</div>
+<div id="landingStrip">
+  <h1>Instructions</h1>
+  <p>Please make sure you fill out all the questions.</p>
+  <div class="application-footer"><button id="next">Proceed to Next Step</button></div>
+</div>
+
+<div class="modal fade in" id="verify_contact_info_popup">
+  <form id="contact_info" action="javascript:void(0);">
+    <input type="hidden" name="email" id="email" value="ada@example.com">
+    <input type="text" name="first_name" id="first_name" class="required" value="Ada">
+    <input type="text" name="last_name" id="last_name" class="required" value="Placeholder">
+    <input type="text" name="contact_number" id="contact_number" class="required" value="2025550143">
+    <select name="applicant_consent_approval" id="applicant_consent_approval" class="required">
+      <option value=""></option>
+      <option value="1">Yes, I agree to be contacted by text messages</option>
+      <option value="2">No, I do not agree to receive text messages</option>
+    </select>
+    <input type="checkbox" id="info_use_consent" name="info_use_consent">
+    <span>I agree to the Privacy Policy.*</span>
+    <input type="submit" id="verify_contact_info_button" value="Save">
+  </form>
+</div>
+
+<script>
+// The wizard as the page drives it: a step loads from /apply/view.php into #landingStrip; Proceed
+// to Next Step checks the required answers and saves the step (here, its HTML, values included,
+// which /apply/view.php serves from then on).
+const strip = document.getElementById("landingStrip");
+const token = document.querySelector("input[name=csrf_token]").value;
+const order = [...document.querySelectorAll("#steps a.step")].map(a => a.dataset.file);
+const current = () => document.querySelector("#steps a.step.current").dataset.file;
+
+async function view(f, params = {}) {
+  const query = new URLSearchParams({n: "apply", f, csrf_token: token, ...params});
+  return (await fetch(`/apply/view.php?${query}`)).text();
+}
+
+async function getFile(f) {
+  const html = await view(f);
+  setTimeout(() => {  // the page fades the step in
+    strip.innerHTML = html;
+    document.querySelectorAll("#steps a.step")
+      .forEach(a => a.classList.toggle("current", a.dataset.file === f));
+  }, 100);
+}
+
+function freeze(root) {
+  for (const el of root.querySelectorAll("input")) {
+    if (["radio", "checkbox"].includes(el.type)) el.toggleAttribute("checked", el.checked);
+    else if (el.type !== "file") el.setAttribute("value", el.value);
+  }
+  for (const el of root.querySelectorAll("textarea")) el.textContent = el.value;
+  for (const el of root.querySelectorAll("select")) {
+    for (const o of el.options) o.toggleAttribute("selected", o.selected);
+  }
+}
+
+function answered(el) {
+  if (el.disabled) return true;
+  if (["radio", "checkbox"].includes(el.type)) {
+    return [...strip.querySelectorAll(`input[name="${el.name}"]`)].some(b => b.checked);
+  }
+  if (el.type === "file") return !!strip.querySelector(".uploaded-resumes-container .file");
+  return !!el.value.trim();
+}
+
+async function save(f) {
+  freeze(strip);
+  await fetch(`/apply/save?f=${f}`, {method: "POST", body: strip.innerHTML});
+}
+
+document.getElementById("steps").addEventListener("click", e => {
+  const step = e.target.closest("a.step");
+  if (step) getFile(step.dataset.file);
+});
+
+strip.addEventListener("click", async e => {
+  if (e.target.closest("#next")) {
+    const f = current();
+    if (f === "submit") {
+      window.location.href = "/apply/thanks.php?orig_job_app=1001-5001";
+      return;
+    }
+    strip.querySelectorAll("[id^=message_]").forEach(m => m.remove());
+    const missing = [...strip.querySelectorAll("input.required, select.required, textarea.required")]
+      .filter(el => !answered(el));
+    if (missing.length) {
+      for (const el of missing) {
+        el.insertAdjacentHTML("afterend",
+          `<p id="message_${el.name || el.id}">Error: You must select at least one option.</p>`);
+      }
+      return;
+    }
+    await save(f);
+    getFile(order[order.indexOf(f) + 1]);
+  }
+  if (e.target.closest("#new_upload_button")) {
+    const form = document.getElementById("upload_resume");
+    await fetch("/apply/upload_resume.php", {method: "POST", body: new FormData(form)});
+    const name = document.getElementById("default_resume").files[0].name;
+    document.querySelector(".uploaded-resumes-container")
+      .insertAdjacentHTML("beforeend", `<div class="file"><p>${name}</p></div>`);
+    e.target.closest("#new_upload_button").remove();
+    await save("resume");
+  }
+});
+
+strip.addEventListener("change", async e => {
+  const el = e.target;
+  if (el.classList.contains("conditional-answer-select")) {
+    const div = document.getElementById(`conditional_questions_div_${el.dataset.id}`);
+    if (el.selectedIndex === Number(el.dataset.conditional_answer)) {
+      div.innerHTML = await view("buildAdditionalQuestions",
+        {parent_question_id: el.dataset.id, group_id: el.dataset.group_id, app_id: "5001"});
+      div.style.display = "";
+    } else {
+      div.innerHTML = "";
+      div.style.display = "none";
+    }
+  }
+  if (el.id === "source_type_id") {
+    const sources = document.getElementById("source_id");
+    sources.innerHTML = "";
+    const listed = await view("getSources",
+      {source_type_id: el.value, selected_id: "", hide_internal: "1"});
+    sources.innerHTML = listed + "<option value='1'>Other</option>";
+    sources.style.display = "";
+  }
+  if (el.id === "source_id" || el.id === "source_type_id") {
+    const other = document.getElementById("source_other");
+    const type = document.getElementById("source_type_id").value;
+    other.disabled = !(document.getElementById("source_id").value === "1" || type === "4");
+    other.classList.toggle("required", !other.disabled);
+  }
+  if (el.id === "default_resume" && !document.getElementById("new_upload_button")) {
+    document.getElementById("upload_resume")
+      .insertAdjacentHTML("beforeend", '<button type="button" id="new_upload_button">Upload Files</button>');
+  }
+});
+
+document.getElementById("verify_contact_info_button").addEventListener("click", async () => {
+  const popup = document.getElementById("verify_contact_info_popup");
+  const consent = document.getElementById("applicant_consent_approval").value;
+  popup.querySelectorAll("[id^=message_]").forEach(m => m.remove());
+  if (!document.getElementById("info_use_consent").checked || !consent) {
+    popup.insertAdjacentHTML("beforeend",
+      '<p id="message_info_use_consent">Error: Agreement is missing.</p>');
+    return;
+  }
+  await fetch("/account/save", {method: "POST", body: new FormData(document.getElementById("contact_info"))});
+  popup.classList.remove("in");
+});
+</script>
+</body>
+</html>

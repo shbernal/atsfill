@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Login - Acme</title></head>
+<body>
+<nav><a href="/jobs/">Jobs</a> <a href="/account/login.php">Login</a></nav>
+<!-- The sign-in, at /account/login.php -->
+<form method="post" id="login" action="/account/login_redirect.php">
+  <input type="email" class="form-control required" id="email" name="username" value="">
+  <input type="password" class="form-control required" id="password" name="password">
+  <input type="submit" value="Log In">
+  <a href="/account/" title="Create A New Job Profile">Need an account? Click here!</a>
+</form>
+</body>
+</html>
