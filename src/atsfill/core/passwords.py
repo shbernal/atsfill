@@ -18,7 +18,7 @@ from atsfill.core import paths
 SERVICE = "atsfill"
 COMMAND_TIMEOUT_S = 60  # a password manager may wait for its unlock
 FILE = "passwords.json"  # in the user's directory, only without a secret store
-GENERATED_LENGTH = 24
+GENERATED_LENGTH = 16  # SuccessFactors refuses a password longer than 18
 CLASSES = (string.ascii_lowercase, string.ascii_uppercase, string.digits, "!#%+-.:=?@_")
 
 

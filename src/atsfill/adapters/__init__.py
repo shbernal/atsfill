@@ -18,6 +18,7 @@ from atsfill.adapters.pinpoint import Pinpoint
 from atsfill.adapters.recruitee import Recruitee
 from atsfill.adapters.rippling import Rippling
 from atsfill.adapters.smartrecruiters import SmartRecruiters
+from atsfill.adapters.successfactors import SuccessFactors
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.ukg import UKG
 from atsfill.adapters.workable import Workable
@@ -55,6 +56,7 @@ def adapters() -> list[Adapter]:
         Eightfold(),
         Workday(),
         UKG(),
+        SuccessFactors(),  # it claims a career site's job path on any host
         Phenom(),  # last: it claims a URL by its path alone
     ]
 

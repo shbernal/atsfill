@@ -95,6 +95,8 @@ kind = "ats"
 share = 0.0350
 account = "to_read"
 hosting = ["hosted"]
+adapter = "successfactors"
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "0d8baea", by = "agent", reason = "quick_apply_sign_up: a Quick Apply page creates the account and sends the application in one submit, its sign-in offering no sign-up; sign_up_fields: a sign-up asking a phone number" }
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [ukg]
