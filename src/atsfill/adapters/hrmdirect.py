@@ -13,7 +13,7 @@ import urllib.parse
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from atsfill.core.adapter import NotTaken, Refused, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -32,11 +32,17 @@ SETTLE_MS = 1_500
 MAX_PAGES = 10
 IDENTITY = "#personal-info-form"
 HAVE_ACCOUNT = "button.have-account-button"
+LOGIN = "a.authenticate-button"
+RECAPTCHA = f"{IDENTITY} iframe[title=reCAPTCHA], {IDENTITY} .g-recaptcha"
 EMAIL_SIGN_IN = "text=Sign in with username and password instead"
 PAGE_FORM = ".form-page-holder form.section-form"
 ACTIVE_PAGE = ".form-progress-holder li.active"
 NEXT = ".form-page-holder ~ * button.submit-button, button.submit-button:visible"
 ERRORS = ".has-error:visible"
+CLOSE_DATEPICKERS = (
+    "() => document.querySelectorAll('.datepicker.dropdown-menu')"
+    ".forEach(d => { d.style.display = 'none'; })"
+)
 TOKEN = re.compile(r"Token\$\$:\$\$([^$]+)")
 API_HEADERS = {"API-Realm": "CWEB", "API-AppType": "careers"}
 
@@ -53,7 +59,7 @@ _FIELDS = """form => [...form.querySelectorAll('.form-field')].flatMap(f => {
   if (qa === 'qa-resume-upload') {
     const kind = [...f.classList].find(c => c !== 'form-field' && c !== qa);
     const names = [...f.querySelectorAll('.file-list tr td:first-child')]
-      .map(t => t.textContent.trim()).filter(Boolean);
+      .map(t => t.textContent.trim()).filter(n => n && !n.includes('Uploading'));
     const upload = !!f.querySelector('input[type=file]');
     return [{...base, id: 'file.' + kind, kind: upload ? 'file' : 'linkedin',
              value: names.at(-1) || null}];
@@ -74,8 +80,8 @@ _FIELDS = """form => [...form.querySelectorAll('.form-field')].flatMap(f => {
     ? [...control.options].filter(o => o.value).map(o => o.textContent.trim()) : null;
   const value = kind === 'select'
     ? (control.value ? control.selectedOptions[0].textContent.trim() : null) : control.value;
-  return [{...base, id: control.id, kind, options, value,
-           max: parseInt(control.dataset.max || control.maxLength) || null}];
+  const max = parseInt(control.dataset.max) || (control.maxLength > 0 ? control.maxLength : null);
+  return [{...base, id: control.id, kind, options, value, max}];
 })"""
 
 
@@ -83,7 +89,7 @@ class HRMDirect:
     name = "hrmdirect"
     per_employer = True
     asks_name = True
-    known_gaps: dict = {}
+    known_gaps = {"screening_first": Gap.FLOW}
     side_effects = [
         SideEffect(
             "sign_up", "employer", "the account is the employer's candidate, emailed a link"
@@ -146,27 +152,46 @@ class HRMDirect:
         return False
 
     def sign_in(self, page: Page, email: str, password: str) -> None:
+        """Signs in through the header's login, whose modal takes a username and a password;
+        an account gets a password through the link its sign-up emailed."""
         _to_apply(page)
-        page.locator(HAVE_ACCOUNT).click()
-        page.locator(EMAIL_SIGN_IN).click()
-        page.locator("input.login-username").fill(email)
-        page.locator("input.login-password").fill(password)
-        page.locator("input.login-password").press("Enter")
+        if page.locator(IDENTITY).is_visible():
+            page.locator(HAVE_ACCOUNT).click()
+            page.locator(EMAIL_SIGN_IN).click()
+            page.locator("input.login-username:visible").fill(email)
+            page.locator("input.login-password:visible").fill(password)
+            page.get_by_role("button", name="Continue").locator("visible=true").click()
+        else:
+            page.locator(LOGIN).click()
+            modal = page.locator(".modal:visible").filter(has=page.locator("input[type=password]"))
+            modal.locator("input:not([type=password]):visible").first.fill(email)
+            modal.locator("input[type=password]").fill(password)
+            modal.locator("button.btn-primary").click()
         try:
-            page.locator(PAGE_FORM).wait_for(timeout=SIGN_UP_TIMEOUT_MS)
+            page.locator(f"{PAGE_FORM}, {LOGIN}:text-is('logout')").first.wait_for(
+                timeout=SIGN_UP_TIMEOUT_MS
+            )
         except Timeout:
             raise Refused("wrong_password") from None
 
     def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
-        """Fills the apply page's first step; the system sets no password (`password` is
-        unused) and emails a sign-in link instead."""
+        """Fills the apply page's first step, which creates the account signed in and sets no
+        password: the email that follows holds a link to set one, `blocked: email_link`."""
         _to_apply(page)
+        if not page.locator(IDENTITY).is_visible():
+            raise Unsupported(
+                known_gap(self, "screening_first", "the form's first page comes before sign-up")
+            )
+        if page.locator(RECAPTCHA).count():
+            raise Blocked("captcha: a reCAPTCHA box keeps the sign-up's Continue disabled")
         first, _, last = (name or "").strip().partition(" ")
         form = page.locator(IDENTITY)
         form.locator("input.first-name").fill(first)
         form.locator("input.last-name").fill(last or first)
         form.locator("input.email").fill(email)
         form.locator("input.email-confirm").fill(email)
+        for group in form.locator(".radio-group:has(input[required])").all():
+            group.locator("label:has(input[value=false])").click()  # declines, the least given
         form.locator("button.submit-button").click()
         try:
             moved = page.locator(f"{PAGE_FORM}, {IDENTITY} .has-error, .alert-danger:visible")
@@ -178,6 +203,7 @@ class HRMDirect:
         if not page.locator(PAGE_FORM).count():
             message = " ".join(page.locator(".alert-danger:visible, .has-error").all_inner_texts())
             raise Refused(f"email_domain_rejected: {message.strip()[:200]}")
+        raise Blocked("email_link: set the account's password through the emailed link")
 
     def browser_read(self, page: Page) -> list[Field]:
         """Walks the wizard from its first page as far as its pages save with what they hold,
@@ -201,6 +227,13 @@ class HRMDirect:
             for f in shown:
                 if f.id in answers and f.id in self._kinds:
                     _fill(page, f, self._kinds[f.id], answers[f.id])
+            values = self._read(page)
+            for f in shown:  # a country renders its state list again, emptying the state
+                answer = answers.get(f.id)
+                if self._kinds.get(f.id) == "select" and answer and values.get(f.id) != answer:
+                    control = page.locator(PAGE_FORM).locator(f"[id='{f.id}']")
+                    tag = control.evaluate("el => el.tagName") if control.count() else ""
+                    _fill(page, f, "select" if tag == "SELECT" else "text", answer)
             unread = [f.id for f in shown if f.required and f.id not in self._fields]
             if unread:
                 raise NotTaken(f"the page shows fields the read did not list: {unread}; read again")
@@ -338,7 +371,7 @@ def _to_apply(page: Page) -> None:
             raise Unsupported("unhandled_rendering: no job on the career site") from None
         page.goto(jobs.get_attribute("href") or "")
     page.goto(_apply_link(page))
-    page.locator(IDENTITY).wait_for(timeout=FORM_TIMEOUT_MS)
+    page.locator(f"{IDENTITY}, {PAGE_FORM}").first.wait_for(timeout=FORM_TIMEOUT_MS)
 
 
 def _field(r: dict[str, Any]) -> Field:
@@ -391,7 +424,7 @@ def _fill(page: Page, field: Field, kind: str, answer: Answer) -> None:
     form = page.locator(PAGE_FORM)
     if kind in ("radio", "checkbox"):
         boxes = form.locator(f"input[data-field='{field.id}']")
-        if kind == "checkbox" and len(field.options or []) == 1:
+        if kind == "checkbox" and boxes.count() == 1:  # one box, answered Yes or No
             box = boxes.first
             if box.is_checked() != (values[0] == "Yes"):
                 box.locator("xpath=ancestor::label[1]").click()
@@ -413,7 +446,8 @@ def _fill(page: Page, field: Field, kind: str, answer: Answer) -> None:
     elif kind == "date":
         year, month, day = values[0].split("-")
         control.fill(f"{month}/{day}/{year}")
-        control.press("Escape")
+        control.press("Tab")
+        page.evaluate(CLOSE_DATEPICKERS)  # an open one covers the fields below it
     else:
         control.fill(values[0])
     control.dispatch_event("change")
@@ -434,4 +468,10 @@ def _upload(form: Locator, kind: str, path: str) -> None:
     holder = form.locator(f".qa-resume-upload.{kind}")
     holder.locator("input[type=file]").set_input_files(path)
     name = path.rsplit("/", 1)[-1]
-    holder.locator(".file-list tr", has_text=name).first.wait_for(timeout=UPLOAD_TIMEOUT_MS)
+    holder.page.wait_for_function(
+        "([el, name]) => [...el.querySelectorAll('.file-list tr td:first-child')]"
+        ".some(t => t.textContent.trim() === name)"
+        " && !el.querySelector('.file-list').textContent.includes('Uploading')",
+        arg=[holder.element_handle(), name],
+        timeout=UPLOAD_TIMEOUT_MS,
+    )
