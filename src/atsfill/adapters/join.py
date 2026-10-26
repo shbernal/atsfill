@@ -13,7 +13,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Request, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -36,11 +36,19 @@ MAX_MONTHS = 36  # how far the calendar is paged for a date
 
 QUESTIONS = """query JobScreeningQuestions($input: JobScreeningQuestionsInput!) {
   jobScreeningQuestions(input: $input) {
-    questions { id question options type isRequired position }
+    questions { id question options type isRequired position questionClass }
   }
 }"""
 YES_NO = ["Yes", "No"]  # a boolean's cards, in this order, in the job's language
 FILES = {"cv": "cv", "coverLetter": "coverLetter"}  # a file field, by its step
+# A question of a class has a step of its own; the others are `question-<n>`, in order.
+CLASS_STEPS = {
+    "workAuthorization": "WORK_AUTHORIZATION",
+    "salaryExpectation": "SALARY_EXPECTATION",
+    "startAvailability": "AVAILABILITY",
+    "availability": "AVAILABILITY",
+}
+PROFILE_STEPS = ("personalInformation", "professionalLinks")  # the account profile's
 PDF = [".pdf", "application/pdf"]
 
 # The page's own GraphQL request, from the page.
@@ -59,7 +67,7 @@ class Join:
     name = "join"
     per_employer = False
     asks_name = True  # the account's first and last name
-    known_gaps: dict[str, Gap] = {}
+    known_gaps = {"profile_incomplete": Gap.FLOW}
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the candidate account"),
         SideEffect("upload", "hiring_system", "a file is stored as soon as it is chosen"),
@@ -172,22 +180,32 @@ class Join:
                 return
             if step in FILES:
                 self._file(page, FILES[step], answers.get(FILES[step]))
-            elif match := re.fullmatch(r"question-(\d+)", step):
-                n = int(match[1])
-                if n > len(self._questions):
-                    raise Unsupported(f"unhandled_rendering: a question step {step} not listed")
-                question = self._questions[n - 1]
+            elif question := self._step_question(step):
                 field_id = f"question.{question['id']}"
                 if field_id in self._fields:
                     self._question(page, question, answers.get(field_id))
-            elif step not in ("personalInformation", "professionalLinks"):
+            elif step in PROFILE_STEPS:
+                if _continue(page).is_disabled():  # shown for what the account profile lacks
+                    detail = f"the {step} step asks what the account profile lacks"
+                    raise Unsupported(known_gap(self, "profile_incomplete", detail))
+            else:
                 raise Unsupported(f"unhandled_rendering: a wizard step {step!r}")
             _next(page, step)
         raise RuntimeError(f"the wizard did not reach its review page in {MAX_STEPS} steps")
 
+    def _step_question(self, step: str) -> dict[str, Any] | None:
+        if kind := CLASS_STEPS.get(step):
+            return next((q for q in self._questions if q.get("questionClass") == kind), None)
+        if match := re.fullmatch(r"question-(\d+)", step):
+            plain = [q for q in self._questions if not q.get("questionClass")]
+            if int(match[1]) > len(plain):
+                raise Unsupported(f"unhandled_rendering: a question step {step} not listed")
+            return plain[int(match[1]) - 1]
+        return None
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         values: dict[str, Answer] = {}
-        by_label = {f.label: i for i, f in self._fields.items() if i.startswith("question.")}
+        by_label = {q["question"]: f"question.{q['id']}" for q in self._questions}
         files = iter(self._files)  # the review lists the files by name, in the steps' order
         for label, value in page.evaluate(_REVIEW):
             if value.lower().endswith(".pdf") and (field_id := next(files, None)):
@@ -226,12 +244,13 @@ class Join:
         match question["type"]:
             case "BOOLEAN" | "SINGLE_CHOICE":
                 cards.first.wait_for(timeout=STEP_TIMEOUT_MS)
-                texts = [t.strip().splitlines()[-1].strip() for t in cards.all_inner_texts()]
-                options = YES_NO if question["type"] == "BOOLEAN" else texts
+                # the cards are the options in order: a letter, the option, a description
+                texts = [_card(t) for t in cards.all_inner_texts()]
+                options = YES_NO if question["type"] == "BOOLEAN" else question["options"]
                 self._shown[field_id] = dict(zip(texts, options, strict=False))
                 if not isinstance(answer, str):
                     return
-                if answer not in options:
+                if answer not in options or options.index(answer) >= len(texts):
                     raise NotTaken(f"no option {answer!r} in {field_id}: {texts}")
                 card = cards.nth(options.index(answer))
                 if card.get_attribute("aria-checked") != "true":
@@ -240,9 +259,11 @@ class Join:
                 _date(page, answer)
             case _ if isinstance(answer, str):
                 name = f"screeningQuestions.answer-{question['id']}"
-                target = page.locator(f'[name="{name}"], [id="{name}"]')
+                target = page.locator(f'[name="{name}"], [id="{name}"], #salaryExpectationAmount')
                 if not target.count():
-                    target = page.locator("textarea:visible, input:visible:not([type=file])")
+                    target = page.locator(
+                        "textarea:visible, input:visible:not([type=file]):not([role=combobox])"
+                    )
                 target.first.fill(answer)
 
 
@@ -279,10 +300,18 @@ def _question(q: dict[str, Any]) -> Field:
             return Field(field_id, label, FieldType.CHOICE, required, YES_NO)
         case "DATE":
             return Field(field_id, label, FieldType.DATE, required)
-        case "TEXT" | "INTEGER":
+        case "INTEGER":
+            return Field(field_id, f"{label} (a number)", FieldType.TEXT, required)
+        case "TEXT":
             return Field(field_id, label, FieldType.TEXT, required)
     reason = f"unhandled_rendering: {label!r} is a {q['type']} question"
     return Field(field_id, label, FieldType.TEXT, required, unfillable=reason)
+
+
+def _card(text: str) -> str:
+    """A choice card's option: the line after its letter."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return lines[1] if len(lines) > 1 else (lines[0] if lines else "")
 
 
 def _date(page: Page, answer: str) -> None:

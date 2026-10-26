@@ -42,10 +42,18 @@ The question counts are postings, from 11 employers whose posting asks screening
 
 - atsfill lists the CV (required), the cover letter and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
 - The fill walks the wizard from `cv` to `review`, answering each step, and stops there; a step it does not know stops it as `unhandled_rendering`. Continue is the footer's last button (its label is in the job's language); one left disabled means a required answer is missing.
+- A question of a class has a step named for it (`workAuthorization`, `salaryExpectation`); the others are `question-<n>`, numbered among themselves. A work authorization's cards hold the option and a description; a salary is `#salaryExpectationAmount`.
+- `personalInformation` (photo, name, country, city, phone) shows only when the job requires what the account profile lacks, a phone on some jobs: atsfill stops there, the known gap `profile_incomplete`.
 - A file is stored on upload, before Continue: the step then shows the file in place of its input.
 - A boolean's cards read in the job's language (`Ja`, `Nein`): they are answered `Yes`, `No` by position.
 - The calendar is paged with its previous and next buttons to the answer's month.
 - The read-back is the review page: each entry's label and value, the files by name in the steps' order, a boolean mapped back from its card's text.
+
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `profile_incomplete` | the job requires a detail the account profile lacks (a phone), so the wizard shows `personalInformation`, which atsfill does not fill | `unsupported_flow` | 2 of 10 at the adapter gate |
 
 ## Submitting
 
