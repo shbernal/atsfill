@@ -268,9 +268,10 @@ unsupported = { date = 2026-10-26, version = "0.0.3", commit = "95f2522", by = "
 [adpmyjobs]
 kind = "ats"
 share = 0.0084
-account = "to_read"
+account = "to_read"  # the posting loads only signed in; the sign-in has no password, a one-time code each time
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "95f2522", by = "agent", reason = "unsupported_flow: sign_in_otp: every sign-in, the sign-up's included, is a one-time code sent to the email or phone, and the posting loads only signed in (11 of 11 employers)" }
 
 [phenom]
 kind = "ats"
