@@ -140,7 +140,7 @@ def test_sign_up_declines_texts_and_agrees_to_the_privacy_policy(page, site):
 
 def test_sign_up_with_a_state_the_country_lacks_is_refused(page, site):
     page.goto(f"{HOST}/account/login.php")
-    details = SignUpDetails(**{**DETAILS.__dict__, "state": "DC"})
+    details = SignUpDetails(**{**DETAILS.__dict__, "state": "DC"})  # a code, not the name
     with pytest.raises(Refused, match="^sign_up_details: no state DC"):
         IsolvedHire().sign_up(page, "jane@example.com", PASSWORD, details)
     assert "sign_up" not in site.sent
