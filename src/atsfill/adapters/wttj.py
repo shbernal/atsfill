@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, SignUpDetails, Unsupported
 from atsfill.core.browser import Locator, Page, PageRequest, Request, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -64,7 +64,7 @@ _READ_BACK = """(form, ids) => Object.fromEntries(ids.map(id => {
 class WelcomeToTheJungle:
     name = "wttj"
     per_employer = False
-    asks_name = True  # the profile's first name
+    asks = {"name"}  # the profile's first name
     known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the account"),
@@ -98,11 +98,11 @@ class WelcomeToTheJungle:
     def sign_in(self, page: Page, email: str, password: str) -> None:
         _account_form(page, "sign-in-form", {"email": email, "password": password}, "/sessions")
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         """Creates the account, signed in, then waits for its confirmation link: clicking it
         signs every session out."""
         page.goto(SIGN_UP)
-        values = {"firstname": name or "", "email": email, "password": password}
+        values = {"firstname": details.name or "", "email": email, "password": password}
         _account_form(page, "sign-up-form", values, "/registrations")
         raise Blocked("email_link: the sign-up sent a confirmation link")
 

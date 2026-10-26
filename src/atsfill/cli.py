@@ -7,7 +7,7 @@ from pathlib import Path
 from atsfill import core
 from atsfill.adapters import adapters
 from atsfill.core import browser, paths
-from atsfill.core.adapter import NeedsAccount
+from atsfill.core.adapter import NeedsAccount, SignUpDetails
 from atsfill.core.results import Result, SessionReport, Status, StatusReport
 
 OK = {Status.READY, Status.SUBMITTED}
@@ -105,7 +105,11 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="create the account with --email and a password atsfill generates and stores",
     )
-    login.add_argument("--name", help="the user's name, for a sign-up that asks it")
+    login.add_argument(
+        "--details",
+        type=details_file,
+        help="a JSON file of the user's sign-up details (name, phone, address), for --create",
+    )
     for name in ("read", "fill", "send", "status", "login", "logout"):
         sub.choices[name].add_argument(
             "-v", "--verbose", action="store_true", help="the whole result, every key, indented"
@@ -121,6 +125,13 @@ def answers_file(path: str) -> dict:
     if not isinstance(answers, dict):
         raise argparse.ArgumentTypeError("expected a JSON object {field_id: value}")
     return answers
+
+
+def details_file(path: str) -> SignUpDetails:
+    try:
+        return SignUpDetails.parse(json.loads(Path(path).read_text()))
+    except (OSError, ValueError) as e:
+        raise argparse.ArgumentTypeError(str(e)) from e
 
 
 def run(args: argparse.Namespace) -> int:
@@ -171,7 +182,7 @@ def run(args: argparse.Namespace) -> int:
                         password=password,
                         window=args.window,
                         create=args.create,
-                        name=args.name,
+                        details=args.details,
                         **where,
                     )
             except ValueError as e:

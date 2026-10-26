@@ -13,7 +13,15 @@ import urllib.parse
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
+from atsfill.core.adapter import (
+    Blocked,
+    Gap,
+    NotTaken,
+    Refused,
+    SignUpDetails,
+    Unsupported,
+    known_gap,
+)
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -88,7 +96,7 @@ _FIELDS = """form => [...form.querySelectorAll('.form-field')].flatMap(f => {
 class HRMDirect:
     name = "hrmdirect"
     per_employer = True
-    asks_name = True
+    asks = {"name"}
     known_gaps = {"screening_first": Gap.FLOW, "sign_up_phone": Gap.FLOW}
     side_effects = [
         SideEffect(
@@ -174,7 +182,7 @@ class HRMDirect:
         except Timeout:
             raise Refused("wrong_password") from None
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         """Fills the apply page's first step, which creates the account signed in and sets no
         password: the email that follows holds a link to set one, `blocked: email_link`."""
         _to_apply(page)
@@ -189,7 +197,7 @@ class HRMDirect:
             )
         if page.locator(RECAPTCHA).count():
             raise Blocked("captcha: a reCAPTCHA box keeps the sign-up's Continue disabled")
-        first, _, last = (name or "").strip().partition(" ")
+        first, _, last = (details.name or "").strip().partition(" ")
         form = page.locator(IDENTITY)
         form.locator("input.first-name").fill(first)
         form.locator("input.last-name").fill(last or first)

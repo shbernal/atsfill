@@ -13,7 +13,15 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
+from atsfill.core.adapter import (
+    Blocked,
+    Gap,
+    NotTaken,
+    Refused,
+    SignUpDetails,
+    Unsupported,
+    known_gap,
+)
 from atsfill.core.browser import Locator, Page, Request, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -66,7 +74,7 @@ _REVIEW = """() => [...document.querySelectorAll("a > div")].map(div => {
 class Join:
     name = "join"
     per_employer = False
-    asks_name = True  # the account's first and last name
+    asks = {"name"}  # the account's first and last name
     known_gaps = {"profile_incomplete": Gap.FLOW}
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the candidate account"),
@@ -110,10 +118,10 @@ class Join:
         if urlsplit(page.url).path == UNVERIFIED:
             raise Blocked("email_link: the account is not confirmed")
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         """Creates the account, signed in, then waits for its confirmation link: until it is
         clicked the wizard does not open."""
-        first, _, last = (name or "").strip().rpartition(" ")
+        first, _, last = (details.name or "").strip().rpartition(" ")
         if not first or not last:
             raise Unsupported("unhandled_rendering: the sign-up asks a first and a last name")
         if _email_step(page, email):

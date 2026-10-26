@@ -17,7 +17,15 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import matching
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
+from atsfill.core.adapter import (
+    Blocked,
+    Gap,
+    NotTaken,
+    Refused,
+    SignUpDetails,
+    Unsupported,
+    known_gap,
+)
 from atsfill.core.browser import Locator, Page, PageRequest, Request, Response, Timeout
 from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
@@ -187,7 +195,7 @@ def _profile_hosts(request: Request, scope: str | None) -> list[str]:
 class Workday:
     name = "workday"
     per_employer = True
-    asks_name = False
+    asks: set[str] = set()
     known_gaps = {
         "experience_entries": Gap.FLOW,
         "long_wizard": Gap.FLOW,
@@ -244,7 +252,7 @@ class Workday:
         _email_form(page)
         _submit(page, "signInSubmitButton", email, password)
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         _email_form(page)
         page.locator("[data-automation-id=createAccountLink]").click()
         page.locator("[data-automation-id=verifyPassword]").fill(password)

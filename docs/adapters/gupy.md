@@ -18,7 +18,7 @@ Applying needs a signed-in account, one per user for the whole system: the accou
   2. Full name, Mobile number with its country code (a react-select of `US +1`-style options), Date of birth (`DD/MM/YYYY`).
   3. Password and its confirmation (at least 8 characters, letters, numbers and one special character), then "Complete registration".
 - The account is then unconfirmed: "Check the inbox … and click the link received". The link lands on `/candidates/auth/confirm-email`, "Email verified successfully", without signing in.
-- `login --create` takes the email and `--name` only. The sign-up also asks an identification document number, a mobile number and a date of birth, so the adapter has no sign-up: a user makes the account once in the `login` window. The Test user's was made outside atsfill, its password put in the secret store under `test/gupy`.
+- `login --create` takes the email and `--details` (a name, a phone, an address) only. The sign-up also asks an identification document number, a mobile number and a date of birth, so the adapter has no sign-up: a user makes the account once in the `login` window. The Test user's was made outside atsfill, its password put in the secret store under `test/gupy`.
 - `login_url` is `login.gupy.io/candidates/signin`. `sign_in` fills the email and password, presses Access account and waits to leave the page.
 - The signed-in check is `GET private-api.gupy.io/authentication/candidate/account/current` with an `Origin` header: 200 with the account, 401 to a visitor, 500 without the header.
 

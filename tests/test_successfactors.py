@@ -7,7 +7,7 @@ import pytest
 
 from atsfill.adapters.successfactors import SuccessFactors
 from atsfill.core import browser
-from atsfill.core.adapter import Refused
+from atsfill.core.adapter import Refused, SignUpDetails
 from atsfill.core.results import Answer, FieldType
 from tests import testuser
 
@@ -87,14 +87,18 @@ def test_detect_and_posting():
 
 def test_sign_up(page):
     page.goto(POSTING)
-    SuccessFactors().sign_up(page, "ada@example.com", "Aa1!aaaaaaaaaaaa", "Ada Placeholder")
+    SuccessFactors().sign_up(
+        page, "ada@example.com", "Aa1!aaaaaaaaaaaa", SignUpDetails(name="Ada Placeholder")
+    )
     assert page.url.startswith(f"{DC}/portalcareer")
 
 
 def test_sign_up_refused(page):
     page.goto(POSTING)
     with pytest.raises(Refused, match="email_in_use"):
-        SuccessFactors().sign_up(page, "taken@example.com", "Aa1!aaaaaaaaaaaa", "Ada Placeholder")
+        SuccessFactors().sign_up(
+            page, "taken@example.com", "Aa1!aaaaaaaaaaaa", SignUpDetails(name="Ada Placeholder")
+        )
 
 
 def test_sign_in(page):

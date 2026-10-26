@@ -101,6 +101,9 @@ Signing in to an account, which stores its session: by a person in a visible win
 **Password source**:
 Where atsfill gets an account's password: `--password -` on stdin, the user's `password-commands` entry, or the secret store for passwords atsfill generated.
 
+**Sign-up details**:
+What creating an account asks of the user besides the email and the password (a name, a phone, an address), passed by the consumer on each `login --create --details` and stored nowhere by atsfill. Not answers: they go to the sign-up, not to a form.
+
 **Session**:
 The stored browser state of a signed-in account, loaded only into its own adapter's context.
 _Avoid_: cookies

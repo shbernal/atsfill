@@ -3,7 +3,7 @@
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser
-from atsfill.core.adapter import Gap, Refused
+from atsfill.core.adapter import Gap, Refused, SignUpDetails
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -147,11 +147,13 @@ class FakeSignUp(FakeSignIn):
     def __init__(self, server: str) -> None:
         super().__init__(server)
         self.created: str | None = None  # the password the account was created with
+        self.details: SignUpDetails | None = None
 
-    asks_name = False
+    asks: set[str] = set()
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         if self.stops:
             raise self.stops
         self.created = self.password = password
+        self.details = details
         page.evaluate("document.cookie = 'session=ok; path=/'")

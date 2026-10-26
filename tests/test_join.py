@@ -7,7 +7,7 @@ import pytest
 from atsfill.adapters import join
 from atsfill.adapters.join import Join
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Refused
+from atsfill.core.adapter import Blocked, Refused, SignUpDetails
 from atsfill.core.results import FieldType
 
 PAGES = Path(__file__).parent / "pages/join"
@@ -155,15 +155,17 @@ def test_an_unconfirmed_account_waits_for_the_link(signing_in, page):
 
 def test_sign_up_waits_for_the_confirmation_link(signing_in, page):
     with pytest.raises(Blocked, match="^email_link"):
-        signing_in.sign_up(page, "jane@example.com", "Right-Password-1", "Jane Doe")
+        signing_in.sign_up(
+            page, "jane@example.com", "Right-Password-1", SignUpDetails(name="Jane Doe")
+        )
 
 
 def test_sign_up_with_a_taken_email_is_refused(signing_in, page):
     with pytest.raises(Refused, match="^email_in_use"):
-        signing_in.sign_up(page, TAKEN, "Right-Password-1", "Jane Doe")
+        signing_in.sign_up(page, TAKEN, "Right-Password-1", SignUpDetails(name="Jane Doe"))
 
 
 def test_sign_up_with_a_short_password_is_refused(signing_in, page, monkeypatch):
     monkeypatch.setattr(join, "BUTTON_TIMEOUT_MS", 300)
     with pytest.raises(Refused, match="^password_rule"):
-        signing_in.sign_up(page, "jane@example.com", "short", "Jane Doe")
+        signing_in.sign_up(page, "jane@example.com", "short", SignUpDetails(name="Jane Doe"))
