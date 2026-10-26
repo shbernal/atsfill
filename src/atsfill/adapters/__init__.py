@@ -8,6 +8,7 @@ from atsfill.adapters.gupy import Gupy
 from atsfill.adapters.hireology import Hireology
 from atsfill.adapters.hiringthing import HiringThing
 from atsfill.adapters.jazzhr import JazzHR
+from atsfill.adapters.join import Join
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
 from atsfill.adapters.oracle import Oracle
@@ -36,6 +37,7 @@ def adapters() -> list[Adapter]:
         Teamtailor(),
         Greenhouse(),
         WelcomeToTheJungle(),
+        Join(),
         SmartRecruiters(),
         Oracle(),
         Manatal(),

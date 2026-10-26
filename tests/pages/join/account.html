@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>JOIN candidate sign-in</title>
+<!-- The candidate account page (docs/adapters/join.md): the email first, then a password for an
+     account, or a name and a password for a new one. -->
+</head>
+<body>
+<form id="form">
+  <input id="email" type="email">
+  <div id="next"></div>
+  <button type="submit" data-testid="SubmitButton">Continue</button>
+</form>
+<script>
+const form = document.getElementById("form");
+const next = document.getElementById("next");
+let asked = null;
+
+async function graphql(operation, input) {
+  const answered = await fetch(`/candidate-api/graphql?operationName=${operation}`, {
+    method: "POST", headers: {"content-type": "application/json"},
+    body: JSON.stringify({operationName: operation, variables: {input}}),
+  });
+  return answered.json();
+}
+
+form.addEventListener("input", () => {
+  const password = document.getElementById("password");
+  if (asked === "sign_up") form.querySelector("[data-testid=SubmitButton]").disabled =
+    !(password.value.length >= 8 && document.getElementById("firstName").value);
+});
+
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = document.getElementById("email").value;
+  if (asked === null) {
+    const {data} = await graphql("CheckCandidate", {email});
+    asked = data.checkCandidate.exists ? "sign_in" : "sign_up";
+    next.innerHTML = (asked === "sign_up"
+      ? `<input id="firstName"><input id="lastName">` : "") + `<input id="password" type="password">`;
+    return;
+  }
+  const password = document.getElementById("password").value;
+  if (asked === "sign_up") {
+    await graphql("RegisterCandidate", {email, password,
+      firstName: document.getElementById("firstName").value,
+      lastName: document.getElementById("lastName").value});
+    location.href = "/auth/candidates/unverified-email";
+    return;
+  }
+  const answer = await graphql("LoginWithCredentials", {email, password});
+  if (!answer.errors) location.href = answer.unverified ? "/auth/candidates/unverified-email" : "/talent/home";
+});
+</script>
+</body>
+</html>

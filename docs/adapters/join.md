@@ -1,6 +1,6 @@
 # JOIN
 
-Observed on live postings on 2026-10-26, headless Camoufox. No adapter yet: the observations below are the first round's, the field inventory taken by request.
+Observed on live postings on 2026-10-26, headless Camoufox. The fixture pages are [tests/pages/join/job.html](../../tests/pages/join/job.html), a posting and its wizard served signed in by `tests/test_join.py`, and [tests/pages/join/account.html](../../tests/pages/join/account.html), the sign-in and sign-up.
 
 ## Where the form is
 
@@ -19,7 +19,8 @@ One account per user for the whole system, a JOIN candidate account.
 - Until the link is clicked every sign-in lands on `/auth/candidates/unverified-email`, and the posting's Apply button does not open the wizard. Each such sign-in mails a new link and voids the previous one, so only the latest works.
 - Sign-in: the email, then a password (`#password`) with Sign in (`[data-testid=SubmitButton]`), or "Get a login link" by email. `LoginWithCredentials` answers `Empty` on success.
 - The signed-in check is `GET join.com/api/me`: the candidate (`type: candidate`, `confirmedAt` once verified).
-- Signed in, Apply skips `authentication` and opens `cv`, with the account's name on `personalInformation`.
+- Signed in, the wizard opens on `authentication` and leaves it for `cv` a moment later. It skips `personalInformation` and `professionalLinks`, taking the name from the account: the steps are `cv`, `coverLetter`, the questions, `review`.
+- atsfill signs in (`login join`) and creates the account (`login join --create --email <address> --name "<first> <last>"`, which ends `blocked: email_link`); with a password source, a form command signs in again on its own.
 
 ## Reading and filling
 
@@ -37,4 +38,15 @@ The screening questions come from `JobScreeningQuestions` (`candidate-api/graphq
 | `DATE` | `date` | an inline calendar, days `td[data-part=table-cell][data-value=YYYY-MM-DD]`, month and year selects | 4 |
 | `TEXT` | `text` | text input | 1 |
 
-The question counts are postings, from 11 employers whose posting asks screening questions, read by request; one posting was walked to `review`. Which of the fixed steps a posting asks, and which are required, was not found in the page's data: the wizard's steps are the source.
+The question counts are postings, from 11 employers whose posting asks screening questions, read by request. Which steps a posting asks was not found in the page's data: the wizard's steps are the source.
+
+- atsfill lists the CV (required), the cover letter and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
+- The fill walks the wizard from `cv` to `review`, answering each step, and stops there; a step it does not know stops it as `unhandled_rendering`. Continue is the footer's last button (its label is in the job's language); one left disabled means a required answer is missing.
+- A file is stored on upload, before Continue: the step then shows the file in place of its input.
+- A boolean's cards read in the job's language (`Ja`, `Nein`): they are answered `Yes`, `No` by position.
+- The calendar is paged with its previous and next buttons to the answer's month.
+- The read-back is the review page: each entry's label and value, the files by name in the steps' order, a boolean mapped back from its card's text.
+
+## Submitting
+
+Confirm & apply (`button[type=submit]` on `review`) is the send; the evidence is the GraphQL request it makes. Not sent yet: which operation it is, and its answer, are unobserved.
