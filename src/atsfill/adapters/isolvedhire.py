@@ -239,7 +239,8 @@ class IsolvedHire:
         if country not in _texts(form.locator("#country_id option")):
             raise Refused(f"sign_up_details: no country {country} in the sign-up's list")
         form.locator("#country_id").select_option(label=country)
-        state = form.locator("#state_id option", has_text=re.compile(rf"^\s*{details.state}\s*$"))
+        named = re.compile(rf"^\s*{re.escape(details.state or '')}\s*$", re.I)
+        state = form.locator("#state_id option", has_text=named)
         try:
             state.first.wait_for(state="attached", timeout=LIST_TIMEOUT_MS)
         except Timeout:
