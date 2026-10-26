@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Blocked, NotTaken, Refused, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -82,7 +82,7 @@ class SuccessFactors:
     name = "successfactors"
     per_employer = True
     asks_name = True
-    known_gaps = {}
+    known_gaps = {"quick_apply_sign_up": Gap.FLOW, "sign_up_fields": Gap.FLOW}
     side_effects = [
         SideEffect("sign_up", "employer", "the account is created in the employer's tenant"),
         SideEffect("fill", "hiring_system", "an attachment is uploaded to the account's profile"),
@@ -143,7 +143,14 @@ class SuccessFactors:
             page.locator(REGISTER).first.click()
         elif page.locator(QUICK_APPLY).count():  # its sign-up sends the application too
             page.locator(SIGN_IN_MODAL).first.click()
-            page.locator(f"{REGISTER}:visible").first.click()
+            register = page.locator(f"{REGISTER}:visible")
+            try:
+                register.first.wait_for(timeout=LIST_TIMEOUT_MS)
+            except Timeout:
+                raise Unsupported(
+                    known_gap(self, "quick_apply_sign_up", "its sign-in offers no sign-up")
+                ) from None
+            register.first.click()
         page.locator(SIGN_UP).wait_for(timeout=LANDING_TIMEOUT_MS)
         first, _, last = (name or "").strip().partition(" ")
         for selector, value in [
@@ -179,7 +186,7 @@ class SuccessFactors:
         if re.search(r"password|kennwort", message, re.IGNORECASE):
             raise Refused(f"password_rule: {message}")
         if message:
-            raise Unsupported(f"unhandled_rendering: the sign-up refused: {message}")
+            raise Unsupported(known_gap(self, "sign_up_fields", message))
         text = page.locator("body").inner_text()
         if ACTIVATE.search(text):
             raise Blocked("email_link: the sign-up sent an activation email")

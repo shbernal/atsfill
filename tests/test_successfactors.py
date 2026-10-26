@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters.successfactors import SuccessFactors
 from atsfill.core import browser
 from atsfill.core.adapter import Refused
-from atsfill.core.results import FieldType
+from atsfill.core.results import Answer, FieldType
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/successfactors"
@@ -150,7 +150,7 @@ def test_fill_and_read_back(page, tmp_path):
     adapter.browser_read(page)
     resume = str(testuser.resume(tmp_path / "resume.pdf"))
     letter = str(testuser.resume(tmp_path / "letter.pdf"))
-    answers = {
+    answers: dict[str, Answer] = {
         "resume": resume,
         "cover-letter": letter,  # replaces the file the profile holds
         "cellPhone": "+12025550143",

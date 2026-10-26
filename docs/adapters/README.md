@@ -32,7 +32,6 @@ The registry covers 90.1% of postings.
 | hiringthing | ats | 0.3% | none | hosted |  | [dry_run_verified](hiringthing.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [send_verified](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [dry_run_verified](workday.md) |
-| successfactors | ats | 3.5% | to_read | hosted |  | mapped |
 | taleo | ats | 1.2% | to_read | hosted |  | mapped |
 | adp | ats | 1.1% | to_read | hosted |  | mapped |
 | ukgready | ats | 0.9% | to_read | hosted |  | mapped |
@@ -44,6 +43,7 @@ The registry covers 90.1% of postings.
 | join | ats | 0.3% | to_read | hosted |  | mapped |
 | paycom | ats | 2.4% | none | hosted | hCaptcha at form | mapped |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | mapped |
+| successfactors | ats | 3.5% | to_read | hosted |  | [unsupported](successfactors.md) |
 | ukg | ats | 3.5% | to_read | hosted |  | [unsupported](ukg.md) |
 | icims | ats | 1.9% | to_read | hosted | hCaptcha at form | mapped |
 | mycareersfuture | board | 1.6% | to_read | hosted |  | unsupported |
