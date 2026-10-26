@@ -360,6 +360,7 @@ kind = "ats"
 share = 0.0040
 account = "to_read"  # one account for the whole system; its sign-up asks an ID document number, a mobile number and a date of birth
 hosting = ["hosted"]
+adapter = "gupy"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [eightfold]

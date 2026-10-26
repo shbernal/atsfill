@@ -4,6 +4,7 @@ from atsfill.adapters.breezy import Breezy
 from atsfill.adapters.dayforce import Dayforce
 from atsfill.adapters.eightfold import Eightfold
 from atsfill.adapters.greenhouse import Greenhouse
+from atsfill.adapters.gupy import Gupy
 from atsfill.adapters.hireology import Hireology
 from atsfill.adapters.hiringthing import HiringThing
 from atsfill.adapters.jazzhr import JazzHR
@@ -55,6 +56,7 @@ def adapters() -> list[Adapter]:
         HiringThing(),
         Eightfold(),
         Workday(),
+        Gupy(),
         UKG(),
         SuccessFactors(),  # it claims a career site's job path on any host
         Phenom(),  # last: it claims a URL by its path alone

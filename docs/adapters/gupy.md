@@ -1,6 +1,6 @@
 # Gupy
 
-Observed on live postings of 11 employers, last on 2026-10-26, with the Test user's account. There is no adapter yet: the round that wrote this page mapped the account and the form and stopped at its turn cap, before an adapter, a fixture page or a dry run. The registry has Gupy `to_read`, mapped.
+Observed on live postings of 13 employers, last on 2026-10-26, with the Test user's account. The fixture page is [tests/pages/gupy/apply.html](../../tests/pages/gupy/apply.html), served with [forms.json](../../tests/pages/gupy/forms.json) as an Acme posting in `tests/test_gupy.py`: the register step's screens in turn, with one example of each question type.
 
 ## Where the form is
 
@@ -18,8 +18,9 @@ Applying needs a signed-in account, one per user for the whole system: the accou
   2. Full name, Mobile number with its country code (a react-select of `US +1`-style options), Date of birth (`DD/MM/YYYY`).
   3. Password and its confirmation (at least 8 characters, letters, numbers and one special character), then "Complete registration".
 - The account is then unconfirmed: "Check the inbox … and click the link received". The link lands on `/candidates/auth/confirm-email`, "Email verified successfully", without signing in.
-- `login --create` takes the email and `--name` only. The sign-up also asks an identification document number, a mobile number and a date of birth, so the Test user's account was made outside atsfill, its password put in the secret store under `test/gupy`. A user makes theirs once, in the `login` window.
-- The account endpoint `GET private-api.gupy.io/authentication/candidate/account/current` answers the account (name, email, ID number, mobile number) for a signed-in session.
+- `login --create` takes the email and `--name` only. The sign-up also asks an identification document number, a mobile number and a date of birth, so the adapter has no sign-up: a user makes the account once in the `login` window. The Test user's was made outside atsfill, its password put in the secret store under `test/gupy`.
+- `login_url` is `login.gupy.io/candidates/signin`. `sign_in` fills the email and password, presses Access account and waits to leave the page.
+- The signed-in check is `GET private-api.gupy.io/authentication/candidate/account/current` with an `Origin` header: 200 with the account, 401 to a visitor, 500 without the header.
 
 ## The application
 
@@ -52,10 +53,26 @@ Each rendering, from the resume (the same on every posting) and the question for
 
 No question had a `parentQuestionId` on these postings.
 
+## Reading
+
+`browser_read` opens Apply and walks past what comes before Additional information: the contact details dialog (Remind me later), Complete resume, Continue Application, then Continue. It stops at Additional information, or at the questions' introduction ("Answer now") when an earlier visit saved Additional information. The buttons are found by their text, which is English for an English account. A disabled Continue Application means the resume is incomplete: the `resume` gap.
+
+- Additional information: each radio group is a `choice` named by its input's name (`radioGroupIsIndicatedTitle`, `radioGroupIsCompanyEmployeeTitle`), labelled by its fieldset's legend, the checked option `prefilled` (No by default). The source combobox ("Where did you find this job?", optional) is listed `unhandled_rendering`.
+- The questions come from the page's own `question-forms` answer: `question-<questionId>`, `SELECT` a `choice`, `MULTI_SELECT` a `multi_choice`, `TEXT` and `TEXT_AREA` a `text`, `required` as given, a parent question a `shown_when`. Any other type is listed `unhandled_rendering`.
+
+## Filling
+
+- Additional information's radios are clicked by their wrapping label's text. Where the posting has questions, Save and continue saves it (`PUT …/curriculum/<application>/additional-info`), and Answer now opens the questions.
+- The questions are on one page: a `SELECT` is radios `question-<id>`, a `MULTI_SELECT` checkboxes `checkbox-<id>-<n>`, each clicked by its label; a `TEXT_AREA` a `textarea` and a `TEXT` an input, each named by the question's title.
+- Read-back: Additional information as it was before its save, the questions' checked labels and typed text.
+- Submit is the last page's Save and continue: the questions, which "cannot be edited later", or Additional information on a posting without them. No send was made.
+
 ## Known gaps
 
-| Gap | What | Postings |
-|---|---|---|
-| `sign_up_fields` | the sign-up asks an identification document number, a mobile number and a date of birth, which `login --create` does not take | every one |
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `resume` | the account's resume, shared by every application, is not filled: an incomplete one disables Continue Application. The Test user's was completed once, by hand | `unsupported_flow` | none with the Test user's |
 
-Not observed yet: the "Address in Brazil: No" path, the fields each education level asks, the question page's rendering, what Continue Application shows after the questions, and its submit.
+The resume as observed: an academic entry is Education level, then Academic qualification and Status (react-aria comboboxes opened with ArrowDown), the institution and course (autocompletes), start and end month and year; a professional one Company, Position, current job, start and end, activities. About you with "Do you live in Brazil?" No asks Country, Address (an autocomplete that also fills State, City and Postal Code), State, City. Each part has its own Save and continue, which releases the next.
+
+Not observed yet: what the page shows once the questions are saved, and a posting without questions.
