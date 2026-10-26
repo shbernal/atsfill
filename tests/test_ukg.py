@@ -8,7 +8,7 @@ import pytest
 
 from atsfill.adapters.ukg import UKG, _register
 from atsfill.core import browser
-from atsfill.core.adapter import SignUpDetails
+from atsfill.core.adapter import Refused, SignUpDetails
 from atsfill.core.results import FieldType, Is, OptionSet
 
 PAGE = Path(__file__).parent / "pages/ukg/apply.html"
@@ -18,6 +18,8 @@ OPPORTUNITY = "11111111-1111-4111-8111-111111111111"
 POSTING = f"{BOARD}/OpportunityDetail?opportunityId={OPPORTUNITY}"
 APPLY = f"{BOARD}/OpportunityApply?opportunityId={OPPORTUNITY}"
 REGISTER = "https://recruiting2.ultipro.com/ACME1000ACME/AuthCode/Register"
+SIGN_IN_PAGE = PAGE.with_name("signin.html")
+SIGN_IN = "https://signin-us.ultipro.com/u/login"
 STATES = {
     "c-us": [{"Code": "DC", "Name": "District of Columbia"}, {"Code": "NY", "Name": "New York"}],
     "c-ca": [{"Code": "ON", "Name": "Ontario"}],
@@ -39,6 +41,7 @@ def serve(route) -> None:
 def page(tmp_path_factory):
     with browser.open_page(tmp_path_factory.mktemp("data"), seconds=600) as page:
         page.context.route("https://recruiting2.ultipro.com/**", serve)
+        page.context.route(SIGN_IN, lambda route: route.fulfill(path=SIGN_IN_PAGE))
         yield page
 
 
@@ -90,6 +93,17 @@ def test_the_details_step_takes_the_phone_and_declines_the_optional_consents(pag
     }
 
 
+def test_a_sign_in_left_at_the_details_step_is_finished_with_the_details(page):
+    page.goto(SIGN_IN)
+    with pytest.raises(Refused, match="^sign_up_details: .*--details"):
+        UKG().sign_in(page, "jane@example.com", "pw")
+    page.goto(SIGN_IN)
+    details = SignUpDetails(name="Jane Doe", phone="+12125550123")
+    UKG().finish_sign_up(page, "jane@example.com", "pw", details)
+    sent = json.loads(unquote(urlsplit(page.url).fragment))
+    assert (sent["firstName"], sent["phoneNumber"]) == ("Jane", "+12125550123")
+
+
 def test_browser_read_lists_each_rendering(page):
     _, fields = opened(page)
     assert page.url == APPLY
@@ -120,6 +134,24 @@ def test_browser_read_lists_each_rendering(page):
     assert fields["TextResponse1"].label == "Why Acme?" and fields["TextResponse1"].required
     assert not fields["NumericResponse2"].required
     assert "InModal" not in fields
+    decline = "I decline to say"
+    assert fields["Gender"].options == ["Male", "Female", decline] and fields["Gender"].required
+    assert not any("decline" in f for f in fields)
+    race = fields["EthnicOrigin"]
+    assert race.shown_when == Is("HispanicOrigin", ["Not Hispanic/Latino"])
+    assert race.options == ["White", "Asian", decline]
+    assert list(fields).index("EthnicOrigin") == list(fields).index("HispanicOrigin") + 1
+
+
+def test_a_read_only_contact_panel_lists_no_state(page):
+    """With the address optional, the contact information is the account's, its Country and
+    State in a closed edit dialog."""
+    adapter = UKG()
+    adapter.account_scope(POSTING)
+    page.goto(APPLY)
+    page.evaluate("document.getElementById('Country').closest('.form-group').hidden = true")
+    fields = {f.id: f for f in adapter.browser_read(page)}
+    assert "Country" not in fields and "State" not in fields
 
 
 def test_fill_and_read_back(page, resume):
@@ -141,8 +173,18 @@ def test_fill_and_read_back(page, resume):
         "AvailableStartDate": "2026-12-01",
         "MultipleChoiceResponse0": "Yes",
         "TextResponse1": "Because",
-        "NumericResponse2": "3",
+        "NumericResponse2": "50000",  # shown 50,000
+        "Gender": "I decline to say",
+        "HispanicOrigin": "Not Hispanic/Latino",
+        "EthnicOrigin": "Asian",
     }
+    page.locator("#Gender").select_option(label="Male")
     adapter.fill(page, answers)
+    assert page.locator("#NumericResponse2").input_value() == "50,000"
+    assert page.locator("#Gender").input_value() == ""  # the decline box cleared it
     shown = adapter.read_back(page)
     assert shown == {**answers, "documents": "CV Ada.pdf", "FirstName": "Ada"}
+    adapter.fill(page, {"Gender": "Female", "HispanicOrigin": "I decline to say"})
+    shown = adapter.read_back(page)
+    assert (shown["Gender"], shown["HispanicOrigin"]) == ("Female", "I decline to say")
+    assert "EthnicOrigin" not in shown

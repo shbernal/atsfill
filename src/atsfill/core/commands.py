@@ -491,7 +491,8 @@ def login(
     `email` is remembered for the account; `password` is used for this sign-in only. `create`
     creates the account with a password atsfill generates and stores first (a side effect),
     giving the sign-up the user's `details`; with a password already stored, the account may
-    exist, so it signs in with that password and keeps the account's email instead."""
+    exist, so it signs in with that password and keeps the account's email instead, the
+    `details` finishing a sign-up the account was left in."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
     mine = paths.user_dir(data, user)
@@ -513,6 +514,15 @@ def login(
         return _create(report, account, url, mine, email, details or SignUpDetails(), data)
     if kept:
         report.password = "kept"
+        # the details finish a sign-up the account may have been left in
+        if (
+            details
+            and isinstance(account, CreatesAccount)
+            and (missing := details.missing(account.asks))
+        ):
+            report.status = Status.REFUSED
+            report.reason = f"sign_up_details: no {', '.join(missing)}"
+            return report
     if password and not (isinstance(account, SignsIn) and accounts.email(mine, adapter, scope)):
         raise ValueError(f"signing in to {adapter} with a password needs --email")
     try:
@@ -526,7 +536,7 @@ def login(
             accounts.wait_for_person(account, scope, data, session),
         )
     else:
-        result = _headless(data, account, scope, credentials, session)
+        result = _headless(data, account, scope, credentials, session, details)
         command = login_command(adapter, user, url)
         report.status, report.reason = (
             result.status,
@@ -563,7 +573,8 @@ def _create(
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
-    result = _headless(data, account, report.scope, (email, password), report.path, details)
+    credentials = (email, password)
+    result = _headless(data, account, report.scope, credentials, report.path, details, create=True)
     command = login_command(account.name, report.user, url)
     report.status, report.reason = result.status, _email_link(result.reason, email, command)
     report.password = "stored"
@@ -582,16 +593,17 @@ def _headless(
     credentials: Credentials,
     session: Path,
     details: SignUpDetails | None = None,
+    create: bool = False,
 ) -> Result:
-    """Signs in, or creates the account, through the adapter: `ready` once the session is
-    stored."""
+    """Signs in, or creates the account with `create`, through the adapter: `ready` once the
+    session is stored."""
     assert isinstance(account, SignsIn)
     url = account.login_url(scope)
 
     def run(_: list[str]) -> Result:
         result = Result(Status.READY, url, account.name)
         with open_page(data, None) as page, _stops(result):
-            accounts.sign_in(page, account, scope, *credentials, session, details)
+            accounts.sign_in(page, account, scope, *credentials, session, details, create)
         return result
 
     return _in_budget(url, run)

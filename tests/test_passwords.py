@@ -207,6 +207,24 @@ def test_create_signs_in_with_a_password_already_stored(creates, config, data, c
     assert core.accounts.email(data / "users/default", "fakeaccount", None) == EMAIL
 
 
+def test_create_with_a_password_stored_finishes_the_sign_up_with_the_details(
+    creates, config, data, capsys, tmp_path
+):
+    login(data, capsys, "--create", "--email", EMAIL)
+    creates.asks, creates.details = {"name", "phone"}, None
+    details = tmp_path / "details.json"
+    details.write_text(json.dumps({"name": "Jane Doe"}))
+    code, report = login(data, capsys, "--create", "--email", EMAIL, "--details", str(details))
+    assert (code, report["status"], report["password"]) == (1, "refused", "kept")
+    assert report["reason"] == "sign_up_details: no phone"
+    assert creates.details is None and creates.sign_ins == 0
+    details.write_text(json.dumps({"name": "Jane Doe", "phone": "+12025550143"}))
+    code, report = login(data, capsys, "--create", "--email", EMAIL, "--details", str(details))
+    assert (code, report["status"], report["password"]) == (0, "signed_in", "kept")
+    assert creates.details == SignUpDetails(name="Jane Doe", phone="+12025550143")
+    assert passwords.stored(data / "users/default", "fakeaccount", None) == creates.created
+
+
 def test_a_verification_link_names_the_address_and_the_command(creates, config, data, capsys):
     creates.stops = Blocked("email_link")
     code, report = login(data, capsys, "--user", "test", "--create", "--email", EMAIL)

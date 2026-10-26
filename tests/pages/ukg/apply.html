@@ -120,6 +120,37 @@
           </div>
         </div>
       </div>
+      <div id="CountryQuestions">
+        <div class="form-group">
+          <label for="Gender" class="control-label required">Gender</label>
+          <select id="Gender" data-automation="country-questions-gender" required>
+            <option value="">Choose...</option><option value="Male">Male</option>
+            <option value="Female">Female</option></select>
+          <div class="checkbox"><label>
+            <input type="checkbox" data-automation="gender-decline-checkbox">
+            <span>I decline to say</span><span class="sr-only">Gender</span></label></div>
+        </div>
+        <div class="form-group">
+          <label for="HispanicOrigin" class="control-label required">Ethnic Origin</label>
+          <select id="HispanicOrigin" data-automation="country-questions-hispanic-origin" required>
+            <option value="">Choose...</option><option value="Yes">Hispanic/Latino</option>
+            <option value="No">Not Hispanic/Latino</option></select>
+          <div class="checkbox"><label>
+            <input type="checkbox" data-automation="ethnic-origin-decline-checkbox">
+            <span>I decline to say</span><span class="sr-only">Ethnic Origin</span></label></div>
+        </div>
+        <div class="row collapse" id="RaceRow" style="display: none">
+          <div class="form-group">
+            <label for="EthnicOrigin" class="control-label required">Race</label>
+            <select id="EthnicOrigin" data-automation="country-questions-race" required>
+              <option value="">Choose...</option><option value="White">White</option>
+              <option value="Asian">Asian</option></select>
+            <div class="checkbox"><label>
+              <input type="checkbox" data-automation="race-decline-checkbox">
+              <span>I decline to say</span><span class="sr-only">Race</span></label></div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="modal"><input type="text" id="InModal"></div>
     <ukg-button data-automation="btn-submit">Submit</ukg-button>
@@ -143,6 +174,23 @@
     document.getElementById("Files").innerHTML =
       `<div data-automation="file-name"><strong class="hidden">File Name</strong>` +
       `<span id="FileName0">${name}</span></div>`;
+  });
+  // an equal-opportunity question's decline box clears its select when ticked
+  for (const box of document.querySelectorAll("[data-automation$='-decline-checkbox']"))
+    box.addEventListener("change", () => {
+      if (box.checked) box.closest(".form-group").querySelector("select").value = "";
+    });
+  // race is asked when not Hispanic or Latino
+  const hispanic = document.getElementById("HispanicOrigin");
+  const race = () => document.getElementById("RaceRow").style.display =
+    hispanic.value === "No" ? "" : "none";
+  hispanic.addEventListener("change", race);
+  document.querySelector("[data-automation=ethnic-origin-decline-checkbox]")
+    .addEventListener("change", race);
+  // autoNumeric groups a Numeric question's number
+  const numeric = document.getElementById("NumericResponse2");
+  numeric.addEventListener("blur", () => {
+    numeric.value = Number(numeric.value.replace(/,/g, "")).toLocaleString("en-US");
   });
   const picker = document.querySelector("ukg-input");
   for (const part of picker.querySelectorAll("input")) part.addEventListener("input", () => {

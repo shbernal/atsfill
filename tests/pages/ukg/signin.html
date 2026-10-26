@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Log in</title></head>
+<body>
+<!-- Auth0's Universal Login for a UKG tenant, for an account whose sign-up stopped before the
+     tenant's details step: continuing goes to that step again. -->
+<form>
+  <input id="username" name="username" type="text">
+  <input id="password" name="password" type="password">
+  <button type="submit" name="action" data-action-button-primary="true">Continue</button>
+</form>
+<script>
+  document.querySelector("form").addEventListener("submit", e => {
+    e.preventDefault();
+    location.href = "https://recruiting2.ultipro.com/ACME1000ACME/AuthCode/Register";
+  });
+</script>
+</body>
+</html>
