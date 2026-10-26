@@ -218,9 +218,10 @@ dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", 
 [adp]
 kind = "ats"
 share = 0.0108
-account = "to_read"
+account = "to_read"  # Apply opens a talent community step, name, email and mobile number, verified with a one-time code before the form
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "b5978b4", by = "agent", reason = "unsupported_flow: sign_up_otp: the talent community step before the form sends a one-time code to the email or mobile number, on every employer that showed it (14 of 15 employers)" }
 
 [eures]
 kind = "aggregator"
