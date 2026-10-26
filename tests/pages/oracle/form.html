@@ -267,6 +267,17 @@
       }, ATTACH_MS);
     });
   }
+  // the draft of an address seen before keeps its resume; Remove gives the upload button back
+  const resume = document.querySelector("resume-upload-button");
+  if (sessionStorage.getItem("draft")) {
+    const waiting = resume.firstElementChild;
+    const filled = document.createElement("div");
+    filled.className = "attachment-upload-button attachment-upload-button--filled";
+    filled.innerHTML = '<div class="attachment-upload-button__filled"><button type="button" class="attachment-upload-button__download">cv.pdf</button>' +
+      '<button type="button" class="attachment-upload-button__bottom-button">Remove Resume</button></div>';
+    filled.querySelector(".attachment-upload-button__bottom-button").addEventListener("click", () => resume.replaceChildren(waiting));
+    resume.replaceChildren(filled);
+  }
 </script>
 </body>
 </html>

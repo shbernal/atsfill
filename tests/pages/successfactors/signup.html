@@ -39,7 +39,16 @@
         error.textContent = 'Please complete all required fields and re-submit.';
       } else if (email.startsWith('otp')) {  // some sites send a passcode before the account
         document.body.innerHTML = '<div id="otpContainer"><p>We have sent a one-time password to your email address.</p>' +
-          '<input type="password" name="passcode" id="passcode" aria-required="true"><button id="continueBtn">Continue</button></div>';
+          '<div role="alert"></div><input type="password" name="passcode" id="passcode" aria-required="true">' +
+          '<button id="continueBtn">Continue</button><button id="resendBtn">Resend</button></div>';
+        document.getElementById('continueBtn').addEventListener('click', () => {
+          if (document.getElementById('passcode').value !== '123456') {
+            document.querySelector('#otpContainer [role=alert]').textContent = 'The passcode is not valid.';
+            return;
+          }
+          document.cookie = 'signedIn=1; path=/';
+          location.href = '/portalcareer?_s.crb=x';
+        });
         return;
       } else if (email.startsWith('taken')) {
         error.textContent = 'An account with this email address already exists.';

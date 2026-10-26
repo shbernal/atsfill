@@ -1,11 +1,11 @@
 # isolved Hire
 
-isolved Applicant Tracking's career sites, observed on live postings on 2026-10-26, headless, with the Test user's account. The fixture pages are [tests/pages/isolvedhire/](../../tests/pages/isolvedhire/), served as an Acme site by `tests/test_isolvedhire.py`: the sign-in and sign-up ([account.html](../../tests/pages/isolvedhire/account.html), [sign-up.html](../../tests/pages/isolvedhire/sign-up.html)), the wizard ([apply.html](../../tests/pages/isolvedhire/apply.html)) and its steps as `/apply/view.php` serves them ([steps.html](../../tests/pages/isolvedhire/steps.html)), one example of each rendering.
+isolved Applicant Tracking's career sites, observed on live postings on 2026-10-26 and 2026-10-27, headless, with the Test user's account. The fixture pages are [tests/pages/isolvedhire/](../../tests/pages/isolvedhire/), served as an Acme site by `tests/test_isolvedhire.py`: the sign-in and sign-up ([account.html](../../tests/pages/isolvedhire/account.html), [sign-up.html](../../tests/pages/isolvedhire/sign-up.html)), the wizard ([apply.html](../../tests/pages/isolvedhire/apply.html)) and its steps as `/apply/view.php` serves them ([steps.html](../../tests/pages/isolvedhire/steps.html)), one example of each rendering.
 
 ## Where the form is
 
 - A posting is `https://<employer>.isolvedhire.com/jobs/<id>`, one subdomain per employer.
-- The posting page holds an apply step in place, under Apply now: "How would you like to verify your identity?", Continue with phone (a text code) or Continue with email, then a six-digit code mailed or texted before the form (`sign_up_otp`). 15 of 15 employers showed it. atsfill goes around it, through an account made from the sign-in.
+- The posting page holds an apply step in place, under Apply now (15 of 15 employers): "How would you like to verify your identity?", Continue with phone (a text OTP) or Continue with email. The email option takes the address ("We'll look up your account or create a new one"), a text message consent (optional), Send verification code, then a six-digit OTP by mail, one box per digit (`.screen-email-otp__digit-input`) and Verify. A new address then gets "Tell us about yourself": first and last name, street, country, state, city and zip required, the phone optional; Continue to Application opens the wizard signed in, with a Setup Password dialog on its first step, behind the contact details dialog, which requires the phone. atsfill does not apply through it: it asks the same details as the sign-in's sign-up, which needs no OTP, so the account is made from the sign-in.
 - The application is a wizard at `/apply/<id>-0.php`. Signed out it redirects to `/account/login.php?listing_id=<id>&i=0`. Signed in, opening it starts an application, kept unfinished in the account (`goal=app_started`), and the next visit resumes it at the step last reached.
 - The steps are listed on the left (`#steps a.step[data-file]`): `instructions`, the employer's choice among `screening` (Job Questions), `employment`, `education`, `resume`, `references`, `additional_questions`, `eeoc` (Voluntary Disclosure), `source`, `disclosure` (Applicant Statement), then `submit`. Each step loads into `#landingStrip` from `GET /apply/view.php?n=apply&f=<step>&csrf_token=<token>`, the token in the page's `input[name=csrf_token]`; Proceed to Next Step (`#next`) checks the step's required answers, saves it and loads the next.
 
@@ -46,7 +46,6 @@ From the 15 employers of the sample, read signed in. A step's fields are read fr
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `sign_up_otp` | the posting page's Apply now sends a one-time code to the email or phone before the form; atsfill signs up from the sign-in instead | `unsupported_flow` | 15 of 15 employers |
 | `entry_list` | the employment or education step adds entries one by one, each with its own form | `unsupported_rendering` | 1 of 15 employers in the sample, 1 of 10 at the adapter gate |
 | `drawn_signature` | the applicant statement asks a signature drawn on a canvas | `unsupported_rendering` | 1 of 15 employers |
 

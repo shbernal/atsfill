@@ -30,6 +30,8 @@ submit-allowed = ["ashby"]
 mute-side-effect-warnings = ["all"]
 [password-commands]
 wttj = "rbw get welcometothejungle.com {email}"
+[otp-commands]
+all = "mailbox wait {email} --code --since {since}"
 
 [users.test]
 mute-side-effect-warnings = ["all"]
@@ -43,7 +45,9 @@ The keys `submit` and `ack_side_effects` are an error naming their replacement.
 
 **Account creation is a side effect** (ADR 0008) and never implicit: never part of `fill` or `send`. A consumer's harness asks before `login --create` for a real user. Development creates Test user accounts freely.
 
-**Verification links and OTPs.** The user's mailbox is outside atsfill. atsfill reports what the hiring system waits for, and the consumer (the user, or an agent with access to the mailbox) supplies it. A verification link is a one-time click in the mailbox: `blocked: email_link` names the address and the `login` command to run again once it is clicked; atsfill takes nothing back. OTPs (`email_otp`, `sms_otp`) are a known gap.
+**Verification links.** The user's mailbox is outside atsfill. A verification link is a one-time click in the mailbox: `blocked: email_link` names the address and the `login` command to run again once it is clicked; atsfill takes nothing back.
+
+**OTPs.** A system sends a fresh OTP each time its step shows, so a command that stopped there and ran again later would meet a new one: the page stays open while atsfill gets the OTP from the user's `otp-commands` entry for the adapter, else its `all` entry, and types it in. The entry is a command, split into arguments without a shell like a password command, with `{email}` (the address the OTP went to), `{scope}` and `{since}` (when the step asked for it, ISO 8601 in UTC, so an older OTP is not taken) filled per argument. atsfill runs it until it exits 0 printing the OTP, its first word, within `OTP_TIMEOUT_S` (90 seconds); a command that waits for the mail itself runs once, stopped at the timeout. Without an entry, or with no OTP in time, the command ends `blocked: email_otp`, naming the step and the address. It serves sign-ins, sign-ups and form steps alike, in the core once: an adapter only finds its system's OTP step and the input it takes, and says what the page did with it. An SMS OTP (`sms_otp`) stays a known gap. Typing an OTP is not a side effect: the system sent it for the step atsfill was already on.
 
 **Password sources.** Where atsfill gets an account's password, first found wins: `--password -` on stdin for one sign-in, the user's `password-commands` entry for the adapter, the secret store for passwords atsfill generated. A command is split into arguments, without a shell; `{email}` and `{scope}` are filled per argument. With a source, a form command that finds the session signed out signs in again on its own, which is not a side effect. Unlocking a password manager for an agent trusts the agent with the password: atsfill never prints it, and cannot stop the agent from fetching it.
 

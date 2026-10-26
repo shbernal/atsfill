@@ -1,4 +1,5 @@
 import functools
+import sys
 import threading
 from collections.abc import Generator
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -10,7 +11,7 @@ import keyring.backend
 import keyring.errors
 import pytest
 
-from atsfill.core import browser
+from atsfill.core import browser, otp
 
 PAGES = Path(__file__).parent / "pages"
 
@@ -103,3 +104,16 @@ def server() -> Generator[str]:
         threading.Thread(target=httpd.serve_forever, daemon=True).start()
         yield f"http://localhost:{httpd.server_port}"
         httpd.shutdown()
+
+
+@pytest.fixture
+def otp_command(tmp_path, monkeypatch) -> None:
+    """Gives the default user an `otp-commands` entry printing 123456, the OTP the fixture
+    pages take."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
+    monkeypatch.setattr(otp, "POLL_S", 0.1)
+    config = tmp_path / "conf/atsfill/config.toml"
+    config.parent.mkdir(parents=True)
+    script = tmp_path / "otp.py"
+    script.write_text("print('123456')")
+    config.write_text(f'[otp-commands]\nall = "{sys.executable} {script}"\n')

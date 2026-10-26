@@ -17,7 +17,7 @@
 | `ready` | dry run clean |
 | `refused` | a mismatch, a missing answer, an answer the page would not take, or an adapter not enabled to submit |
 | `submitted` | sent, with the evidence |
-| `blocked` | a captcha challenge, an OTP, a low reCAPTCHA score, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason comes back |
+| `blocked` | a captcha challenge, an OTP atsfill could not get, a low reCAPTCHA score, a login wall, or the time budget (ADR 0004) running out before the click stopped it; the reason comes back |
 | `unknown` | submit was clicked and no evidence came before the time budget ran out |
 | `unsupported` | no adapter for the system, a required field atsfill cannot fill (ADR 0014), a flow the adapter does not handle, or a step on another site; the reason comes back |
 
@@ -27,4 +27,4 @@ The exit code is 0 for `ready` and `submitted`, 1 for any other status, 2 for a 
 
 **Double-send guard.** Before clicking submit, atsfill appends the attempt to the user's `attempts.jsonl` (ADR 0015), keyed by the posting. A `send` for a posting whose last attempt ended `submitted` or `unknown` is refused unless it passes `--resend`. This covers a command killed after the click, which no consumer can tell apart from one that failed before it.
 
-**OTPs** end the command as `blocked: email_otp` or `blocked: sms_otp` and close the page. The consumer starts over later.
+**OTPs.** An emailed OTP is typed in while the page waits, from the user's `otp-commands` entry (ADR 0015). Without an entry, or with no OTP in time, the command ends `blocked: email_otp`; an SMS OTP ends `blocked: sms_otp`. The page closes either way: the next attempt meets a fresh OTP.

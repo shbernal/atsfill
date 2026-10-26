@@ -17,7 +17,7 @@
   - CI green on the first run: merge. A red run counts even if a re-run goes green; re-run only to tell a flake from a break.
   - A flake (red then green on one commit, main red after a green PR, green locally and red in CI) in the code the PR touches is its bug: fix it before merging. Elsewhere: find or file a `flaky` issue, then merge. After merging, check main's CI the same way.
   - Waits and timeouts are named constants, never hardcoded.
-  - OTPs are a known gap; each one met (sign-in, sign-up or form) gets an `otp-required` issue naming the system and the step, never the posting: the count decides whether to handle them.
+  - An emailed OTP is the core's, from the user's `otp-commands`: an adapter only finds the OTP step and its input. Development gets the Test user's from the mailbox. An SMS OTP is a known gap; each one met gets an `otp-required` issue naming the system and the step, never the posting: the count decides whether to handle them.
   - Development creates accounts for the Test user freely, never for a real user.
 
 - Iron Laws

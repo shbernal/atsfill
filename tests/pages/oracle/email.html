@@ -5,7 +5,8 @@
 </head>
 <body>
 <!-- The email step, as Oracle renders it: an address, the terms, Next. A known address gets
-     the code page instead of the form. Some tenants' cookie banner covers it: the adapter's
+     the OTP step first, one box per digit, and once 123456 is verified the form holds that
+     address's draft. Some tenants' cookie banner covers it: the adapter's
      filter hides it. -->
 <div class="cookie-consent-modal cookie-consent-site narrow" style="position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.5)">
   <div class="cookie-consent__content" role="dialog" aria-label="Cookie Consent Message">
@@ -36,7 +37,15 @@
   </div>
   <div class="apply-flow-pin-code-required" hidden>
     <h1>Confirm Your Identity</h1>
-    <input class="pin-code-input__input" maxlength="1"><input class="pin-code-input__input" maxlength="1">
+    <form class="pin-code-verification">
+      <p>The verification code was sent to this email address.</p>
+      <div class="pin-code-input">
+        <input class="pin-code-input__input" id="pin-code-1" maxlength="1"><input class="pin-code-input__input" id="pin-code-2" maxlength="1"><input class="pin-code-input__input" id="pin-code-3" maxlength="1"><input class="pin-code-input__input" id="pin-code-4" maxlength="1"><input class="pin-code-input__input" id="pin-code-5" maxlength="1"><input class="pin-code-input__input" id="pin-code-6" maxlength="1">
+      </div>
+      <p class="pin-code-error" hidden>The code is not valid.</p>
+      <button type="submit" class="apply-flow-dialog__button apply-flow-dialog__button--primary">VERIFY</button>
+      <button type="button" class="pin-code-form__action-button">Send New Code</button>
+    </form>
   </div>
 </main>
 <script>
@@ -56,6 +65,18 @@
       return;
     }
     sessionStorage.setItem("email", email);
+    sessionStorage.removeItem("draft");
+    location.href = location.href.replace(/\/apply\/email.*/, "/apply/section/1");
+  });
+  document.querySelector(".pin-code-verification").addEventListener("submit", e => {
+    e.preventDefault();
+    const pin = [...document.querySelectorAll(".pin-code-input__input")].map(i => i.value).join("");
+    if (pin !== "123456") {
+      document.querySelector(".pin-code-error").hidden = false;
+      return;
+    }
+    sessionStorage.setItem("email", document.querySelector("#primary-email-1").value);
+    sessionStorage.setItem("draft", "1");
     location.href = location.href.replace(/\/apply\/email.*/, "/apply/section/1");
   });
 </script>

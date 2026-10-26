@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from atsfill.adapters.oracle import Oracle
-from atsfill.core import browser, matching
+from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import Blocked
 from atsfill.core.results import FieldType, Is, OptionSet
 
@@ -152,7 +152,23 @@ def test_every_answer_reads_back(opened, page, resume):
     assert [c for c in checks if not c.match] == []
 
 
-def test_a_known_address_gets_an_emailed_code(opened, page, resume):
+def test_a_known_address_types_the_emailed_otp_and_replaces_the_drafts_resume(
+    opened, page, resume, otp_command
+):
+    adapter, fields = opened
+    answers = {"email": "known@example.com", "legalDisclaimer": "Yes", "resume": resume}
+    with otp.source("default", adapter.name, None):
+        adapter.fill(page, answers)
+    assert page.url.endswith("/apply/section/1")
+    checks = matching.check(fields, answers, adapter.read_back(page))
+    assert [c for c in checks if not c.match] == []
+
+
+def test_a_known_address_without_an_otp_command_is_blocked(opened, page, tmp_path, monkeypatch):
     adapter, _ = opened
-    with pytest.raises(Blocked, match="email_otp"):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
+    with (
+        otp.source("default", adapter.name, None),
+        pytest.raises(Blocked, match="email_otp: the email step sent an OTP to known@example.com"),
+    ):
         adapter.fill(page, {"email": "known@example.com", "legalDisclaimer": "Yes"})

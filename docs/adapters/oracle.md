@@ -1,12 +1,13 @@
 # Oracle
 
-Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last on 2026-10-24. The fixture pages are [tests/pages/oracle/](../../tests/pages/oracle/), served as an employer's site in `tests/test_oracle.py`: the email step, and one single-page form with one example of each rendering below.
+Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last on 2026-10-27. The fixture pages are [tests/pages/oracle/](../../tests/pages/oracle/), served as an employer's site in `tests/test_oracle.py`: the email step with its OTP step, and one single-page form, holding a known address's draft resume with one example of each rendering below.
 
 ## Where the form is
 
 - Each employer has its own tenant, `<tenant>.fa.<region>.oraclecloud.com` (`fa.ocs.oraclecloud.com`, `fa.oraclecloud.com` too). A job is `/hcmUI/CandidateExperience/<lang>/sites/<site>/job/<id>`; the same requisition shows under several sites, so the double-send key is `https://<tenant host>/hcmUI/CandidateExperience/job/<id>`.
 - Applying starts at `<job>/apply/email`: an email address, on most tenants the employer's terms (`legal-disclaimer`, a checkbox styled over a hidden input), and Next (`button[type=submit].apply-flow-pagination__button`). Past it, `<job>/apply/section/1`. Some tenants first offer to import a LinkedIn profile (`/easy-apply`); its "manually" link (`.quick-apply-flow__manually--link`) goes on to the form.
-- An address the tenant has seen before, even once on the email step, gets "Confirm Your Identity" (`.apply-flow-pin-code-required`) instead: a six-digit OTP is emailed to it. atsfill stops with `blocked`, `email_otp`. A user's address meets it on every employer they applied to or dry-ran before; the Test user takes a new address each run.
+- An address the tenant has seen before, even once on the email step, gets "Confirm Your Identity" (`.apply-flow-pin-code-required`) first: a six-digit OTP is emailed to it, one box per digit (`.pin-code-input__input`), then VERIFY (`button[type=submit]`) opens the form. atsfill types it from the OTP command; one the page does not take, or none in time, is `blocked: email_otp`. A user's address meets it on every employer they applied to or dry-ran before; the survey's Test user takes a new address each run, which never meets it.
+- Past the OTP, the form holds that address's draft: the answers and the resume of the earlier visit. A resume already attached shows its name and Remove Resume (`.attachment-upload-button__bottom-button`) instead of the upload input; atsfill removes it before uploading the answer's.
 - Some tenants put an hCaptcha on the email step: `blocked`, `captcha`.
 - The form's metadata (`recruitingCECandidateProfileBlocksMetadata`, `recruitingCEQuestions`) answers 401 until the email step is passed, so there is no request read. Reading passes the step with a throwaway `atsfill.read.<random>@example.com`; filling clears cookies and storage and passes it again with the answer's address.
 - From the email step on, Oracle keeps a draft (`POST recruitingCEJobApplicationDrafts`, then a `PATCH` as fields change); a picked file is attached to it at once.

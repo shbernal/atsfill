@@ -2,8 +2,9 @@
 as docs/adapters/oracle.md observes.
 
 The form opens only past an email step, and an email the employer's Oracle already knows gets an
-emailed OTP instead. Reading passes the step with a throwaway address; filling starts over with
-the answer's. Oracle keeps a draft of the application from then on, autosaved as fields change.
+emailed OTP first, typed in by the core. Reading passes the step with a throwaway address;
+filling starts over with the answer's. Oracle keeps a draft of the application from then on,
+autosaved as fields change.
 """
 
 import re
@@ -15,7 +16,7 @@ from pathlib import PurePath
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core import browser, matching
+from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import Locator, Page
 from atsfill.core.results import Answer, Field, FieldType, Is, OptionSet, SideEffect
@@ -32,9 +33,12 @@ PAGINATION = ".apply-flow-pagination__button"
 PAGE_NUMBERS = ".apply-flow-navigation-pages__link:visible"
 LOADING = ".app-loading-spinner, .cx-select--loading, .apply-flow-block .skeleton"
 OTP_PAGE = ".apply-flow-pin-code-required"
+PIN = f"{OTP_PAGE} .pin-code-input__input"  # one per digit
+VERIFY = f"{OTP_PAGE} button[type=submit]"
 CAPTCHA = "iframe[src*='hcaptcha.com']"
 MANUALLY = ".quick-apply-flow__manually--link:visible"  # past an offer to import a profile
 ATTACHED = ".attachment-upload-button__download, .misc-attachment-list__item-name"
+REMOVE = ".attachment-upload-button__filled .attachment-upload-button__bottom-button"
 STEP_TIMEOUT_MS = 30_000
 LIST_TIMEOUT_MS = 3_000
 SEARCH_TIMEOUT_MS = 6_000  # for a typed search's results
@@ -356,21 +360,26 @@ class Oracle:
             if "--checked" not in (box.get_attribute("class") or ""):
                 _click(page, box)
         _click(page, page.locator(NEXT).first)
-        opened = page.locator(f"apply-flow-block, {OTP_PAGE}, {MANUALLY}")
         try:
-            opened.first.wait_for(timeout=STEP_TIMEOUT_MS)
-            if page.locator(MANUALLY).count():
-                _click(page, page.locator(MANUALLY).first)
-                page.locator("apply-flow-block").first.wait_for(timeout=STEP_TIMEOUT_MS)
+            page.locator(f"apply-flow-block, {OTP_PAGE}, {MANUALLY}").first.wait_for(
+                timeout=STEP_TIMEOUT_MS
+            )
         except browser.Timeout:
             if page.locator(CAPTCHA).count():
                 raise Blocked("captcha: the email step asks for an hCaptcha") from None
             raise RuntimeError("the email step did not open the form") from None
-        if page.locator(OTP_PAGE).count():
-            raise Blocked(
-                f"email_otp: {email} is known to this employer's Oracle, which emails it an"
-                " OTP before it shows the form"
-            )
+        if page.locator(OTP_PAGE).count():  # an address this employer's Oracle knows
+            otp.enter(page.locator(PIN), email, "the email step")
+            _click(page, page.locator(VERIFY))
+            try:
+                page.locator(f"apply-flow-block, {MANUALLY}").first.wait_for(
+                    timeout=STEP_TIMEOUT_MS
+                )
+            except browser.Timeout:
+                raise Blocked("email_otp: the email step did not take the OTP") from None
+        if page.locator(MANUALLY).count():
+            _click(page, page.locator(MANUALLY).first)
+            page.locator("apply-flow-block").first.wait_for(timeout=STEP_TIMEOUT_MS)
         page.locator(f"{PAGINATION}:visible").first.wait_for(timeout=STEP_TIMEOUT_MS)
         _settle(page)
 
@@ -428,6 +437,11 @@ class Oracle:
             return
         if kind == "file":
             assert isinstance(answer, str)
+            # a draft from an earlier visit keeps its file, the input gone until it is removed
+            remove = page.locator(f"{_upload(field_id)} {REMOVE}")
+            if remove.count():
+                _click(page, remove.first)
+                self._file_input(page, field_id).wait_for(state="attached", timeout=STEP_TIMEOUT_MS)
             self._file_input(page, field_id).set_input_files(answer)
             return
         row = self._row(page, field_id)

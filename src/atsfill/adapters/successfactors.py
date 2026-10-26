@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+from atsfill.core import otp
 from atsfill.core.adapter import (
     Blocked,
     Gap,
@@ -26,7 +27,9 @@ from atsfill.core.browser import Locator, Page, PageRequest, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 JOB = re.compile(r"^(?:/[^/]+)?/job/[^/]+/(?P<id>\d{5,})/?$")
-DC_HOST = re.compile(r"^career\d*\.(?:sapsf|successfactors)\.(?:eu|com|cn)$")
+DC_HOST = re.compile(
+    r"^(?:career\d*\.(?:sapsf|successfactors)\.(?:eu|com|cn)|career-[a-z]+\d*\.ns2cloud\.com)$"
+)
 APPLY = "a[href*='/talentcommunity/apply/']"
 COMPANY_COOKIE = "careerSiteCompanyId"
 PROFILE = "/career?company={company}&career_ns=job_listing_summary&navBarLevel=MY_PROFILE"
@@ -43,6 +46,7 @@ COUNTRY = "fbclc_country"  # its options' values are ISO 3166 alpha-2 codes
 PHONE, CALLING_CODE = "#fbclc_phoneNumber", "#fbclc_ituCode"  # `CA`: `Canada (+1)`
 SIGN_UP = "#fbclc_userName"
 PASSCODE = "#passcode"  # an OTP some sign-ups ask before the account exists
+PASSCODE_STEP = "#otpContainer"
 QUICK_APPLY = "#fbqa_apply"
 FORM = ".RCMFormField"
 LANDED = f"{SIGN_IN}, {SIGN_UP}, {FORM}"
@@ -243,7 +247,9 @@ class SuccessFactors:
             if page.locator(FORM).count():
                 return
             if page.locator(f"{PASSCODE}:visible").count():
-                raise Blocked("email_otp: the sign-up sent a passcode to the email")
+                self._passcode(page, email)
+                deadline = time.monotonic() + SIGN_IN_TIMEOUT_MS / 1000
+                continue
             if not page.locator(f"{SIGN_UP}:visible").count():
                 break
             if self._message(page, REFUSAL):
@@ -264,6 +270,16 @@ class SuccessFactors:
         if self.signed_in(page.request, None):  # created, back on the career site
             return
         raise Unsupported(f"unhandled_rendering: the sign-up led to {urlsplit(page.url).path}")
+
+    def _passcode(self, page: Page, email: str) -> None:
+        """Types the passcode the sign-up emailed; the account exists once it is taken."""
+        otp.enter(page.locator(PASSCODE), email, "the sign-up")
+        page.locator(PASSCODE_STEP).get_by_role("button").first.click()
+        try:
+            page.locator(PASSCODE).wait_for(state="hidden", timeout=SIGN_IN_TIMEOUT_MS)
+        except Timeout:
+            message = self._message(page)
+            raise Blocked(f"email_otp: the sign-up did not take the OTP: {message}") from None
 
     def browser_read(self, page: Page) -> list[Field]:
         self._candidate(page)

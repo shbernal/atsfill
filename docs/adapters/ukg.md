@@ -1,6 +1,6 @@
 # UKG
 
-UKG Pro Recruiting's job boards and application form, observed on live postings, last on 2026-10-26. The fixture page is [tests/pages/ukg/apply.html](../../tests/pages/ukg/apply.html), served as an Acme tenant in `tests/test_ukg.py`: the form with one example of each rendering below.
+UKG Pro Recruiting's job boards and application form, observed on live postings, last on 2026-10-27. The fixture page is [tests/pages/ukg/apply.html](../../tests/pages/ukg/apply.html), served as an Acme tenant in `tests/test_ukg.py`: the form with one example of each rendering below.
 
 ## Where the form is
 
@@ -11,7 +11,7 @@ UKG Pro Recruiting's job boards and application form, observed on live postings,
 
 Applying needs an account, one per tenant: the account scope is the tenant alias. The same address signs up on each tenant separately.
 
-- The sign-in is Auth0's Universal Login on `signin-<region>.ultipro.com` (`signin-us`), with the tenant as an Auth0 organization: `input#username`, `input#password`, and Sign up (`/u/signup`: `input#email`, `input#password`). No tenant sent a verification email or asked for a code.
+- The sign-in is Auth0's Universal Login on `signin-<region>.ultipro.com` (`signin-us`), with the tenant as an Auth0 organization: `input#username`, `input#password`, and Sign up (`/u/signup`: `input#email`, `input#password`). No tenant sent a verification email or asked for an OTP: 6 more on 2026-10-27, each signed up and then signed in from a fresh browser, sent no mail at all. An Auth0 OTP page (`/u/mfa…`, `/u/email-verification`, `/u/login-email-verification`) stays `blocked: email_otp` until one is seen: its input is not known.
 - After the sign-up the tenant asks its own details (`/AuthCode/Register`, "Almost there!"): first and last name, a phone number (a plain `tel` input, required on 10 of 16 tenants, any format taken), and on some tenants a privacy policy box, a text-message box and an AI scoring box (Candidate Match, ticked by default). Its inputs are UKG web components that take typed keys only; Create account stays disabled until the required ones are given. atsfill types the name and, where required, the phone as given (E.164), ticks the privacy box and leaves the other two unticked.
 - The phone is known to be needed only once the Auth0 identity exists, so the adapter asks the phone of every sign-up (`asks`), refused before the browser opens without it.
 - An identity left without its tenant details (a sign-up stopped there) lands on the same step at every sign-in. A plain sign-in stops there with `refused: sign_up_details`; `login --create` with the password already stored signs in and gives that step the `--details`.

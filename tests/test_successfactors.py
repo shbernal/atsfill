@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 
 from atsfill.adapters.successfactors import SuccessFactors
-from atsfill.core import browser
+from atsfill.core import browser, otp
 from atsfill.core.adapter import Blocked, Refused, SignUpDetails, Unsupported
 from atsfill.core.results import Answer, FieldType
 from tests import testuser
@@ -83,17 +83,24 @@ class Profile:
 
 
 COMPANY = {"name": "careerSiteCompanyId", "value": "acme", "domain": "career5.successfactors.eu"}
+NS2 = COMPANY | {"domain": "career-hcm20.ns2cloud.com"}
 SITE = {"name": "JSESSIONID", "value": "x", "domain": "careers.acme.com"}
 
 
 @pytest.mark.parametrize(
     ("cookies", "profile", "expected"),
-    [([COMPANY, SITE], True, True), ([COMPANY], False, False), ([SITE], True, False)],
+    [
+        ([COMPANY, SITE], True, True),
+        ([NS2, SITE], True, True),
+        ([COMPANY], False, False),
+        ([SITE], True, False),
+    ],
 )
 def test_signed_in(cookies, profile, expected):
     request = Profile(cookies, profile)
     assert SuccessFactors().signed_in(request, "careers.acme.com") is expected  # ty: ignore[invalid-argument-type]
-    assert request.asked == ([PROFILE] if COMPANY in cookies else [])
+    hosts = [c["domain"] for c in cookies if c["name"] == COMPANY["name"]]
+    assert request.asked == [f"https://{h}{PROFILE.split(DC)[1]}" for h in hosts]
 
 
 def test_detect_and_posting():
@@ -142,9 +149,28 @@ def test_sign_up_refused(page):
         SuccessFactors().sign_up(page, "taken@example.com", "Aa1!aaaaaaaaaaaa", ADA)
 
 
-def test_sign_up_asking_a_passcode_is_blocked(page):
+def test_sign_up_asking_a_passcode_types_the_emailed_otp(page, otp_command):
     page.goto(POSTING)
-    with pytest.raises(Blocked, match="^email_otp"):
+    with otp.source("default", "successfactors", "careers.acme.com"):
+        SuccessFactors().sign_up(page, "otp@example.com", "Aa1!aaaaaaaaaaaa", ADA)
+    assert page.url.startswith(f"{DC}/portalcareer")
+
+
+def test_a_passcode_not_taken_is_blocked(page, otp_command, tmp_path, monkeypatch):
+    (tmp_path / "otp.py").write_text("print('654321')")
+    monkeypatch.setattr("atsfill.adapters.successfactors.SIGN_IN_TIMEOUT_MS", 2_000)
+    page.goto(POSTING)
+    with (
+        otp.source("default", "successfactors", "careers.acme.com"),
+        pytest.raises(Blocked, match="^email_otp: the sign-up did not take the OTP"),
+    ):
+        SuccessFactors().sign_up(page, "otp@example.com", "Aa1!aaaaaaaaaaaa", ADA)
+
+
+def test_sign_up_asking_a_passcode_without_an_otp_command_is_blocked(page, tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    page.goto(POSTING)
+    with pytest.raises(Blocked, match="^email_otp: the sign-up sent an OTP to otp@example.com"):
         SuccessFactors().sign_up(page, "otp@example.com", "Aa1!aaaaaaaaaaaa", ADA)
 
 
