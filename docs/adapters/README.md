@@ -33,7 +33,7 @@ The registry covers 90.1% of postings.
 | join | ats | 0.3% | to_send | hosted |  | [dry_run_verified](join.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [send_verified](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [dry_run_verified](workday.md) |
-| isolvedhire | ats | 0.5% | to_read | hosted |  | [mapped](isolvedhire.md) |
+| isolvedhire | ats | 0.5% | to_read | hosted |  | [dry_run_verified](isolvedhire.md) |
 | gupy | ats | 0.4% | to_read | hosted |  | [dry_run_verified](gupy.md) |
 | paycom | ats | 2.4% | none | hosted | hCaptcha at form | mapped |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | mapped |
