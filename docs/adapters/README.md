@@ -32,7 +32,7 @@ The registry covers 90.1% of postings.
 | hiringthing | ats | 0.3% | none | hosted |  | [dry_run_verified](hiringthing.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [send_verified](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [dry_run_verified](workday.md) |
-| gupy | ats | 0.4% | to_read | hosted |  | [mapped](gupy.md) |
+| gupy | ats | 0.4% | to_read | hosted |  | [dry_run_verified](gupy.md) |
 | join | ats | 0.3% | to_read | hosted |  | mapped |
 | paycom | ats | 2.4% | none | hosted | hCaptcha at form | mapped |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | mapped |

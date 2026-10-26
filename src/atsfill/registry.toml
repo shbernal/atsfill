@@ -362,6 +362,7 @@ account = "to_read"  # one account for the whole system; its sign-up asks an ID 
 hosting = ["hosted"]
 adapter = "gupy"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+dry_run_verified = { date = 2026-10-26, version = "0.0.3", by = "adapter_gate", commit = "c83fac6" }
 
 [eightfold]
 kind = "ats"
