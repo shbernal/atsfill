@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Engineer - Acme</title>
+<!-- One rendering of each kind the JOIN wizard showed (docs/adapters/join.md), not one posting.
+     The page routes itself: the posting, then /apply/<step>, as the candidate app does. -->
+<script id="__NEXT_DATA__" type="application/json">
+{"props": {"pageProps": {"locale": "en-us", "pageData": {"job": {"id": 101, "companyId": 7, "status": "ONLINE", "title": "AI Engineer", "language": {"locale": "en-us"}}}}}}
+</script>
+<style>
+  [role=radio][aria-checked=true] { outline: 2px solid; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const BASE = "/companies/acme/101";
+const STEPS = ["cv", "coverLetter", "question-1", "question-2", "question-3", "question-4", "review"];
+const QUESTIONS = [
+  {id: 1, question: "Your level of English?", options: ["None", "Fluent"], type: "SINGLE_CHOICE"},
+  {id: 2, question: "Do you hold a work permit?", options: null, type: "BOOLEAN"},
+  {id: 3, question: "When can you start?", options: null, type: "DATE"},
+  {id: 4, question: "Your salary expectation?", options: null, type: "INTEGER"},
+];
+const state = {files: {}, answers: {}, month: new Date(2026, 0, 1)};
+const app = document.getElementById("app");
+
+function button(label, attrs = "") {
+  return `<button type="button" ${attrs}><span data-button-label="true">${label}</span></button>`;
+}
+
+function footer(ready) {
+  return `<footer>${button("Back")}${button("Weiter", "disabled hidden")}` +
+    `${button("Weiter", ready ? "" : "disabled")}</footer>`;
+}
+
+function go(step) {
+  history.pushState({}, "", `${BASE}/apply/${step}`);
+  render();
+}
+
+function upload(step) {
+  return `<h2>Upload</h2>` + (state.files[step]
+    ? `<p>Ada Placeholder</p>${button("Remove file")}`
+    : `<input type="file" accept=".pdf"><input type="file" accept=".pdf" hidden>`);
+}
+
+function calendar(q) {
+  const y = state.month.getFullYear(), m = state.month.getMonth();
+  const days = new Date(y, m + 1, 0).getDate();
+  let cells = "";
+  for (let d = 1; d <= days; d++) {
+    const value = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    cells += `<td data-part="table-cell" data-value="${value}" aria-selected="${state.answers[q.id] === value}"><div data-part="table-cell-trigger"` +
+      ` data-day="${value}">${d}</div></td>`;
+  }
+  return `<button type="button" data-part="prev-trigger">&lt;</button>` +
+    `<button type="button" data-part="next-trigger">&gt;</button><table><tr>${cells}</tr></table>`;
+}
+
+function question(q) {
+  const answer = state.answers[q.id];
+  let body = `<h2>${q.question}</h2>`;
+  if (q.type === "SINGLE_CHOICE" || q.type === "BOOLEAN") {
+    const options = q.options || ["Ja", "Nein"];
+    body += options.map((o, i) => `<div role="radio" data-option="${o}" aria-checked="${answer === o}">` +
+      `<div><p>${String.fromCharCode(97 + i)}</p></div><p>${o}</p></div>`).join("");
+  } else if (q.type === "DATE") {
+    body += calendar(q);
+  } else {
+    body += `<input type="number" id="screeningQuestions.answer-${q.id}" name="screeningQuestions.answer-${q.id}" value="${answer ?? ""}">`;
+  }
+  return body + footer(answer !== undefined);
+}
+
+function review() {
+  const entry = (label, value) => `<a><div><p>${label}</p><p>${value}</p></div><p>Edit</p></a>`;
+  return `<h2>Review your application</h2>` +
+    `<a><div><span role="img">AP</span></div><div><p>Ada Placeholder</p><p>France</p></div><p>Edit</p></a>` +
+    entry("CV", state.files.cv) +
+    QUESTIONS.map(q => entry(q.question, state.answers[q.id] ?? "")).join("") +
+    (state.files.coverLetter
+      ? `<a><div><p>Cover letter</p><div><div><p>${state.files.coverLetter}</p></div></div></div><p>Edit</p></a>`
+      : "") +
+    `<footer>${button("Back")}<button type="submit"><span data-button-label="true">Confirm &amp; apply</span></button></footer>`;
+}
+
+function render() {
+  const step = location.pathname.split("/apply/")[1];
+  if (!step) {
+    app.innerHTML = `<h1>AI Engineer</h1><button data-testid="ApplyButton" hidden>Apply now</button>` +
+      `<button type="button" data-testid="ApplyButton">Apply now</button>`;
+    return;
+  }
+  if (step === "authentication") {
+    setTimeout(() => go("cv"), 300);  // the wizard learns the account, then leaves
+    app.innerHTML = "<p>Loading</p>";
+    return;
+  }
+  if (step === "cv" || step === "coverLetter") {
+    app.innerHTML = upload(step) + footer(step === "coverLetter" || !!state.files.cv);
+  } else if (step.startsWith("question-")) {
+    app.innerHTML = question(QUESTIONS[Number(step.split("-")[1]) - 1]);
+  } else if (step === "review") {
+    app.innerHTML = review();
+  }
+}
+
+app.addEventListener("change", e => {
+  const step = location.pathname.split("/apply/")[1];
+  if (e.target.type === "file") {
+    const name = e.target.files[0].name;
+    setTimeout(() => { state.files[step] = name; render(); }, 200);  // stored, then shown
+  }
+});
+
+app.addEventListener("input", e => {
+  if (e.target.id?.startsWith("screeningQuestions.answer-")) {
+    state.answers[Number(e.target.id.split("-").pop())] = e.target.value;
+    document.querySelectorAll("footer button:not([hidden])")[1].disabled = !e.target.value;
+  }
+});
+
+app.addEventListener("click", async e => {
+  const step = location.pathname.split("/apply/")[1];
+  const target = e.target.closest("button, [role=radio], [data-day]");
+  if (!target) return;
+  const q = step?.startsWith("question-") ? QUESTIONS[Number(step.split("-")[1]) - 1] : null;
+  if (target.dataset.testid === "ApplyButton") {
+    go("authentication");
+  } else if (target.getAttribute("role") === "radio") {
+    state.answers[q.id] = target.dataset.option;
+    render();
+  } else if (target.dataset.day) {
+    state.answers[q.id] = target.dataset.day;
+    render();
+  } else if (target.dataset.part === "next-trigger" || target.dataset.part === "prev-trigger") {
+    state.month.setMonth(state.month.getMonth() + (target.dataset.part === "next-trigger" ? 1 : -1));
+    render();
+  } else if (target.type === "submit") {
+    const sent = await fetch("/candidate-api/graphql?operationName=ApplyToJob", {method: "POST", body: "{}"});
+    app.innerHTML = sent.ok ? "<h1>Sent</h1>" : "<h1>Error</h1>";
+  } else if (target.textContent === "Weiter" && !target.disabled) {
+    go(STEPS[STEPS.indexOf(step) + 1]);
+  }
+});
+
+window.addEventListener("popstate", render);
+render();
+</script>
+</body>
+</html>
