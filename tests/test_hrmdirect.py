@@ -1,12 +1,13 @@
 """The HRMDirect adapter on tests/pages/hrmdirect, served as an Acme org's apply page."""
 
+import json
 from pathlib import Path
 
 import pytest
 
 from atsfill.adapters.hrmdirect import HRMDirect
 from atsfill.core import browser, matching
-from atsfill.core.adapter import NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Refused, SignUpDetails, Unsupported
 from atsfill.core.results import Answer, FieldType
 from tests import testuser
 
@@ -15,12 +16,16 @@ JOB_ID = "11111111-2222-3333-4444-555555555555"
 GONE = "99999999-2222-3333-4444-555555555555"
 HOST = "https://acme.clearcompany.com"
 APPLY = f"{HOST}/careers/jobs/{JOB_ID}/apply"
+SIGN_UP_ID = "77777777-2222-3333-4444-555555555555"
+SIGN_UP = f"{HOST}/careers/jobs/{SIGN_UP_ID}/apply"
 
 
 def serve(route) -> None:
     url = route.request.url
     if route.request.method == "POST":
         route.fulfill(status=200, json={"ok": True})
+    elif SIGN_UP_ID in url:
+        route.fulfill(path=PAGES / "sign-up.html")
     elif GONE in url:
         route.fulfill(status=200, content_type="text/html", body="<p>Not found</p>")
     else:
@@ -48,6 +53,30 @@ def opened(page, url: str = APPLY, fresh: bool = True) -> tuple[HRMDirect, list]
         page.goto(url)
     assert adapter.detect(url, None)
     return adapter, adapter.browser_read(page)
+
+
+def test_sign_up_gives_the_phone_an_org_requires(page):
+    page.goto(SIGN_UP)
+    with pytest.raises(Blocked, match="^email_link"):
+        HRMDirect().sign_up(
+            page, "jane@example.com", "unused", SignUpDetails("Jane Doe", "+12125550123")
+        )
+    sent = json.loads(page.locator("form.section-form").get_attribute("data-sent") or "")
+    assert sent == {
+        "first-name": "Jane",
+        "last-name": "Doe",
+        "email": "jane@example.com",
+        "email-confirm": "jane@example.com",
+        "mobile-number": "+12125550123",
+        "other": "false",
+    }
+
+
+def test_sign_up_without_the_phone_an_org_requires_is_refused(page):
+    page.goto(SIGN_UP)
+    with pytest.raises(Refused, match="^sign_up_details: no phone$"):
+        HRMDirect().sign_up(page, "jane@example.com", "unused", SignUpDetails("Jane Doe"))
+    assert page.locator("#personal-info-form").count()
 
 
 def test_a_fresh_read_stops_at_the_first_page(page):

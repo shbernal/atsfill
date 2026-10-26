@@ -34,6 +34,8 @@ SIGNED_IN = re.compile(r"\bsignOut|\blogout\b|_logout", re.IGNORECASE)
 FIELDS = (Path(__file__).with_suffix(".js")).read_text()
 # What the candidate pages show once loaded
 SIGN_IN = "#username"
+COUNTRY = "fbclc_country"  # its options' values are ISO 3166 alpha-2 codes
+PHONE, CALLING_CODE = "#fbclc_phoneNumber", "#fbclc_ituCode"  # `CA`: `Canada (+1)`
 SIGN_UP = "#fbclc_userName"
 QUICK_APPLY = "#fbqa_apply"
 FORM = ".RCMFormField"
@@ -84,6 +86,22 @@ def _company(request: Request) -> list[tuple[str, str]]:
             if c["name"] == COMPANY_COOKIE and DC_HOST.match(c["domain"].lstrip("."))
         }
     )
+
+
+def _calling_code(select: Locator, details: SignUpDetails) -> tuple[str, str]:
+    """The calling code's option for the E.164 phone, the one of `country` among the countries
+    sharing it, and the national number that follows the code."""
+    options = select.evaluate("s => [...s.options].map(o => [o.value, o.textContent])")
+    phone = (details.phone or "").removeprefix("+")
+    codes = [
+        (len(m[1]), value == details.country, value)
+        for value, text in options
+        if (m := re.search(r"\(\+(\d+)\)", text)) and phone.startswith(m[1])
+    ]
+    if not codes:
+        raise Unsupported(f"unhandled_rendering: the sign-up offers no calling code for {phone}")
+    length, _, value = max(codes, key=lambda c: c[:2])  # the first of the best
+    return value, phone[length:]
 
 
 class SuccessFactors:
@@ -146,6 +164,10 @@ class SuccessFactors:
             raise Refused(f"wrong_password: {message}") from None
 
     def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
+        """Creates the account from the career site's sign-up: the name, the country of
+        residence from `country` (the list's first without it), and the phone where the site
+        requires one, its calling code picked from the number; a missing phone is refused
+        before anything is sent."""
         self._candidate(page)
         if page.locator(SIGN_IN).count():
             page.locator(REGISTER).first.click()
@@ -160,6 +182,9 @@ class SuccessFactors:
                 ) from None
             register.first.click()
         page.locator(SIGN_UP).wait_for(timeout=LANDING_TIMEOUT_MS)
+        phone_asked = page.locator(f"{PHONE}[aria-required=true]:visible").count() > 0
+        if phone_asked and not details.phone:
+            raise Refused("sign_up_details: no phone")
         first, _, last = (details.name or "").strip().partition(" ")
         for selector, value in [
             (SIGN_UP, email),
@@ -170,10 +195,17 @@ class SuccessFactors:
             ("#fbclc_lName", last or first),
         ]:
             page.fill(selector, value)
-        for select in page.locator("select:visible").all():  # the country, a phone code
+        if phone_asked and details.phone:
+            code, national = _calling_code(page.locator(CALLING_CODE), details)
+            page.locator(CALLING_CODE).select_option(code)
+            page.fill(PHONE, national)
+        for select in page.locator("select:visible").all():  # the country, any other
             if not select.input_value():
                 values = select.evaluate("s => [...s.options].map(o => o.value).filter(v => v)")
-                select.select_option(values[0])
+                wanted = details.country if select.get_attribute("id") == COUNTRY else None
+                if wanted and wanted not in values:
+                    raise Unsupported(f"unhandled_rendering: the sign-up's countries lack {wanted}")
+                select.select_option(wanted or values[0])
         if page.locator(PRIVACY).count():
             page.locator(PRIVACY).click()
             dialog = page.locator("[role=dialog]:visible").last
@@ -200,6 +232,8 @@ class SuccessFactors:
             raise Blocked("email_link: the sign-up sent an activation email")
         if page.locator(f"{SIGN_IN}:visible").count():  # created, signed out
             self.sign_in(page, email, password)
+            return
+        if self.signed_in(page.request, None):  # created, back on the career site
             return
         raise Unsupported(f"unhandled_rendering: the sign-up led to {urlsplit(page.url).path}")
 

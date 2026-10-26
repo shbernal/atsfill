@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Almost there!</title></head>
+<body>
+<!-- A tenant's details step after the sign-up (/AuthCode/Register), as UKG renders it: web
+     components around native inputs, the phone required, an AI scoring consent ticked by
+     default, a text-message box, a privacy policy box. Create account sends the values to
+     the form's URL, in its hash. -->
+<h1>Almost there!</h1>
+<ukg-input name="firstName" required="true"><input name="firstName" type="text" required></ukg-input>
+<ukg-input name="lastName" required="true"><input name="lastName" type="text" required></ukg-input>
+<ukg-input name="phoneNumber" type="tel" required="true"><input name="phoneNumber" type="tel" maxlength="15" required></ukg-input>
+<ukg-checkbox data-automation="registrationDetails-candidate-match-checkbox" aria-checked="" checked="true" role="checkbox">Allow AI to score my qualifications</ukg-checkbox>
+<ukg-checkbox data-automation="registrationDetails-sms-checkbox" aria-checked="false" checked="false" role="checkbox">I want to receive recruiting-related SMS messages</ukg-checkbox>
+<ukg-checkbox data-automation="registrationDetails-privacy-checkbox" aria-checked="false" checked="false" role="checkbox">I agree to the privacy policy</ukg-checkbox>
+<button type="button" disabled>Create account</button>
+<script>
+  const boxes = [...document.querySelectorAll("ukg-checkbox")];
+  const button = document.querySelector("button");
+  const privacy = document.querySelector("[data-automation*=privacy]");
+  const ticked = box => box.getAttribute("checked") === "true";
+  const update = () => {
+    const filled = [...document.querySelectorAll("input[required]")].every(i => i.value);
+    button.disabled = !(filled && ticked(privacy));
+  };
+  boxes.forEach(box => box.addEventListener("click", () => {
+    const value = String(!ticked(box));
+    box.setAttribute("checked", value);
+    box.setAttribute("aria-checked", value);
+    update();
+  }));
+  document.querySelectorAll("input").forEach(i => i.addEventListener("input", update));
+  button.addEventListener("click", () => {
+    const sent = {};
+    document.querySelectorAll("input").forEach(i => { sent[i.name] = i.value; });
+    boxes.forEach(box => { sent[box.dataset.automation] = ticked(box); });
+    location.href = "/acme1000acme/JobBoard/registered#" + encodeURIComponent(JSON.stringify(sent));
+  });
+</script>
+</body>
+</html>

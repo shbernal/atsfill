@@ -2,18 +2,22 @@
 
 import json
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 import pytest
 
-from atsfill.adapters.ukg import UKG
+from atsfill.adapters.ukg import UKG, _register
 from atsfill.core import browser
+from atsfill.core.adapter import SignUpDetails
 from atsfill.core.results import FieldType, Is, OptionSet
 
 PAGE = Path(__file__).parent / "pages/ukg/apply.html"
+REGISTER_PAGE = PAGE.with_name("register.html")
 BOARD = "https://recruiting2.ultipro.com/acme1000acme/JobBoard/00000000-0000-4000-8000-000000000001"
 OPPORTUNITY = "11111111-1111-4111-8111-111111111111"
 POSTING = f"{BOARD}/OpportunityDetail?opportunityId={OPPORTUNITY}"
 APPLY = f"{BOARD}/OpportunityApply?opportunityId={OPPORTUNITY}"
+REGISTER = "https://recruiting2.ultipro.com/ACME1000ACME/AuthCode/Register"
 STATES = {
     "c-us": [{"Code": "DC", "Name": "District of Columbia"}, {"Code": "NY", "Name": "New York"}],
     "c-ca": [{"Code": "ON", "Name": "Ontario"}],
@@ -25,6 +29,8 @@ def serve(route) -> None:
     if "/Candidate/GetStates" in url or "/GetStates?" in url:
         country = url.split("countryId=")[1].split("&")[0]
         route.fulfill(content_type="application/json", body=json.dumps(STATES.get(country, [])))
+    elif "/AuthCode/Register" in url:
+        route.fulfill(path=REGISTER_PAGE)
     else:
         route.fulfill(path=PAGE)
 
@@ -68,6 +74,20 @@ def test_login_url_comes_back_to_the_form():
     assert "OpportunityApply" in url
     with pytest.raises(ValueError):
         UKG().login_url("acme1000acme")
+
+
+def test_the_details_step_takes_the_phone_and_declines_the_optional_consents(page):
+    page.goto(REGISTER)
+    _register(page, SignUpDetails(name="Jane Doe", phone="+12125550123"))
+    sent = json.loads(unquote(urlsplit(page.url).fragment))
+    assert sent == {
+        "firstName": "Jane",
+        "lastName": "Doe",
+        "phoneNumber": "+12125550123",
+        "registrationDetails-candidate-match-checkbox": False,
+        "registrationDetails-sms-checkbox": False,
+        "registrationDetails-privacy-checkbox": True,
+    }
 
 
 def test_browser_read_lists_each_rendering(page):

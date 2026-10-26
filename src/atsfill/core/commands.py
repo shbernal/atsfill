@@ -63,7 +63,7 @@ def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
 
 type Credentials = tuple[str, str]  # email, password
 # Refusals the page states before any account exists: the generated password goes.
-NO_ACCOUNT = {"email_in_use", "email_domain_rejected", "password_rule"}
+NO_ACCOUNT = {"email_in_use", "email_domain_rejected", "password_rule", "sign_up_details"}
 
 
 def _email_link(reason: str | None, email: str, command: str) -> str | None:

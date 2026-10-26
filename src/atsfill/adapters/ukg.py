@@ -36,7 +36,6 @@ YES_NO = ["Yes", "No"]
 DATE_SHOWN = re.compile(r"(\d\d)/(\d\d)/(\d{4})")
 COUNTRY, STATE = "Country", "State"
 DAYS, DOCUMENTS = "availability_days", "documents"
-PHONE_GAP = "sign_up_phone"
 
 # Auth0's error codes on the sign-in and sign-up pages, by what atsfill raises
 ERRORS = [
@@ -218,8 +217,8 @@ def board(url: str) -> Board | None:
 class UKG:
     name = "ukg"
     per_employer = True
-    asks = {"name"}
-    known_gaps = {PHONE_GAP: Gap.FLOW}
+    asks = {"name", "phone"}  # the phone only some tenants require, asked before the sign-up
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("sign_up", "employer", "the account is created in the employer's tenant"),
         SideEffect("upload", "hiring_system", "a document is stored in the account's documents"),
@@ -284,7 +283,7 @@ class UKG:
         _left_sign_in(page)
         if "/AuthCode/Register" not in page.url:
             return
-        _register(page, details.name or "")
+        _register(page, details)
 
     def browser_read(self, page: Page) -> list[Field]:
         found = board(page.url)
@@ -397,24 +396,31 @@ def _left_sign_in(page: Page) -> None:
     raise Unsupported("unhandled_rendering: the sign-in page answered nothing")
 
 
-def _register(page: Page, name: str) -> None:
-    """The tenant's own step after the sign-up: the name, and the privacy policy's box on some
-    tenants; the box for text messages is left. Its inputs take typed keys only: a filled value
+def _register(page: Page, details: SignUpDetails) -> None:
+    """The tenant's own step after the sign-up: the name, the phone where the tenant requires
+    it, and the privacy policy's box on some tenants; the optional consents (text messages, AI
+    scoring, ticked by default) are declined. Its inputs take typed keys only: a filled value
     leaves Create account disabled."""
     page.locator("input[name=firstName]").wait_for(timeout=FORM_TIMEOUT_MS)
     page.wait_for_load_state("networkidle")
+    first, _, last = (details.name or "").strip().partition(" ")
+    values = [("firstName", first), ("lastName", last or first)]
     if page.locator("ukg-input[name=phoneNumber][required=true]").count():
-        raise Unsupported(f"{Gap.FLOW}: {PHONE_GAP}: the tenant's sign-up asks a phone number")
-    first, _, last = name.strip().partition(" ")
-    for field, value in (("firstName", first), ("lastName", last or first)):
+        values.append(("phoneNumber", details.phone or ""))
+    for field, value in values:
         page.locator(f"input[name={field}]").click()
         page.locator(f"input[name={field}]").press_sequentially(value)
-    privacy = page.locator("ukg-checkbox[data-automation*=privacy]:visible")
-    for box in privacy.all():
-        if box.get_attribute("aria-checked") != "true":
+    for box in page.locator("ukg-checkbox[data-automation*=-checkbox]:visible").all():
+        wanted = "privacy" in (box.get_attribute("data-automation") or "")
+        if _ticked(box) != wanted:
             box.click()
     page.get_by_role("button", name="Create account").click()
     page.wait_for_url(lambda u: "/AuthCode/Register" not in u, timeout=FORM_TIMEOUT_MS)
+
+
+def _ticked(box: Locator) -> bool:
+    """A `ukg-checkbox`'s state: `aria-checked` once clicked, `checked` as the page set it."""
+    return "true" in (box.get_attribute("aria-checked"), box.get_attribute("checked"))
 
 
 def _field(raw: dict[str, Any], states: dict[str, list[str]] | None) -> Field:
