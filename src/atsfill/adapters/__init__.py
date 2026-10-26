@@ -6,7 +6,6 @@ from atsfill.adapters.eightfold import Eightfold
 from atsfill.adapters.greenhouse import Greenhouse
 from atsfill.adapters.hireology import Hireology
 from atsfill.adapters.hiringthing import HiringThing
-from atsfill.adapters.hrmdirect import HRMDirect
 from atsfill.adapters.jazzhr import JazzHR
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
@@ -54,7 +53,6 @@ def adapters() -> list[Adapter]:
         Rippling(),
         Pinpoint(),
         HiringThing(),
-        HRMDirect(),
         Eightfold(),
         Workday(),
         UKG(),

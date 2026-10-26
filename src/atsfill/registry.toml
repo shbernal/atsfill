@@ -305,8 +305,8 @@ kind = "ats"
 share = 0.0059
 account = "to_read"
 hosting = ["hosted"]
-adapter = "hrmdirect"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "211fe03", by = "agent", reason = "unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); sign_up_phone: the sign-up step requires a mobile phone, which login does not take (1 of 17); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs" }
 
 [applicantpro]
 kind = "ats"

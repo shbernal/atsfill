@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Your Application for Acme Role</title>
+<style>.hidden { display: none; } .datepicker { position: absolute; }</style></head>
+<body>
+<a href="#" class="authenticate-button btn btn-link" data-login-text="login" data-logout-text="logout">logout</a>
+<div class="apply-form-holder">
+<ol class="breadcrumb form-progress-holder">
+  <li class="page-0 active">Page 1</li><li class="page-1">Page 2</li>
+</ol>
+<div class="form-page-holder">
+<form class="section-form" action="/blank/page" method="POST">
+<!-- Page 1: the uploads -->
+<div class="page" data-page="0">
+  <div class="file-field"><div class="form-field qa-resume-upload resume">
+    <div class="control-label field-title"> Resume <span class="required-indicator">*</span> </div>
+    <input type="hidden" id="aaaaaaaa-0000-0000-0000-000000000001" class="form-file">
+    <table><tbody class="file-list single-file-list"></tbody></table>
+    <ul class="dropdown-menu"><li class="fileinput-button"><input type="file" name="files[]" class="file-upload"></li></ul>
+  </div></div>
+  <div class="form-field qa-resume-upload applinkedin">
+    <div class="control-label field-title"> LinkedIn® Profile </div>
+    <table><tbody class="file-list single-file-list"></tbody></table>
+  </div>
+  <div class="file-field"><div class="form-field qa-resume-upload appcoverletter">
+    <div class="control-label field-title"> Cover Letter </div>
+    <table><tbody class="file-list single-file-list"></tbody></table>
+    <ul class="dropdown-menu"><li class="fileinput-button"><input type="file" name="files[]" class="file-upload"></li></ul>
+  </div></div>
+</div>
+<!-- Page 2: every other rendering -->
+<div class="page hidden" data-page="1">
+  <div class="fieldItem"><div class="form-field qa-text-field">
+    <label for="t1" class="control-label field-title">Legal First Name <span class="required-indicator">*</span></label>
+    <input id="t1" type="text" class="form-control form-input required" data-max="50">
+  </div></div>
+  <div class="fieldItem"><div class="form-field qa-text-field">
+    <label for="t2" class="control-label field-title">Tell us about yourself</label>
+    <textarea id="t2" class="form-control form-input"></textarea>
+  </div></div>
+  <div class="fieldItem"><div class="form-field qa-dropdown-field">
+    <label for="s1" class="control-label field-title">Country <span class="required-indicator">*</span></label>
+    <select id="s1" class="form-control field-dropdown"><option value=""></option><option value="c1">Canada</option><option value="c2">United States</option></select>
+  </div></div>
+  <div class="fieldItem"><div class="form-field qa-dropdown-field">
+    <label for="s2" class="control-label field-title">State or Province <span class="required-indicator">*</span></label>
+    <select id="s2" class="form-control field-dropdown"><option value=""></option><option value="r1">Alabama</option><option value="r2">District of Columbia</option></select>
+  </div></div>
+  <div class="fieldItem"><div class="form-field qa-radio-field">
+    <span class="control-label field-title">Are you authorized to work in the US? <span class="required-indicator">*</span></span>
+    <div class="option-holder">
+      <div class="radio"><label><input type="radio" class="form-radio" data-field="r-1" name="r-1-0" value="y"> Yes </label></div>
+      <div class="child-field-holder child-field-holder-0"></div>
+      <div class="radio"><label><input type="radio" class="form-radio" data-field="r-1" name="r-1-0" value="n"> No </label></div>
+      <div class="child-field-holder child-field-holder-1"></div>
+    </div>
+  </div></div>
+  <div class="fieldItem"><div class="form-field qa-checkboxexplain-field">
+    <span class="control-label field-title"> How did you hear about us? </span>
+    <div class="option-holder">
+      <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="m-1" value="a"> <span>Indeed</span></label></div>
+      <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="m-1" value="b"> <span>LinkedIn</span></label></div>
+      <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="m-1" value="c"> <span>Other</span></label></div>
+    </div>
+  </div></div>
+  <div class="fieldItem"><div class="form-field qa-checkbox-field">
+    <span class="control-label field-title">I certify that the information is true <span class="required-indicator">*</span></span>
+    <div class="option-holder">
+      <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="c-1" value="x"> <span>I agree</span></label></div>
+    </div>
+  </div></div>
+  <div class="fieldItem"><h3 class="control-label">Work Experience</h3></div>
+  <div class="section-repeatable">
+    <div class="fieldItem"><div class="form-field qa-text-field">
+      <label for="w1" class="control-label field-title">Company Name</label>
+      <input id="w1" type="text" class="form-control form-input input-sm">
+    </div></div>
+    <div class="fieldItem"><div class="form-field">
+      <label for="d1" class="control-label field-title">Start Date</label>
+      <input id="d1" type="text" placeholder="MM/DD/YYYY" class="form-control form-input date-input datepicker-target">
+      <div class="datepicker dropdown-menu hidden"><table><tr><th class="today">Today</th></tr></table></div>
+    </div></div>
+  </div>
+</div>
+</form>
+</div>
+<div class="actions">
+  <button type="button" class="btn btn-secondary cancel-button">Finish Later</button>
+  <button type="submit" class="btn btn-primary submit-button" data-localized-key="forms.application.continue">Continue</button>
+</div>
+</div>
+<script>
+  const pages = [...document.querySelectorAll(".page")];
+  const crumbs = [...document.querySelectorAll(".form-progress-holder li")];
+  const next = document.querySelector("button.submit-button");
+  let current = 0;
+  function show(n) {
+    current = n;
+    pages.forEach((p, i) => p.classList.toggle("hidden", i !== n));
+    crumbs.forEach((c, i) => c.classList.toggle("active", i === n));
+    const last = n === pages.length - 1;
+    next.dataset.localizedKey = last ? "forms.application.submit" : "forms.application.continue";
+    next.textContent = last ? "Submit" : "Continue";
+  }
+  const saved = sessionStorage.getItem("resume");
+  if (saved) document.querySelector(".qa-resume-upload.resume .file-list").innerHTML =
+    `<tr><td>${saved}</td><td>10/26/2026</td></tr>`;
+  crumbs[0].addEventListener("click", () => show(0));
+  next.addEventListener("click", async () => {
+    if (current === pages.length - 1) {
+      await fetch("/api/v1/careers/apply/submit", {method: "POST"});
+      return;
+    }
+    const resume = document.querySelector(".qa-resume-upload.resume .file-list");
+    if (current === 0 && !resume.children.length) {
+      resume.closest(".form-field").classList.add("has-error");
+      return;
+    }
+    show(current + 1);
+  });
+  document.querySelectorAll("input.file-upload").forEach(input => input.addEventListener("change", () => {
+    const list = input.closest(".form-field").querySelector(".file-list");
+    const name = input.files[0].name;
+    list.innerHTML = `<tr><td>${name}: Uploading... (1% complete)</td></tr>`;
+    setTimeout(() => { list.innerHTML = `<tr><td>${name}</td><td>10/26/2026</td></tr>`; }, 300);
+    if (list.closest(".resume")) sessionStorage.setItem("resume", name);  // the draft keeps it
+  }));
+  document.getElementById("d1").addEventListener("focus", () =>
+    document.querySelector(".datepicker").classList.remove("hidden"));
+</script>
+</body>
+</html>
