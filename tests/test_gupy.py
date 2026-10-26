@@ -98,7 +98,8 @@ def test_every_answer_reads_back_and_submit_saves_the_answers(opened, page):
     assert adapter.submit(page) == answered
 
 
-def test_an_incomplete_resume_is_the_known_gap(page):
+def test_an_incomplete_resume_is_the_known_gap(page, monkeypatch):
+    monkeypatch.setattr(gupy, "RESUME_WAIT_S", 1)
     page.goto(JOB)
     incomplete.append(True)
     try:

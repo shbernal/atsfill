@@ -28,6 +28,7 @@ ANSWER_NOW = "button:has-text('Answer now')"  # Additional information saved on 
 QUESTIONS = "[name^=question-], [name^=checkbox-], textarea, input[id^=input-]"
 STEP_TIMEOUT_S = 40
 STEP_POLL_MS = 500
+RESUME_WAIT_S = 15
 SAVE_TIMEOUT_MS = 30_000
 SIGN_IN_TIMEOUT_MS = 30_000
 FORMS_TIMEOUT_S = 10
@@ -154,7 +155,7 @@ class Gupy:
     def _walk(self, page: Page) -> None:
         """Past the interstitials to Additional information: the dialog asking to confirm the
         account's contact details, Complete resume, Continue Application, Continue."""
-        deadline = time.monotonic() + STEP_TIMEOUT_S
+        deadline, disabled_since = time.monotonic() + STEP_TIMEOUT_S, None
         while time.monotonic() < deadline:
             if "/candidates/signin" in page.url:
                 raise Blocked("login_required: run `atsfill login gupy`")
@@ -164,10 +165,16 @@ class Gupy:
                 button = page.locator(f"button:has-text('{name}'):visible").first
                 if not button.count():
                     continue
-                if not button.is_enabled():
+                if button.is_enabled():
+                    disabled_since = None
+                    browser.click(button)
+                # Continue Application is disabled while the resume loads, for good when the
+                # resume is incomplete
+                elif (disabled_since := disabled_since or time.monotonic()) < (
+                    time.monotonic() - RESUME_WAIT_S
+                ):
                     detail = "the account's resume is incomplete; complete it once in Gupy"
                     raise Unsupported(known_gap(self, "resume", detail))
-                browser.click(button)
                 break
             page.wait_for_timeout(STEP_POLL_MS)
         raise Unsupported(f"unhandled_rendering: no Additional information on {page.url}")
