@@ -42,6 +42,10 @@ A source whose postings only link to a form on another source: a job aggregator 
 **Adapter**:
 The module that knows one hiring system's page. Its name (`ashby`, `wttj`) identifies the system in commands, the config file and results.
 
+**Tenant**:
+One employer's own space on a hiring system: its career site, its settings and, on some systems, its accounts. Usually named in the posting URL (`acme` in `acme.wd5.myworkdayjobs.com`).
+_Avoid_: instance, subdomain
+
 **Posting**:
 One job opening on a hiring system, which an application is for. Every URL of a posting has the same key.
 _Avoid_: job, offer, listing
@@ -89,7 +93,7 @@ Something the hiring system or the employer receives before the submit, such as 
 A user's sign-in on a hiring system, needed by some systems to read or to send: one per user, hiring system and account scope.
 
 **Account scope**:
-What one account covers on a hiring system: the whole system (no scope), or one employer where each keeps its own, such as a Workday tenant.
+What one account covers on a hiring system: the whole system (no scope), or one tenant where each keeps its own accounts, as on Workday.
 
 **Login**:
 Signing in to an account, which stores its session: by a person in a visible window, or by atsfill with a password source. Also the `login` command.
