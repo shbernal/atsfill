@@ -260,10 +260,10 @@ dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", 
 [ukgready]
 kind = "ats"
 share = 0.0085
-account = "to_read"  # the first step's Continue creates a password-less account and the job application; a sign-up with a password asks a zip code
+account = "to_read"  # the sign-in's Create a new account sets a password, asking the name, country and zip code
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "95f2522", by = "agent", reason = "unsupported_flow: sign_up_zip: the sign-up that sets a password requires a zip code, which login does not take; the first step's account has none, so it cannot be signed in to again (14 of 14 tenants)" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "b0cb322", by = "agent", reason = "unsupported_flow: profile_wizard: signed in, the form is the applicant portal's profile wizard, items of a dozen types edited in cards, entry lists, a security question and an electronic signature; not built within the round (1 tenant walked)" }
 
 [adpmyjobs]
 kind = "ats"
