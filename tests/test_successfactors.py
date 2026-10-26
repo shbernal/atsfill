@@ -2,6 +2,7 @@
 its candidate pages on a data center host."""
 
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
@@ -24,6 +25,8 @@ def serve(route) -> None:
         route.fulfill(path=PAGES / "posting.html")
     elif "login_ns=register" in url:
         route.fulfill(path=PAGES / "signup.html")
+    elif "/career?company=acme" in url:
+        route.fulfill(content_type="text/html", body="<p>Career site</p>")
     elif "/careers?company=acme" in url:
         route.fulfill(
             path=PAGES / ("apply.html" if SESSION["signed_in"] else "signin.html"),
@@ -85,20 +88,39 @@ def test_detect_and_posting():
     assert adapter.login_url("careers.acme.com") == POSTING
 
 
+ADA = SignUpDetails(name="Ada Placeholder", phone="+12125550123", country="US")
+
+
 def test_sign_up(page):
     page.goto(POSTING)
-    SuccessFactors().sign_up(
-        page, "ada@example.com", "Aa1!aaaaaaaaaaaa", SignUpDetails(name="Ada Placeholder")
-    )
+    SuccessFactors().sign_up(page, "ada@example.com", "Aa1!aaaaaaaaaaaa", ADA)
     assert page.url.startswith(f"{DC}/portalcareer")
+    sent = parse_qs(urlsplit(page.url).query)
+    assert sent["fbclc_ituCode"] == ["US"]  # of the +1 countries, the one the details name
+    assert sent["fbclc_phoneNumber"] == ["2125550123"]
+    assert sent["fbclc_country"] == ["US"]
+
+
+def test_sign_up_back_on_the_career_site_signed_in(page, monkeypatch):
+    adapter = SuccessFactors()
+    monkeypatch.setattr(adapter, "signed_in", lambda request, scope: True)  # its profile page
+    page.goto(POSTING)
+    adapter.sign_up(page, "back@example.com", "Aa1!aaaaaaaaaaaa", ADA)
+    assert urlsplit(page.url).path == "/career"
+
+
+def test_sign_up_without_the_phone_the_site_requires_is_refused(page):
+    page.goto(POSTING)
+    with pytest.raises(Refused, match="^sign_up_details: no phone$"):
+        SuccessFactors().sign_up(
+            page, "ada@example.com", "Aa1!aaaaaaaaaaaa", SignUpDetails(name="Ada Placeholder")
+        )
 
 
 def test_sign_up_refused(page):
     page.goto(POSTING)
     with pytest.raises(Refused, match="email_in_use"):
-        SuccessFactors().sign_up(
-            page, "taken@example.com", "Aa1!aaaaaaaaaaaa", SignUpDetails(name="Ada Placeholder")
-        )
+        SuccessFactors().sign_up(page, "taken@example.com", "Aa1!aaaaaaaaaaaa", ADA)
 
 
 def test_sign_in(page):

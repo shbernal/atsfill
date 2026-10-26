@@ -96,7 +96,7 @@ share = 0.0350
 account = "to_read"
 hosting = ["hosted"]
 adapter = "successfactors"
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "0d8baea", by = "agent", reason = "quick_apply_sign_up: a Quick Apply page creates the account and sends the application in one submit, its sign-in offering no sign-up; sign_up_fields: a sign-up asking a phone number" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "0d8baea", by = "agent", reason = "quick_apply_sign_up: a Quick Apply page creates the account and sends the application in one submit, its sign-in offering no sign-up; sign_up_fields: a sign-up asking who may see the profile" }
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [ukg]
@@ -106,7 +106,7 @@ account = "to_read"
 hosting = ["hosted"]
 adapter = "ukg"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "a60a17d", by = "agent", reason = "unsupported_flow: sign_up_phone: the tenant's details step after the sign-up requires a phone number, which login does not take (10 of 17 tenants)" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "a60a17d", by = "agent", reason = "unhandled on the forms the sign-up now reaches, 3 of 8 tenants ready: no gender decline box to tick (3), a State whose condition names no Country (1), a numeric answer read back differently (1)" }
 
 [paycom]
 kind = "ats"
@@ -306,7 +306,7 @@ share = 0.0059
 account = "to_read"
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "211fe03", by = "agent", reason = "unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); sign_up_phone: the sign-up step requires a mobile phone, which login does not take (1 of 17); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "211fe03", by = "agent", reason = "unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs" }
 
 [applicantpro]
 kind = "ats"

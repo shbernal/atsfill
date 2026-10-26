@@ -8,6 +8,10 @@
   <input type="password" id="fbclc_pwdConf" aria-label="Retype Password:">
   <input type="text" id="fbclc_fName" aria-label="First Name:">
   <input type="text" id="fbclc_lName" aria-label="Last Name:">
+  <select id="fbclc_ituCode" aria-required="true">
+    <option value="">- Select -</option><option value="AR">Argentina (+54)</option><option value="BS">Bahamas (+1)</option><option value="CA">Canada (+1)</option><option value="US">United States (+1)</option>
+  </select>
+  <input type="text" id="fbclc_phoneNumber" aria-required="true">
   <select id="fbclc_country" aria-label="Country/Region of Residence">
     <option value="">No Selection</option><option value="AR">Argentina</option><option value="US">United States</option>
   </select>
@@ -24,7 +28,7 @@
     function create() {
       const error = document.getElementById('error');
       const email = document.getElementById('fbclc_userName').value;
-      const fields = ['fbclc_emailConf', 'fbclc_pwd', 'fbclc_pwdConf', 'fbclc_fName', 'fbclc_lName', 'fbclc_country'];
+      const fields = ['fbclc_emailConf', 'fbclc_pwd', 'fbclc_pwdConf', 'fbclc_fName', 'fbclc_lName', 'fbclc_ituCode', 'fbclc_phoneNumber', 'fbclc_country'];
       if (!accepted || fields.some(id => !document.getElementById(id).value)) {
         error.textContent = 'Please complete all required fields and re-submit.';
       } else if (email.startsWith('taken')) {
@@ -33,7 +37,10 @@
         error.textContent = 'Password must not be longer than 18 characters.';
       } else {
         document.cookie = 'signedIn=1; path=/';
-        location.href = '/portalcareer?_s.crb=x';
+        const sent = ['fbclc_ituCode', 'fbclc_phoneNumber', 'fbclc_country']
+          .map(id => `${id}=${encodeURIComponent(document.getElementById(id).value)}`).join('&');
+        // some sites go back to the career site, signed in, instead of to the application
+        location.href = email.startsWith('back') ? '/career?company=acme' : `/portalcareer?_s.crb=x&${sent}`;
         return;
       }
       error.classList.remove('displayNone');

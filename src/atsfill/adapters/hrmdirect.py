@@ -97,7 +97,7 @@ class HRMDirect:
     name = "hrmdirect"
     per_employer = True
     asks = {"name"}
-    known_gaps = {"screening_first": Gap.FLOW, "sign_up_phone": Gap.FLOW}
+    known_gaps = {"screening_first": Gap.FLOW}
     side_effects = [
         SideEffect(
             "sign_up", "employer", "the account is the employer's candidate, emailed a link"
@@ -184,17 +184,18 @@ class HRMDirect:
 
     def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         """Fills the apply page's first step, which creates the account signed in and sets no
-        password: the email that follows holds a link to set one, `blocked: email_link`."""
+        password: the email that follows holds a link to set one, `blocked: email_link`. The
+        mobile phone is given only where the org requires it; a missing one is refused before
+        anything is sent."""
         _to_apply(page)
         if not page.locator(IDENTITY).is_visible():
             raise Unsupported(
                 known_gap(self, "screening_first", "the form's first page comes before sign-up")
             )
         phone = page.locator(f"{IDENTITY} .form-group:has(input.mobile-number)")
-        if phone.count() and not phone.locator(".common-option-label").count():
-            raise Unsupported(
-                known_gap(self, "sign_up_phone", "the sign-up step requires a mobile phone")
-            )
+        phone_asked = phone.count() and not phone.locator(".common-option-label").count()
+        if phone_asked and not details.phone:
+            raise Refused("sign_up_details: no phone")
         if page.locator(RECAPTCHA).count():
             raise Blocked("captcha: a reCAPTCHA box keeps the sign-up's Continue disabled")
         first, _, last = (details.name or "").strip().partition(" ")
@@ -203,6 +204,8 @@ class HRMDirect:
         form.locator("input.last-name").fill(last or first)
         form.locator("input.email").fill(email)
         form.locator("input.email-confirm").fill(email)
+        if phone_asked:
+            form.locator("input.mobile-number").fill(details.phone or "")
         for group in form.locator(".radio-group:has(input[required])").all():
             group.locator("label:has(input[value=false])").click()  # declines, the least given
         form.locator("button.submit-button").click()
