@@ -13,7 +13,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported
-from atsfill.core.browser import Locator, Page, Request, Response, Timeout
+from atsfill.core.browser import Locator, Page, PageRequest, Request, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOST = "www.welcometothejungle.com"
@@ -205,12 +205,21 @@ def _account_form(page: Page, form: str, values: dict[str, str], posts: str) -> 
     page.wait_for_function(
         "() => document.cookie.includes('csrf-token=')", timeout=ACCOUNT_TIMEOUT_MS
     )
+    sent: list[PageRequest] = []
     answered: list[Response] = []
 
+    def posted(request: PageRequest) -> bool:
+        return request.method == "POST" and urlsplit(request.url).path.endswith(posts)
+
+    def on_request(request: PageRequest) -> None:
+        if posted(request):
+            sent.append(request)
+
     def on_response(response: Response) -> None:
-        if response.request.method == "POST" and urlsplit(response.url).path.endswith(posts):
+        if posted(response.request):
             answered.append(response)
 
+    page.on("request", on_request)
     page.on("response", on_response)
     on_form = page.url
     page.locator(f"[data-testid={form}-submit-button]").click()
@@ -223,7 +232,8 @@ def _account_form(page: Page, form: str, values: dict[str, str], posts: str) -> 
                 # the page leaves the form on its own: a navigation before then is aborted
                 page.wait_for_url(lambda url: url != on_form, timeout=ACCOUNT_TIMEOUT_MS)
                 return
-            if said.count():
+            # the page can show the answer before its response event arrives here
+            if said.count() and not sent:
                 field = said.first.get_attribute("data-testid") or ""
                 text = said.first.inner_text().strip()
                 if field.endswith("-password-error"):
@@ -231,6 +241,7 @@ def _account_form(page: Page, form: str, values: dict[str, str], posts: str) -> 
                 raise Unsupported(f"unhandled_rendering: the form says {text!r}")
             page.wait_for_timeout(ACCOUNT_POLL_MS)
     finally:
+        page.remove_listener("request", on_request)
         page.remove_listener("response", on_response)
     raise Unsupported("unhandled_rendering: the form answered nothing")
 
