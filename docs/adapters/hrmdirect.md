@@ -1,6 +1,6 @@
 # HRMDirect
 
-HRMDirect, now ClearCompany, observed on live postings on 2026-10-26. The fixture page is [tests/pages/hrmdirect/apply.html](../../tests/pages/hrmdirect/apply.html), a two-page wizard served as an Acme org in `tests/test_hrmdirect.py`. Unsupported (see the registry): the known gaps below stop sign-up on 6 of 17 orgs, and the gate's 5 dry runs were not reached.
+HRMDirect, now ClearCompany, observed on live postings on 2026-10-26. The fixture page is [tests/pages/hrmdirect/apply.html](../../tests/pages/hrmdirect/apply.html), a two-page wizard served as an Acme org in `tests/test_hrmdirect.py`. Unsupported (see the registry): the known gap below and a reCAPTCHA stop sign-up on 5 of 17 orgs, and the gate's 5 dry runs were not reached.
 
 ## Where the form is
 
