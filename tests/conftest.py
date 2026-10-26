@@ -10,6 +10,8 @@ import keyring.backend
 import keyring.errors
 import pytest
 
+from atsfill.core import browser
+
 PAGES = Path(__file__).parent / "pages"
 
 
@@ -70,6 +72,19 @@ class MemoryKeyring(keyring.backend.KeyringBackend):
     def delete_password(self, service: str, username: str) -> None:
         if self.passwords.pop((service, username), None) is None:
             raise keyring.errors.PasswordDeleteError(username)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def offline() -> Generator[None]:
+    """Every host name resolves to this machine, so a request no route serves fails here
+    instead of reaching a live site: a redirect `route.fulfill` answers is followed outside
+    the context's routes."""
+    launch = functools.partial(
+        browser.Camoufox, firefox_user_prefs={"network.dns.forceResolve": "127.0.0.1"}
+    )
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(browser, "Camoufox", launch)
+        yield
 
 
 @pytest.fixture(autouse=True)
