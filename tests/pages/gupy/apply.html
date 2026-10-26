@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acme - Gupy</title>
+<!-- One example of each rendering docs/adapters/gupy.md lists, a screen at a time as the
+     register step shows them: the contact details dialog, the account's resume (complete),
+     Continue, Additional information, the questions' introduction, and the employer's
+     questions, rendered from the `question-forms` answer. -->
+</head>
+<body>
+<main id="screen"></main>
+<script>
+const APPLICATION = "https://private-api.gupy.io/question-forms/candidates/applications/11/steps/22/forms";
+const incomplete = false;  // the test serves it true for a resume left incomplete
+let questions = [];
+const screen = document.getElementById("screen");
+
+function radio(name, value, text, checked) {
+  return `<label><input type="radio" name="${name}" value="${value}" ${checked ? "checked" : ""}>` +
+    `<span aria-hidden="true"></span><span>${text}</span></label>`;
+}
+
+const screens = {
+  resume: () => `
+    <div role="dialog"><h2>Update your data</h2>
+      <button type="button" onclick="this.parentElement.remove()">Remind me later</button></div>
+    <h1>My resume</h1>
+    <button type="button" aria-label="">Save and continue</button>
+    <button type="button" ${incomplete ? "disabled" : ""} onclick="show('hello')">Continue Application</button>`,
+  hello: () => `
+    <p>Hello Ada, shall we continue with your application?</p>
+    <button type="button" onclick="show('additional')">Continue</button>`,
+  additional: () => `
+    <h1>Additional information</h1>
+    <fieldset><legend>Someone who works at this company referred you for this position?</legend>
+      <div>${radio("radioGroupIsIndicatedTitle", "yes", "Yes")}${radio("radioGroupIsIndicatedTitle", "no", "No", true)}</div>
+    </fieldset>
+    <fieldset><legend>Do you work at Acme?</legend>
+      <div>${radio("radioGroupIsCompanyEmployeeTitle", "yes", "Yes")}${radio("radioGroupIsCompanyEmployeeTitle", "no", "No", true)}</div>
+    </fieldset>
+    <label for="source">Where did you find this job? (Optional)</label>
+    <input type="text" id="source" name="howDidYouHearAboutUs" role="combobox">
+    <button type="button" onclick="saveAdditional()">Save and continue</button>`,
+  intro: () => `
+    <h1>Company created questions</h1>
+    <p>Attention: the answers cannot be edited later.</p>
+    <button type="button" onclick="show('questions')">Answer now</button>`,
+  questions: () => `<h1>Questions created by the company Acme</h1>` + questions.map(q => {
+    const id = q.questionId;
+    const options = (q.options || []).map((o, n) => q.type === "MULTI_SELECT"
+      ? `<label><input type="checkbox" name="checkbox-${id}-${n}"><span>${o.label}</span></label>`
+      : radio(`question-${id}`, "", o.label)).join("");
+    const text = q.type === "TEXT_AREA"
+      ? `<textarea name="${q.title}" id="input-${q.title}"></textarea>`
+      : q.type === "TEXT" ? `<input type="text" name="${q.title}" id="input-${q.title}">` : "";
+    return `<div><p>${q.title} *</p>${options}${text}</div>`;
+  }).join("") + `<button type="button" onclick="sendAnswers()">Save and continue</button>`,
+};
+
+function show(name) {
+  screen.innerHTML = screens[name]();
+}
+
+async function saveAdditional() {
+  await fetch(APPLICATION.replace(/question-forms.*/, "curriculum-management/additional-info"),
+    {method: "PUT", body: "{}"});
+  show("intro");
+}
+
+async function sendAnswers() {
+  await fetch(APPLICATION.replace("/forms", "/answers"), {method: "PUT", body: "{}"});
+  screen.innerHTML = "<p>Application sent</p>";
+}
+
+fetch(APPLICATION).then(r => r.json()).then(body => {
+  questions = body.questionForm.questions;
+  show("resume");
+});
+</script>
+</body>
+</html>

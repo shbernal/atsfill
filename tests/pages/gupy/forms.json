@@ -1,0 +1,14 @@
+{"questionForm": {"context": "QUESTION_FORM", "formId": 1, "questions": [
+  {"questionId": 101, "order": 1, "title": "What is your salary expectation?", "required": true,
+   "type": "TEXT_AREA", "options": [], "answer": null, "parentQuestionId": null,
+   "conditionalTriggerOptions": null},
+  {"questionId": 102, "order": 2, "title": "Your city", "required": true, "type": "TEXT",
+   "options": [], "answer": null, "parentQuestionId": null, "conditionalTriggerOptions": null},
+  {"questionId": 103, "order": 3, "title": "Are you available on weekends?", "required": true,
+   "type": "SELECT", "options": [{"label": "Yes"}, {"label": "No"}], "answer": null,
+   "parentQuestionId": null, "conditionalTriggerOptions": null},
+  {"questionId": 104, "order": 4, "title": "Which tools do you use?", "required": true,
+   "type": "MULTI_SELECT", "options": [{"label": "Spreadsheets"}, {"label": "Databases"},
+   {"label": "None of these"}], "answer": null, "parentQuestionId": null,
+   "conditionalTriggerOptions": null}
+]}}
