@@ -47,7 +47,7 @@ From the 15 employers of the sample, read signed in. A step's fields are read fr
 | Gap | What | Code | Postings |
 |---|---|---|---|
 | `sign_up_otp` | the posting page's Apply now sends a one-time code to the email or phone before the form; atsfill signs up from the sign-in instead | `unsupported_flow` | 15 of 15 employers |
-| `entry_list` | the employment or education step adds entries one by one, each with its own form | `unsupported_rendering` | 1 of 15 employers |
+| `entry_list` | the employment or education step adds entries one by one, each with its own form | `unsupported_rendering` | 1 of 15 employers in the sample, 1 of 10 at the adapter gate |
 | `drawn_signature` | the applicant statement asks a signature drawn on a canvas | `unsupported_rendering` | 1 of 15 employers |
 
 ## Submitting
