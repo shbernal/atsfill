@@ -89,7 +89,7 @@ class HRMDirect:
     name = "hrmdirect"
     per_employer = True
     asks_name = True
-    known_gaps = {"screening_first": Gap.FLOW}
+    known_gaps = {"screening_first": Gap.FLOW, "sign_up_phone": Gap.FLOW}
     side_effects = [
         SideEffect(
             "sign_up", "employer", "the account is the employer's candidate, emailed a link"
@@ -181,6 +181,11 @@ class HRMDirect:
         if not page.locator(IDENTITY).is_visible():
             raise Unsupported(
                 known_gap(self, "screening_first", "the form's first page comes before sign-up")
+            )
+        phone = page.locator(f"{IDENTITY} .form-group:has(input.mobile-number)")
+        if phone.count() and not phone.locator(".common-option-label").count():
+            raise Unsupported(
+                known_gap(self, "sign_up_phone", "the sign-up step requires a mobile phone")
             )
         if page.locator(RECAPTCHA).count():
             raise Blocked("captcha: a reCAPTCHA box keeps the sign-up's Continue disabled")
