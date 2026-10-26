@@ -40,7 +40,7 @@ QUESTIONS = """query JobScreeningQuestions($input: JobScreeningQuestionsInput!) 
   }
 }"""
 YES_NO = ["Yes", "No"]  # a boolean's cards, in this order, in the job's language
-FILES = {"cv": "cv", "coverLetter": "coverLetter"}  # a file field, by its step
+FILES = {"cv": "cv"}  # a file field, by its step
 # A question of a class has a step of its own; the others are `question-<n>`, in order.
 CLASS_STEPS = {
     "workAuthorization": "WORK_AUTHORIZATION",
@@ -77,7 +77,7 @@ class Join:
     def __init__(self) -> None:
         self._fields: dict[str, Field] = {}
         self._questions: list[dict[str, Any]] = []
-        self._shown: dict[str, dict[str, str]] = {}  # a boolean's option, by its card's text
+        self._seen: dict[str, Answer] = {}  # each question as its step was left
         self._files: list[str] = []  # the file fields answered, in the steps' order
 
     def detect(self, url: str, page: Page | None) -> bool:
@@ -153,7 +153,6 @@ class Join:
         self._questions = sorted(questions, key=lambda q: q.get("position") or 0)
         fields = [
             Field("cv", "CV", FieldType.FILE, True, accept=PDF),
-            Field("coverLetter", "Cover letter", FieldType.FILE, False, accept=PDF),
             *(_question(q) for q in self._questions),
         ]
         self._fields = {f.id: f for f in fields if not f.unfillable}
@@ -184,10 +183,15 @@ class Join:
                 field_id = f"question.{question['id']}"
                 if field_id in self._fields:
                     self._question(page, question, answers.get(field_id))
+            elif step == "coverLetter":  # asked by some jobs only: left without one
+                pass
             elif step in PROFILE_STEPS:
-                if _continue(page).is_disabled():  # shown for what the account profile lacks
+                try:  # shown when the job requires what the account profile lacks
+                    _next(page, step)
+                except NotTaken, RuntimeError:
                     detail = f"the {step} step asks what the account profile lacks"
-                    raise Unsupported(known_gap(self, "profile_incomplete", detail))
+                    raise Unsupported(known_gap(self, "profile_incomplete", detail)) from None
+                continue
             else:
                 raise Unsupported(f"unhandled_rendering: a wizard step {step!r}")
             _next(page, step)
@@ -204,14 +208,13 @@ class Join:
         return None
 
     def read_back(self, page: Page) -> dict[str, Answer]:
-        values: dict[str, Answer] = {}
-        by_label = {q["question"]: f"question.{q['id']}" for q in self._questions}
+        """The files as the review page lists them; each question as its step was left, since
+        the review shows a classed question's answer reworded (`€50,000`)."""
+        values: dict[str, Answer] = dict(self._seen)
         files = iter(self._files)  # the review lists the files by name, in the steps' order
-        for label, value in page.evaluate(_REVIEW):
+        for _, value in page.evaluate(_REVIEW):
             if value.lower().endswith(".pdf") and (field_id := next(files, None)):
                 values[field_id] = value
-            elif field_id := by_label.get(label):
-                values[field_id] = self._shown.get(field_id, {}).get(value, value)
         return {k: v for k, v in values.items() if v}
 
     def submit(self, page: Page) -> str | None:
@@ -247,16 +250,21 @@ class Join:
                 # the cards are the options in order: a letter, the option, a description
                 texts = [_card(t) for t in cards.all_inner_texts()]
                 options = YES_NO if question["type"] == "BOOLEAN" else question["options"]
-                self._shown[field_id] = dict(zip(texts, options, strict=False))
-                if not isinstance(answer, str):
-                    return
-                if answer not in options or options.index(answer) >= len(texts):
-                    raise NotTaken(f"no option {answer!r} in {field_id}: {texts}")
-                card = cards.nth(options.index(answer))
-                if card.get_attribute("aria-checked") != "true":
-                    card.click()
-            case "DATE" if isinstance(answer, str):
-                _date(page, answer)
+                if isinstance(answer, str):
+                    if answer not in options or options.index(answer) >= len(texts):
+                        raise NotTaken(f"no option {answer!r} in {field_id}: {texts}")
+                    card = cards.nth(options.index(answer))
+                    if card.get_attribute("aria-checked") != "true":
+                        card.click()
+                checked = [c.get_attribute("aria-checked") == "true" for c in cards.all()]
+                if True in checked and checked.index(True) < len(options):
+                    self._seen[field_id] = options[checked.index(True)]
+            case "DATE":
+                if isinstance(answer, str):
+                    _date(page, answer)
+                picked = page.locator("td[data-part=table-cell][aria-selected=true]")
+                if picked.count():
+                    self._seen[field_id] = picked.first.get_attribute("data-value") or ""
             case _ if isinstance(answer, str):
                 name = f"screeningQuestions.answer-{question['id']}"
                 target = page.locator(f'[name="{name}"], [id="{name}"], #salaryExpectationAmount')
@@ -265,6 +273,7 @@ class Join:
                         "textarea:visible, input:visible:not([type=file]):not([role=combobox])"
                     )
                 target.first.fill(answer)
+                self._seen[field_id] = target.first.input_value()
 
 
 def _step(page: Page) -> str:

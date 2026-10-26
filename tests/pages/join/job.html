@@ -52,7 +52,7 @@ function calendar(q) {
   let cells = "";
   for (let d = 1; d <= days; d++) {
     const value = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    cells += `<td data-part="table-cell" data-value="${value}"><div data-part="table-cell-trigger"` +
+    cells += `<td data-part="table-cell" data-value="${value}" aria-selected="${state.answers[q.id] === value}"><div data-part="table-cell-trigger"` +
       ` data-day="${value}">${d}</div></td>`;
   }
   return `<button type="button" data-part="prev-trigger">&lt;</button>` +

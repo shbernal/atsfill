@@ -76,13 +76,13 @@ def test_browser_read_lists_the_files_and_the_questions(opened, page):
     _, fields = opened
     assert [(f.id, f.type, f.required) for f in fields] == [
         ("cv", FieldType.FILE, True),
-        ("coverLetter", FieldType.FILE, False),
         ("question.1", FieldType.CHOICE, True),
         ("question.2", FieldType.CHOICE, True),
         ("question.3", FieldType.DATE, True),
         ("question.4", FieldType.TEXT, False),
     ]
-    assert fields[3].options == ["Yes", "No"]
+    assert fields[2].options == ["Yes", "No"]
+    assert fields[4].label == "Your salary expectation? (a number)"
     assert page.url.endswith("/apply/cv")  # the wizard left `authentication` on its own
 
 
@@ -90,7 +90,6 @@ def test_every_answer_reads_back_from_the_review_page(opened, page, files):
     adapter, fields = opened
     answers = {
         "cv": files[0],
-        "coverLetter": files[1],
         "question.1": "Fluent",
         "question.2": "Yes",
         "question.3": "2026-03-15",

@@ -40,14 +40,15 @@ The screening questions come from `JobScreeningQuestions` (`candidate-api/graphq
 
 The question counts are postings, from 11 employers whose posting asks screening questions, read by request. Which steps a posting asks was not found in the page's data: the wizard's steps are the source.
 
-- atsfill lists the CV (required), the cover letter and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
+- atsfill lists the CV (required) and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
 - The fill walks the wizard from `cv` to `review`, answering each step, and stops there; a step it does not know stops it as `unhandled_rendering`. Continue is the footer's last button (its label is in the job's language); one left disabled means a required answer is missing.
 - A question of a class has a step named for it (`workAuthorization`, `salaryExpectation`); the others are `question-<n>`, numbered among themselves. A work authorization's cards hold the option and a description; a salary is `#salaryExpectationAmount`.
 - `personalInformation` (photo, name, country, city, phone) shows only when the job requires what the account profile lacks, a phone on some jobs: atsfill stops there, the known gap `profile_incomplete`.
 - A file is stored on upload, before Continue: the step then shows the file in place of its input.
-- A boolean's cards read in the job's language (`Ja`, `Nein`): they are answered `Yes`, `No` by position.
+- A choice's cards are its options in order, each a letter, the option and, for a work authorization, a description; a boolean's read in the job's language (`Ja`, `Nein`) and are answered `Yes`, `No` by position.
+- `coverLetter` is asked by some jobs only, optional where seen: it is left without one, and not listed.
 - The calendar is paged with its previous and next buttons to the answer's month.
-- The read-back is the review page: each entry's label and value, the files by name in the steps' order, a boolean mapped back from its card's text.
+- The read-back is each question as its step was left (the checked card, the picked day, the input), and the CV by name from the review page: the review shows a classed question under a label of its own and its answer reworded (`€50,000`, an availability in the account's language).
 
 ## Known gaps
 
