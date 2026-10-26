@@ -35,6 +35,8 @@ SETTLE_MS = 500
 YES_NO = ["Yes", "No"]
 DATE_SHOWN = re.compile(r"(\d\d)/(\d\d)/(\d{4})")
 COUNTRY, STATE = "Country", "State"
+HISPANIC = "HispanicOrigin"  # race (`EthnicOrigin`) is asked when not Hispanic or Latino
+DECLINE_BOX = "input[type=checkbox][data-automation$='-decline-checkbox']"
 DAYS, DOCUMENTS = "availability_days", "documents"
 
 # Auth0's error codes on the sign-in and sign-up pages, by what atsfill raises
@@ -66,10 +68,25 @@ _READ = """root => {
     return el.closest(".form-group")?.querySelector("label");
   };
   const required = (el, label) => el.required || !!label?.classList.contains("required");
+  const select = (el, field) => {
+    field.kind = "select";
+    field.options = [...el.options].filter(o => o.value).map(o => clean(o.textContent));
+    field.value = el.value ? clean(el.selectedOptions[0]?.textContent) : "";
+    const box = el.closest(".form-group")?.querySelector(
+      "input[type=checkbox][data-automation$='-decline-checkbox']");
+    if (box) {
+      field.decline = clean(box.closest("label")?.querySelector("span:not(.sr-only)")
+        ?.textContent);
+      field.options.push(field.decline);
+      if (box.checked) field.value = field.decline;
+    }
+    return field;
+  };
   const out = [], seen = new Set();
   for (const el of root.querySelectorAll("input, select, textarea")) {
     const type = (el.type || "").toLowerCase();
     if (["hidden", "file", "submit", "button"].includes(type) || !shown(el)) continue;
+    if (el.matches("[data-automation$='-decline-checkbox']")) continue;  // its select's option
     if (el.closest("ukg-input, ukg-input-container, [data-automation=upload-resume]")) continue;
     const id = type === "radio" ? el.name : el.id || el.name || el.dataset.automation;
     if (!id || seen.has(id)) continue;
@@ -79,11 +96,8 @@ _READ = """root => {
                    kind: type, options: [], value: el.value,
                    readonly: el.readOnly || el.disabled, maxLength: el.maxLength > 0 ?
                    el.maxLength : null};
-    if (el.tagName === "SELECT") {
-      field.kind = "select";
-      field.options = [...el.options].filter(o => o.value).map(o => clean(o.textContent));
-      field.value = el.value ? clean(el.selectedOptions[0]?.textContent) : "";
-    } else if (el.tagName === "TEXTAREA") field.kind = "text";
+    if (el.tagName === "SELECT") select(el, field);
+    else if (el.tagName === "TEXTAREA") field.kind = "text";
     else if (type === "radio") {
       const all = [...root.querySelectorAll(`input[type=radio][name="${CSS.escape(id)}"]`)];
       field.options = all.map(r => clean(r.closest("label")?.textContent));
@@ -108,6 +122,17 @@ _READ = """root => {
               required: box.getAttribute("required") === "true" ||
                 !!label.classList?.contains("required"),
               options: [], value: box.getAttribute("value") || ""});
+  }
+  const race = root.querySelector("select#EthnicOrigin");
+  const hispanic = root.querySelector("select#HispanicOrigin");
+  if (race && hispanic && out.some(f => f.id === "HispanicOrigin")) {
+    const kept = out.findIndex(f => f.id === "EthnicOrigin");
+    if (kept >= 0) out.splice(kept, 1);
+    const label = labelOf(race);
+    out.splice(out.findIndex(f => f.id === "HispanicOrigin") + 1, 0, select(race, {
+      id: race.id, label: clean(label?.textContent), required: required(race, label),
+      readonly: false, maxLength: null,
+      shownWhen: clean([...hispanic.options].find(o => o.value === "No")?.textContent)}));
   }
   const days = [...root.querySelectorAll("[data-automation=day-btn]")].filter(shown);
   if (days.length) {
@@ -151,11 +176,19 @@ _READ_BACK = """(root, kinds) => {
         .find(r => r.checked);
       out[id] = checked ? clean(checked.closest("label")?.textContent) : null;
     } else {
-      const el = [...root.querySelectorAll(`[id="${CSS.escape(id)}"], [name="${CSS.escape(id)}"]`)]
-        .find(shown);
+      const named = CSS.escape(id);
+      const el = [...root.querySelectorAll(
+        `[id="${named}"], [name="${named}"], [data-automation="${named}"]`)].find(shown);
       if (!el) continue;
-      if (kind === "select") out[id] = el.value ? clean(el.selectedOptions[0]?.textContent) : null;
-      else if (kind === "checkbox") out[id] = el.checked ? "Yes" : "No";
+      const box = el.closest(".form-group")?.querySelector(
+        "input[type=checkbox][data-automation$='-decline-checkbox']");
+      if (kind === "select" && box?.checked) {
+        out[id] = clean(box.closest("label")?.querySelector("span:not(.sr-only)")?.textContent);
+      } else if (kind === "select") {
+        out[id] = el.value ? clean(el.selectedOptions[0]?.textContent) : null;
+      } else if (kind === "checkbox") out[id] = el.checked ? "Yes" : "No";
+      // a Numeric question's autoNumeric input groups its number: 50,000
+      else if (el.dataset.automation === "numeric-response") out[id] = el.value.replace(/,/g, "");
       else out[id] = el.value;
     }
   }
@@ -228,6 +261,7 @@ class UKG:
     def __init__(self) -> None:
         self._boards: dict[str, Board] = {}  # by tenant, the last posting's
         self._kinds: dict[str, str] = {}
+        self._declines: dict[str, str] = {}  # a select's decline box's label, by the select
 
     def detect(self, url: str, page: Page | None) -> bool:
         return board(url) is not None
@@ -266,13 +300,18 @@ class UKG:
         )  # fmt: skip
 
     def sign_in(self, page: Page, email: str, password: str) -> None:
-        page.locator("input#username").wait_for(timeout=FORM_TIMEOUT_MS)
-        page.locator("input#username").fill(email)
-        page.locator("input#password").fill(password)
-        page.locator("button[type=submit][name=action][data-action-button-primary]").click()
-        _left_sign_in(page)
+        _sign_in(page, email, password)
         if "/AuthCode/Register" in page.url:
-            raise Unsupported("unhandled_rendering: the tenant asks the account's name")
+            raise Refused(
+                "sign_up_details: the account was left at the tenant's details step: "
+                "`login --create --details` finishes it"
+            )
+
+    def finish_sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
+        """Signs in and, where the account was left without its tenant details, gives them."""
+        _sign_in(page, email, password)
+        if "/AuthCode/Register" in page.url:
+            _register(page, details)
 
     def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         page.locator("a[href*='/u/signup']").first.click()
@@ -302,7 +341,9 @@ class UKG:
         raws = page.locator(FORM).evaluate(_READ)
         required_resume = '"IsResumeRequired":true' in page.content()
         states = None
-        if page.locator(f"{FORM} select#{STATE}").count():
+        # with the address optional, the contact information is the account's, a read-only
+        # panel whose Country and State are in a closed edit dialog
+        if page.locator(f"{FORM} select#{STATE}").count() and any(r["id"] == COUNTRY for r in raws):
             states = page.locator(FORM).evaluate(_STATES, f"{found.base}/Candidate/GetStates")
             if not any(r["id"] == STATE for r in raws):  # shown once a country is picked
                 label = page.locator(f"{FORM} label[for={STATE}]").first
@@ -313,6 +354,7 @@ class UKG:
                     "required": "required" in (label.get_attribute("class") or ""),
                 })  # fmt: skip
         self._kinds = {raw["id"]: raw["kind"] for raw in raws}
+        self._declines = {raw["id"]: raw["decline"] for raw in raws if raw.get("decline")}
         fields = []
         for raw in raws:
             if raw["id"] == DOCUMENTS:
@@ -328,6 +370,11 @@ class UKG:
             values = [answer] if isinstance(answer, str) else answer
             root = page.locator(FORM)
             match kind:
+                case "select" if field_id in self._declines:
+                    declined = values[0] == self._declines[field_id]
+                    _decline_box(root, field_id).set_checked(declined)
+                    if not declined:
+                        _control(root, field_id).select_option(label=values[0])
                 case "select":
                     control = _control(root, field_id)
                     control.select_option(label=values[0])
@@ -364,6 +411,14 @@ class UKG:
                 raise Blocked("captcha: Cloudflare Turnstile asked for a challenge") from None
             raise
         return page.url
+
+
+def _sign_in(page: Page, email: str, password: str) -> None:
+    page.locator("input#username").wait_for(timeout=FORM_TIMEOUT_MS)
+    page.locator("input#username").fill(email)
+    page.locator("input#password").fill(password)
+    page.locator("button[type=submit][name=action][data-action-button-primary]").click()
+    _left_sign_in(page)
 
 
 def _left_sign_in(page: Page) -> None:
@@ -441,12 +496,13 @@ def _field(raw: dict[str, Any], states: dict[str, list[str]] | None) -> Field:
         return Field(field_id, label, KINDS[kind], raw["required"], prefilled=value,
                      unfillable=reason)  # fmt: skip
     options = raw["options"] if kind in ("select", "radio") else None
+    shown_when = Is(HISPANIC, [raw["shownWhen"]]) if raw.get("shownWhen") else None
     if field_id == STATE and states is not None:
         sets = [OptionSet(Is(COUNTRY, [country]), names) for country, names in states.items()]
         return Field(field_id, label, FieldType.CHOICE, raw["required"], [], option_sets=sets)
     return Field(
         field_id, label, KINDS[kind], raw["required"], options, raw.get("maxLength"),
-        default=value if kind in ("date", "select") else None,
+        default=value if kind in ("date", "select") else None, shown_when=shown_when,
     )  # fmt: skip
 
 
@@ -459,7 +515,15 @@ def _wait_for_states(page: Page) -> None:
 
 
 def _control(root: Locator, field_id: str) -> Locator:
-    return root.locator(f'[id="{field_id}"]:visible, [name="{field_id}"]:visible').first
+    named = f'[id="{field_id}"]:visible, [name="{field_id}"]:visible'
+    return root.locator(f'{named}, [data-automation="{field_id}"]:visible').first
+
+
+def _decline_box(root: Locator, field_id: str) -> Locator:
+    """The "I decline to say" box under an equal-opportunity question's select: ticked, it
+    clears the select."""
+    group = "xpath=ancestor::div[contains(@class,'form-group')][1]"
+    return _control(root, field_id).locator(group).locator(DECLINE_BOX)
 
 
 def _option(root: Locator, name: str, text: str) -> Locator:

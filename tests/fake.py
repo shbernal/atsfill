@@ -157,3 +157,7 @@ class FakeSignUp(FakeSignIn):
         self.created = self.password = password
         self.details = details
         page.evaluate("document.cookie = 'session=ok; path=/'")
+
+    def finish_sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
+        self.sign_in(page, email, password)
+        self.details = details

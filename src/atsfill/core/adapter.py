@@ -184,6 +184,17 @@ class CreatesAccount(SignsIn, Protocol):
 
 
 @runtime_checkable
+class FinishesSignUp(CreatesAccount, Protocol):
+    """An adapter whose system can keep an account half made: signed up, but a step the
+    sign-up shows after it left unfinished, which every sign-in then shows again."""
+
+    def finish_sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
+        """Signs in as `sign_in` does and, where the system shows the unfinished step, gives it
+        `details` as `sign_up` would."""
+        ...
+
+
+@runtime_checkable
 class ReadsByRequest(Adapter, Protocol):
     """An adapter with a request read: a form's fields listed without a browser (ADR 0011)."""
 

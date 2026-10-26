@@ -13,7 +13,8 @@ Applying needs an account, one per tenant: the account scope is the tenant alias
 
 - The sign-in is Auth0's Universal Login on `signin-<region>.ultipro.com` (`signin-us`), with the tenant as an Auth0 organization: `input#username`, `input#password`, and Sign up (`/u/signup`: `input#email`, `input#password`). No tenant sent a verification email or asked for a code.
 - After the sign-up the tenant asks its own details (`/AuthCode/Register`, "Almost there!"): first and last name, a phone number (a plain `tel` input, required on 10 of 16 tenants, any format taken), and on some tenants a privacy policy box, a text-message box and an AI scoring box (Candidate Match, ticked by default). Its inputs are UKG web components that take typed keys only; Create account stays disabled until the required ones are given. atsfill types the name and, where required, the phone as given (E.164), ticks the privacy box and leaves the other two unticked.
-- The phone is known to be needed only once the Auth0 identity exists, and an identity without its tenant details is a dead end: a later sign-in lands on the same step and stops with `unhandled_rendering`. So the adapter asks the phone of every sign-up (`asks`), refused before the browser opens without it.
+- The phone is known to be needed only once the Auth0 identity exists, so the adapter asks the phone of every sign-up (`asks`), refused before the browser opens without it.
+- An identity left without its tenant details (a sign-up stopped there) lands on the same step at every sign-in. A plain sign-in stops there with `refused: sign_up_details`; `login --create` with the password already stored signs in and gives that step the `--details`.
 - The signed-in check asks for the last posting's form: it loads, where a visitor or an account without its tenant details is redirected to the sign-in or the details step. Without a posting seen, it looks for the tenant host's `.AspNetCore.Cookies` session cookie, which lasts a day.
 - Auth0's error codes name the refusal: `user-exists` (`email_in_use`), wrong credentials (`wrong_password`), a password rule (`password_rule`).
 
@@ -30,6 +31,8 @@ Each rendering, and how many of the sample's postings showed it:
 | `type=tel` (`Phone`, `SecondaryPhone`) | `phone` | all |
 | `select`: title, suffix, country, how did you hear (`ApplicantSource`) | `choice` | all |
 | state (`State`): a `select` shown once a country with states is picked, filled from `…/Candidate/GetStates?countryId=<id>` | `choice`, the states per country in `option_sets` | all |
+| equal-opportunity question (`Gender`, `HispanicOrigin`, `USFederalContractor`): a `select` with an "I decline to say" box under it (`[data-automation$=-decline-checkbox]`) that clears the select when ticked | `choice`, the box's label one more option | 6 of 14 |
+| race (`EthnicOrigin`): the same, shown when the ethnic origin is Not Hispanic/Latino | `choice`, a follow-up of `HispanicOrigin` | where the ethnic origin is asked |
 | radio group: referred by an employee, a Multiple Choice question | `choice` | all |
 | one checkbox (`WillingToRelocate`) | `choice` `Yes`/`No` | all |
 | date picker (`ukg-input type=date`, month, day and year inputs): when can you start, today by default | `date` | all |
@@ -38,14 +41,16 @@ Each rendering, and how many of the sample's postings showed it:
 
 A read-only field without a value (preferred name, former name) is listed `unsupported_rendering`; atsfill leaves it. The Upload Resume box at the top parses a resume into the profile and is not used.
 
+Where a tenant makes the address optional, Contact Information is a read-only panel of the account's (name, phone, email) whose controls, Country and State among them, sit in a closed edit dialog: the read lists none of them.
+
 ## Filling
 
-- A select is picked by its option's text; picking the country waits for its states. A radio or the checkbox is clicked to the answer, the date's month, day and year typed in turn, a day toggled when it differs.
+- A select is picked by its option's text; picking the country waits for its states. An equal-opportunity answer "I decline to say" ticks the box, any other unticks it and picks the option. A radio or the checkbox is clicked to the answer, the date's month, day and year typed in turn, a day toggled when it differs.
 - The document is uploaded to the account's documents (`…/Documents/UploadFile`) and listed by its name once stored.
 
 ## Read-back and submit
 
-- The read-back is the page: an input's value, a select's option text, the checked radio's label, the date picker's `value` (`YYYY-MM-DD`), the selected days, the last uploaded document's name.
+- The read-back is the page: an input's value (a Numeric question's without the grouping autoNumeric shows, `50,000` read as `50000`), a select's option text or its ticked decline box's label, the checked radio's label, the date picker's `value` (`YYYY-MM-DD`), the selected days, the last uploaded document's name.
 - Submit is `[data-automation=btn-submit]`, expected to move to `…/OpportunityApply/ApplicationSubmitted`; a tenant may turn on Cloudflare Turnstile for it (`enable-recruiting-signup-captcha-implementation`). No send was made.
 
 ## Development
