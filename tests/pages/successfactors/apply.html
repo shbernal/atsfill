@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Portfolio Manager (1234)</title>
+<style>.displayNone { display: none; } .collapsed { display: none; }</style></head>
+<body>
+  <a role="button" id="30:_expandAllSections" onclick="document.querySelectorAll('.collapsed').forEach(s => s.classList.remove('collapsed'))">Expand all sections</a>
+
+  <div class="rcmFormSection"><h2>My Documents</h2><div class="sectionContent collapsed">
+    <div class="RCMFormField rcmFormElement attachmentField" data-attach="46">
+      <label id="38:" for="" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Resume</label>
+      <div class="attachmentComponentInput">
+        <div id="46:_attachDownloadLabel" class="attachmentLabel displayNone"><span id="46:_attachDownloadLabelLink"></span></div>
+        <div class="attachActions"><span role="button" id="46:_attachIcon" class="glyphicon glyphicon-plus-sign addAttachments" onclick="sources(46)">Upload</span></div>
+      </div>
+    </div>
+    <div class="RCMFormField rcmFormElement attachmentField" data-attach="48">
+      <label id="43:" for="" class="rcmFormFieldLabel">Cover Letter</label>
+      <div class="attachmentComponentInput">
+        <div id="48:_attachDownloadLabel" class="attachmentLabel"><span id="48:_attachDownloadLabelLink">old letter.pdf</span></div>
+        <div class="attachActions">
+          <span role="button" id="48:_attachIcon" class="glyphicon glyphicon-trash removeAttachments" onclick="confirmDelete(48)">Delete</span>
+          <span role="button" id="49:_attachIcon" class="glyphicon glyphicon-plus-sign addAttachments displayNone" onclick="sources(48)">Upload</span>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <div class="rcmFormSection"><h2>Profile Information</h2><div class="sectionContent collapsed">
+    <div class="RCMFormField rcmFormElement">
+      <label id="62:" for="60:_txtFld" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;First Name</label>
+      <input data-testid="sfTextField" name="firstName" id="60:_txtFld" value="Ada" class="fd-input" type="text" maxlength="1024" aria-required="true">
+    </div>
+    <div class="RCMFormField rcmFormElement">
+      <label for="72:_txtFld" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Mobile Number</label>
+      <input data-testid="sfTextField" name="cellPhone" id="72:_txtFld" value="" class="fd-input" type="text" maxlength="40" aria-required="true">
+    </div>
+    <div class="RCMFormField rcmFormElement">
+      <label for="104:_input" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Country</label>
+      <span class="sfCascadingPicklist"><div class="paginatedPicklistContainer">
+        <input aria-label="Country" type="text" placeholder="No Selection" aria-owns="105:_listSelect" role="combobox" aria-required="true" class="rcmpaginatedselectinput" id="104:_input" value="Argentina">
+        <button aria-label="Country" type="button" id="104:_selectButton" class="rcmpaginatedselectbutton" onclick="toggle('104', ['Argentina', 'United States'])"></button>
+      </div></span>
+    </div>
+    <div class="RCMFormField rcmFormElement">
+      <label for="110:_input" class="rcmFormFieldLabel">State</label>
+      <span class="sfCascadingPicklist"><div class="paginatedPicklistContainer">
+        <input aria-label="State" type="text" placeholder="No Selection" aria-owns="111:_listSelect" role="combobox" class="rcmpaginatedselectinput" id="110:_input" value="">
+        <button aria-label="State" type="button" id="110:_selectButton" class="rcmpaginatedselectbutton" onclick="toggle('110', document.getElementById('104:_input').value === 'United States' ? ['Alabama', 'District of Columbia'] : [])"></button>
+      </div></span>
+    </div>
+  </div></div>
+
+  <div class="rcmFormSection"><h2>Outside Work Experience</h2><div class="sectionContent collapsed">
+    <div id="115:_bgElementContainer">
+      <div class="RCMFormField rcmFormElement">
+        <label for="120:_txtFld" class="rcmFormFieldLabel">Employer</label>
+        <input data-testid="sfTextField" name="employer" id="120:_txtFld" class="fd-input" type="text">
+      </div>
+    </div>
+  </div></div>
+
+  <div class="rcmFormSection"><h2>Job-Specific Information</h2><div class="sectionContent collapsed">
+    <div class="RCMFormField rcmFormElement">
+      <label for="127:_input" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Have you previously worked for Acme?</label>
+      <span class="sfCascadingPicklist"><div class="paginatedPicklistContainer">
+        <input aria-label="Have you previously worked for Acme?" type="text" placeholder="No Selection" aria-owns="128:_listSelect" role="combobox" aria-required="true" class="rcmpaginatedselectinput" id="127:_input" value="">
+        <button type="button" id="127:_selectButton" class="rcmpaginatedselectbutton" onclick="toggle('127', ['No', 'Yes'])"></button>
+      </div></span>
+    </div>
+    <div class="RCMFormField rcmFormElement">
+      <label for="133:_txtFld" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Salary Expectations</label>
+      <textarea name="custSalary" id="133:_txtFld" maxlength="500" aria-required="true"></textarea>
+    </div>
+    <div class="RCMFormField rcmFormElement">
+      <label class="rcmFormFieldLabel">Gender</label>
+      <input type="radio" class="fd-radio" id="12:_item_0" name="gender" value="F"><label for="12:_item_0">Female</label>
+      <input type="radio" class="fd-radio" id="12:_item_1" name="gender" value="M"><label for="12:_item_1">Male</label>
+      <input type="radio" class="fd-radio" id="12:_item_2" name="gender" value="U" checked><label for="12:_item_2">Not specified</label>
+    </div>
+    <div class="RCMFormField rcmFormElement">
+      <label for="140:" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Notice Period</label>
+      <select id="140:"><option value="">No Selection</option><option value="1">One month</option><option value="3">Three months</option></select>
+    </div>
+    <div class="RCMFormField rcmFormElement">
+      <label for="150:" class="rcmFormFieldLabel">I agree to be contacted about other jobs</label>
+      <input type="checkbox" id="150:">
+    </div>
+  </div></div>
+
+  <span role="button" id="165:_saveBtn" class="rcmSaveButton">Save</span>
+  <span role="button" id="165:_submitBtn" class="rcmSaveButton" onclick="location.href = '/portalcareer?applied=1'">Apply</span>
+
+  <div id="sfOverlayMgr"></div>
+  <script>
+    function toggle(id, options) {
+      const input = document.getElementById(id + ':_input');
+      const owns = input.getAttribute('aria-owns');
+      const open = document.getElementById(owns);
+      if (open) { open.remove(); return; }
+      const ul = document.createElement('ul');
+      ul.id = owns;
+      ul.setAttribute('role', 'listbox');
+      for (const o of ['No Selection', ...options]) {
+        const li = document.createElement('li');
+        li.setAttribute('role', 'option');
+        const a = document.createElement('a');
+        a.title = o;
+        a.textContent = o;
+        a.onclick = () => { input.value = o === 'No Selection' ? '' : o; ul.remove(); };
+        li.appendChild(a);
+        ul.appendChild(li);
+      }
+      input.parentElement.appendChild(ul);
+    }
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') document.querySelectorAll('ul[role=listbox]').forEach(u => u.remove());
+    });
+    function sources(id) {
+      const callout = document.createElement('div');
+      callout.setAttribute('role', 'dialog');
+      callout.innerHTML = '<span>Upload from Device</span><input type="file" class="fileUpload">';
+      callout.querySelector('input').onchange = e => {
+        const name = e.target.files[0].name;
+        callout.remove();
+        setTimeout(() => {
+          document.getElementById(id + ':_attachDownloadLabelLink').textContent = name;
+          document.getElementById(id + ':_attachDownloadLabel').classList.remove('displayNone');
+        }, 300);
+      };
+      document.body.appendChild(callout);
+    }
+    function confirmDelete(id) {
+      const overlay = document.getElementById('sfOverlayMgr');
+      overlay.innerHTML = '<div role="dialog"><p>Delete this document?</p>' +
+        '<button class="globalSecondaryButton">Cancel</button><button class="globalPrimaryButton">OK</button></div>';
+      overlay.querySelector('.globalPrimaryButton').onclick = () => {
+        overlay.innerHTML = '';
+        document.getElementById(id + ':_attachDownloadLabel').classList.add('displayNone');
+        document.getElementById(id + ':_attachIcon').classList.add('displayNone');
+        document.querySelector('[data-attach="' + id + '"] .addAttachments.displayNone').classList.remove('displayNone');
+      };
+    }
+  </script>
+</body></html>

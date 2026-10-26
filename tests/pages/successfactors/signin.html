@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Career Opportunities: Sign In</title></head>
+<body>
+  <h2>Already have an account?</h2>
+  <label for="username">Email Address:*</label>
+  <input type="text" name="username" id="username">
+  <label for="password">Password:*</label>
+  <input type="password" name="password" id="password">
+  <button onclick="return validateFields();">Sign In</button>
+  <div id="signIn_PasswordError" class="rcmValidationMsgArea displayNone" role="alert"></div>
+  <p>Not a registered user yet? <a href="/career?company=acme&amp;login_ns=register&amp;career_ns=job_application">Create an account</a></p>
+  <script>
+    function validateFields() {
+      if (document.getElementById('password').value === 'wrong') {
+        const e = document.getElementById('signIn_PasswordError');
+        e.textContent = 'Invalid username or password.';
+        e.classList.remove('displayNone');
+      } else {
+        document.cookie = 'signedIn=1; path=/';
+        location.href = '/portalcareer?_s.crb=x';
+      }
+      return false;
+    }
+  </script>
+</body></html>

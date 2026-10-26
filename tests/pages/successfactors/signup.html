@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Career Opportunities: Create an Account</title></head>
+<body>
+  <div id="error" class="rcmValidationMsgArea displayNone" role="alert"></div>
+  <input type="text" id="fbclc_userName" aria-label="Email Address:">
+  <input type="text" id="fbclc_emailConf" aria-label="Retype Email Address:">
+  <input type="password" id="fbclc_pwd" maxlength="99" aria-label="Choose Password:">
+  <input type="password" id="fbclc_pwdConf" aria-label="Retype Password:">
+  <input type="text" id="fbclc_fName" aria-label="First Name:">
+  <input type="text" id="fbclc_lName" aria-label="Last Name:">
+  <select id="fbclc_country" aria-label="Country/Region of Residence">
+    <option value="">No Selection</option><option value="AR">Argentina</option><option value="US">United States</option>
+  </select>
+  <input type="checkbox" id="fbclc_emailEnabled">
+  <a id="dataPrivacyId" role="button" onclick="document.getElementById('dpcs').style.display = 'block'; return false;">Read and accept the data privacy statement.</a>
+  <div id="dpcs" role="dialog" style="display: none">
+    <p>Privacy Notice</p>
+    <button id="dlgButton_21:" onclick="accepted = true; this.parentElement.style.display = 'none'">Accept</button>
+    <button id="dlgButton_22:" onclick="this.parentElement.style.display = 'none'">Decline</button>
+  </div>
+  <button type="submit" id="fbclc_createAccountButton" onclick="create(); return false;">Create Account</button>
+  <script>
+    let accepted = false;
+    function create() {
+      const error = document.getElementById('error');
+      const email = document.getElementById('fbclc_userName').value;
+      const fields = ['fbclc_emailConf', 'fbclc_pwd', 'fbclc_pwdConf', 'fbclc_fName', 'fbclc_lName', 'fbclc_country'];
+      if (!accepted || fields.some(id => !document.getElementById(id).value)) {
+        error.textContent = 'Please complete all required fields and re-submit.';
+      } else if (email.startsWith('taken')) {
+        error.textContent = 'An account with this email address already exists.';
+      } else if (document.getElementById('fbclc_pwd').value.length > 18) {
+        error.textContent = 'Password must not be longer than 18 characters.';
+      } else {
+        document.cookie = 'signedIn=1; path=/';
+        location.href = '/portalcareer?_s.crb=x';
+        return;
+      }
+      error.classList.remove('displayNone');
+    }
+  </script>
+</body></html>
