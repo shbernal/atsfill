@@ -168,9 +168,10 @@ mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25
 [mycareersfuture]
 kind = "board"
 share = 0.0157
-account = "to_read"
+account = "to_read"  # Log in to Apply goes to Singpass, Singapore's national digital identity; there is no email sign-up
 hosting = ["hosted"]
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
+unsupported = { date = 2026-10-26, version = "0.0.3", commit = "46095c4", by = "agent", reason = "unsupported_flow: national_id_login: applying needs a Singpass sign-in, whose account takes a Singapore NRIC or FIN number; no account can be made for the Test user (7 of 7 employers)" }
 
 [adzuna]
 kind = "aggregator"
