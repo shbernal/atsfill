@@ -1,0 +1,15 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Verify</title>
+<!-- An OTP step: one input, or one box per character as some systems draw it. Verify signs in
+     when what was typed is the OTP the tests' commands print. -->
+<input id="otp" autocomplete="one-time-code">
+<div id="boxes"><input maxlength="1"><input maxlength="1"><input maxlength="1"><input maxlength="1"><input maxlength="1"><input maxlength="1"></div>
+<button id="verify">Verify</button>
+<script>
+  document.querySelector("#verify").addEventListener("click", () => {
+    const boxes = [...document.querySelectorAll("#boxes input")].map(i => i.value).join("");
+    if ([document.querySelector("#otp").value, boxes].includes("123456"))
+      document.cookie = "session=ok; path=/";
+  });
+</script>

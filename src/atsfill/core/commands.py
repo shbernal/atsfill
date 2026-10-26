@@ -11,6 +11,7 @@ from atsfill.core import (
     browser,
     conditions,
     matching,
+    otp,
     passwords,
     paths,
     registry,
@@ -130,12 +131,15 @@ def _opened(
             detected.append(adapter.name)
         if adapter is None:
             yield _no_adapter(url)
-        elif isinstance(adapter, NeedsAccount) and not (
-            session and adapter.signed_in(page.request, adapter.account_scope(url))
-        ):
-            yield _sign_in_again(page, adapter, user, mine, url, credentials) or (page, adapter)
-        else:
-            yield page, adapter
+            return
+        scope = adapter.account_scope(url) if isinstance(adapter, NeedsAccount) else None
+        with otp.source(user, adapter.name, scope):
+            if isinstance(adapter, NeedsAccount) and not (
+                session and adapter.signed_in(page.request, scope)
+            ):
+                yield _sign_in_again(page, adapter, user, mine, url, credentials) or (page, adapter)
+            else:
+                yield page, adapter
 
 
 def _sign_in_again(
@@ -536,7 +540,7 @@ def login(
             accounts.wait_for_person(account, scope, data, session),
         )
     else:
-        result = _headless(data, account, scope, credentials, session, details)
+        result = _headless(data, user, account, scope, credentials, session, details)
         command = login_command(adapter, user, url)
         report.status, report.reason = (
             result.status,
@@ -574,7 +578,9 @@ def _create(
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
     credentials = (email, password)
-    result = _headless(data, account, report.scope, credentials, report.path, details, create=True)
+    result = _headless(
+        data, report.user, account, report.scope, credentials, report.path, details, create=True
+    )
     command = login_command(account.name, report.user, url)
     report.status, report.reason = result.status, _email_link(result.reason, email, command)
     report.password = "stored"
@@ -588,6 +594,7 @@ def _create(
 
 def _headless(
     data: Path,
+    user: str,
     account: NeedsAccount,
     scope: str | None,
     credentials: Credentials,
@@ -595,14 +602,14 @@ def _headless(
     details: SignUpDetails | None = None,
     create: bool = False,
 ) -> Result:
-    """Signs in, or creates the account with `create`, through the adapter: `ready` once the
-    session is stored."""
+    """Signs in, or creates the account with `create`, through the adapter, an OTP it meets
+    from the user's `otp-commands` entry: `ready` once the session is stored."""
     assert isinstance(account, SignsIn)
     url = account.login_url(scope)
 
     def run(_: list[str]) -> Result:
         result = Result(Status.READY, url, account.name)
-        with open_page(data, None) as page, _stops(result):
+        with open_page(data, None) as page, _stops(result), otp.source(user, account.name, scope):
             accounts.sign_in(page, account, scope, *credentials, session, details, create)
         return result
 

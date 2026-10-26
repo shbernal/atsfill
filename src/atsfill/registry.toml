@@ -327,7 +327,7 @@ dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", 
 [isolvedhire]
 kind = "ats"
 share = 0.0047
-account = "to_read"  # one account for the whole system, signed in per employer's site; Apply now verifies the email or phone with a one-time code, the sign-in's sign-up sets a password instead
+account = "to_read"  # one account for the whole system, signed in per employer's site; Apply now verifies the email or phone with an OTP and asks the same details as the sign-in's sign-up, which sets a password instead
 hosting = ["hosted"]
 adapter = "isolvedhire"
 mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }

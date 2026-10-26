@@ -2,7 +2,7 @@
 
 from urllib.parse import parse_qs, urlsplit
 
-from atsfill.core import browser
+from atsfill.core import browser, otp
 from atsfill.core.adapter import Gap, Refused, SignUpDetails
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
@@ -161,3 +161,18 @@ class FakeSignUp(FakeSignIn):
     def finish_sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         self.sign_in(page, email, password)
         self.details = details
+
+
+class FakeOtp(FakeSignIn):
+    """The same, whose sign-in emails an OTP, typed into `inputs` on tests/pages/otp.html."""
+
+    def __init__(self, server: str) -> None:
+        super().__init__(server)
+        self.inputs = "#otp"
+
+    def login_url(self, scope: str | None) -> str:
+        return f"{self.server}/otp.html"
+
+    def sign_in(self, page: Page, email: str, password: str) -> None:
+        otp.enter(page.locator(self.inputs), email, "the sign-in")
+        page.locator("#verify").click()

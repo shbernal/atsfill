@@ -109,8 +109,11 @@ The stored browser state of a signed-in account, loaded only into its own adapte
 _Avoid_: cookies
 
 **OTP**:
-A one-time password a hiring system sends by email or SMS and asks for before it goes on. Its reasons are `email_otp` and `sms_otp`.
+A one-time password a hiring system sends by email or SMS and asks for before it goes on. atsfill types an emailed one in from the OTP command; the reasons for one it cannot get are `email_otp` and `sms_otp`.
 _Avoid_: code, verification code, PIN
+
+**OTP command**:
+The user's `otp-commands` entry for an adapter, or for `all`: a command atsfill runs while the OTP step waits, until it prints the OTP emailed since the step asked for it.
 
 **Account profile**:
 What a hiring system keeps about an account and prefills its forms from.

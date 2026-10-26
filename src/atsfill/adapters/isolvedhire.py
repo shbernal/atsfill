@@ -173,7 +173,6 @@ class IsolvedHire:
     per_employer = False
     asks = {"name", "phone", "street", "city", "state", "zip", "country"}
     known_gaps = {
-        "sign_up_otp": Gap.FLOW,  # why the sign-up goes through the sign-in, not Apply now
         "entry_list": Gap.RENDERING,
         "drawn_signature": Gap.RENDERING,
     }
