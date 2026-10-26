@@ -3,7 +3,12 @@
 <body>
   <h1>Portfolio Manager</h1>
   <p>Acme is hiring.</p>
-  <!-- The career site redirects the link to the candidate pages; the fixture's script stands in -->
+  <!-- The career site's link posts the job to the candidate pages; the fixture's script stands in -->
   <a href="/talentcommunity/apply/1234567/?locale=en_US" class="btn btn-primary apply dialogApplyBtn"
-     onclick="location.href = 'https://career5.successfactors.eu/careers?company=acme'; return false;">Apply now</a>
+     onclick="document.forms.job.submit(); return false;">Apply now</a>
+  <form name="job" method="post" action="https://career5.successfactors.eu/careers?company=acme">
+    <input type="hidden" name="company" value="acme">
+    <input type="hidden" name="career_ns" value="job_application">
+    <input type="hidden" name="career_job_req_id" value="1234">
+  </form>
 </body></html>

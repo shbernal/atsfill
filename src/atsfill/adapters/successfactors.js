@@ -26,6 +26,9 @@
       d.kind = 'picklist';
       d.id = picklist.id;
       d.owns = picklist.getAttribute('aria-owns');
+      d.placeholder = picklist.placeholder; // its empty item's text, in the page's language
+      const opener = box.querySelector('button.rcmpaginatedselectbutton');
+      d.disabled = !!opener && opener.disabled; // a cascading list before its parent is chosen
       d.value = picklist.value === picklist.placeholder ? '' : picklist.value;
       d.required = d.required || picklist.getAttribute('aria-required') === 'true';
     } else if (radios.length) {
