@@ -1,0 +1,148 @@
+<!-- The wizard's steps as /apply/view.php serves them, one rendering of each field type. -->
+
+<template id="instructions">
+<h1>Instructions</h1>
+<p>Please make sure you fill out all the questions.</p>
+<div class="application-footer"><button id="next">Proceed to Next Step</button></div>
+</template>
+
+<template id="screening">
+<h1>Job Questions</h1>
+<form id="new_screening" action="javascript:void(0);" class="validate">
+  <ul class="list-group">
+    <li class="list-group-item"></li>
+    <li class="list-group-item background-theme">
+      <div id="form_group_11" class="form-group">
+        <label class="control-label" for="101">Are you legally authorized to work in the US?*</label><select data-question-title="Are you legally authorized to work in the US?" id="101" class="form-control required conditional-answer-select" data-id="101" data-conditional_answer="2" data-group_id="11"><option value=""></option><option value="9001">Yes</option><option value="9002">No</option></select>
+        <div id="conditional_questions_div_101" style="display: none;"></div>
+        <label class="control-label" for="102">What is the highest level of education you have completed?*</label><select data-question-title="What is the highest level of education you have completed?" id="102" class="form-control required" data-id="102"><option value=""></option><option value="9003">Bachelor's Degree</option><option value="9004">High school or Equivalent</option></select>
+        <label class="control-label" for="103">What grade level(s) are you most passionate about teaching?*</label><input data-maxlength="5000" data-question-title="What grade level(s) are you most passionate about teaching?" type="text" id="103" class="form-control required" data-id="103" value="" maxlength="5001">
+        <label class="control-label" for="104">Tell us about yourself.</label><textarea data-maxlength="5000" data-question-title="Tell us about yourself." id="104" class="form-control" data-id="104" maxlength="5001"></textarea>
+        <label class="control-label">Please indicate the location(s) you are interested in:*</label>
+        <div class="checkbox"><label><input type="checkbox" id="105" name="105" class="required" data-id="105" data-answer-id="9005" value="9005"> North</label></div>
+        <div class="checkbox"><label><input type="checkbox" id="105" name="105" class="required" data-id="105" data-answer-id="9006" value="9006"> South</label></div>
+        <label class="control-label">Which shift do you prefer?*</label>
+        <div class="radio"><label><input type="radio" name="106" class="required" data-id="106" value="9007"> Day</label></div>
+        <div class="radio"><label><input type="radio" name="106" class="required" data-id="106" value="9008"> Night</label></div>
+      </div>
+    </li>
+  </ul>
+</form>
+<div class="application-footer"><button id="previous">Back</button><button id="next">Proceed to Next Step</button></div>
+</template>
+
+<template id="children">
+<label class="control-label" for="107">If not, will you need sponsorship?*</label><select data-question-title="If not, will you need sponsorship?" id="107" class="form-control required" data-id="107"><option value=""></option><option value="9009">Yes</option><option value="9010">No</option></select><br><br>
+</template>
+
+<template id="resume">
+<h1>Resume</h1>
+<ul class="list-group">
+  <li class="list-group-item"><h2>Submitted Documents</h2></li>
+  <li class="list-group-item background-theme">
+    <div class="uploaded-resumes-container"></div>
+    <form class="validate" id="upload_resume" action="upload_resume.php" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="token-1">
+      <input type="hidden" name="applications_id" value="5001">
+      <label for="default_resume" class="sr-only">Choose a file</label>
+      <input type="file" name="resume" class="required" id="default_resume">
+    </form>
+  </li>
+</ul>
+<ul class="list-group">
+  <li class="list-group-item background-theme">
+    <form class="validate" id="text_resume">
+      <label for="resume_text" class="sr-only">Text Resume</label>
+      <textarea name="text" id="resume_text" class="form-control"></textarea>
+    </form>
+  </li>
+</ul>
+<div class="application-footer"><button id="previous">Back</button><button id="next">Proceed to Next Step</button></div>
+</template>
+
+<template id="eeoc">
+<h1>Voluntary Disclosure</h1>
+<form class="validate" id="new_eeoc">
+  <input type="hidden" name="applications_id" value="5001">
+  <ul class="list-group">
+    <li class="list-group-item"><h2 class="accent">Sex/Gender</h2></li>
+    <li class="list-group-item background-theme">
+      <fieldset>
+        <legend class="sr-only">Sex/Gender</legend>
+        <div class="radio"><label><input type="radio" name="sex_type" class="required" value="m"> Male</label></div>
+        <div class="radio"><label><input type="radio" name="sex_type" class="required" value="f"> Female</label></div>
+        <div class="radio"><label><input type="radio" name="sex_type" class="required" value="u"> I choose not to provide my gender.</label></div>
+      </fieldset>
+    </li>
+  </ul>
+  <ul class="list-group">
+    <li class="list-group-item"><h4 class="accent">VETERANS INVITATION TO SELF-IDENTIFY</h4></li>
+    <li class="list-group-item background-theme">
+      <fieldset>
+        <legend class="sr-only">Veterans Classification</legend>
+        <div class="radio"><label><input type="radio" class="required" name="is_vet_2014" value="1"> I IDENTIFY AS ONE OR MORE OF THE CLASSIFICATIONS OF PROTECTED VETERANS</label></div>
+        <div class="radio"><label><input type="radio" class="required" name="is_vet_2014" value="0"> I AM NOT A PROTECTED VETERAN</label></div>
+        <div class="radio"><label><input type="radio" class="required" name="is_vet_2014" value="2"> I DON'T WISH TO ANSWER</label></div>
+      </fieldset>
+    </li>
+  </ul>
+  <ul class="list-group">
+    <li class="list-group-item"><h4>Voluntary Self-Identification of Disability</h4>
+      <input type="text" name="disabled_employee_id" autocomplete="off">
+    </li>
+    <li class="list-group-item background-theme">
+      <select class="form-control required zeroValue" name="is_disabled" id="is_disabled" data-question-title="Disability Classification">
+        <option value="0">....</option>
+        <option value="1">Yes, I have a disability, or have had one in the past</option>
+        <option value="2">No, I do not have a disability and have not had one in the past</option>
+        <option value="3">I do not want to answer</option>
+      </select>
+    </li>
+  </ul>
+</form>
+<div class="application-footer"><button id="previous">Back</button><button id="next">Proceed to Next Step</button></div>
+</template>
+
+<template id="source">
+<h1>Source</h1>
+<form class="validate form-horizontal" id="new_source">
+  <input type="hidden" name="applications_id" value="5001">
+  <label for="source_id" class="control-label">How did you hear about this position?*</label>
+  <select data-question-title="Source Type" class="form-control required" name="source_type_id" id="source_type_id">
+    <option value="" selected="selected">-- Select a Source Type--</option><option value="1">Company Website </option><option value="4">Referral </option>
+  </select>
+  <select data-question-title="Source" style="display: none;" class="form-control required" name="source_id" id="source_id"></select>
+  <label for="source_other" class="control-label">If Employee or Other, please describe:</label>
+  <input data-maxlength="50" type="text" id="source_other" class="form-control" name="source_other" value="" disabled maxlength="51">
+</form>
+<div class="application-footer"><button id="previous">Back</button><button id="next">Proceed to Next Step</button></div>
+</template>
+
+<template id="sources-1"><option value="">-- Select a Source --</option><option value="2001">Acme Website</option></template>
+<template id="sources-4"><option value="">-- Select a Source --</option><option value="2002">Employee Referral</option></template>
+
+<template id="submit">
+<h1>Submit Application</h1>
+<div class="instructions">You have completed the required sections of the application.</div>
+<div class="application-footer"><button id="previous">Back</button><button id="next">Submit Application</button></div>
+</template>
+
+<template id="employment">
+<h1>Employment History</h1>
+<p><b><i>You must provide at least 1 employer(s).</i></b></p>
+<form id="employer_form" class="form-horizontal validate" action="javascript:void(0);">
+  <label class="sr-only" for="company">Company Name*</label>
+  <input type="text" name="company" id="company" class="form-control required">
+</form>
+<div class="application-footer"><button id="previous">Back</button><button id="next">Proceed to Next Step</button></div>
+</template>
+
+<template id="disclosure">
+<h1>Applicant Statement</h1>
+<form id="new_disclosure">
+  <input type="hidden" name="disclosure_agreed_at" value="">
+  <label><input type="checkbox" id="disclosure_agreed_at" name="disclosure_agreed_at" class="required" data-question-title="Agreement Checkbox"> I agree to the above.</label>
+  <canvas class="pad" width="300" height="80"></canvas>
+</form>
+<div class="application-footer"><button id="previous">Back</button><button id="next">Proceed to Next Step</button></div>
+</template>
