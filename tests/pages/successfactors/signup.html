@@ -15,6 +15,11 @@
   <select id="fbclc_country" aria-label="Country/Region of Residence">
     <option value="">No Selection</option><option value="AR">Argentina</option><option value="US">United States</option>
   </select>
+  <label id="makeProfileVisibleLabel">Make my Profile visible to:<span class="required">*</span></label>
+  <div class="form-group" aria-required="true" role="radiogroup" aria-labelledby="makeProfileVisibleLabel">
+    <input type="radio" name="fbclc_searPref" value="1" aria-label="Any recruiter within the company to consider me for positions worldwide">
+    <input type="radio" name="fbclc_searPref" value="2" aria-label="Only recruiters managing jobs I apply to">
+  </div>
   <input type="checkbox" id="fbclc_emailEnabled">
   <a id="dataPrivacyId" role="button" onclick="document.getElementById('dpcs').style.display = 'block'; return false;">Read and accept the data privacy statement.</a>
   <div id="dpcs" role="dialog" style="display: none">
@@ -29,8 +34,13 @@
       const error = document.getElementById('error');
       const email = document.getElementById('fbclc_userName').value;
       const fields = ['fbclc_emailConf', 'fbclc_pwd', 'fbclc_pwdConf', 'fbclc_fName', 'fbclc_lName', 'fbclc_ituCode', 'fbclc_phoneNumber', 'fbclc_country'];
-      if (!accepted || fields.some(id => !document.getElementById(id).value)) {
+      const visible = document.querySelector('[name=fbclc_searPref]:checked');
+      if (!accepted || !visible || fields.some(id => !document.getElementById(id).value)) {
         error.textContent = 'Please complete all required fields and re-submit.';
+      } else if (email.startsWith('otp')) {  // some sites send a passcode before the account
+        document.body.innerHTML = '<div id="otpContainer"><p>We have sent a one-time password to your email address.</p>' +
+          '<input type="password" name="passcode" id="passcode" aria-required="true"><button id="continueBtn">Continue</button></div>';
+        return;
       } else if (email.startsWith('taken')) {
         error.textContent = 'An account with this email address already exists.';
       } else if (document.getElementById('fbclc_pwd').value.length > 18) {
@@ -38,7 +48,8 @@
       } else {
         document.cookie = 'signedIn=1; path=/';
         const sent = ['fbclc_ituCode', 'fbclc_phoneNumber', 'fbclc_country']
-          .map(id => `${id}=${encodeURIComponent(document.getElementById(id).value)}`).join('&');
+          .map(id => `${id}=${encodeURIComponent(document.getElementById(id).value)}`).join('&')
+          + `&fbclc_searPref=${visible.value}`;
         // some sites go back to the career site, signed in, instead of to the application
         location.href = email.startsWith('back') ? '/career?company=acme' : `/portalcareer?_s.crb=x&${sent}`;
         return;

@@ -8,7 +8,7 @@ import pytest
 
 from atsfill.adapters.successfactors import SuccessFactors
 from atsfill.core import browser
-from atsfill.core.adapter import Refused, SignUpDetails
+from atsfill.core.adapter import Blocked, Refused, SignUpDetails, Unsupported
 from atsfill.core.results import Answer, FieldType
 from tests import testuser
 
@@ -16,7 +16,8 @@ PAGES = Path(__file__).parent / "pages/successfactors"
 POSTING = "https://careers.acme.com/job/Detroit-Portfolio-Manager-MI-48201/1234567/"
 DC = "https://career5.successfactors.eu"
 PROFILE = f"{DC}/career?company=acme&career_ns=job_listing_summary&navBarLevel=MY_PROFILE"
-SESSION = {"signed_in": False}  # the candidate pages' session, kept here by the fixture
+# The candidate pages' session, and whether the job posted lands on the candidate home
+SESSION = {"signed_in": False, "home": False, "guided": False}
 
 
 def serve(route) -> None:
@@ -25,6 +26,12 @@ def serve(route) -> None:
         route.fulfill(path=PAGES / "posting.html")
     elif "login_ns=register" in url:
         route.fulfill(path=PAGES / "signup.html")
+    elif url.startswith(DC) and SESSION["signed_in"] and SESSION["guided"]:
+        route.fulfill(content_type="text/html", body=GUIDED)
+    elif "career_ns=job_application&career_job_req_id=1234" in url:
+        route.fulfill(path=PAGES / "apply.html")
+    elif "/careers?company=acme" in url and SESSION["signed_in"] and SESSION["home"]:
+        route.fulfill(content_type="text/html", body=HOME)
     elif "/career?company=acme" in url:
         route.fulfill(content_type="text/html", body="<p>Career site</p>")
     elif "/careers?company=acme" in url:
@@ -36,9 +43,16 @@ def serve(route) -> None:
         route.fulfill(path=PAGES / "apply.html")
 
 
+HOME = '<body class="careerSite careerUserLoggedIn"><p>Welcome, Ada</p></body>'
+GUIDED = (
+    '<body class="careerSite careerUserLoggedIn cxApplyEnabled">'
+    "<h2>Job Application</h2><p>1. Getting Started</p><button>Next</button></body>"
+)
+
+
 @pytest.fixture
 def page(tmp_path):
-    SESSION["signed_in"] = False
+    SESSION.update(signed_in=False, home=False, guided=False)
     with browser.open_page(tmp_path / "data", seconds=300) as page:
         page.context.route("https://careers.acme.com/**", serve)
         page.context.route(f"{DC}/**", serve)
@@ -60,7 +74,11 @@ class Profile:
 
     def get(self, url: str):
         self.asked.append(url)
-        body = '<a onclick="signOut()">Sign Out</a>' if self.signed_in else '<input id="username">'
+        body = (
+            '<body class="careerSite careerUserLoggedIn">'
+            if self.signed_in
+            else '<body class="careerSite"><a href="?login_ns=logout">Log Out</a><input id=x>'
+        )
         return type("Response", (), {"ok": True, "text": lambda _: body})()
 
 
@@ -99,6 +117,7 @@ def test_sign_up(page):
     assert sent["fbclc_ituCode"] == ["US"]  # of the +1 countries, the one the details name
     assert sent["fbclc_phoneNumber"] == ["2125550123"]
     assert sent["fbclc_country"] == ["US"]
+    assert sent["fbclc_searPref"] == ["2"]  # only the recruiters of the jobs applied to
 
 
 def test_sign_up_back_on_the_career_site_signed_in(page, monkeypatch):
@@ -121,6 +140,12 @@ def test_sign_up_refused(page):
     page.goto(POSTING)
     with pytest.raises(Refused, match="email_in_use"):
         SuccessFactors().sign_up(page, "taken@example.com", "Aa1!aaaaaaaaaaaa", ADA)
+
+
+def test_sign_up_asking_a_passcode_is_blocked(page):
+    page.goto(POSTING)
+    with pytest.raises(Blocked, match="^email_otp"):
+        SuccessFactors().sign_up(page, "otp@example.com", "Aa1!aaaaaaaaaaaa", ADA)
 
 
 def test_sign_in(page):
@@ -167,6 +192,23 @@ def test_browser_read(page):
     assert fields["notice-period"].options == ["One month", "Three months"]
     assert fields["i-agree-to-be-contacted-about-other-jobs"].options == ["Yes", "No"]
     assert not any(f.unfillable for f in fields.values())
+
+
+def test_apply_link_landing_on_the_candidate_home(page):
+    signed_in(page)
+    SESSION["home"] = True
+    page.goto(POSTING)
+    assert "firstName" in [f.id for f in SuccessFactors().browser_read(page)]
+    assert "career_job_req_id=1234" in page.url
+
+
+def test_a_guided_application_is_a_known_gap(page, monkeypatch):
+    monkeypatch.setattr("atsfill.adapters.successfactors.LANDING_TIMEOUT_MS", 2_000)
+    signed_in(page)
+    SESSION["guided"] = True
+    page.goto(POSTING)
+    with pytest.raises(Unsupported, match="^unsupported_flow: guided_application"):
+        SuccessFactors().browser_read(page)
 
 
 def test_fill_and_read_back(page, tmp_path):

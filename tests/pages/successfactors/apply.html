@@ -44,7 +44,7 @@
       <label for="110:_input" class="rcmFormFieldLabel">State</label>
       <span class="sfCascadingPicklist"><div class="paginatedPicklistContainer">
         <input aria-label="State" type="text" placeholder="No Selection" aria-owns="111:_listSelect" role="combobox" class="rcmpaginatedselectinput" id="110:_input" value="">
-        <button aria-label="State" type="button" id="110:_selectButton" class="rcmpaginatedselectbutton" onclick="toggle('110', document.getElementById('104:_input').value === 'United States' ? ['Alabama', 'District of Columbia'] : [])"></button>
+        <button aria-label="State" type="button" id="110:_selectButton" class="rcmpaginatedselectbutton" disabled onclick="toggle('110', document.getElementById('104:_input').value === 'United States' ? ['Alabama', 'District of Columbia'] : [])"></button>
       </div></span>
     </div>
   </div></div>
@@ -62,7 +62,7 @@
     <div class="RCMFormField rcmFormElement">
       <label for="127:_input" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Have you previously worked for Acme?</label>
       <span class="sfCascadingPicklist"><div class="paginatedPicklistContainer">
-        <input aria-label="Have you previously worked for Acme?" type="text" placeholder="No Selection" aria-owns="128:_listSelect" role="combobox" aria-required="true" class="rcmpaginatedselectinput" id="127:_input" value="">
+        <input aria-label="Have you previously worked for Acme?" type="text" placeholder="Keine Auswahl" aria-owns="128:_listSelect" role="combobox" aria-required="true" class="rcmpaginatedselectinput" id="127:_input" value="">
         <button type="button" id="127:_selectButton" class="rcmpaginatedselectbutton" onclick="toggle('127', ['No', 'Yes'])"></button>
       </div></span>
     </div>
@@ -99,13 +99,19 @@
       const ul = document.createElement('ul');
       ul.id = owns;
       ul.setAttribute('role', 'listbox');
-      for (const o of ['No Selection', ...options]) {
+      for (const o of [input.placeholder, ...options]) {  // the empty item, in the page's language
         const li = document.createElement('li');
         li.setAttribute('role', 'option');
         const a = document.createElement('a');
         a.title = o;
         a.textContent = o;
-        a.onclick = () => { input.value = o === 'No Selection' ? '' : o; ul.remove(); };
+        a.onclick = () => {
+          input.value = o === input.placeholder ? '' : o;
+          ul.remove();
+          if (id === '104') {  // the states' list opens once the country has states
+            document.getElementById('110:_selectButton').disabled = input.value !== 'United States';
+          }
+        };
         li.appendChild(a);
         ul.appendChild(li);
       }

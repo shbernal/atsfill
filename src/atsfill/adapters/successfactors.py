@@ -11,7 +11,7 @@ import re
 import time
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core.adapter import (
     Blocked,
@@ -22,7 +22,7 @@ from atsfill.core.adapter import (
     Unsupported,
     known_gap,
 )
-from atsfill.core.browser import Locator, Page, Request, Timeout
+from atsfill.core.browser import Locator, Page, PageRequest, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 JOB = re.compile(r"^(?:/[^/]+)?/job/[^/]+/(?P<id>\d{5,})/?$")
@@ -30,13 +30,19 @@ DC_HOST = re.compile(r"^career\d*\.(?:sapsf|successfactors)\.(?:eu|com|cn)$")
 APPLY = "a[href*='/talentcommunity/apply/']"
 COMPANY_COOKIE = "careerSiteCompanyId"
 PROFILE = "/career?company={company}&career_ns=job_listing_summary&navBarLevel=MY_PROFILE"
-SIGNED_IN = re.compile(r"\bsignOut|\blogout\b|_logout", re.IGNORECASE)
+JOB_REQ = "career_job_req_id"  # the job the apply link posts, the candidate pages' own id
+APPLICATION = "/career?company={company}&career_ns=job_application&career_job_req_id={req}"
+GUIDED = "body.cxApplyEnabled"  # a site whose application is a step-by-step one, not sections
+HOME = "body.careerUserLoggedIn"  # any candidate page signed in, the candidate home's too
+# The body's class for an account; a signed-out page also holds a log-out link and its label
+SIGNED_IN = re.compile(r"<body[^>]*\bclass=[\"'][^\"']*\bcareerUserLoggedIn\b")
 FIELDS = (Path(__file__).with_suffix(".js")).read_text()
 # What the candidate pages show once loaded
 SIGN_IN = "#username"
 COUNTRY = "fbclc_country"  # its options' values are ISO 3166 alpha-2 codes
 PHONE, CALLING_CODE = "#fbclc_phoneNumber", "#fbclc_ituCode"  # `CA`: `Canada (+1)`
 SIGN_UP = "#fbclc_userName"
+PASSCODE = "#passcode"  # an OTP some sign-ups ask before the account exists
 QUICK_APPLY = "#fbqa_apply"
 FORM = ".RCMFormField"
 LANDED = f"{SIGN_IN}, {SIGN_UP}, {FORM}"
@@ -47,6 +53,8 @@ SIGN_IN_MODAL = "a[onclick*=openSignInModal]"  # a Quick Apply page's
 REFUSAL = re.compile(r"required|exist|already|invalid|bereits|erforderlich|ungültig", re.I)
 ACTIVATE = re.compile(r"activat|verify your|verification e-?mail|bestätig", re.I)
 PRIVACY = "#dataPrivacyId"
+VISIBILITY = "input[name=fbclc_searPref]"  # who may see the profile
+APPLIED_ONLY = "2"  # its option for only the recruiters of the jobs applied to
 EXPAND = "[id$=_expandAllSections]"
 SUBMIT = "[id$=_submitBtn]"
 OVERLAY = "#sfOverlayMgr"  # a confirmation dialog
@@ -88,6 +96,15 @@ def _company(request: Request) -> list[tuple[str, str]]:
     )
 
 
+def _posts_job(request: PageRequest) -> bool:
+    """Whether the apply link's request posts a job to the candidate pages."""
+    return (
+        request.method == "POST"
+        and bool(DC_HOST.match(urlsplit(request.url).hostname or ""))
+        and JOB_REQ in (request.post_data or "")
+    )
+
+
 def _calling_code(select: Locator, details: SignUpDetails) -> tuple[str, str]:
     """The calling code's option for the E.164 phone, the one of `country` among the countries
     sharing it, and the national number that follows the code."""
@@ -108,7 +125,10 @@ class SuccessFactors:
     name = "successfactors"
     per_employer = True
     asks = {"name"}
-    known_gaps = {"quick_apply_sign_up": Gap.FLOW, "sign_up_fields": Gap.FLOW}
+    known_gaps = {
+        "quick_apply_sign_up": Gap.FLOW,
+        "guided_application": Gap.FLOW,
+    }
     side_effects = [
         SideEffect("sign_up", "employer", "the account is created in the employer's tenant"),
         SideEffect("fill", "hiring_system", "an attachment is uploaded to the account's profile"),
@@ -140,7 +160,7 @@ class SuccessFactors:
         return self._postings.get(scope or "", f"https://{scope}/")
 
     def signed_in(self, request: Request, scope: str | None) -> bool:
-        """The profile page of the session's company shows a sign-out for an account."""
+        """The profile page of the session's company marks its body for an account."""
         for host, company in _company(request):
             response = request.get(f"https://{host}{PROFILE.format(company=company)}")
             if response.ok and SIGNED_IN.search(response.text()):
@@ -165,8 +185,9 @@ class SuccessFactors:
 
     def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         """Creates the account from the career site's sign-up: the name, the country of
-        residence from `country` (the list's first without it), and the phone where the site
-        requires one, its calling code picked from the number; a missing phone is refused
+        residence from `country` (the list's first without it), the phone where the site
+        requires one, its calling code picked from the number, and the profile visible only to
+        the recruiters of the jobs applied to where the site asks; a missing phone is refused
         before anything is sent."""
         self._candidate(page)
         if page.locator(SIGN_IN).count():
@@ -206,6 +227,11 @@ class SuccessFactors:
                 if wanted and wanted not in values:
                     raise Unsupported(f"unhandled_rendering: the sign-up's countries lack {wanted}")
                 select.select_option(wanted or values[0])
+        if page.locator(f"{VISIBILITY}:visible").count():
+            least = page.locator(f"{VISIBILITY}[value='{APPLIED_ONLY}']")
+            if not least.count():
+                raise Unsupported("unhandled_rendering: the profile's visibility has no jobs only")
+            least.check()
         if page.locator(PRIVACY).count():
             page.locator(PRIVACY).click()
             dialog = page.locator("[role=dialog]:visible").last
@@ -216,6 +242,8 @@ class SuccessFactors:
             page.wait_for_timeout(POLL_MS)
             if page.locator(FORM).count():
                 return
+            if page.locator(f"{PASSCODE}:visible").count():
+                raise Blocked("email_otp: the sign-up sent a passcode to the email")
             if not page.locator(f"{SIGN_UP}:visible").count():
                 break
             if self._message(page, REFUSAL):
@@ -226,7 +254,7 @@ class SuccessFactors:
         if re.search(r"password|kennwort", message, re.IGNORECASE):
             raise Refused(f"password_rule: {message}")
         if message:
-            raise Unsupported(known_gap(self, "sign_up_fields", message))
+            raise Unsupported(f"unhandled_rendering: the sign-up refused: {message}")
         text = page.locator("body").inner_text()
         if ACTIVATE.search(text):
             raise Blocked("email_link: the sign-up sent an activation email")
@@ -249,8 +277,8 @@ class SuccessFactors:
             page.wait_for_timeout(SETTLE_MS)
         fields = []
         for d in page.evaluate(FIELDS):
-            if d["kind"] == "picklist":
-                d["options"] = self._options(page, d)
+            if d["kind"] == "picklist":  # a disabled one waits for its parent: no items yet
+                d["options"] = [] if d["disabled"] else self._options(page, d)
             self._fields[d["key"]] = d
             fields.append(self._field(d))
         return fields
@@ -288,7 +316,7 @@ class SuccessFactors:
         items = self._open(page, d)
         options = [t for t in items.evaluate_all("as => as.map(a => a.title.trim())") if t]
         self._close(page, d)
-        return [o for o in options if o != NO_SELECTION]
+        return [o for o in options if o not in (NO_SELECTION, d["placeholder"])]
 
     def _open(self, page: Page, d: dict[str, Any]) -> Locator:
         """Opens a picklist; a click can go unheard, or close a list another left open."""
@@ -343,6 +371,8 @@ class SuccessFactors:
                 self._upload(page, d, value)
 
     def _pick(self, page: Page, d: dict[str, Any], value: str) -> None:
+        if d["disabled"]:
+            raise NotTaken(f"{d['key']} stays disabled: its parent's answer offers no items")
         items = self._open(page, d)
         titles = [t.strip() for t in items.evaluate_all("as => as.map(a => a.title)")]
         wanted = next((i for i, t in enumerate(titles) if t == value), None)
@@ -364,8 +394,8 @@ class SuccessFactors:
             confirm.first.wait_for(timeout=LIST_TIMEOUT_MS)
             confirm.first.click()
             deadline = time.monotonic() + UPLOAD_TIMEOUT_S
-            while self._current(page, d["key"])["multiple"]:
-                if time.monotonic() > deadline:
+            while (now := self._current(page, d["key"]))["multiple"] or now["id"] is None:
+                if time.monotonic() > deadline:  # deleting, it shows neither button
                     raise NotTaken(f"{d['key']} kept its file")
                 page.wait_for_timeout(POLL_MS)
         source = page.locator("[role=dialog]:visible input[type=file]")
@@ -407,16 +437,39 @@ class SuccessFactors:
         return page.url
 
     def _candidate(self, page: Page) -> None:
-        """From the posting, follows its apply link to the candidate pages."""
+        """From the posting, follows its apply link to the candidate pages. The link posts the
+        job there; signed in, some sites drop it and land on the candidate home, so the
+        application is opened from the job the link posted."""
         host = urlsplit(page.url).hostname or ""
+        posted: list[PageRequest] = []
         if not DC_HOST.match(host):
             apply = page.locator(APPLY)
             if not apply.count():
                 raise Unsupported("posting_gone: the posting has no apply link")
+
+            def keep(request: PageRequest) -> None:
+                if _posts_job(request):
+                    posted.append(request)
+
+            page.on("request", keep)
             apply.first.evaluate("a => a.click()")  # some sites open a dialog on a real click
         try:
+            page.locator(f"{LANDED}, {HOME}").first.wait_for(
+                state="attached", timeout=LANDING_TIMEOUT_MS
+            )
+            page.wait_for_load_state(timeout=LANDING_TIMEOUT_MS)
+            if posted and JOB_REQ not in page.url and not page.locator(LANDED).count():
+                post = posted[0]
+                parts = urlsplit(post.url)
+                job = parse_qs(parts.query) | parse_qs(post.post_data or "")
+                application = APPLICATION.format(company=job["company"][0], req=job[JOB_REQ][0])
+                page.goto(f"https://{parts.hostname}{application}")
             page.locator(LANDED).first.wait_for(state="attached", timeout=LANDING_TIMEOUT_MS)
         except Timeout:
+            if page.locator(GUIDED).count():
+                raise Unsupported(
+                    known_gap(self, "guided_application", "the application is a step-by-step one")
+                ) from None
             raise Unsupported(
                 f"unhandled_rendering: the apply link led to {urlsplit(page.url).path}"
             ) from None
