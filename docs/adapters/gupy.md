@@ -71,8 +71,10 @@ No question had a `parentQuestionId` on these postings.
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `resume` | the account's resume, shared by every application, is not filled: an incomplete one disables Continue Application. The Test user's was completed once, by hand | `unsupported_flow` | none with the Test user's |
+| `resume` | the account's resume, shared by every application, is not filled: an incomplete one disables Continue Application. The Test user's was completed once, by hand | `unsupported_flow` | 2 of 10 in the adapter gate, with the Test user's resume complete: an employer can ask more of it, what is not observed yet |
 
 The resume as observed: an academic entry is Education level, then Academic qualification and Status (react-aria comboboxes opened with ArrowDown), the institution and course (autocompletes), start and end month and year; a professional one Company, Position, current job, start and end, activities. About you with "Do you live in Brazil?" No asks Country, Address (an autocomplete that also fills State, City and Postal Code), State, City. Each part has its own Save and continue, which releases the next.
+
+Not handled yet, `unhandled`, one posting each of 10 in the adapter gate: a `CONDITIONAL` question type; a `question-forms` answer that was not JSON; a button detached from the page as it was clicked.
 
 Not observed yet: what the page shows once the questions are saved, and a posting without questions.
