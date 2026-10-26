@@ -33,7 +33,6 @@ The registry covers 90.1% of postings.
 | wttj | board | 0.1% | to_send | hosted |  | [send_verified](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [dry_run_verified](workday.md) |
 | taleo | ats | 1.2% | to_read | hosted |  | mapped |
-| ukgready | ats | 0.9% | to_read | hosted |  | mapped |
 | adpmyjobs | ats | 0.8% | to_read | hosted |  | mapped |
 | hrmdirect | ats | 0.6% | to_read | hosted |  | mapped |
 | isolvedhire | ats | 0.5% | to_read | hosted |  | mapped |
@@ -47,6 +46,7 @@ The registry covers 90.1% of postings.
 | icims | ats | 1.9% | to_read | hosted | hCaptcha at form | mapped |
 | mycareersfuture | board | 1.6% | to_read | hosted |  | unsupported |
 | adp | ats | 1.1% | to_read | hosted |  | unsupported |
+| ukgready | ats | 0.9% | to_read | hosted |  | unsupported |
 
 Aggregators, employer-built forms and out-of-scope systems ([ADR 0014](../adr/0014-out-of-scope.md)), counted and not adapted:
 
