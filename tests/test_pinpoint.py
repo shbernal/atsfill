@@ -22,7 +22,9 @@ HTML = (PAGES / "apply.html").read_text()
 def serve(route) -> None:
     url, method = route.request.url, route.request.method
     if method == "POST" and url.endswith("/applications"):
-        route.fulfill(status=302, headers={"Location": f"{JOB}/applications/1/thanks"})
+        thanks = f"{JOB}/applications/1/thanks"  # a 302 would be followed off the route
+        redirect = f"<script>location.replace({thanks!r})</script>"
+        route.fulfill(body=redirect, content_type="text/html")
     elif "/7654321a-" in url:
         route.fulfill(status=404, content_type="text/html", body="<h1>Not found</h1>")
     else:
