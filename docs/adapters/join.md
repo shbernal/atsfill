@@ -54,7 +54,7 @@ The question counts are postings, from 11 employers whose posting asks screening
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `profile_incomplete` | the job requires a detail the account profile lacks (a phone), so the wizard shows `personalInformation`, which atsfill does not fill | `unsupported_flow` | 2 of 10 at the adapter gate |
+| `profile_incomplete` | the job requires a detail the account profile lacks (a phone), so the wizard shows `personalInformation`, which atsfill does not fill | `unsupported_flow` | 13 of 45 in the sample, 2 of 10 at the adapter gate |
 
 ## Submitting
 
