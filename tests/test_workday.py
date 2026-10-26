@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters import workday as workday_module
 from atsfill.adapters.workday import Workday
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, NotTaken, Refused, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Refused, SignUpDetails, Unsupported
 from atsfill.core.results import AnyOf, FieldType, Is
 from tests import testuser
 
@@ -148,7 +148,7 @@ def test_an_account_not_verified_yet_blocks(workday, page):
 
 
 def test_sign_up(workday, page):
-    workday.sign_up(page, "new@example.com", "Right-123!", None)
+    workday.sign_up(page, "new@example.com", "Right-123!", SignUpDetails())
     assert signed_in(page)
 
 
@@ -162,7 +162,7 @@ def test_sign_up(workday, page):
 )
 def test_what_sign_up_is_told(workday, page, email, password, error, reason):
     with pytest.raises(error, match=f"^{reason}"):
-        workday.sign_up(page, email, password, None)
+        workday.sign_up(page, email, password, SignUpDetails())
 
 
 @pytest.fixture

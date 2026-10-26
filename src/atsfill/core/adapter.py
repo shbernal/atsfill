@@ -1,5 +1,7 @@
+import re
+from dataclasses import dataclass, fields
 from enum import StrEnum
-from typing import Protocol, runtime_checkable
+from typing import Protocol, Self, runtime_checkable
 
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, SideEffect
@@ -123,16 +125,61 @@ class SignsIn(NeedsAccount, Protocol):
         ...
 
 
+ADDRESS = ("street", "city", "state", "zip", "country")
+PHONE = re.compile(r"\+[1-9][0-9]{6,14}")  # E.164
+COUNTRY = re.compile(r"[A-Z]{2}")  # ISO 3166 alpha-2
+
+
+@dataclass(frozen=True)
+class SignUpDetails:
+    """What a sign-up asks of the user besides the email and the password, from the file
+    `login --create --details` takes (ADR 0015). atsfill stores none of it."""
+
+    name: str | None = None
+    phone: str | None = None
+    street: str | None = None
+    city: str | None = None
+    state: str | None = None
+    zip: str | None = None
+    country: str | None = None
+
+    @classmethod
+    def parse(cls, data: object) -> Self:
+        """From `{"name", "phone", "address": {"street", "city", "state", "zip", "country"}}`,
+        every key optional. Raises `ValueError` naming what is wrong."""
+        if not isinstance(data, dict):
+            raise ValueError("sign-up details: expected a JSON object")
+        address = data.get("address", {})
+        if not isinstance(address, dict):
+            raise ValueError("sign-up details: address: expected a JSON object")
+        if unknown := (data.keys() - {"name", "phone", "address"}) | (address.keys() - {*ADDRESS}):
+            raise ValueError(f"sign-up details: unknown keys {', '.join(sorted(unknown))}")
+        flat = {k: v for k, v in data.items() if k != "address"} | address
+        for key, value in flat.items():
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(f"sign-up details: {key}: expected a non-empty string")
+        if "phone" in flat and not PHONE.fullmatch(flat["phone"]):
+            raise ValueError("sign-up details: phone: expected E.164, as +15551234567")
+        if "country" in flat and not COUNTRY.fullmatch(flat["country"]):
+            raise ValueError("sign-up details: country: expected ISO 3166 alpha-2, as US")
+        return cls(**flat)
+
+    def missing(self, asks: set[str]) -> list[str]:
+        """The details `asks` names that these lack, in the file's order."""
+        return [f.name for f in fields(self) if f.name in asks and getattr(self, f.name) is None]
+
+
 @runtime_checkable
 class CreatesAccount(SignsIn, Protocol):
     """An adapter atsfill can create an account through, where the system's sign-up allows it.
     Account creation is a side effect it declares (ADR 0008)."""
 
-    asks_name: bool  # the sign-up asks the user's name
+    asks: set[str]  # the `SignUpDetails` fields its sign-up requires
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         """Creates the account from the page `login_url` loaded, signed in once it returns.
-        Raises as `sign_in` does; `Refused` names the rule a `password_rule` page showed."""
+        Raises as `sign_in` does; `Refused` names the rule a `password_rule` page showed. The
+        details in `asks` are given; optional consents the sign-up offers stay declined."""
         ...
 
 

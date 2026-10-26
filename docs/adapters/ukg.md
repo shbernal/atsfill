@@ -12,7 +12,7 @@ UKG Pro Recruiting's job boards and application form, observed on live postings,
 Applying needs an account, one per tenant: the account scope is the tenant alias. The same address signs up on each tenant separately.
 
 - The sign-in is Auth0's Universal Login on `signin-<region>.ultipro.com` (`signin-us`), with the tenant as an Auth0 organization: `input#username`, `input#password`, and Sign up (`/u/signup`: `input#email`, `input#password`). No tenant sent a verification email or asked for a code.
-- After the sign-up the tenant asks its own details (`/AuthCode/Register`, "Almost there!"): first and last name, a phone number, and on some tenants a privacy policy box and a text-message box. Its inputs are UKG web components that take typed keys only; Create account stays disabled until the required ones are given. atsfill types the name from `--name` and ticks the privacy box, never the text-message one.
+- After the sign-up the tenant asks its own details (`/AuthCode/Register`, "Almost there!"): first and last name, a phone number, and on some tenants a privacy policy box and a text-message box. Its inputs are UKG web components that take typed keys only; Create account stays disabled until the required ones are given. atsfill types the name from `--details` and ticks the privacy box, never the text-message one.
 - The phone number there is required on some tenants: that is the `sign_up_phone` known gap, raised before anything is typed. By then the Auth0 identity exists, signed up but with no tenant account: a later sign-in lands on the same step and stops with `unhandled_rendering`.
 - The signed-in check asks for the last posting's form: it loads, where a visitor or an account without its tenant details is redirected to the sign-in or the details step. Without a posting seen, it looks for the tenant host's `.AspNetCore.Cookies` session cookie, which lasts a day.
 - Auth0's error codes name the refusal: `user-exists` (`email_in_use`), wrong credentials (`wrong_password`), a password rule (`password_rule`).
@@ -50,7 +50,7 @@ A read-only field without a value (preferred name, former name) is listed `unsup
 
 ## Development
 
-The Test user's accounts are one per tenant, created by the round (ADR 0013): `atsfill login ukg --user test --url <posting> --create --email <address> --name "<name>"`.
+The Test user's accounts are one per tenant, created by the round (ADR 0013): `atsfill login ukg --user test --url <posting> --create --email <address> --details <file>`.
 
 ## Known gaps
 

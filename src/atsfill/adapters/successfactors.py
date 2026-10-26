@@ -13,7 +13,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported, known_gap
+from atsfill.core.adapter import (
+    Blocked,
+    Gap,
+    NotTaken,
+    Refused,
+    SignUpDetails,
+    Unsupported,
+    known_gap,
+)
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -81,7 +89,7 @@ def _company(request: Request) -> list[tuple[str, str]]:
 class SuccessFactors:
     name = "successfactors"
     per_employer = True
-    asks_name = True
+    asks = {"name"}
     known_gaps = {"quick_apply_sign_up": Gap.FLOW, "sign_up_fields": Gap.FLOW}
     side_effects = [
         SideEffect("sign_up", "employer", "the account is created in the employer's tenant"),
@@ -137,7 +145,7 @@ class SuccessFactors:
                 raise Blocked(f"email_link: {message}") from None
             raise Refused(f"wrong_password: {message}") from None
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         self._candidate(page)
         if page.locator(SIGN_IN).count():
             page.locator(REGISTER).first.click()
@@ -152,7 +160,7 @@ class SuccessFactors:
                 ) from None
             register.first.click()
         page.locator(SIGN_UP).wait_for(timeout=LANDING_TIMEOUT_MS)
-        first, _, last = (name or "").strip().partition(" ")
+        first, _, last = (details.name or "").strip().partition(" ")
         for selector, value in [
             (SIGN_UP, email),
             ("#fbclc_emailConf", email),

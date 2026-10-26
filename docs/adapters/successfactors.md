@@ -50,7 +50,7 @@ The list sections' entries are not read: they are empty on a new account and non
 
 ## Development
 
-The Test user's accounts are one per employer, created by the round (ADR 0013): `atsfill login successfactors --user test --url <posting> --create --email <address> --name "Ada Placeholder"`.
+The Test user's accounts are one per employer, created by the round (ADR 0013): `atsfill login successfactors --user test --url <posting> --create --email <address> --details <file>`.
 
 ## Known gaps
 

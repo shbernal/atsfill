@@ -6,7 +6,13 @@ import time
 from pathlib import Path
 
 from atsfill.core import browser
-from atsfill.core.adapter import CreatesAccount, NeedsAccount, SignsIn, Unsupported
+from atsfill.core.adapter import (
+    CreatesAccount,
+    NeedsAccount,
+    SignsIn,
+    SignUpDetails,
+    Unsupported,
+)
 from atsfill.core.browser import Page
 from atsfill.core.passwords import account_key
 
@@ -53,17 +59,16 @@ def sign_in(
     address: str,
     password: str,
     session: Path,
-    create: bool = False,
-    name: str | None = None,
+    details: SignUpDetails | None = None,
 ) -> None:
-    """Signs in, or creates the account (with the user's `name` where it asks one), from the
+    """Signs in, or creates the account from the user's sign-up `details` when given, from the
     system's login page and stores the session.
     Raises what the adapter raises, without the password in it."""
     page.goto(adapter.login_url(scope))
     try:
-        if create:
+        if details is not None:
             assert isinstance(adapter, CreatesAccount)
-            adapter.sign_up(page, address, password, name)
+            adapter.sign_up(page, address, password, details)
         else:
             adapter.sign_in(page, address, password)
     except Exception as e:

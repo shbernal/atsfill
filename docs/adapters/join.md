@@ -20,7 +20,7 @@ One account per user for the whole system, a JOIN candidate account.
 - Sign-in: the email, then a password (`#password`) with Sign in (`[data-testid=SubmitButton]`), or "Get a login link" by email. `LoginWithCredentials` answers `Empty` on success.
 - The signed-in check is `GET join.com/api/me`: the candidate (`type: candidate`, `confirmedAt` once verified).
 - Signed in, the wizard opens on `authentication` and leaves it for `cv` a moment later. It skips `personalInformation` and `professionalLinks`, taking the name from the account: the steps are `cv`, `coverLetter`, the questions, `review`.
-- atsfill signs in (`login join`) and creates the account (`login join --create --email <address> --name "<first> <last>"`, which ends `blocked: email_link`); with a password source, a form command signs in again on its own.
+- atsfill signs in (`login join`) and creates the account (`login join --create --email <address> --details <file>` with a first and a last `name`, which ends `blocked: email_link`); with a password source, a form command signs in again on its own.
 
 ## Reading and filling
 

@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, SignUpDetails, Unsupported
 from atsfill.core.browser import Page, Request, Timeout
 from atsfill.core.results import Answer, AnyOf, Field, FieldType, Is, OptionSet, SideEffect
 
@@ -209,7 +209,7 @@ def posting(url: str) -> Posting | None:
 class Taleo:
     name = "taleo"
     per_employer = True
-    asks_name = False
+    asks: set[str] = set()
     known_gaps = {LOCATION_GAP: Gap.RENDERING, DATE_PICKER_GAP: Gap.RENDERING}
     side_effects = [
         SideEffect("sign_up", "employer", "the account is created in the employer's zone"),
@@ -264,7 +264,7 @@ class Taleo:
         page.locator(f"#{FORM_ID}-login-defaultCmd").click()
         _left_sign_in(page)
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         page.locator(f"#{FORM_ID}-login-register").click()
         page.wait_for_load_state()
         accept = page.locator(f"#{FORM_ID}-StatementBeforeAuthentificationContent-ContinueButton")

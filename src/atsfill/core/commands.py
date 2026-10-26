@@ -25,6 +25,7 @@ from atsfill.core.adapter import (
     ReadsByRequest,
     Refused,
     SignsIn,
+    SignUpDetails,
     Unsupported,
 )
 from atsfill.core.browser import OutOfTime, Overlaid, Page, open_page
@@ -481,7 +482,7 @@ def login(
     password: str | None = None,
     window: bool = False,
     create: bool = False,
-    name: str | None = None,
+    details: SignUpDetails | None = None,
     data_dir: Path | None = None,
 ) -> SessionReport:
     """Signs in with the account's password source, headless, and stores the session; without
@@ -489,7 +490,7 @@ def login(
 
     `email` is remembered for the account; `password` is used for this sign-in only. `create`
     creates the account with a password atsfill generates and stores first (a side effect),
-    giving `name` where the sign-up asks it; with a password already stored, the account may
+    giving the sign-up the user's `details`; with a password already stored, the account may
     exist, so it signs in with that password and keeps the account's email instead."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
@@ -498,6 +499,8 @@ def login(
     report = SessionReport(user, adapter, scope, "missing", session)
     if create and not email:
         raise ValueError("creating an account needs --email")
+    if details and not create:
+        raise ValueError("--details goes with --create")
     try:
         kept = create and passwords.stored(mine, adapter, scope) is not None
     except passwords.PasswordError as e:
@@ -507,7 +510,7 @@ def login(
         accounts.remember(mine, adapter, scope, email)
     if create and not kept:
         assert email
-        return _create(report, account, url, mine, (email, name), data)
+        return _create(report, account, url, mine, email, details or SignUpDetails(), data)
     if kept:
         report.password = "kept"
     if password and not (isinstance(account, SignsIn) and accounts.email(mine, adapter, scope)):
@@ -539,25 +542,28 @@ def _create(
     account: NeedsAccount,
     url: str | None,
     mine: Path,
-    who: tuple[str, str | None],
+    email: str,
+    details: SignUpDetails,
     data: Path,
 ) -> SessionReport:
-    """Creates the account: the generated password is stored before the click, and deleted
-    only on a refusal the page states before any account exists."""
+    """Creates the account: refused before the browser opens when `details` lack one the
+    sign-up asks; the generated password is stored before the click, and deleted only on a
+    refusal the page states before any account exists."""
     if not isinstance(account, CreatesAccount):
         report.status = Status.UNSUPPORTED
         report.reason = f"no_sign_up: atsfill cannot create a {account.name} account"
         return report
-    email, name = who
-    if account.asks_name and not name:
-        raise ValueError(f"creating a {account.name} account needs --name")
+    if missing := details.missing(account.asks):
+        report.status = Status.REFUSED
+        report.reason = f"sign_up_details: no {', '.join(missing)}"
+        return report
     password = passwords.generate()
     try:
         passwords.store(mine, account.name, report.scope, password)
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
-    result = _headless(data, account, report.scope, (email, password), report.path, True, name)
+    result = _headless(data, account, report.scope, (email, password), report.path, details)
     command = login_command(account.name, report.user, url)
     report.status, report.reason = result.status, _email_link(result.reason, email, command)
     report.password = "stored"
@@ -575,8 +581,7 @@ def _headless(
     scope: str | None,
     credentials: Credentials,
     session: Path,
-    create: bool = False,
-    name: str | None = None,
+    details: SignUpDetails | None = None,
 ) -> Result:
     """Signs in, or creates the account, through the adapter: `ready` once the session is
     stored."""
@@ -586,7 +591,7 @@ def _headless(
     def run(_: list[str]) -> Result:
         result = Result(Status.READY, url, account.name)
         with open_page(data, None) as page, _stops(result):
-            accounts.sign_in(page, account, scope, *credentials, session, create, name)
+            accounts.sign_in(page, account, scope, *credentials, session, details)
         return result
 
     return _in_budget(url, run)

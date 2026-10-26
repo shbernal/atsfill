@@ -8,7 +8,7 @@ from keyring.backends import fail
 from atsfill import core
 from atsfill.cli import parser, run
 from atsfill.core import commands, passwords
-from atsfill.core.adapter import Blocked, Refused
+from atsfill.core.adapter import Blocked, Refused, SignUpDetails
 from atsfill.core.results import Status
 from tests.fake import FakeSignIn, FakeSignUp
 
@@ -160,9 +160,9 @@ def test_create_stores_the_password_before_the_click(creates, config, data, caps
     stored_first = []
     sign_up = creates.sign_up
 
-    def watched(page, email, password, name):
+    def watched(page, email, password, details):
         stored_first.append(passwords.stored(data / "users/test", "fakeaccount", None) == password)
-        sign_up(page, email, password, name)
+        sign_up(page, email, password, details)
 
     creates.sign_up = watched
     code, report = login(data, capsys, "--user", "test", "--create", "--email", EMAIL)
@@ -217,12 +217,38 @@ def test_a_verification_link_names_the_address_and_the_command(creates, config, 
     assert report["password"] == "stored"
 
 
-def test_a_sign_up_that_asks_a_name_needs_it(creates, config, data, capsys, secret_store):
-    creates.asks_name = True
-    args = ["--data-dir", str(data), "login", "fakeaccount", "--create", "--email", EMAIL]
-    assert run(parser().parse_args(args)) == 2
-    assert "needs --name" in capsys.readouterr().err
+def test_a_sign_up_refuses_without_the_details_it_asks(creates, config, data, capsys, tmp_path):
+    creates.asks = {"name", "phone", "zip"}
+    details = tmp_path / "details.json"
+    details.write_text(json.dumps({"name": "Jane Doe"}))
+    code, report = login(data, capsys, "--create", "--email", EMAIL, "--details", str(details))
+    assert (code, report["status"]) == (1, "refused")
+    assert report["reason"] == "sign_up_details: no phone, zip"
+    assert creates.created is None
     assert passwords.stored(data / "users/default", "fakeaccount", None) is None
+
+
+def test_a_sign_up_gets_the_details(creates, config, data, capsys, tmp_path, secret_store):
+    creates.asks = {"name", "country"}
+    details = tmp_path / "details.json"
+    details.write_text(json.dumps({"name": "Jane Doe", "address": {"country": "US"}}))
+    code, _ = login(data, capsys, "--create", "--email", EMAIL, "--details", str(details))
+    assert code == 0
+    assert creates.details == SignUpDetails(name="Jane Doe", country="US")
+
+
+@pytest.mark.parametrize(
+    "content",
+    ["[]", "{", '{"age": "30"}', '{"phone": "555"}', '{"address": {"country": "USA"}}'],
+)
+def test_a_bad_details_file_is_a_usage_error(data, capsys, tmp_path, content):
+    details = tmp_path / "details.json"
+    details.write_text(content)
+    args = ["--data-dir", str(data), "login", "fakeaccount", "--create", "--details", str(details)]
+    with pytest.raises(SystemExit) as exit:
+        parser().parse_args(args)
+    assert exit.value.code == 2
+    assert "--details" in capsys.readouterr().err
 
 
 def test_create_needs_an_adapter_with_sign_up(account, config, data, capsys):

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, Unsupported
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Refused, SignUpDetails, Unsupported
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, Field, FieldType, Is, OptionSet, SideEffect
 
@@ -218,7 +218,7 @@ def board(url: str) -> Board | None:
 class UKG:
     name = "ukg"
     per_employer = True
-    asks_name = True
+    asks = {"name"}
     known_gaps = {PHONE_GAP: Gap.FLOW}
     side_effects = [
         SideEffect("sign_up", "employer", "the account is created in the employer's tenant"),
@@ -275,7 +275,7 @@ class UKG:
         if "/AuthCode/Register" in page.url:
             raise Unsupported("unhandled_rendering: the tenant asks the account's name")
 
-    def sign_up(self, page: Page, email: str, password: str, name: str | None) -> None:
+    def sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         page.locator("a[href*='/u/signup']").first.click()
         page.locator("input#email").wait_for(timeout=FORM_TIMEOUT_MS)
         page.locator("input#email").fill(email)
@@ -284,7 +284,7 @@ class UKG:
         _left_sign_in(page)
         if "/AuthCode/Register" not in page.url:
             return
-        _register(page, name or "")
+        _register(page, details.name or "")
 
     def browser_read(self, page: Page) -> list[Field]:
         found = board(page.url)

@@ -8,7 +8,7 @@ import pytest
 from atsfill.adapters import wttj
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Refused, Unsupported
+from atsfill.core.adapter import Blocked, Refused, SignUpDetails, Unsupported
 
 PAGES = Path(__file__).parent / "pages/wttj"
 PAGE = PAGES / "job.html"
@@ -162,7 +162,7 @@ def test_a_login_page_answering_too_many_requests_blocks(page, monkeypatch):
 
 def test_sign_up_waits_for_the_confirmation_link(signing_in, page):
     with pytest.raises(Blocked, match="^email_link"):
-        signing_in.sign_up(page, "new@example.com", "Right-Password-1", "Jane")
+        signing_in.sign_up(page, "new@example.com", "Right-Password-1", SignUpDetails(name="Jane"))
     assert "/complete-profile/" in page.url  # created, signed in
 
 
@@ -176,4 +176,4 @@ def test_sign_up_waits_for_the_confirmation_link(signing_in, page):
 )
 def test_what_sign_up_is_told(signing_in, page, email, password, name, error, reason):
     with pytest.raises(error, match=f"^{reason}"):
-        signing_in.sign_up(page, email, password, name)
+        signing_in.sign_up(page, email, password, SignUpDetails(name=name or None))
