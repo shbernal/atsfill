@@ -1,12 +1,14 @@
 """The Greenhouse adapter on tests/pages/greenhouse, served as its hosted page and embedded."""
 
+import sys
 from pathlib import Path
 
 import pytest
 
 from atsfill.adapters import greenhouse
 from atsfill.adapters.greenhouse import Greenhouse, _api_fields
-from atsfill.core import browser, matching
+from atsfill.core import browser, matching, otp
+from atsfill.core.adapter import Blocked
 from atsfill.core.results import Answer, FieldType
 
 PAGE = Path(__file__).parent / "pages/greenhouse/job.html"
@@ -68,6 +70,7 @@ def test_browser_read_waits_for_the_live_page(page):
     by_id = {f.id: f for f in fields}
     assert list(by_id) == [
         "first_name",
+        "email",
         "phone",
         "candidate-location",
         "resume",
@@ -157,6 +160,49 @@ def test_a_radio_is_listed_unhandled(page):
 def test_submit_returns_the_confirmation(page):
     adapter, _ = opened(page)
     assert adapter.submit(page) == JOB + "/confirmation"
+
+
+@pytest.fixture
+def otp_prints(tmp_path, monkeypatch):
+    """Gives the default user an `otp-commands` entry printing the OTP given."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
+    monkeypatch.setattr(otp, "POLL_S", 0.1)
+
+    def entry(printed: str) -> None:
+        config = tmp_path / "conf/atsfill/config.toml"
+        config.parent.mkdir(parents=True, exist_ok=True)
+        script = tmp_path / "otp.py"
+        script.write_text(f"print({printed!r})")
+        config.write_text(f'[otp-commands]\nall = "{sys.executable} {script}"\n')
+
+    return entry
+
+
+def test_an_otp_is_typed_in_and_submitted(page, otp_prints):
+    otp_prints("Ab3dEf7h")
+    adapter, _ = opened(page, JOB + "?otp")
+    with otp.source("default", adapter.name, None):
+        assert adapter.submit(page) == JOB + "/confirmation"
+
+
+def test_an_otp_not_taken_is_blocked(page, otp_prints):
+    otp_prints("Zz9zZz9z")
+    adapter, _ = opened(page, JOB + "?otp")
+    with (
+        otp.source("default", adapter.name, None),
+        pytest.raises(Blocked, match="^otp_rejected: the submit did not take the OTP: Incorrect"),
+    ):
+        adapter.submit(page)
+
+
+def test_an_otp_without_an_otp_command_is_blocked(page, tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
+    adapter, _ = opened(page, JOB + "?otp")
+    with (
+        otp.source("default", adapter.name, None),
+        pytest.raises(Blocked, match="no_otp_command: the submit sent an OTP to jane@example.com"),
+    ):
+        adapter.submit(page)
 
 
 def test_an_embedding_company_page(page):

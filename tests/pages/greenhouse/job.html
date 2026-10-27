@@ -5,12 +5,18 @@
      keys (Location suggests as you type, one takes several values, School shows only its first
      page until typed into), a phone whose typed dial code sets its Country select, a textarea, a
      number input, a checkbox group, a consent box that appears with the live page, and attaches
-     that swap their input for the file's name or, entered manually, add a textarea beside it. -->
+     that swap their input for the file's name or, entered manually, add a textarea beside it.
+     With `?otp` in the URL, the first submit asks the emailed OTP, a box per character,
+     and the next takes only Ab3dEf7h. -->
 <style>.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; }</style>
 <form id="application-form">
   <div class="field-wrapper">
     <label id="first_name-label" for="first_name">First Name<span aria-hidden="true">*</span></label>
     <input id="first_name" type="text" maxlength="255" aria-required="true">
+  </div>
+  <div class="field-wrapper">
+    <label id="email-label" for="email">Email<span aria-hidden="true">*</span></label>
+    <input id="email" type="text" maxlength="255" aria-required="true" value="jane@example.com">
   </div>
   <fieldset class="phone-input"><legend class="visually-hidden">Phone</legend>
     <div class="select" data-options="France +33|United States +1" data-enter-only>
@@ -154,6 +160,23 @@
   }
   document.getElementById("application-form").onsubmit = e => {
     e.preventDefault();
+    if (new URLSearchParams(location.search).has("otp")) {
+      const boxes = [...document.querySelectorAll("[id^=security-input-]")];
+      if (!boxes.length) {
+        const inputs = [...Array(8).keys()].map(i =>
+          `<input id="security-input-${i}" type="text" maxlength="1" aria-required="true">`).join("");
+        e.target.insertAdjacentHTML("beforeend", `<div class="email-verification">
+          <fieldset id="email-verification"><legend>A code was sent to jane@example.com</legend>
+          <div class="email-verification__wrapper">${inputs}</div></fieldset></div>`);
+        return;
+      }
+      if (boxes.map(b => b.value).join("") !== "Ab3dEf7h") {
+        document.getElementById("email-verification-error")?.remove();
+        e.target.querySelector(".email-verification").insertAdjacentHTML("beforeend",
+          `<p id="email-verification-error" class="helper-text--error">Incorrect security code</p>`);
+        return;
+      }
+    }
     location.href = location.pathname + "/confirmation";
   };
 </script>

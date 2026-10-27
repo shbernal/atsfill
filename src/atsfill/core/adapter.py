@@ -120,8 +120,8 @@ class SignsIn(NeedsAccount, Protocol):
 
     def sign_in(self, page: Page, email: str, password: str) -> None:
         """Signs in on the page `login_url` loaded. Raises `Blocked` for what the system waits
-        for (`email_link`, `email_otp`, `sms_otp`, `captcha`), `Refused` for what it turns down,
-        `Unsupported` for a page it does not know."""
+        for (`email_link`, `email_otp`, `sms_otp`, `captcha`, the OTP command's reasons),
+        `Refused` for what it turns down, `Unsupported` for a page it does not know."""
         ...
 
 

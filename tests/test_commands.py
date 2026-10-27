@@ -127,7 +127,7 @@ def test_a_mismatch_refuses(fake, config, url, answers, data):
 @pytest.mark.parametrize(
     "error, status, reason",
     [
-        (Blocked("email_otp"), Status.BLOCKED, "email_otp"),
+        (Blocked("otp_rejected"), Status.BLOCKED, "otp_rejected"),
         (Unsupported("unsupported_rendering: x"), Status.UNSUPPORTED, "unsupported_rendering: x"),
         (
             NotTaken("no suggestion for 'x'"),

@@ -1,6 +1,6 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-25; the OTP step from the page's script, 2026-10-27. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 
@@ -53,4 +53,4 @@ The form is server-rendered and goes live a second or two later. Until then a se
 
 - Nothing but the files reaches Greenhouse before submit, so the read-back is the page: input values, each select's shown value, the checked boxes' labels, the attached file's name. The phone reads back as the Country select's dial code then the number; it is empty until a country is set.
 - Submit runs an invisible reCAPTCHA Enterprise check. The evidence is the redirect to `…/confirmation`, titled "Thank you for applying".
-- An emailed OTP can stop the send. Its markup has not been observed, so such a send ends `unknown`.
+- When the reCAPTCHA check fails, the submit answers `captcha-failed` naming a recipient, and the form adds an OTP step instead: `fieldset#email-verification`, its legend naming the address, eight one-character inputs `#security-input-0` to `-7` that move the focus on as each is typed, for the 8-character OTP Greenhouse emails ("Security code for your application to <employer>", the OTP in an `<h1>`). The core types it in from the user's `otp-commands`, and submitting again sends it with the application. An invalid, expired or over-tried OTP shows `#email-verification-error`. Read from the page's script, not yet met live.

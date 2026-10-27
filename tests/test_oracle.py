@@ -169,6 +169,6 @@ def test_a_known_address_without_an_otp_command_is_blocked(opened, page, tmp_pat
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
     with (
         otp.source("default", adapter.name, None),
-        pytest.raises(Blocked, match="email_otp: the email step sent an OTP to known@example.com"),
+        pytest.raises(Blocked, match="^no_otp_command: the email step sent an OTP to known@"),
     ):
         adapter.fill(page, {"email": "known@example.com", "legalDisclaimer": "Yes"})

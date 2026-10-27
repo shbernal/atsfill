@@ -181,7 +181,7 @@ def test_create_stores_the_password_before_the_click(creates, config, data, caps
         (Refused("email_in_use"), "refused", False),
         (Refused("email_domain_rejected"), "refused", False),
         (Refused("password_rule: at most 16 characters"), "refused", False),
-        (Blocked("email_otp"), "blocked", True),
+        (Blocked("no_otp_command"), "blocked", True),
         (Blocked("captcha"), "blocked", True),
         (RuntimeError("after the click"), "unsupported", True),
     ],

@@ -279,7 +279,7 @@ class SuccessFactors:
             page.locator(PASSCODE).wait_for(state="hidden", timeout=SIGN_IN_TIMEOUT_MS)
         except Timeout:
             message = self._message(page)
-            raise Blocked(f"email_otp: the sign-up did not take the OTP: {message}") from None
+            raise Blocked(f"otp_rejected: the sign-up did not take the OTP: {message}") from None
 
     def browser_read(self, page: Page) -> list[Field]:
         self._candidate(page)
