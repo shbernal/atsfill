@@ -2,7 +2,7 @@
 
 # atsfill
 
-Fill job application forms from the command line: read, dry-run, then submit.
+Let your agent apply for you. One CLI for every hiring system.
 
 [![PyPI][pypi-badge]][pypi]
 [![Python][python-badge]][pypi]
