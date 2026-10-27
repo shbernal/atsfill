@@ -84,7 +84,7 @@ def test_no_otp_in_time_blocks(account, config, tmp_path, monkeypatch):
     report = login(tmp_path)
     assert report.status is Status.BLOCKED
     assert report.reason == (
-        f"email_otp: the sign-in sent an OTP to {EMAIL}; the OTP command"
+        f"otp_not_received: the sign-in sent an OTP to {EMAIL}; the OTP command"
         f" `{sys.executable}` printed none within 1s"
     )
 
@@ -103,7 +103,8 @@ def test_without_an_entry_the_otp_blocks(account, config, tmp_path):
     report = login(tmp_path)
     assert report.status is Status.BLOCKED
     assert report.reason == (
-        f"email_otp: the sign-in sent an OTP to {EMAIL}; no `otp-commands` entry for fakeaccount"
+        f"no_otp_command: the sign-in sent an OTP to {EMAIL};"
+        " no `otp-commands` entry for fakeaccount"
     )
 
 

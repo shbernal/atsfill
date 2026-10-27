@@ -14,9 +14,9 @@ from contextlib import suppress
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from atsfill.core import browser
-from atsfill.core.adapter import Gap, Unsupported
-from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout
+from atsfill.core import browser, otp
+from atsfill.core.adapter import Blocked, Gap, Unsupported
+from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
 HOSTS = re.compile(r"^(job-boards|boards)(\.eu)?\.greenhouse\.io$")
@@ -33,6 +33,7 @@ HYDRATE_TIMEOUT_MS = 15_000
 FORM_TIMEOUT_MS = 20_000
 ANSWER_TIMEOUT_MS = 15_000  # an upload's file name, a suggestion: past it, a mismatch
 SUBMIT_TIMEOUT_MS = 90_000
+SUBMIT_POLL_MS = 500  # for the confirmation or the OTP step
 HYDRATE_POLL_MS = 500  # for a select's list to open, per click
 KEY_DELAY_MS = 20
 API_TYPES = {
@@ -43,6 +44,11 @@ API_TYPES = {
     "multi_value_multi_select": FieldType.MULTI_CHOICE,
 }
 YES_NO = ["Yes", "No"]
+CONFIRMATION = re.compile(r"/confirmation")
+# The OTP step a submit can stop at: a box per character of the OTP it emails.
+OTP_STEP = "fieldset#email-verification"
+OTP_INPUTS = f"{OTP_STEP} input[id^='security-input-']"
+OTP_ERROR = "#email-verification-error"
 # Sections the page adds or names its own way, or shows a question of only on another answer
 # (EEOC race after Hispanic/Latino): `request_read` declines a posting with any (ADR 0011).
 UNMAPPED = ("education", "compliance", "demographic_questions")
@@ -234,8 +240,24 @@ class Greenhouse:
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def submit(self, page: Page) -> str | None:
-        browser.click(page.locator(f"{FORM} button[type=submit]"))
-        page.wait_for_url(re.compile(r"/confirmation"), timeout=SUBMIT_TIMEOUT_MS)
+        """Submits, then types the emailed OTP where the step asks for one and submits again.
+        The evidence is the confirmation page."""
+        button = page.locator(f"{FORM} button[type=submit]")
+        browser.click(button)
+        if not _confirmed(page, OTP_INPUTS):
+            email = page.locator(f"{FORM} {_by_id('email')}").input_value()
+            otp.enter(page.locator(OTP_INPUTS), email, "the submit")
+            browser.click(button)
+            try:
+                confirmed = _confirmed(page, OTP_ERROR)
+            except Timeout:
+                if not page.locator(f"{OTP_INPUTS}:visible").count():
+                    raise
+                stayed = "unhandled_rendering: the submit stayed at the OTP step"
+                raise Unsupported(stayed) from None
+            if not confirmed:
+                message = page.locator(OTP_ERROR).first.inner_text().strip()
+                raise Blocked(f"otp_rejected: the submit did not take the OTP: {message}")
         return page.url
 
     def _field(self, page: Page, raw: dict[str, Any]) -> Field:
@@ -315,6 +337,19 @@ def _wait_until_live(page: Page) -> None:
             continue
         select.press("Escape")
         return
+
+
+def _confirmed(page: Page, step: str) -> bool:
+    """True once the page reaches the confirmation, False once `step` shows instead."""
+    deadline = time.monotonic() + SUBMIT_TIMEOUT_MS / 1000
+    while time.monotonic() < deadline:
+        with suppress(BrowserError):  # the page navigating away
+            if CONFIRMATION.search(page.url):
+                return True
+            if page.locator(f"{step}:visible").count():
+                return False
+        page.wait_for_timeout(SUBMIT_POLL_MS)
+    raise Timeout(f"no confirmation within {SUBMIT_TIMEOUT_MS} ms")
 
 
 def _board_job(url: str) -> tuple[str, str] | None:

@@ -162,7 +162,7 @@ def test_a_passcode_not_taken_is_blocked(page, otp_command, tmp_path, monkeypatc
     page.goto(POSTING)
     with (
         otp.source("default", "successfactors", "careers.acme.com"),
-        pytest.raises(Blocked, match="^email_otp: the sign-up did not take the OTP"),
+        pytest.raises(Blocked, match="^otp_rejected: the sign-up did not take the OTP"),
     ):
         SuccessFactors().sign_up(page, "otp@example.com", "Aa1!aaaaaaaaaaaa", ADA)
 
@@ -170,7 +170,7 @@ def test_a_passcode_not_taken_is_blocked(page, otp_command, tmp_path, monkeypatc
 def test_sign_up_asking_a_passcode_without_an_otp_command_is_blocked(page, tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     page.goto(POSTING)
-    with pytest.raises(Blocked, match="^email_otp: the sign-up sent an OTP to otp@example.com"):
+    with pytest.raises(Blocked, match="^no_otp_command: the sign-up sent an OTP to otp@"):
         SuccessFactors().sign_up(page, "otp@example.com", "Aa1!aaaaaaaaaaaa", ADA)
 
 

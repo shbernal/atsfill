@@ -376,7 +376,7 @@ class Oracle:
                     timeout=STEP_TIMEOUT_MS
                 )
             except browser.Timeout:
-                raise Blocked("email_otp: the email step did not take the OTP") from None
+                raise Blocked("otp_rejected: the email step did not take the OTP") from None
         if page.locator(MANUALLY).count():
             _click(page, page.locator(MANUALLY).first)
             page.locator("apply-flow-block").first.wait_for(timeout=STEP_TIMEOUT_MS)

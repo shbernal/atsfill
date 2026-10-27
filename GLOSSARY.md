@@ -109,7 +109,7 @@ The stored browser state of a signed-in account, loaded only into its own adapte
 _Avoid_: cookies
 
 **OTP**:
-A one-time password a hiring system sends by email or SMS and asks for before it goes on. atsfill types an emailed one in from the OTP command; the reasons for one it cannot get are `email_otp` and `sms_otp`.
+A one-time password a hiring system sends by email or SMS and asks for before it goes on. atsfill types an emailed one in from the OTP command. An OTP step an adapter does not type into is `email_otp` or `sms_otp`; one it does ends `no_otp_command` without an OTP command, `otp_not_received` when the command prints none in time, `otp_rejected` when the system does not take what it printed.
 _Avoid_: code, verification code, PIN
 
 **OTP command**:

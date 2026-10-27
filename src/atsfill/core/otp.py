@@ -53,17 +53,21 @@ def source(user: str, adapter: str, scope: str | None) -> Generator[None]:
 
 def enter(inputs: Locator, email: str, step: str) -> None:
     """Types the OTP emailed to `email` into the step's input, or one character into each of
-    its inputs. Raises `Blocked` (`email_otp`) when there is no entry, or no OTP within
-    `OTP_TIMEOUT_S`; `step` names where the OTP was asked, for the reason."""
+    its inputs. Raises `Blocked`: `no_otp_command` without an entry, `otp_not_received` when the
+    command prints none within `OTP_TIMEOUT_S`, `otp_rejected` when what it prints does not fit
+    the inputs; `step` names where the OTP was asked, for the reason."""
     current = _source.get()
-    asked = f"email_otp: {step} sent an OTP to {email}"
+    asked = f"{step} sent an OTP to {email}"
     if current is None or current.command is None:
         adapter = current.adapter if current else "the adapter"
-        raise Blocked(f"{asked}; no `otp-commands` entry for {adapter}")
+        raise Blocked(f"no_otp_command: {asked}; no `otp-commands` entry for {adapter}")
     otp = _wait(current, email, asked)
     count = inputs.count()
     if count > 1 and count != len(otp):
-        raise Blocked(f"{asked}; the OTP command printed {len(otp)} characters for {count} inputs")
+        raise Blocked(
+            f"otp_rejected: {asked}; the OTP command printed {len(otp)} characters"
+            f" for {count} inputs"
+        )
     if count > 1:
         for box, character in zip(inputs.all(), otp, strict=True):
             box.press_sequentially(character)
@@ -90,12 +94,15 @@ def _wait(current: Source, email: str, asked: str) -> str:
             break
         except OSError as e:
             raise Blocked(
-                f"{asked}; the OTP command `{args[0]}` failed: {type(e).__name__}"
+                f"otp_not_received: {asked}; the OTP command `{args[0]}` failed: {type(e).__name__}"
             ) from None
         if run.returncode == 0 and (otp := next(iter(run.stdout.split()), "")):
             return otp
         time.sleep(min(POLL_S, max(0.0, deadline - time.monotonic())))
-    raise Blocked(f"{asked}; the OTP command `{args[0]}` printed none within {OTP_TIMEOUT_S}s")
+    raise Blocked(
+        f"otp_not_received: {asked}; the OTP command `{args[0]}` printed none"
+        f" within {OTP_TIMEOUT_S}s"
+    )
 
 
 def _now() -> datetime:
