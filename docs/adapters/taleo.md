@@ -2,7 +2,7 @@
 
 Oracle Taleo Enterprise career sections, observed on live postings, last on 2026-10-26. The fixture pages are [tests/pages/taleo/apply.html](../../tests/pages/taleo/apply.html) and [review.html](../../tests/pages/taleo/review.html), served as an Acme zone in `tests/test_taleo.py`: one wizard page with one example of each rendering below, and Review and Submit.
 
-The adapter (`atsfill.adapters.taleo`) is not in `adapters()` yet: the registry has Taleo `unsupported` for its `location_levels` gap, and it is registered once its adapter gate passes.
+The adapter (`atsfill.adapters.taleo`) is not in `adapters()` yet: the registry has Taleo `in_scope`, stopped at its `location_levels` gap, and it is registered once its adapter gate passes.
 
 ## Where the form is
 

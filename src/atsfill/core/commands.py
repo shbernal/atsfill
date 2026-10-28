@@ -324,7 +324,6 @@ def _form_command(
         result = _fill(page, adapter, url, answers, user)
         if result.status is not Status.READY:
             return result
-        result.warning = _unverified(adapter.name)
         if not send:
             return result
         attempts.record(mine, posting, attempts.PENDING, url=url)
@@ -398,18 +397,6 @@ def send(
     )
 
 
-def _unverified(adapter: str) -> str | None:
-    """The warning a ready dry run or a send carries when no send through the adapter was
-    verified, or the last verified one fails now (ADR 0012)."""
-    source = registry.for_adapter(adapter)
-    if source and source.send_broken:
-        return f"send_broken: {_broken(source)}"
-    if source and source.send_verified:
-        return None
-    verification = source.verification if source else None
-    return f"not_send_verified: {adapter} is {verification or 'not in the registry'}"
-
-
 def _sessions(data: Path, users: list[str], candidates: list[Adapter]) -> list[SessionReport]:
     """Every session a user stored, each asked of its system."""
     return [
@@ -439,26 +426,14 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
     )
 
 
-def _broken(source: registry.Source) -> str:
-    broken, last = source.send_broken, source.send_verified
-    assert broken
-    since = f"send broken since {broken.date} ({broken.version}), {broken.reason}"
-    return since + (f"; last verified {last.date} ({last.version})" if last else "")
-
-
 def _adapter_status(adapter: Adapter, users: list[str]) -> AdapterStatus:
     source = registry.for_adapter(adapter.name)
-    verified = source.verification if source else None
-    v = getattr(source, verified) if source and verified else None
     return AdapterStatus(
         adapter.name,
         submit_allowed=[u for u in users if paths.submit_enabled(adapter.name, u)],
         side_effects=adapter.side_effects,
         side_effects_muted=[u for u in users if paths.muted(adapter.name, u)],
-        verified=verified,
-        verified_version=v.version if v else None,
-        verified_release=registry.release(v.version, version("atsfill")) if v else None,
-        send_broken=_broken(source) if source and source.send_broken else None,
+        scope=source.scope.value if source else None,
     )
 
 

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -13,15 +14,9 @@ def test_every_adapter_is_in_the_registry():
     assert all(registry.for_adapter(a.name) for a in adapters())
 
 
-def test_the_furthest_state_wins():
-    (system,) = registry.parse("""
-[x]
-kind = "ats"
-account = "none"
-mapped = { date = 2026-10-01, version = "0.0.1", by = "agent" }
-dry_run_verified = { date = 2026-10-02, version = "0.0.1", by = "agent" }
-""").values()
-    assert system.verification == "dry_run_verified"
+def test_a_source_without_a_scope_is_in_scope():
+    (system,) = registry.parse('[x]\nkind = "ats"\naccount = "none"\n').values()
+    assert system.scope == registry.Scope("in_scope")
 
 
 @pytest.mark.parametrize(
@@ -34,6 +29,7 @@ dry_run_verified = { date = 2026-10-02, version = "0.0.1", by = "agent" }
             "block.vendor",
         ),
         ('kind = "ats"\naccount = "none"\nlinks_to = ["lever"]', "only an aggregator"),
+        ('kind = "ats"\naccount = "none"\nscope = { is = "verified" }', "scope.is"),
     ],
 )
 def test_an_invalid_entry_is_refused(entry, error):
@@ -82,49 +78,15 @@ def test_the_committed_backlog_is_current():
     assert committed == registry.backlog(), "run `uv run python -m scripts.backlog`"
 
 
-def test_a_state_is_written_into_its_entry_only():
+def test_a_scope_is_written_into_its_entry_only():
     text = '[a]\nkind = "ats"\naccount = "none"\n\n[b]\nkind = "ats"\naccount = "none"\n'
-    v = registry.Verification(date(2026, 10, 19), "0.0.2", "adapter_gate", "abc1234")
-    once = registry.with_verification(text, "a", "dry_run_verified", v)
-    twice = registry.with_verification(once, "a", "dry_run_verified", v)
+    scope = registry.Scope("supported", date(2026, 10, 19), "abc1234")
+    once = registry.with_scope(text, "a", scope)
+    twice = registry.with_scope(once, "a", scope)
     assert once == twice
     systems = registry.parse(twice)
-    assert (systems["a"].dry_run_verified, systems["b"].verification) == (v, None)
-
-
-def test_a_verified_send_ends_a_break():
-    text = '[a]\nkind = "ats"\naccount = "none"\n'
-    broken = registry.Broken(date(2026, 10, 19), "0.0.2", "abc1234", "user", "resume empty")
-    text = registry.with_verification(text, "a", "send_broken", broken)
-    assert registry.parse(text)["a"].send_broken == broken
-    v = registry.Verification(date(2026, 10, 20), "0.0.3", "user", "def5678")
-    (system,) = registry.parse(registry.with_verification(text, "a", "send_verified", v)).values()
-    assert (system.send_verified, system.send_broken) == (v, None)
-
-
-def test_a_break_names_a_known_cause():
-    entry = (
-        'send_broken = { date = 2026-10-19, version = "0.0.2", commit = "a", by = "u",'
-        ' reason = "r", cause = "weather" }'
-    )
-    with pytest.raises(ValueError, match="send_broken.cause"):
-        registry.parse(f'[x]\nkind = "ats"\naccount = "none"\n{entry}\n')
-
-
-@pytest.mark.parametrize(
-    "verified, installed, release",
-    [
-        ("0.0.2", "0.0.2", "this_release"),
-        ("0.0.1", "0.0.2", "older"),
-        ("0.1.0", "0.0.2", "newer"),
-        ("0.0.2", "0.0.2+abc1234", "this_release"),
-        ("0.0.3", "0.0.4.dev32", "older"),
-        ("0.0.4", "0.0.4.dev32", "newer"),
-        ("0.0.4.dev32", "0.0.4.dev32", "this_release"),
-    ],
-)
-def test_a_verified_release_against_the_installed_one(verified, installed, release):
-    assert registry.release(verified, installed) == release
+    assert (systems["a"].scope, systems["b"].scope) == (scope, registry.Scope())
+    assert "supported%202026--10--19" in registry._badge(replace(systems["a"], adapter="a"))
 
 
 def test_the_committed_badges_are_current():
@@ -132,27 +94,25 @@ def test_the_committed_badges_are_current():
     assert readme == registry.with_badges(readme), "run `uv run python -m scripts.backlog`"
 
 
-def test_an_unsupported_system_goes_last_with_its_reason():
+def test_a_system_stopped_by_a_known_gap_goes_last_with_its_reason():
     systems = registry.parse("""
 [stopped]
 kind = "ats"
 account = "none"
 share = 0.5
 adapter = "stopped"
-unsupported = { date = 2026-10-21, version = "0.0.3", commit = "abc1234", by = "a", reason = "x" }
+scope = { is = "in_scope", date = 2026-10-21, reason = "x" }
 
 [open]
 kind = "ats"
 account = "to_read"
 share = 0.1
 """)
-    assert systems["stopped"].unsupported == registry.Shortfall(
-        date(2026, 10, 21), "0.0.3", "abc1234", "a", "x"
-    )
+    assert systems["stopped"].scope == registry.Scope("in_scope", date(2026, 10, 21), reason="x")
     rows = [line for line in registry.backlog(systems).splitlines() if line.startswith("| ")]
     assert [r.split(" | ")[0][2:] for r in rows[1:]] == ["open", "stopped"]
-    assert "[unsupported](stopped.md)" in rows[-1]
-    assert "unsupported%202026--10--21" in registry._badge(systems["stopped"])
+    assert "[in scope: x](stopped.md)" in rows[-1]
+    assert "in%20scope%202026--10--21" in registry._badge(systems["stopped"])
 
 
 def test_an_out_of_scope_system_joins_the_side_table_with_its_reason():
@@ -161,15 +121,15 @@ def test_an_out_of_scope_system_joins_the_side_table_with_its_reason():
 kind = "ats"
 account = "none"
 share = 0.5
-out_of_scope = { reason = "every form records a video", date = 2026-10-22 }
+scope = { is = "out_of_scope", date = 2026-10-22, reason = "every form records a video" }
 
 [open]
 kind = "ats"
 account = "none"
 share = 0.1
 """)
-    assert systems["video"].out_of_scope == registry.OutOfScope(
-        "every form records a video", date(2026, 10, 22)
+    assert systems["video"].scope == registry.Scope(
+        "out_of_scope", date(2026, 10, 22), reason="every form records a video"
     )
     main, side = registry.backlog(systems).split("counted and not adapted:")
     assert "| open |" in main and "| video |" not in main

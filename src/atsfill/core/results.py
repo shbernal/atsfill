@@ -101,7 +101,6 @@ class Result:
     checks: list[Check] = field(default_factory=list)
     side_effects: list[SideEffect] = field(default_factory=list)
     evidence: str | None = None
-    warning: str | None = None  # `code: detail`, on a ready dry run or a send that went ahead
 
 
 @dataclass
@@ -122,10 +121,7 @@ class AdapterStatus:
     submit_allowed: list[str]  # the users whose config lets it submit
     side_effects: list[SideEffect]
     side_effects_muted: list[str]  # the users who muted them
-    verified: str | None = None  # mapped | dry_run_verified | send_verified (ADR 0012)
-    verified_version: str | None = None
-    verified_release: str | None = None  # this_release | older | newer than the installed one
-    send_broken: str | None = None  # since when and why, with the last verified send
+    scope: str | None = None  # supported | in_scope | out_of_scope, None when not in the registry
 
 
 @dataclass
