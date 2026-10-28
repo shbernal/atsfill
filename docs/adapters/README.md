@@ -49,7 +49,7 @@ The registry covers 90.3% of postings.
 | ukgready | ats | 0.9% | to_read | hosted |  | in scope: unsupported_flow: profile_wizard: signed in, the form is the applicant portal's profile wizard, items of a dozen types edited in cards, entry lists, a security question and an electronic signature; not built within the round (1 tenant walked) |
 | adpmyjobs | ats | 0.8% | to_read | hosted |  | in scope: unsupported_flow: sign_in_otp_only: no password, every sign-in, the sign-up's included, is an OTP alone, and the posting loads only signed in (11 of 11 employers) |
 | hrmdirect | ats | 0.6% | to_read | hosted |  | in scope: unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs |
-| jobstreet | board | 0.5% | to_read | hosted |  | in scope: unsupported_flow: sign_in_otp_only: Apply goes to the SEEK sign-in, with no password, every sign-in and sign-up a six-digit OTP emailed to the address, alone (14 of 15 employers) |
+| jobstreet | board | 0.5% | to_read | hosted |  | [in scope: adapter before its gate: 10 of 10 Quick apply dry runs ready; 13 of 24 postings link out to the employer's site](jobstreet.md) |
 
 Aggregators, employer-built forms and out-of-scope systems ([ADR 0014](../adr/0014-out-of-scope.md)), counted and not adapted:
 

@@ -283,9 +283,16 @@ def login_window(data_dir: Path, url: str, headless: bool = False) -> Generator[
 
 
 def save_session(page: Page, path: Path) -> None:
+    """Stores the context's cookies and each origin's storage; the cookies alone where Firefox
+    aborts gathering an origin's storage (a sign-in that framed a Cloudflare challenge)."""
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     path.touch(mode=0o600)
-    page.context.storage_state(path=path)
+    try:
+        page.context.storage_state(path=path)
+    except BrowserError as e:
+        if "NS_ERROR_ABORT" not in str(e):
+            raise
+        path.write_text(json.dumps({"cookies": page.context.cookies(), "origins": []}))
 
 
 @contextmanager

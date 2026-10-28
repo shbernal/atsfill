@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Engineer - Acme</title>
+<!-- One rendering of each kind Quick apply showed (docs/adapters/jobstreet.md), not one posting.
+     The page routes itself: the posting, then /apply, /role-requirements, /profile and /review,
+     loading its data from /graphql as the apply app does. `?linkout` gives an Apply that links
+     out; `?nohistory` a profile without a career history. -->
+</head>
+<body>
+<main id="app"></main>
+<script>
+const JOB = location.pathname.match(/\/job\/\d+/)[0];
+const params = new URLSearchParams(location.search);
+const app = document.getElementById("app");
+const state = JSON.parse(sessionStorage.getItem("state") || '{"answers": {}}');
+const save = () => sessionStorage.setItem("state", JSON.stringify(state));
+let data = null;
+
+async function load() {
+  const ops = ["GetUser", "GetPersonalDetails", "GetJobApplicationProcess"];
+  const response = await fetch("/graphql", {method: "POST", headers: {"content-type": "application/json"},
+    body: JSON.stringify(ops.map(operationName => ({operationName, variables: {jobId: "1"}})))});
+  data = Object.fromEntries((await response.json()).map((r, i) => [ops[i], r.data]));
+}
+
+function go(step) {
+  history.pushState({}, "", `${JOB}/apply${step}`);
+  render();
+}
+
+function posting() {
+  const out = params.has("linkout");
+  state.nohistory = params.has("nohistory");
+  save();
+  app.innerHTML = `<h1>Engineer</h1><a data-automation="job-detail-apply" href="${JOB}/apply"
+    target="${out ? "_blank" : "_self"}">${out ? "Apply" : "Quick apply"}</a>`;
+}
+
+function documents() {
+  const d = data.GetPersonalDetails.viewer;
+  const editing = !state.saved;
+  app.innerHTML = `<h3>Personal details</h3>` + (editing ? `
+    <label for="firstName">First name</label><input id="firstName" value="${d.personalDetails.firstName}">
+    <label for="lastName">Last name</label><input id="lastName" value="${d.personalDetails.lastName}">
+    <label for="currentLocation2">Home location</label>
+    <input id="currentLocation2" role="combobox" value="${d.currentLocation2.description}">
+    <ul id="suggestions" role="listbox"></ul>
+    <select id="countryCallingCode"><option value="">Select country code</option>
+      <option value="7" selected>Philippines (+63)</option><option value="2">Hong Kong SAR (+852)</option>
+      <option value="9">United States (+1)</option></select>
+    <input id="phoneNumber" type="tel" aria-label="Phone number">
+    <button type="submit" data-automation="personal-details-save-button">Save</button>`
+    : `<p>${state.details.firstName} ${state.details.lastName}</p>`) + `
+    <h3>Resumé</h3><input id="resume-fileFile" type="file" accept=".doc,.docx,application/pdf" hidden>
+    <div id="resumes">${state.resume ? `<input type="radio" name="document-select-r" id="r1" value="r1" checked>
+      <label for="r1">${state.resume}</label>` : ""}
+    <input type="radio" name="document-select-r" id="r0" value="dont-include"><label for="r0">Don't include a resumé</label></div>
+    <h3>Cover letter</h3>
+    <input type="radio" name="coverLetter-method" id="c1" value="change" data-testid="coverLetter-method-change">
+    <label for="c1">Write a cover letter</label><textarea data-testid="coverLetterTextInput"></textarea>
+    <input type="radio" name="coverLetter-method" id="c0" value="none" data-testid="coverLetter-method-none">
+    <label for="c0">Don't include a cover letter</label>
+    <button type="button" data-testid="continue-button">Continue</button>`;
+  const location = app.querySelector("#currentLocation2");
+  location?.addEventListener("input", () => {
+    app.querySelector("#suggestions").innerHTML = location.value.length > 2
+      ? `<li role="option">Makati City Metro Manila</li><li role="option">Manila City Metro Manila</li>` : "";
+    app.querySelectorAll("[role=option]").forEach(o => o.addEventListener("click", () => {
+      location.value = o.innerText; app.querySelector("#suggestions").innerHTML = "";
+    }));
+  });
+  app.querySelector("[data-automation=personal-details-save-button]")?.addEventListener("click", () => {
+    state.saved = true;
+    state.details = {firstName: app.querySelector("#firstName").value, lastName: app.querySelector("#lastName").value};
+    save(); documents();
+  });
+  app.querySelector("#resume-fileFile").addEventListener("change", e => {
+    state.resume = e.target.files[0].name; save(); documents();
+  });
+  app.querySelector("[data-testid=continue-button]").addEventListener("click", () => {
+    const picked = app.querySelector("input[name^=document-select]:checked");
+    if (!state.saved || !picked) {
+      app.insertAdjacentHTML("beforeend", `<p role="alert">Please complete your personal details.</p>`);
+      return;
+    }
+    go("/role-requirements");
+  });
+}
+
+function questions() {
+  const qs = data.GetJobApplicationProcess.jobApplicationProcess.questionnaire.questions;
+  app.innerHTML = qs.map(q => {
+    const name = `questionnaire.${q.id}`;
+    const texts = q.options.map(o => o.text).join();
+    if (q.__typename === "SingleChoiceQuestion" && texts === "Yes,No") {  // two options: radios
+      return `<fieldset><legend>${q.text}</legend>${q.options.map(o =>
+        `<input type="radio" name="${name}" id="${o.id}" value="${o.uri}"><label for="${o.id}">${o.text}</label>`).join("")}</fieldset>`;
+    }
+    if (q.__typename === "SingleChoiceQuestion") {
+      return `<label for="question-${q.id}">${q.text}</label><select id="question-${q.id}" name="${name}">
+        <option value=""></option>${q.options.map(o => `<option value="${o.uri}">${o.text}</option>`).join("")}</select>`;
+    }
+    return `<fieldset><legend>${q.text}</legend>${q.options.map(o =>
+      `<input type="checkbox" name="${name}" id="${o.id}" value="${o.uri}"><label for="${o.id}">${o.text}</label>`).join("")}</fieldset>`;
+  }).join("") + `<button type="button" data-testid="continue-button">Continue</button>`;
+  app.querySelector("[data-testid=continue-button]").addEventListener("click", () => {
+    const missing = qs.filter(q => !app.querySelector(`select[name="questionnaire.${q.id}"]`)?.value
+      && !app.querySelector(`input[name="questionnaire.${q.id}"]:checked`));
+    if (missing.length) {
+      app.insertAdjacentHTML("beforeend", `<p role="alert">Before you can continue with the application, please address the following issues: ${missing[0].text} - Please make a selection</p>`);
+      return;
+    }
+    go("/profile");
+  });
+}
+
+function profile() {
+  app.innerHTML = `<p role="alert">Your Jobstreet Profile is part of your application.</p><h2>Career history</h2>`
+    + (state.nohistory ? `<input id="title">` : `<p>Software Engineer</p>`)
+    + `<button type="button" data-testid="continue-button">Continue</button>`;
+  app.querySelector("[data-testid=continue-button]").addEventListener("click", () => {
+    if (state.nohistory) {
+      app.insertAdjacentHTML("beforeend", `<p role="alert">Before you can continue with the application, please address the following issues: Career History - Please update your career history</p>`);
+      return;
+    }
+    go("/review");
+  });
+}
+
+function review() {
+  app.innerHTML = ["Public", "Standard", "Limited", "Hidden"].map(v =>
+    `<input type="radio" name="visibility" id="v${v}" value="${v}"
+      data-testid="profile-visibility-field2-radio-group-${v.toLowerCase()}"><label for="v${v}">${v}</label>`).join("")
+    + `<button type="submit" data-testid="review-submit-application">Submit application</button>`;
+  app.querySelector("[data-testid=review-submit-application]").addEventListener("click", () => {
+    history.pushState({}, "", `${JOB}/apply/success`);
+    app.innerHTML = "<h1>Application sent</h1>";
+  });
+}
+
+async function render() {
+  const path = location.pathname;
+  if (!path.includes("/apply")) return posting();
+  if (!data) await load();
+  if (path.endsWith("/role-requirements")) return questions();
+  if (path.endsWith("/profile")) return profile();
+  if (path.endsWith("/review")) return review();
+  return documents();
+}
+render();
+</script>
+</body>
+</html>

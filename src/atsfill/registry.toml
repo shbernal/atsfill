@@ -321,10 +321,11 @@ scope = { is = "supported", date = 2026-10-26, commit = "867de7d" }
 [jobstreet]
 kind = "board"
 share = 0.0047
-account = "to_read"  # Apply needs a SEEK account; its sign-in and sign-up have no password, an emailed OTP alone each time
+account = "to_read"  # Apply needs a SEEK account without a password, signed in by an emailed OTP on each site
 hosting = ["hosted"]
 hosts = ["jobstreet.com", "jobsdb.com"]
-scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_in_otp_only: Apply goes to the SEEK sign-in, with no password, every sign-in and sign-up a six-digit OTP emailed to the address, alone (14 of 15 employers)" }
+adapter = "jobstreet"
+scope = { is = "in_scope", date = 2026-10-28, reason = "adapter before its gate: 10 of 10 Quick apply dry runs ready; 13 of 24 postings link out to the employer's site" }
 
 [whatjobs-uk]
 kind = "aggregator"
