@@ -47,6 +47,12 @@ def email(user_dir: Path, adapter: str, scope: str | None) -> str | None:
     return emails.get(account_key(adapter, scope))
 
 
+def emails(user_dir: Path) -> list[str]:
+    """Every account's email, for a snapshot to scrub."""
+    path = user_dir / EMAILS
+    return list(json.loads(path.read_text()).values()) if path.exists() else []
+
+
 def remember(user_dir: Path, adapter: str, scope: str | None, address: str) -> None:
     path = user_dir / EMAILS
     emails = json.loads(path.read_text()) if path.exists() else {}

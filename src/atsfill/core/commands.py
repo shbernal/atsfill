@@ -1,6 +1,7 @@
 import shlex
 from collections.abc import Callable, Generator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from atsfill.core import (
     passwords,
     paths,
     registry,
+    snapshot,
     telemetry,
 )
 from atsfill.core.adapter import (
@@ -35,6 +37,7 @@ from atsfill.core.results import (
     AdapterStatus,
     Answer,
     Field,
+    ReportResult,
     Result,
     SessionReport,
     Status,
@@ -42,6 +45,14 @@ from atsfill.core.results import (
 )
 
 type Sessions = dict[str, Path]
+
+
+@dataclass
+class Seen:
+    """What a command saw before it ended, for a result it did not get to make."""
+
+    adapter: str | None = None  # the adapter detected
+    page: tuple[str, str] | None = None  # a failed run's page, for its report (ADR 0016)
 
 
 def _detect(candidates: list[Adapter], url: str, page: Page | None = None) -> Adapter | None:
@@ -90,18 +101,18 @@ def _credentials(
 
 @contextmanager
 def _opened(
-    data: Path, user: str, url: str, sessions: Sessions | None, detected: list[str]
+    data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen
 ) -> Generator[tuple[Page, Adapter] | Result]:
     """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
     lands on, else by its page; or the result that ends the command first. An adapter that
     needs an account gets the user's session, and only that adapter's; signed out with a
-    password source, atsfill signs in again (ADR 0015). The adapter's name goes in `detected`
+    password source, atsfill signs in again (ADR 0015). The adapter's name goes in `seen`
     once known. The adapters are fresh: none keeps state from another
     posting (a survey or the adapter gate runs many commands in one process)."""
     candidates = adapters()
     adapter = _detect(candidates, url)
     if adapter:
-        detected.append(adapter.name)
+        seen.adapter = adapter.name
     mine = paths.user_dir(data, user)
     session, credentials = None, None
     if isinstance(adapter, NeedsAccount):
@@ -129,7 +140,7 @@ def _opened(
         if adapter is None and (
             adapter := _detect(candidates, page.url) or _detect(candidates, url, page)
         ):
-            detected.append(adapter.name)
+            seen.adapter = adapter.name
         if adapter is None:
             yield _no_adapter(url)
             return
@@ -247,18 +258,41 @@ def _stops(result: Result) -> Generator[None]:
         result.status, result.reason = Status.BLOCKED, f"overlaid: {e}"
 
 
-def _in_budget(url: str, command: Callable[[list[str]], Result]) -> Result:
+def _in_budget(url: str, seen: Seen, command: Callable[[], Result]) -> Result:
     """Runs a command to a status whatever happens: past the click it reports `unknown` itself,
     before it an error the adapter did not expect means the page is not one it handles. The
     result keeps the adapter detected before the stop."""
-    detected: list[str] = []
     try:
-        return command(detected)
+        return command()
     except OutOfTime as e:
-        return Result(Status.BLOCKED, url, (detected or [None])[-1], f"time_budget: {e}")
+        return Result(Status.BLOCKED, url, seen.adapter, f"time_budget: {e}")
     except Exception as e:
         reason = f"adapter_error: {type(e).__name__}: {e}"
-        return Result(Status.UNSUPPORTED, url, (detected or [None])[-1], reason)
+        return Result(Status.UNSUPPORTED, url, seen.adapter, reason)
+
+
+def _kept(page: Page, seen: Seen, run: Callable[[], Result]) -> Result:
+    """The run's result; a failed run's page goes in `seen`, values stripped, when telemetry
+    is on."""
+    try:
+        result = run()
+    except Exception:
+        _capture(page, seen)
+        raise
+    if telemetry.verdict(result) == "fail":
+        _capture(page, seen)
+    return result
+
+
+def _capture(page: Page, seen: Seen) -> None:
+    with suppress(Exception):  # a page the budget closed has nothing to keep
+        if telemetry.level() != "off":
+            seen.page = snapshot.capture(page)
+
+
+def _secrets(data: Path, user: str, answers: dict[str, Answer], result: Result) -> set[str]:
+    emails = accounts.emails(paths.user_dir(data, user))
+    return snapshot.secrets(answers, result.fields, emails)
 
 
 def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], user: str) -> Result:
@@ -281,18 +315,20 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
     return result
 
 
-def _browser_read(
-    data: Path, user: str, url: str, sessions: Sessions | None, detected: list[str]
-) -> Result:
-    with _opened(data, user, url, sessions, detected) as opened:
+def _browser_read(data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen) -> Result:
+    with _opened(data, user, url, sessions, seen) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
-        result = _result(adapter, url, user)
-        with _stops(result):
-            _listed(result, adapter.browser_read(page))
-            _unfillable(result)
-        return result
+
+        def run() -> Result:
+            result = _result(adapter, url, user)
+            with _stops(result):
+                _listed(result, adapter.browser_read(page))
+                _unfillable(result)
+            return result
+
+        return _kept(page, seen, run)
 
 
 def _form_command(
@@ -303,46 +339,59 @@ def _form_command(
     sessions: Sessions | None,
     send: bool,
     resend: bool,
-    detected: list[str],
+    seen: Seen,
 ) -> Result:
     mine = paths.user_dir(data, user)  # before the page takes the lock its first use needs
-    with _opened(data, user, url, sessions, detected) as opened:
+    with _opened(data, user, url, sessions, seen) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
-        posting = adapter.posting(page.url)  # past any redirect a link goes through
-        if send and not paths.submit_enabled(adapter.name, user):
-            where = "" if user == paths.DEFAULT_USER else f" under [users.{user}]"
-            reason = (
-                f"submit_not_enabled: add {adapter.name} to `submit-allowed`{where}"
-                f" in {paths.config_file()}"
-            )
-            return Result(Status.REFUSED, url, adapter.name, reason=reason)
-        if send and not resend and attempts.blocks_send(mine, posting):
-            last = attempts.last(mine, posting)
-            reason = f"already_sent: last attempt ended {last}; pass --resend"
-            return Result(Status.REFUSED, url, adapter.name, reason=reason)
-        result = _fill(page, adapter, url, answers, user)
-        if result.status is not Status.READY:
-            return result
-        if not send:
-            return result
-        attempts.record(mine, posting, attempts.PENDING, url=url)
-        try:
-            result.evidence = adapter.submit(page)
-            if result.evidence:
-                result.status = Status.SUBMITTED
-            else:
-                result.status, result.reason = Status.UNKNOWN, "no_evidence"
-        except Blocked as e:
-            result.status, result.reason = Status.BLOCKED, str(e)
-        except Exception as e:  # after the click, nothing tells a failed send from a sent one
-            result.status = Status.UNKNOWN
-            result.reason = f"error_after_click: {type(e).__name__}: {e}"
-        attempts.record(
-            mine, posting, result.status, evidence=result.evidence, reason=result.reason
+        return _kept(
+            page, seen, lambda: _on_page(page, adapter, mine, user, url, answers, send, resend)
         )
+
+
+def _on_page(
+    page: Page,
+    adapter: Adapter,
+    mine: Path,
+    user: str,
+    url: str,
+    answers: dict[str, Answer],
+    send: bool,
+    resend: bool,
+) -> Result:
+    posting = adapter.posting(page.url)  # past any redirect a link goes through
+    if send and not paths.submit_enabled(adapter.name, user):
+        where = "" if user == paths.DEFAULT_USER else f" under [users.{user}]"
+        reason = (
+            f"submit_not_enabled: add {adapter.name} to `submit-allowed`{where}"
+            f" in {paths.config_file()}"
+        )
+        return Result(Status.REFUSED, url, adapter.name, reason=reason)
+    if send and not resend and attempts.blocks_send(mine, posting):
+        last = attempts.last(mine, posting)
+        reason = f"already_sent: last attempt ended {last}; pass --resend"
+        return Result(Status.REFUSED, url, adapter.name, reason=reason)
+    result = _fill(page, adapter, url, answers, user)
+    if result.status is not Status.READY:
         return result
+    if not send:
+        return result
+    attempts.record(mine, posting, attempts.PENDING, url=url)
+    try:
+        result.evidence = adapter.submit(page)
+        if result.evidence:
+            result.status = Status.SUBMITTED
+        else:
+            result.status, result.reason = Status.UNKNOWN, "no_evidence"
+    except Blocked as e:
+        result.status, result.reason = Status.BLOCKED, str(e)
+    except Exception as e:  # after the click, nothing tells a failed send from a sent one
+        result.status = Status.UNKNOWN
+        result.reason = f"error_after_click: {type(e).__name__}: {e}"
+    attempts.record(mine, posting, result.status, evidence=result.evidence, reason=result.reason)
+    return result
 
 
 def read(
@@ -354,11 +403,12 @@ def read(
 ) -> Result:
     """Lists the form's fields by a request read when an adapter has one (ADR 0011), else by a
     browser read."""
-    data = paths.data_dir(data_dir)
-    return telemetry.sent("read", _read(data, user, url, sessions), data)
+    data, seen = paths.data_dir(data_dir), Seen()
+    result = _read(data, user, url, sessions, seen)
+    return telemetry.sent("read", result, data, seen.page, _secrets(data, user, {}, result))
 
 
-def _read(data: Path, user: str, url: str, sessions: Sessions | None) -> Result:
+def _read(data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen) -> Result:
     for adapter in adapters():
         if not isinstance(adapter, ReadsByRequest):
             continue
@@ -370,7 +420,7 @@ def _read(data: Path, user: str, url: str, sessions: Sessions | None) -> Result:
                 return Result(Status.UNSUPPORTED, url, adapter.name, f"adapter_error: {e}")
             _unfillable(result)
             return result
-    return _in_budget(url, lambda seen: _browser_read(data, user, url, sessions, seen))
+    return _in_budget(url, seen, lambda: _browser_read(data, user, url, sessions, seen))
 
 
 def fill(
@@ -381,11 +431,11 @@ def fill(
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
-    data = paths.data_dir(data_dir)
+    data, seen = paths.data_dir(data_dir), Seen()
     result = _in_budget(
-        url, lambda seen: _form_command(data, user, url, answers, sessions, False, False, seen)
+        url, seen, lambda: _form_command(data, user, url, answers, sessions, False, False, seen)
     )
-    return telemetry.sent("fill", result, data)
+    return telemetry.sent("fill", result, data, seen.page, _secrets(data, user, answers, result))
 
 
 def send(
@@ -397,11 +447,16 @@ def send(
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
-    data = paths.data_dir(data_dir)
+    data, seen = paths.data_dir(data_dir), Seen()
     result = _in_budget(
-        url, lambda seen: _form_command(data, user, url, answers, sessions, True, resend, seen)
+        url, seen, lambda: _form_command(data, user, url, answers, sessions, True, resend, seen)
     )
-    return telemetry.sent("send", result, data)
+    return telemetry.sent("send", result, data, seen.page, _secrets(data, user, answers, result))
+
+
+def report(*, data_dir: Path | None = None) -> ReportResult:
+    """Sends the last failed run's URL and scrubbed page, once (ADR 0016)."""
+    return telemetry.report(paths.data_dir(data_dir))
 
 
 def _sessions(data: Path, users: list[str], candidates: list[Adapter]) -> list[SessionReport]:
@@ -589,13 +644,13 @@ def _headless(
     assert isinstance(account, SignsIn)
     url = account.login_url(scope)
 
-    def run(_: list[str]) -> Result:
+    def run() -> Result:
         result = Result(Status.READY, url, account.name)
         with open_page(data, None) as page, _stops(result), otp.source(user, account.name, scope):
             accounts.sign_in(page, account, scope, *credentials, session, details, create)
         return result
 
-    return _in_budget(url, run)
+    return _in_budget(url, Seen(), run)
 
 
 def logout(
