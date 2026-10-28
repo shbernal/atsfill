@@ -94,6 +94,58 @@
     </div>
   </section>
 
+  <section class="hall route" id="how-it-works" aria-labelledby="route-title" data-route>
+    <h2 id="route-title">From your agent to the employer</h2>
+    <p class="lede">Your agent writes the answers; atsfill carries them to the hiring system and checks what it holds before anything is sent.</p>
+    <div class="route-map" aria-hidden="true">
+      <ol class="stops">
+        <li class="stop" data-stop="you">
+          <span class="stop-dot"></span>
+          <span class="stop-name">You</span>
+          <span class="stop-note">your profile and resume, and the config that allows a send</span>
+        </li>
+        <li class="stop" data-stop="agent">
+          <span class="stop-dot"></span>
+          <span class="stop-name">Your agent</span>
+          <span class="stop-note">any agent with a shell</span>
+          <span class="stop-file">answers.json</span>
+        </li>
+        <li class="stop" data-stop="atsfill">
+          <span class="stop-dot"></span>
+          <span class="stop-name">atsfill</span>
+          <span class="stop-note">the send rules, one adapter per system, its own browser</span>
+        </li>
+        <li class="stop" data-stop="system">
+          <span class="stop-dot"></span>
+          <span class="stop-name">Hiring system</span>
+          <span class="stop-note">the employer's form</span>
+          <span class="stop-marks">
+            {%- for carrier in ["greenhouse", "ashby", "lever", "workday"] -%}
+              <img src="{{ ('assets/logos/' ~ carriers.logos[carrier]) | url }}" alt="" width="24" height="24">
+            {%- endfor -%}
+          </span>
+        </li>
+      </ol>
+      <span class="packet" data-packet></span>
+    </div>
+    <ol class="legs" data-legs>
+      {% for path, label, kind, text in [
+        ("you agent", "posting", "", "You give your agent a posting. It already knows your profile and resume."),
+        ("agent atsfill", "read", "", "The agent runs <code>atsfill read</code> on the posting."),
+        ("atsfill system", "browser", "", "atsfill opens the form in its own browser, through that system's adapter."),
+        ("system atsfill agent", "fields", "", "Every field comes back as JSON: its id, type, options and whether it is required."),
+        ("agent", "answers.json", "file", "The agent writes <code>answers.json</code> from what it knows about you, one answer per field id."),
+        ("agent atsfill system", "fill", "", "<code>fill</code> types each answer, then reads it back from the page. It never submits."),
+        ("system atsfill agent", "ready", "ok", "Every answer read back as given: <code>ready</code>. A mismatch comes back <code>refused</code>, naming the field."),
+        ("agent you", "send?", "", "Your agent asks you before it sends, and atsfill submits only on systems your config allows."),
+        ("you agent atsfill system", "send", "", "<code>send</code> fills again, checks every answer again, and only then submits."),
+        ("system atsfill agent you", "submitted", "ok", "The application reaches the employer: <code>submitted</code>, with the evidence of the send."),
+      ] %}
+      <li data-path="{{ path }}" data-label="{{ label }}" data-kind="{{ kind }}">{{ text }}</li>
+      {% endfor %}
+    </ol>
+  </section>
+
   <section class="hall" id="three-gates" aria-labelledby="three-gates-title">
     <h2 id="three-gates-title">One posting, three gates</h2>
     <p class="lede">The same commands for every system. Each prints one JSON line and an exit code your agent can branch on.</p>

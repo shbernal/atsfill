@@ -77,7 +77,7 @@ Small radii: 3px for cells and plates, 6px for panels. Rules are 1px; a 2px ink 
 
 ## Components
 
-The runway (one plane, one inline SVG symbol, rolling and lifting off in CSS; the same plane leaves a SUBMITTED row and marks the Departures sign), flap cells (two leaves, a split line, CSS rotateX through a character drum), gate lines (the command, a yellow marker, a copy button), sign plates (yellow on ink, the rules' terms), the carrier wall (each system's mark in a white tile, generated from the registry by `scripts.backlog`).
+The runway (one plane, one inline SVG symbol, rolling and lifting off in CSS; the same plane leaves a SUBMITTED row and marks the Departures sign), flap cells (two leaves, a split line, CSS rotateX through a character drum), gate lines (the command, a yellow marker, a copy button), sign plates (yellow on ink, the rules' terms and the route's stops), the route (four stops on one line, You, the agent, atsfill, the hiring system, with a packet riding each leg while its line in the list below is current; still, the list alone), the carrier wall (each system's mark in a white tile, generated from the registry by `scripts.backlog`).
 
 ## Do's and Don'ts
 
