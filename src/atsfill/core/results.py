@@ -102,6 +102,14 @@ class Result:
     side_effects: list[SideEffect] = field(default_factory=list)
     evidence: str | None = None
     notice: str | None = None  # telemetry's, the first time it is on (ADR 0016)
+    report: str | None = None  # how to send a failed run's report, when it was not sent
+
+
+@dataclass
+class ReportResult:
+    status: str  # sent | refused | blocked
+    reason: str | None = None
+    url: str | None = None  # the failed run's posting
 
 
 @dataclass

@@ -19,7 +19,16 @@ At `basic`, the default, one `run` event:
 
 Nothing the user typed is sent: no answers, no field values, no URL, no account, no email address, no file. Each event has its own random id and there is no install id, so nothing ties one machine's events together. Events go to PostHog's EU Cloud (Frankfurt), which drops IP addresses; atsfill turns GeoIP off too.
 
-`detailed` sends the same event.
+## A failed run's report
+
+A run whose verdict is `fail` has a `report` event: the `run` event's properties, plus the posting URL, the reason's detail, and `snapshot`, the page as it stood when the run failed. atsfill keeps the last one in the data directory, `failed-run.json`, and the command's JSON output names `atsfill report` (`report`), which sends it, once, whatever the level but `off`. At `detailed`, the run sends its report itself, and its `run` event carries the URL.
+
+The snapshot is scrubbed on the machine, before it is kept:
+
+- scripts, styles, images drawn in SVG and metadata are removed;
+- every field's value, checked and selected state is stripped;
+- every answer, uploaded file name, account email and value the account filled in for you is replaced by `[scrubbed]` wherever the page shows it, each word of an answer of up to four words too, and so is any email address; answers shorter than three characters are left;
+- a page over 800 KiB is cut to the smallest part holding every field of the failing step.
 
 ## The posting hash
 
@@ -30,7 +39,7 @@ The hash is pseudonymous, not anonymous. It is a SHA-256 of the posting's key, t
 In the config file (`~/.config/atsfill/config.toml` on Linux, `~/.atsfill/config.toml` elsewhere), at the top level:
 
 ```toml
-telemetry = "off"   # "basic" by default
+telemetry = "off"   # "basic" by default, or "detailed"
 ```
 
 Setting `DO_NOT_TRACK=1` in the environment also turns it off, whatever the config says. atsfill never sends from its test suite or from CI.
