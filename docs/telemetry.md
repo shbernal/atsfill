@@ -1,6 +1,6 @@
 # Telemetry
 
-atsfill sends one anonymous event after each `read`, `fill` and `send`, so that the [run history](adr/0016-telemetry-and-run-history.md) can show whether each hiring system's adapter works today. The first command that sends one says so on stderr and in its JSON output (`notice`), once per data directory.
+atsfill sends one anonymous event after each `read`, `fill`, `send` and `profile`, so that the [run history](adr/0016-telemetry-and-run-history.md) can show whether each hiring system's adapter works today. The first command that sends one says so on stderr and in its JSON output (`notice`), once per data directory.
 
 ## What is sent
 
@@ -9,11 +9,11 @@ At `basic`, the default, one `run` event:
 | Property | Example |
 |---|---|
 | `system` | `greenhouse`; for a posting no adapter handles, the registry source its host belongs to, or `unknown` |
-| `command` | `read`, `fill` or `send` |
+| `command` | `read`, `fill`, `send` or `profile` |
 | `verdict` | `pass`, `fail`, `excluded` or `unsupported` |
 | `status`, `reason` | `refused`, `mismatch`: the reason's code only, never its detail |
 | `version` | the atsfill version |
-| `posting` | a hash of the posting, see below |
+| `posting` | a hash of the posting, see below; none after `profile`, which has no posting |
 | `source` | `user` for an installed release, `dev` for a checkout of the repository |
 | `commit` | for `dev` only, the checkout's commit when it has no uncommitted changes |
 

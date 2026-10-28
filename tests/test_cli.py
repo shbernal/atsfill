@@ -6,7 +6,7 @@ import pytest
 
 from atsfill.adapters import adapters
 from atsfill.cli import emit, parser, run
-from atsfill.core import browser
+from atsfill.core import browser, commands
 from atsfill.core.results import (
     Check,
     Field,
@@ -17,6 +17,8 @@ from atsfill.core.results import (
     SideEffect,
     Status,
 )
+from tests.fake import FakeProfile
+from tests.test_accounts import storage_state
 
 
 def test_send_requires_answers():
@@ -139,3 +141,28 @@ def test_verbose_prints_the_whole_result(capsys):
     assert emitted(capsys, result, "send", verbose=True) == json.loads(
         json.dumps(dataclasses.asdict(result))
     )
+
+
+def test_a_profile_read_prints_its_fields_and_a_save_its_saved_steps(
+    server, tmp_path, monkeypatch, capsys
+):
+    adapter = FakeProfile(server)
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+    monkeypatch.setattr("atsfill.cli.adapters", lambda: [adapter])
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
+    data = tmp_path / "data"
+    session = data / "users/default/sessions/fakeprofile.json"
+    session.parent.mkdir(parents=True)
+    storage_state(session, "ok")
+    base = ["--data-dir", str(data), "profile", "fakeprofile"]
+    assert run(parser().parse_args(base)) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert ([f["id"] for f in out["fields"]], out["unloaded"]) == (["name"], ["level"])
+    answers = tmp_path / "profile.json"
+    answers.write_text(json.dumps({"name": "Ada", "level": "Fluent"}))
+    assert run(parser().parse_args([*base, "--answers", str(answers)])) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "status": "ready",
+        "system": "fakeprofile",
+        "saved": ["about", "level"],
+    }

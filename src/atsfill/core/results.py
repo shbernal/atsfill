@@ -86,7 +86,7 @@ class Check:
 
 @dataclass(frozen=True)
 class SideEffect:
-    step: str  # load | fill | upload | submit | sign_up
+    step: str  # load | fill | upload | submit | sign_up | profile
     reaches: str  # hiring_system | employer
     effect: str
 
@@ -101,6 +101,8 @@ class Result:
     checks: list[Check] = field(default_factory=list)
     side_effects: list[SideEffect] = field(default_factory=list)
     evidence: str | None = None
+    saved: list[str] = field(default_factory=list)  # the profile steps a `profile` run saved
+    unloaded: list[str] = field(default_factory=list)  # steps a profile read could not load yet
     notice: str | None = None  # telemetry's, the first time it is on (ADR 0016)
 
 

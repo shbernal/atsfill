@@ -42,6 +42,7 @@ def sent(config, monkeypatch) -> list[dict]:
         (Status.UNSUPPORTED, "no_adapter: no adapter for this hiring system", "unsupported"),
         (Status.REFUSED, "mismatch: level", "fail"),
         (Status.BLOCKED, "login_wall", "fail"),
+        (Status.BLOCKED, "profile_incomplete: no about, run `atsfill profile x`", "fail"),
         (Status.UNSUPPORTED, "unsupported_rendering: g: x", "fail"),
         (Status.UNSUPPORTED, "adapter_error: KeyError: x", "fail"),
         (Status.UNKNOWN, "no_evidence", "fail"),
@@ -136,3 +137,9 @@ def test_an_unknown_level_is_a_config_error(config):
     config.write_text('telemetry = "full"\n')
     with pytest.raises(paths.ConfigError, match="telemetry"):
         paths.telemetry()
+
+
+def test_a_profile_event_has_no_posting(monkeypatch):
+    monkeypatch.setattr(telemetry, "origin", lambda: ("user", None))
+    event = telemetry.event("profile", Result(Status.READY, "https://example.com/profile", "x"))
+    assert (event["command"], event["verdict"], "posting" in event) == ("profile", "pass", False)

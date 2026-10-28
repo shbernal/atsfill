@@ -5,11 +5,12 @@ import pytest
 
 from atsfill import core
 from atsfill.cli import parser, run
-from atsfill.core import attempts, commands, registry
+from atsfill.core import attempts, commands, registry, telemetry
 from atsfill.core.adapter import Blocked, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Field, FieldType, Is, Status
-from tests.fake import FIELDS, Fake
+from tests.fake import FIELDS, Fake, FakeProfile
+from tests.test_accounts import storage_state
 
 
 @pytest.fixture
@@ -385,3 +386,89 @@ def test_no_state_carries_from_one_posting_to_the_next(config, server, data, mon
     first = core.read(f"{server}/form.html", data_dir=data)
     second = core.read(f"{server}/form.html?second", data_dir=data)
     assert (first.status, second.status, second.reason) == (Status.READY, Status.READY, None)
+
+
+@pytest.fixture
+def keeper(server, config, data, monkeypatch) -> FakeProfile:
+    """A system that keeps an account profile, the default user signed in to it."""
+    adapter = FakeProfile(server)
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+    monkeypatch.setattr("atsfill.cli.adapters", lambda: [adapter])
+    session = data / "users/default/sessions/fakeprofile.json"
+    session.parent.mkdir(parents=True)
+    storage_state(session, "ok")
+    return adapter
+
+
+PROFILE = {"name": "Ada", "level": "Fluent"}
+
+
+def test_a_profile_read_lists_the_steps_it_can_load_and_names_the_rest(keeper, data):
+    result = core.profile("fakeprofile", data_dir=data)
+    assert (result.status, [f.id for f in result.fields], result.unloaded) == (
+        Status.READY,
+        ["name"],
+        ["level"],
+    )
+    assert keeper.saved == {}
+
+
+def test_a_profile_saves_each_step_then_reads_back_as_saved(keeper, data):
+    result = core.profile("fakeprofile", PROFILE, data_dir=data)
+    assert (result.status, result.reason, result.saved) == (Status.READY, None, ["about", "level"])
+    assert keeper.saved == {"about": {"name": "Ada"}, "level": {"level": "Fluent"}}
+    read = core.profile("fakeprofile", data_dir=data)
+    assert [(f.id, f.prefilled) for f in read.fields] == [("name", "Ada"), ("level", "Fluent")]
+
+
+def test_a_profile_run_again_saves_nothing(keeper, data):
+    core.profile("fakeprofile", PROFILE, data_dir=data)
+    result = core.profile("fakeprofile", PROFILE, data_dir=data)
+    assert (result.status, result.saved) == (Status.READY, [])
+
+
+def test_a_profile_mismatch_stops_after_the_steps_saved(keeper, data, monkeypatch):
+    read_back = keeper.profile_read_back
+    monkeypatch.setattr(
+        keeper,
+        "profile_read_back",
+        lambda page: {"level": "Native"} if keeper.step == "level" else read_back(page),
+    )
+    result = core.profile("fakeprofile", PROFILE, data_dir=data)
+    assert (result.status, result.reason, result.saved) == (
+        Status.REFUSED,
+        "mismatch: level",
+        ["about"],
+    )
+    assert keeper.saved == {"about": {"name": "Ada"}}
+
+
+def test_a_step_the_page_refuses_stops_the_profile(keeper, data):
+    keeper.refuses = "phone_rule: a phone is required"
+    result = core.profile("fakeprofile", PROFILE, data_dir=data)
+    assert (result.status, result.reason, result.saved) == (
+        Status.REFUSED,
+        "phone_rule: a phone is required",
+        [],
+    )
+
+
+def test_an_answer_no_step_lists_refuses(keeper, data):
+    result = core.profile("fakeprofile", {**PROFILE, "phone": "1"}, data_dir=data)
+    assert (result.status, result.reason) == (Status.REFUSED, "invalid_answers: no field phone")
+
+
+def test_a_form_command_on_an_incomplete_profile_names_the_profile_command(
+    keeper, server, answers, data
+):
+    result = core.fill(f"{server}/form.html?account", answers, data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.BLOCKED,
+        "profile_incomplete: no about, level, run `atsfill profile fakeprofile`",
+    )
+    assert telemetry.verdict(result) == "fail"
+
+
+def test_profile_needs_an_adapter_that_keeps_one(fake, config, data):
+    with pytest.raises(ValueError):
+        core.profile("fake", data_dir=data)
