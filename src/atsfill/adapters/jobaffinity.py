@@ -408,9 +408,9 @@ def _set(form, c: _Control, answer: Answer) -> None:
         case "radio":
             radio = next((i for i, t in c.options.items() if t == value), value)
             form.locator(f"label[for='{radio}']").click()
-        case "checkbox":  # drawn under its label, which takes the click
+        case "checkbox":  # under its label, whose notice link takes a click without ticking it
             if control.is_checked() != (value == "Yes"):
-                form.locator(f"label[for='{control.get_attribute('id')}']").click()
+                control.evaluate("box => box.click()")
         case "number" if not NUMBER.fullmatch(value.strip()):
             pass  # the input takes no text: left empty, it reads back as a mismatch
         case "dmy":

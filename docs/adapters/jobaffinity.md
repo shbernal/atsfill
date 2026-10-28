@@ -42,7 +42,7 @@ Each rendering, and in how many of 41 postings it shows (2026-10-28):
 ## Filling
 
 - Documents first, then, on the older form, until the CV analysis is done, so a filled answer is never overwritten and an unanswered field holds what the analysis gave.
-- A text, phone or date input is filled, an older form's date as `DD/MM/YYYY`; a number input takes only a number, else it is left empty and reads back as a mismatch. A select is set to the value of the option whose text is the answer. A radio and the consent box are drawn under their labels: the label is clicked.
+- A text, phone or date input is filled, an older form's date as `DD/MM/YYYY`; a number input takes only a number, else it is left empty and reads back as a mismatch. A select is set to the value of the option whose text is the answer. A radio is drawn under its label: the label is clicked. The consent box is too, but its label holds a link to the legal notice that, where the notice starts hidden, shows it and cancels the click: the box is clicked from the page's script.
 - A dry run fills the older form's questionnaire in a second tab of the same session, opened on its URL.
 
 ## Read-back and submit

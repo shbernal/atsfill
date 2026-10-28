@@ -109,7 +109,9 @@
   <div class="form-group">
     <div class="custom-control custom-checkbox">
       <input type="checkbox" name="gdpr_agreement" class="custom-control-input" id="_identity-gdpr_agreement-field">
-      <label for="_identity-gdpr_agreement-field" class="custom-control-label">Vous confirmez avoir pris connaissance et validé <span>les conditions d'utilisation de vos données personnelles.</span></label>
+      <label for="_identity-gdpr_agreement-field" class="custom-control-label">Vous confirmez avoir pris connaissance et validé <span id="js-legal-notice-control-form">les conditions d'utilisation de vos données personnelles.</span></label>
+    </div>
+    <div id="js-legal-notice-form" style="display: none">Les données personnelles vous concernant sont traitées par Acme.
     </div>
   </div>
   <input type="submit" value="Valider">
@@ -132,6 +134,12 @@
   availability.addEventListener("change", toggle);
   toggle();
   // The checkbox is drawn under its label, which takes the click.
+  // With the notice hidden, the label's link shows it instead of ticking the box.
+  document.getElementById("js-legal-notice-control-form").addEventListener("click", e => {
+    e.preventDefault();
+    const notice = document.getElementById("js-legal-notice-form");
+    notice.style.display = notice.style.display === "none" ? "" : "none";
+  });
   const box = document.getElementById("_identity-gdpr_agreement-field");
   box.style.cssText = "position:absolute;opacity:0;z-index:-1";
 </script>
