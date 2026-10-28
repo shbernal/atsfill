@@ -30,7 +30,7 @@ The registry covers 90.2% of postings.
 | eightfold | ats | 0.4% | none | hosted |  | [supported](eightfold.md) |
 | pinpoint | ats | 0.4% | none | hosted |  | [supported](pinpoint.md) |
 | hiringthing | ats | 0.3% | none | hosted |  | [supported](hiringthing.md) |
-| recruiterflow | ats | 0.1% | none | hosted |  | [in scope](recruiterflow.md) |
+| recruiterflow | ats | 0.1% | none | hosted |  | [supported](recruiterflow.md) |
 | jobaffinity | ats |  | none | hosted |  | [supported](jobaffinity.md) |
 | join | ats | 0.3% | to_send | hosted |  | [supported](join.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [supported](wttj.md) |

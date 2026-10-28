@@ -277,6 +277,7 @@ share = 0.0011
 account = "none"
 hosting = ["hosted"]
 adapter = "recruiterflow"
+scope = { is = "supported", date = 2026-10-28, commit = "cde64b4" }
 
 [hrmdirect]
 kind = "ats"
