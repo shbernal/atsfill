@@ -31,7 +31,7 @@ The registry covers 90.2% of postings.
 | pinpoint | ats | 0.4% | none | hosted |  | [supported](pinpoint.md) |
 | hiringthing | ats | 0.3% | none | hosted |  | [supported](hiringthing.md) |
 | join | ats | 0.3% | to_send | hosted |  | [supported](join.md) |
-| workatastartup | board | 0.1% | to_send | hosted |  | [in scope](workatastartup.md) |
+| workatastartup | board | 0.1% | to_send | hosted |  | [supported](workatastartup.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [supported](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [supported](workday.md) |
 | successfactors | ats | 3.5% | to_read | hosted |  | [supported](successfactors.md) |

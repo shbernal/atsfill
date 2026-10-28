@@ -53,6 +53,7 @@ share = 0.0008
 account = "to_send"
 hosting = ["hosted"]
 adapter = "workatastartup"
+scope = { is = "supported", date = 2026-10-28, commit = "7f980d7" }
 
 [workday]
 kind = "ats"
