@@ -1,6 +1,6 @@
 # Manatal
 
-Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/manatal/apply.html](../../tests/pages/manatal/apply.html), drawing the fields of [form.json](../../tests/pages/manatal/form.json), served behind a job page in `tests/test_manatal.py`.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/manatal/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/manatal/apply.html), drawing the fields of [form.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/manatal/form.json), served behind a job page in `tests/test_manatal.py`.
 
 ## Where the form is
 

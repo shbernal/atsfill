@@ -1,6 +1,6 @@
 # Lever
 
-Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/lever/apply.html](../../tests/pages/lever/apply.html), served as a posting's application page in `tests/test_lever.py`.
+Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/lever/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/lever/apply.html), served as a posting's application page in `tests/test_lever.py`.
 
 ## Where the form is
 

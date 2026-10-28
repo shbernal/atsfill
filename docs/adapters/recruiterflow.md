@@ -1,6 +1,6 @@
 # Recruiterflow
 
-Recruiterflow's posting pages, observed on live postings, last on 2026-10-28. The fixture page is [tests/pages/recruiterflow/form.html](../../tests/pages/recruiterflow/form.html), served as `recruiterflow.com` in `tests/test_recruiterflow.py`: one example of each rendering below.
+Recruiterflow's posting pages, observed on live postings, last on 2026-10-28. The fixture page is [tests/pages/recruiterflow/form.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/recruiterflow/form.html), served as `recruiterflow.com` in `tests/test_recruiterflow.py`: one example of each rendering below.
 
 ## Where the form is
 
