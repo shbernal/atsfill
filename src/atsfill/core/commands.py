@@ -23,12 +23,14 @@ from atsfill.core.adapter import (
     Adapter,
     Blocked,
     CreatesAccount,
+    CreatesAccountByOtp,
     ListsShownFields,
     NeedsAccount,
     NotTaken,
     ReadsByRequest,
     Refused,
     SignsIn,
+    SignsInByOtp,
     SignUpDetails,
     Unsupported,
 )
@@ -59,14 +61,14 @@ def _detect(candidates: list[Adapter], url: str, page: Page | None = None) -> Ad
     return next((a for a in candidates if a.detect(url, page)), None)
 
 
-def login_command(adapter: str, user: str, url: str | None) -> str:
+def login_command(adapter: str, user: str, url: str | None, *more: str) -> str:
     """The `login` command line for one account: its user, and a posting where it is scoped."""
     command = ["atsfill", "login", adapter]
     if user != paths.DEFAULT_USER:
         command += ["--user", user]
     if url:
         command += ["--url", url]
-    return shlex.join(command)
+    return shlex.join([*command, *more])
 
 
 def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
@@ -74,27 +76,38 @@ def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
     return Result(Status.BLOCKED, url, adapter.name, reason=f"login_required: run `{command}`")
 
 
-type Credentials = tuple[str, str]  # email, password
+type Credentials = tuple[str, str | None]  # email, password: None for an account without one
 # Refusals the page states before any account exists: the generated password goes.
 NO_ACCOUNT = {"email_in_use", "email_domain_rejected", "password_rule", "sign_up_details"}
 
 
-def _email_link(reason: str | None, email: str, command: str) -> str | None:
-    """Names the address a verification link went to and the command to run once clicked."""
-    if reason and reason.split(":")[0] == "email_link":
+def _next_step(
+    reason: str | None, email: str, adapter: str, user: str, url: str | None
+) -> str | None:
+    """Names the command to run next: once the verification link sent to the address is
+    clicked, or `--create` for an email the system has no account for."""
+    code = (reason or "").split(":")[0]
+    if code == "email_link":
+        command = login_command(adapter, user, url)
         return f"email_link: click the link sent to {email}, then run `{command}`"
+    if code == "no_account":
+        command = login_command(adapter, user, url, "--email", email, "--create")
+        return f"no_account: {email} has no {adapter} account; run `{command}`"
     return reason
 
 
 def _credentials(
     adapter: NeedsAccount, user: str, mine: Path, scope: str | None, given: str | None = None
 ) -> Credentials | None:
-    """The account's email and a password from its password source, where atsfill can sign in
+    """The account's email and a password from its password source, or no password for an
+    account without one when the user has an OTP command for it, where atsfill can sign in
     through the adapter; None otherwise."""
-    if not isinstance(adapter, SignsIn):
+    if not isinstance(adapter, (SignsIn, SignsInByOtp)):
         return None
     if not (email := accounts.email(mine, adapter.name, scope)):
         return None
+    if isinstance(adapter, SignsInByOtp):
+        return (email, None) if otp.command(user, adapter.name) else None
     password = passwords.password(user, mine, adapter.name, scope, email, given)
     return (email, password) if password else None
 
@@ -106,7 +119,8 @@ def _opened(
     """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
     lands on, else by its page; or the result that ends the command first. An adapter that
     needs an account gets the user's session, and only that adapter's; signed out with a
-    password source, atsfill signs in again (ADR 0015). The adapter's name goes in `seen`
+    password source, or an OTP command for an account without a password, atsfill signs in
+    again (ADR 0015). The adapter's name goes in `seen`
     once known. The adapters are fresh: none keeps state from another
     posting (a survey or the adapter gate runs many commands in one process)."""
     candidates = adapters()
@@ -162,8 +176,8 @@ def _sign_in_again(
     url: str,
     credentials: Credentials | None,
 ) -> Result | None:
-    """Signs in with the account's password source, stores the session and loads the posting
-    again; the result that ends the command instead, `login_required` without a source."""
+    """Signs in as `_credentials` allows, stores the session and loads the posting again; the
+    result that ends the command instead, `login_required` where it does not."""
     result = Result(Status.BLOCKED, url, adapter.name)
     with _stops(result):
         scope = adapter.account_scope(url)
@@ -172,14 +186,15 @@ def _sign_in_again(
         except passwords.PasswordError as e:
             result.reason = f"password_source: {e}"
             return result
-        if credentials is None or not isinstance(adapter, SignsIn):
+        if credentials is None or not isinstance(adapter, (SignsIn, SignsInByOtp)):
             return _login_required(url, adapter, user)
         session = accounts.session_file(mine, adapter.name, scope)
         accounts.sign_in(page, adapter, scope, *credentials, session)
         page.goto(url)
         return None
-    command = login_command(adapter.name, user, url if adapter.per_employer else None)
-    result.reason = _email_link(result.reason, credentials[0] if credentials else "", command)
+    email = credentials[0] if credentials else ""
+    scoped = url if adapter.per_employer else None
+    result.reason = _next_step(result.reason, email, adapter.name, user, scoped)
     return result
 
 
@@ -485,6 +500,7 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         users=users,
         adapters=[_adapter_status(a, users) for a in candidates],
         sessions=_sessions(data, users, candidates),
+        run_history=registry.RUN_HISTORY,
     )
 
 
@@ -533,7 +549,9 @@ def login(
     creates the account with a password atsfill generates and stores first (a side effect),
     giving the sign-up the user's `details`; with a password already stored, the account may
     exist, so it signs in with that password and keeps the account's email instead, the
-    `details` finishing a sign-up the account was left in."""
+    `details` finishing a sign-up the account was left in. An account without a password signs
+    in through the user's OTP command in place of a password source, and is created the same
+    way."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
     mine = paths.user_dir(data, user)
@@ -543,8 +561,11 @@ def login(
         raise ValueError("creating an account needs --email")
     if details and not create:
         raise ValueError("--details goes with --create")
+    by_otp = isinstance(account, SignsInByOtp)
+    if password and by_otp:
+        raise ValueError(f"{adapter} signs in with an emailed OTP, not a password")
     try:
-        kept = create and passwords.stored(mine, adapter, scope) is not None
+        kept = create and not by_otp and passwords.stored(mine, adapter, scope) is not None
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
@@ -578,11 +599,8 @@ def login(
         )
     else:
         result = _headless(data, user, account, scope, credentials, session, details)
-        command = login_command(adapter, user, url)
-        report.status, report.reason = (
-            result.status,
-            _email_link(result.reason, credentials[0], command),
-        )
+        report.status = result.status
+        report.reason = _next_step(result.reason, credentials[0], adapter, user, url)
     if report.reason is None:
         report.session = report.status = "signed_in"
     return report
@@ -599,8 +617,9 @@ def _create(
 ) -> SessionReport:
     """Creates the account: refused before the browser opens when `details` lack one the
     sign-up asks; the generated password is stored before the click, and deleted only on a
-    refusal the page states before any account exists."""
-    if not isinstance(account, CreatesAccount):
+    refusal the page states before any account exists. An account without a password gets
+    none."""
+    if not isinstance(account, (CreatesAccount, CreatesAccountByOtp)):
         report.status = Status.UNSUPPORTED
         report.reason = f"no_sign_up: atsfill cannot create a {account.name} account"
         return report
@@ -608,9 +627,10 @@ def _create(
         report.status = Status.REFUSED
         report.reason = f"sign_up_details: no {', '.join(missing)}"
         return report
-    password = passwords.generate()
+    password = None if isinstance(account, CreatesAccountByOtp) else passwords.generate()
     try:
-        passwords.store(mine, account.name, report.scope, password)
+        if password:
+            passwords.store(mine, account.name, report.scope, password)
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
@@ -618,10 +638,14 @@ def _create(
     result = _headless(
         data, report.user, account, report.scope, credentials, report.path, details, create=True
     )
-    command = login_command(account.name, report.user, url)
-    report.status, report.reason = result.status, _email_link(result.reason, email, command)
-    report.password = "stored"
-    if result.status is Status.REFUSED and (result.reason or "").split(":")[0] in NO_ACCOUNT:
+    report.status = result.status
+    report.reason = _next_step(result.reason, email, account.name, report.user, url)
+    report.password = "stored" if password else "none"
+    if (
+        password
+        and result.status is Status.REFUSED
+        and (result.reason or "").split(":")[0] in NO_ACCOUNT
+    ):
         passwords.delete(mine, account.name, report.scope)
         report.password = "deleted"
     if report.reason is None:
@@ -641,7 +665,7 @@ def _headless(
 ) -> Result:
     """Signs in, or creates the account with `create`, through the adapter, an OTP it meets
     from the user's `otp-commands` entry: `ready` once the session is stored."""
-    assert isinstance(account, SignsIn)
+    assert isinstance(account, (SignsIn, SignsInByOtp))
     url = account.login_url(scope)
 
     def run() -> Result:

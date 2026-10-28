@@ -8,9 +8,11 @@ from pathlib import Path
 from atsfill.core import browser
 from atsfill.core.adapter import (
     CreatesAccount,
+    CreatesAccountByOtp,
     FinishesSignUp,
     NeedsAccount,
     SignsIn,
+    SignsInByOtp,
     SignUpDetails,
     Unsupported,
 )
@@ -61,21 +63,30 @@ def remember(user_dir: Path, adapter: str, scope: str | None, address: str) -> N
 
 def sign_in(
     page: Page,
-    adapter: SignsIn,
+    adapter: SignsIn | SignsInByOtp,
     scope: str | None,
     address: str,
-    password: str,
+    password: str | None,
     session: Path,
     details: SignUpDetails | None = None,
     create: bool = False,
 ) -> None:
     """Signs in from the system's login page and stores the session: with `create`, creates
     the account from the user's sign-up `details`; without, `details` finish a sign-up the
-    account was left in, where the adapter knows that step.
+    account was left in, where the adapter knows that step. An account without a password
+    (`password` None) signs in by OTP, and creates the same way.
     Raises what the adapter raises, without the password in it."""
     page.goto(adapter.login_url(scope))
     try:
-        if create:
+        if isinstance(adapter, SignsInByOtp):
+            if create:
+                assert isinstance(adapter, CreatesAccountByOtp) and details is not None
+                adapter.sign_up_by_otp(page, address, details)
+            else:
+                adapter.sign_in_by_otp(page, address)
+        elif password is None:
+            raise AssertionError(f"{adapter.name} signs in with a password")
+        elif create:
             assert isinstance(adapter, CreatesAccount) and details is not None
             adapter.sign_up(page, address, password, details)
         elif details is not None and isinstance(adapter, FinishesSignUp):
@@ -83,7 +94,7 @@ def sign_in(
         else:
             adapter.sign_in(page, address, password)
     except Exception as e:
-        if password in str(e):
+        if password and password in str(e):
             raise redacted(e, password) from None
         raise
     if not adapter.signed_in(page.request, scope):

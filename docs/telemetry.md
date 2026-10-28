@@ -1,6 +1,6 @@
 # Telemetry
 
-atsfill sends one anonymous event after each `read`, `fill` and `send`, so that the [run history](adr/0016-telemetry-and-run-history.md) can show whether each hiring system's adapter works today. The first command that sends one says so on stderr and in its JSON output (`notice`), once per data directory.
+atsfill sends one anonymous event after each `read`, `fill` and `send`, so that the [run history](run-history.md) can show whether each hiring system's adapter works today. The first command that sends one says so on stderr and in its JSON output (`notice`), once per data directory.
 
 ## What is sent
 

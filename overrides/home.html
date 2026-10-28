@@ -1,0 +1,179 @@
+{% extends "main.html" %}
+{% import "partials/carriers.html" as carriers with context %}
+
+{% macro flaps(text, width) -%}
+  <span class="flaps" data-flaps="{{ text }}"><span class="sr-only" data-flaps-text>{{ text }}</span>
+    {%- for i in range(width) -%}<span class="flap" aria-hidden="true">{{ text[i] if i < text | length and text[i] != " " else "" }}</span>{%- endfor -%}
+  </span>
+{%- endmacro %}
+
+{% macro gate(label, command) -%}
+  <div class="gate">
+    <span class="gate-label">{{ label }}</span>
+    <code class="gate-command">{{ command | e }}</code>
+    <button class="gate-copy" type="button" data-copy="{{ command | e }}">Copy</button>
+  </div>
+{%- endmacro %}
+
+{% block extrahead %}
+  <link rel="preload" href="{{ 'assets/fonts/overpass-normal.woff2' | url }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ 'assets/fonts/overpass-mono-normal.woff2' | url }}" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ 'assets/home.css' | url }}">
+{% endblock %}
+
+{% block header %}
+  <header class="hall-header">
+    <a class="wordmark" href="{{ '.' | url }}">atsfill</a>
+    <span class="hall-sign">Departures</span>
+    <time class="clock" data-clock></time>
+    <nav class="hall-nav" aria-label="Site">
+      <a href="{{ 'getting-started/' | url }}">Docs</a>
+      <a href="{{ 'adapters/' | url }}">Systems</a>
+      <a href="{{ config.repo_url }}">GitHub</a>
+    </nav>
+  </header>
+{% endblock %}
+
+{% block tabs %}{% endblock %}
+{% block site_nav %}{% endblock %}
+
+{% block container %}
+<main class="home">
+  <section class="board-hall" aria-labelledby="offer">
+    <div class="offer">
+      <h1 id="offer">Your agent applies. atsfill checks every answer before it sends.</h1>
+      <p>One CLI reads the application form on {{ carriers.count }} hiring systems, fills it with your answers, reads each one back, and sends only when all of them match.</p>
+      <div class="gates">
+        {{ gate("Gate 1", "uvx atsfill install-browser") }}
+        {{ gate("Gate 2", "uvx atsfill read <posting-url>") }}
+      </div>
+    </div>
+
+    <div class="board" data-board>
+      <table>
+        <caption>Example run: sample postings, the kind of results atsfill prints</caption>
+        <thead>
+          <tr><th scope="col">Time</th><th scope="col">Carrier</th><th scope="col">Posting</th><th scope="col" class="col-command">Command</th><th scope="col">Remarks</th></tr>
+        </thead>
+        <tbody>
+          {% for time, carrier, name, posting, command, remark in [
+            ("09:12", "greenhouse", "Greenhouse", "Acme – Backend Engineer", "fill", "READY"),
+            ("09:14", "ashby", "Ashby", "Northwind – Data Analyst", "send", "SUBMITTED"),
+            ("09:15", "lever", "Lever", "Contoso – Product Designer", "send", "REFUSED"),
+            ("09:21", "workday", "Workday", "Fabrikam – Support Lead", "read", "READY"),
+            ("09:34", None, "Own careers site", "Litware – QA Engineer", "read", "UNSUPPORTED"),
+          ] %}
+          <tr data-remark="{{ remark | lower }}">
+            <td class="time">{{ time }}</td>
+            <td class="carrier">
+              {% if carrier and carriers.logos[carrier] %}<img src="{{ ('assets/logos/' ~ carriers.logos[carrier]) | url }}" alt="" width="28" height="28">{% else %}<span class="no-carrier" aria-hidden="true">{{ name[0] }}</span>{% endif %}
+              <span class="carrier-name">{{ name }}</span>
+            </td>
+            <td class="posting">{{ posting }}</td>
+            <td class="command col-command">{{ command }}</td>
+            <td class="remark">{{ flaps(remark, 11) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="hall" id="three-gates" aria-labelledby="three-gates-title">
+    <h2 id="three-gates-title">One posting, three gates</h2>
+    <p class="lede">The same commands for every system. Each prints one JSON line and an exit code your agent can branch on.</p>
+    <ol class="steps">
+      <li>
+        <h3><span class="step-cmd">read</span> lists the form</h3>
+        <p>Every field with its id, type, options and whether it is required, so the agent knows what to answer.</p>
+        <pre><code>$ uvx atsfill read "$POSTING"
+{"status":"ready",
+ "system":"greenhouse",
+ "fields":[{"id":"level",
+   "label":"English level",
+   "type":"choice",
+   "required":true,
+   "options":["Basic","Fluent"]},
+   …]}</code></pre>
+      </li>
+      <li>
+        <h3><span class="step-cmd">fill</span> reads every answer back</h3>
+        <p>A dry run: it fills the form, reads each field back from the page, and never submits. <code>ready</code> means every answer read back as given; a mismatch names the field.</p>
+        <pre><code>$ uvx atsfill fill "$POSTING" \
+    --answers answers.json
+{"status":"ready",
+ "system":"greenhouse"}</code></pre>
+      </li>
+      <li>
+        <h3><span class="step-cmd">send</span> submits when all match</h3>
+        <p>Only on a system you allowed, only once per posting, and only when every answer reads back as given.</p>
+        <pre><code>$ uvx atsfill send "$POSTING" \
+    --answers answers.json
+{"status":"submitted",
+ "system":"greenhouse",
+ "evidence":"https://job-boards.greenhouse.io/acme/jobs/1234/confirmation"}</code></pre>
+      </li>
+    </ol>
+    <p class="example-note">Example output, shortened and wrapped: atsfill prints each result on one line.</p>
+  </section>
+
+  <section class="closed" id="gate-closed" aria-labelledby="gate-closed-title">
+    <h2 id="gate-closed-title">A wrong answer never boards</h2>
+    <div class="mismatch">
+      <div><span class="mismatch-label">Answer</span><span class="mismatch-value">Fluent</span></div>
+      <div><span class="mismatch-label">Read back</span><span class="mismatch-value is-wrong">Basic</span></div>
+      <div class="mismatch-remark">{{ flaps("REFUSED", 7) }}</div>
+    </div>
+    <p>A custom dropdown kept its old value. atsfill compares each answer with what the page holds and refuses the send before the click: nothing reaches the employer, and the result names the field.</p>
+    <pre><code>{"status":"refused",
+ "system":"lever",
+ "reason":"mismatch: level",
+ "checks":[{"field_id":"level","read_back":"Basic"}]}</code></pre>
+  </section>
+
+  <section class="hall carriers" id="carriers" aria-labelledby="carriers-title">
+    <h2 id="carriers-title">{{ carriers.count }} carriers serve this terminal</h2>
+    <p class="lede">A hiring system is supported once a dry run passed on five employers. Any other one answers <code>unsupported</code>, so your agent can fall back to driving a browser itself.</p>
+    {{ carriers.wall() }}
+    <p><a href="{{ 'adapters/' | url }}">Every hiring system mapped, and each one's form as observed</a></p>
+  </section>
+
+  <section class="rules" id="rules" aria-labelledby="rules-title">
+    <h2 id="rules-title">Terminal rules</h2>
+    <dl>
+      <div><dt>Submitting is off</dt><dd>until you list a system under <code>submit-allowed</code>, in a config file the agent does not write.</dd></div>
+      <div><dt>One send per posting</dt><dd>A posting already sent is refused unless you pass <code>--resend</code>.</dd></div>
+      <div><dt>Side effects declared</dt><dd>Some systems save answers as they are typed. <code>atsfill status</code> lists what each one does before anything is sent.</dd></div>
+      <div><dt>Accounts handled</dt><dd>Where a system needs one, atsfill signs in from your password manager and types emailed codes from your mailbox command.</dd></div>
+      <div><dt>Telemetry you can turn off</dt><dd>One anonymous event per command, never your answers. <a href="{{ 'telemetry/' | url }}">What is sent</a>.</dd></div>
+    </dl>
+  </section>
+
+  <section class="board-hall boarding" id="boarding" aria-labelledby="boarding-title">
+    <h2 id="boarding-title">{{ flaps("NOW BOARDING", 12) }}</h2>
+    <div class="board">
+      <div class="gates">
+        {{ gate("Gate 1", "uvx atsfill install-browser") }}
+        {{ gate("Gate 2", "uvx atsfill read <posting-url>") }}
+      </div>
+    </div>
+    <nav class="boarding-links" aria-label="Next">
+      <a href="{{ 'getting-started/' | url }}">Getting started</a>
+      <a href="{{ 'adr/' | url }}">How it is built</a>
+      <a href="https://pypi.org/project/atsfill/">PyPI</a>
+      <a href="{{ config.repo_url }}">GitHub</a>
+    </nav>
+  </section>
+</main>
+{% endblock %}
+
+{% block footer %}
+  <footer class="hall-footer">
+    <p>{{ config.copyright }}</p>
+  </footer>
+{% endblock %}
+
+{% block scripts %}
+  {{ super() }}
+  <script src="{{ 'assets/home.js' | url }}" defer></script>
+{% endblock %}
