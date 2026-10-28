@@ -271,6 +271,13 @@ hosting = ["hosted"]
 adapter = "recruitee"
 scope = { is = "supported", date = 2026-10-25, commit = "f47f160" }
 
+[recruiterflow]
+kind = "ats"
+share = 0.0011
+account = "none"
+hosting = ["hosted"]
+adapter = "recruiterflow"
+
 [hrmdirect]
 kind = "ats"
 share = 0.0059
