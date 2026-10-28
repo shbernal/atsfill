@@ -42,7 +42,7 @@ def out_of_scope(field_id: str, what: str) -> str:
 
 class Refused(Exception):
     """The system turned down a sign-in or a sign-up for a reason it states:
-    `email_in_use`, `email_domain_rejected`, `password_rule`, `wrong_password`.
+    `email_in_use`, `email_domain_rejected`, `password_rule`, `wrong_password`, `no_account`.
 
     The message is the result's reason, `code` or `code: detail`.
     """
@@ -125,6 +125,18 @@ class SignsIn(NeedsAccount, Protocol):
         ...
 
 
+@runtime_checkable
+class SignsInByOtp(NeedsAccount, Protocol):
+    """An adapter atsfill can sign in through with an email and the OTP its system emails each
+    time, an account without a password (ADR 0015)."""
+
+    def sign_in_by_otp(self, page: Page, email: str) -> None:
+        """Signs in on the page `login_url` loaded, typing the OTP with `otp.enter`. Raises as
+        `sign_in` does, and `Refused("no_account")` before the click that would turn an unknown
+        email's sign-in into a sign-up."""
+        ...
+
+
 ADDRESS = ("street", "city", "state", "zip", "country")
 PHONE = re.compile(r"\+[1-9][0-9]{6,14}")  # E.164
 COUNTRY = re.compile(r"[A-Z]{2}")  # ISO 3166 alpha-2
@@ -180,6 +192,20 @@ class CreatesAccount(SignsIn, Protocol):
         """Creates the account from the page `login_url` loaded, signed in once it returns.
         Raises as `sign_in` does; `Refused` names the rule a `password_rule` page showed. The
         details in `asks` are given; optional consents the sign-up offers stay declined."""
+        ...
+
+
+@runtime_checkable
+class CreatesAccountByOtp(SignsInByOtp, Protocol):
+    """An adapter atsfill can create an account without a password through. Account creation is
+    a side effect it declares (ADR 0008)."""
+
+    asks: set[str]  # the `SignUpDetails` fields its sign-up requires
+
+    def sign_up_by_otp(self, page: Page, email: str, details: SignUpDetails) -> None:
+        """Creates the account from the page `login_url` loaded, or signs in where the email
+        has one, signed in once it returns. Raises as `sign_in_by_otp` does, `no_account` aside;
+        the details are given as `sign_up` gives them."""
         ...
 
 
