@@ -15,6 +15,7 @@ from atsfill.core import (
     passwords,
     paths,
     registry,
+    telemetry,
 )
 from atsfill.core.adapter import (
     Adapter,
@@ -353,6 +354,11 @@ def read(
 ) -> Result:
     """Lists the form's fields by a request read when an adapter has one (ADR 0011), else by a
     browser read."""
+    data = paths.data_dir(data_dir)
+    return telemetry.sent("read", _read(data, user, url, sessions), data)
+
+
+def _read(data: Path, user: str, url: str, sessions: Sessions | None) -> Result:
     for adapter in adapters():
         if not isinstance(adapter, ReadsByRequest):
             continue
@@ -364,7 +370,6 @@ def read(
                 return Result(Status.UNSUPPORTED, url, adapter.name, f"adapter_error: {e}")
             _unfillable(result)
             return result
-    data = paths.data_dir(data_dir)
     return _in_budget(url, lambda seen: _browser_read(data, user, url, sessions, seen))
 
 
@@ -377,9 +382,10 @@ def fill(
     sessions: Sessions | None = None,
 ) -> Result:
     data = paths.data_dir(data_dir)
-    return _in_budget(
+    result = _in_budget(
         url, lambda seen: _form_command(data, user, url, answers, sessions, False, False, seen)
     )
+    return telemetry.sent("fill", result, data)
 
 
 def send(
@@ -392,9 +398,10 @@ def send(
     sessions: Sessions | None = None,
 ) -> Result:
     data = paths.data_dir(data_dir)
-    return _in_budget(
+    result = _in_budget(
         url, lambda seen: _form_command(data, user, url, answers, sessions, True, resend, seen)
     )
+    return telemetry.sent("send", result, data)
 
 
 def _sessions(data: Path, users: list[str], candidates: list[Adapter]) -> list[SessionReport]:
