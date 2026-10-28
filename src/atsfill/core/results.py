@@ -74,6 +74,7 @@ class Field:
     required_when: Condition | None = None  # required once shown when it holds, if not always
     one_of: str | None = None  # an alternative: one of the fields with this key answers (ADR 0005)
     option_sets: list[OptionSet] | None = None  # a dependent list's; `options` where none holds
+    min_length: int | None = None  # a text the system refuses shorter
 
 
 @dataclass(frozen=True)

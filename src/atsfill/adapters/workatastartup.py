@@ -239,8 +239,6 @@ class WorkAtAStartup:
         dialog = page.locator(DIALOG).first
         for field_id, answer in answers.items():
             if field_id == MESSAGE:
-                if len(str(answer).strip()) < MIN_MESSAGE:
-                    raise NotTaken(f"message: under {MIN_MESSAGE} characters")
                 dialog.locator("[data-atsfill-field=message]").fill(str(answer))
                 continue
             question = self._questions[field_id]
@@ -731,10 +729,7 @@ def _skills(page: Page, form: Locator, box: Locator, c: Control, answer: list[st
 def _fields(questions: list[dict[str, Any]]) -> list[Field]:
     """The message and the questions not archived, as both reads list them (ADR 0011)."""
     message = Field(
-        MESSAGE,
-        f"Message to the founders (at least {MIN_MESSAGE} characters)",
-        FieldType.TEXT,
-        True,
+        MESSAGE, "Message to the founders", FieldType.TEXT, True, min_length=MIN_MESSAGE
     )
     return [message] + [_field(q) for q in questions if q["archived_at"] is None]
 

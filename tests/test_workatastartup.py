@@ -14,7 +14,6 @@ from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import (
     Blocked,
     KeepsProfile,
-    NotTaken,
     ProfileIncomplete,
     Refused,
     SignUpDetails,
@@ -234,10 +233,11 @@ def test_an_answer_without_the_job_is_no_evidence(page, site):
     assert adapter.submit(page) is None
 
 
-def test_a_short_message_is_not_taken(page, site):
-    adapter, _ = opened(page)
-    with pytest.raises(NotTaken, match="^message"):
-        adapter.fill(page, {**ANSWERS, "message": "Hi."})
+def test_a_short_message_refuses_before_the_fill(page, site):
+    _, fields = opened(page)
+    assert fields[0].min_length == 50
+    problems = matching.problems(fields, {**ANSWERS, "message": "Hi."})
+    assert problems == ["message: 3 characters, under the minimum of 50"]
 
 
 @pytest.mark.parametrize(

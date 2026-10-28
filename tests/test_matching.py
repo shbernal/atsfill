@@ -67,6 +67,8 @@ def test_problems_before_filling():
     name = Field("n", "Name", FieldType.TEXT, True, max_length=5)
     assert problems([name], {"n": "Jane Doe"}) == ["n: 8 characters, over the limit of 5"]
     assert problems([name], {"n": " Jane "}) == []  # trimmed, as the read-back is
+    note = Field("m", "Message", FieldType.TEXT, True, min_length=5)
+    assert problems([note], {"m": "Hi"}) == ["m: 2 characters, under the minimum of 5"]
     site = Field("s", "LinkedIn", FieldType.URL, False)
     assert problems([site], {"s": "janedoe"}) == ["s: a url answer is an absolute http(s) URL"]
     assert problems([site], {"s": "linkedin.com/in/janedoe"}) == [

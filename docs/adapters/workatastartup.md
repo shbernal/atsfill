@@ -59,7 +59,7 @@ A form command on an account profile not complete (`minimally_complete` false) o
 
 Signed in with the profile complete and visible, Apply on `/jobs/<job id>` opens a dialog "Reach out to <founder> at <employer>". Field ids: `message`, and `question_<id>` per question. The page names none of the controls: each question's block is found by its label.
 
-- The message, a textarea whose placeholder names the account ("Hi! My name is Jane Doe and…"), at least 50 characters. Send stays disabled until it has them and every required question is answered. A shorter answer is `refused: answer_not_taken`.
+- The message, a textarea whose placeholder names the account ("Hi! My name is Jane Doe and…"), at least 50 characters. Send stays disabled until it has them and every required question is answered. The field declares it (`min_length`): a shorter answer is `refused: invalid_answers`.
 - The custom questions, from the props' `customQuestions` or `GET /jobs/<job id>/custom_questions.json`, each with `id`, `question_type`, `label`, `required`, `archived_at` and `options` (`id`, `label`); archived ones are not shown. A required one's label ends in ` *`. Renderings, from the page's `QuestionsForm` and seen live:
 
 | Question type | Rendering | Questions (on 23 postings of 139) |
