@@ -1,6 +1,6 @@
 # Work at a Startup
 
-Y Combinator's job board. Observed on live postings on 2026-10-28, headless Camoufox, on 16 employers signed in and 139 postings read by request. The fixture pages are [tests/pages/workatastartup/posting.html](../../tests/pages/workatastartup/posting.html), a ycombinator.com posting, [job.html](../../tests/pages/workatastartup/job.html), its signed-in Work at a Startup job page with the apply dialog, and [account.html](../../tests/pages/workatastartup/account.html), the sign-in and sign-up, served by `tests/test_workatastartup.py`.
+Y Combinator's job board. Observed on live postings on 2026-10-28, headless Camoufox, on 16 employers signed in and 139 postings read by request. The fixture pages are [tests/pages/workatastartup/posting.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workatastartup/posting.html), a ycombinator.com posting, [job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workatastartup/job.html), its signed-in Work at a Startup job page with the apply dialog, and [account.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workatastartup/account.html), the sign-in and sign-up, served by `tests/test_workatastartup.py`.
 
 ## Where the form is
 
@@ -26,7 +26,7 @@ One account per user for the whole system, a Y Combinator account (`account.ycom
 
 Applying needs the account's profile complete and visible. Signed in with the profile incomplete, the job page shows "Finish profile to apply" (to `/application/next`, the first incomplete step); with the profile hidden, "Change status to apply".
 
-The profile is a wizard at `www.workatastartup.com/application/<step>`, read and saved by `atsfill profile workatastartup` (ADR 0017). Its props (`ProfileWizardPage`, `sectionAppProps`) list the steps in `sectionInfo`, each with its status, and name the step shown in `activeSection`: a step asked before the ones it needs are saved shows another, and the read stops there. Every step of a complete profile loads directly, with its saved values. The fixture page is [tests/pages/workatastartup/profile.html](../../tests/pages/workatastartup/profile.html).
+The profile is a wizard at `www.workatastartup.com/application/<step>`, read and saved by `atsfill profile workatastartup` (ADR 0017). Its props (`ProfileWizardPage`, `sectionAppProps`) list the steps in `sectionInfo`, each with its status, and name the step shown in `activeSection`: a step asked before the ones it needs are saved shows another, and the read stops there. Every step of a complete profile loads directly, with its saved values. The fixture page is [tests/pages/workatastartup/profile.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workatastartup/profile.html).
 
 - Steps: `personal`, `location`, `role`, `experience`, `skills` (Engineering only), `career`, `share`.
 - Save & next (Continue on an incomplete profile, Finish on the last step) posts `POST /application/next`, `{from: <step>, profile: {data: {…}}}`, answered `{redirect_to}`. A value the server refuses is 422 with `errors` ("Phone number is an invalid number"): `refused: step_refused: <step>: <errors>`. A required field left empty shows "Required" under it and posts nothing: `refused: step_refused: <step>`.

@@ -1,6 +1,6 @@
 # JOIN
 
-Observed on live postings on 2026-10-26, headless Camoufox, the account profile on 2026-10-28. The fixture pages are [tests/pages/join/job.html](../../tests/pages/join/job.html), a posting and its wizard served signed in by `tests/test_join.py`, [tests/pages/join/account.html](../../tests/pages/join/account.html), the sign-in and sign-up, and [tests/pages/join/profile.html](../../tests/pages/join/profile.html), the account profile's form.
+Observed on live postings on 2026-10-26, headless Camoufox, the account profile on 2026-10-28. The fixture pages are [tests/pages/join/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/join/job.html), a posting and its wizard served signed in by `tests/test_join.py`, [tests/pages/join/account.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/join/account.html), the sign-in and sign-up, and [tests/pages/join/profile.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/join/profile.html), the account profile's form.
 
 ## Where the form is
 

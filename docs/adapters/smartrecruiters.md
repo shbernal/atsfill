@@ -1,6 +1,6 @@
 # SmartRecruiters
 
-Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/smartrecruiters/apply.html](../../tests/pages/smartrecruiters/apply.html), served behind a job page in `tests/test_smartrecruiters.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/smartrecruiters/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/smartrecruiters/apply.html), served behind a job page in `tests/test_smartrecruiters.py`.
 
 ## Where the form is
 

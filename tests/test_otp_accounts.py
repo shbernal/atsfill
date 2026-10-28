@@ -97,3 +97,23 @@ def test_a_password_is_a_usage_error(account, config, data, capsys, monkeypatch)
     args = ["--data-dir", str(data), "login", "fakeaccount", "--email", EMAIL, "--password", "-"]
     assert run(parser().parse_args(args)) == 2
     assert "signs in with an emailed OTP" in capsys.readouterr().err
+
+
+def test_a_session_the_system_ended_signs_in_again(account, config, data, server):
+    url = f"{server}/form.html?account"
+    core.login("fakeaccount", email=EMAIL, create=True, details=JANE, data_dir=data)
+    account.ends_sessions = 1
+    result = core.fill(url, {"name": "Ada"}, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert account.sign_ins == 2
+    account.ends_sessions = 2
+    result = core.fill(url, {"name": "Ada"}, data_dir=data)
+    assert result.reason == "login_required: the page asks to sign in"
+
+
+def test_a_session_is_saved_again_after_a_command(account, config, data, server):
+    core.login("fakeaccount", email=EMAIL, create=True, details=JANE, data_dir=data)
+    session = data / "users/default/sessions/fakeaccount.json"
+    assert "rotated" not in session.read_text()
+    core.read(f"{server}/form.html?account", data_dir=data)
+    assert "rotated" in session.read_text()

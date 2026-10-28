@@ -1,6 +1,6 @@
 # HiringThing
 
-HiringThing's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/hiringthing/job.html](../../tests/pages/hiringthing/job.html), served as `acme.hiringthing.com` in `tests/test_hiringthing.py`: one example of each rendering below.
+HiringThing's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/hiringthing/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/hiringthing/job.html), served as `acme.hiringthing.com` in `tests/test_hiringthing.py`: one example of each rendering below.
 
 ## Where the form is
 

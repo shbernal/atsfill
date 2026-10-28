@@ -4,7 +4,7 @@ from dataclasses import replace
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, otp
-from atsfill.core.adapter import Gap, ProfileIncomplete, Refused, SignUpDetails
+from atsfill.core.adapter import Gap, ProfileIncomplete, Refused, SignedOut, SignUpDetails
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -193,6 +193,14 @@ class FakeOtpOnly(FakeAccount):
         super().__init__(server)
         self.accounts: dict[str, SignUpDetails] = {}
         self.sign_ins = 0
+        self.ends_sessions = 0  # the reads whose page asks to sign in though the session holds
+
+    def browser_read(self, page: Page) -> list[Field]:
+        if self.ends_sessions:
+            self.ends_sessions -= 1
+            raise SignedOut("login_required: the page asks to sign in")
+        page.evaluate("document.cookie = 'rotated=1; path=/'")  # as a page refreshing its tokens
+        return super().browser_read(page)
 
     def login_url(self, scope: str | None) -> str:
         return f"{self.server}/otp.html"

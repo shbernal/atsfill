@@ -1,6 +1,6 @@
 # JazzHR
 
-Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/jazzhr/apply.html](../../tests/pages/jazzhr/apply.html), served as a posting's page in `tests/test_jazzhr.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/jazzhr/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jazzhr/apply.html), served as a posting's page in `tests/test_jazzhr.py`.
 
 ## Where the form is
 

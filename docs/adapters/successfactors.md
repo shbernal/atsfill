@@ -1,6 +1,6 @@
 # SAP SuccessFactors
 
-SAP SuccessFactors Recruiting's career sites and candidate pages, observed on live postings, last on 2026-10-27. The fixture pages are in [tests/pages/successfactors/](../../tests/pages/successfactors/): the posting, the sign-in and sign-up pages, and an application page with one example of each rendering below, served as an Acme career site and its data center host in `tests/test_successfactors.py`.
+SAP SuccessFactors Recruiting's career sites and candidate pages, observed on live postings, last on 2026-10-27. The fixture pages are in [tests/pages/successfactors/](https://github.com/shbernal/atsfill/tree/main/tests/pages/successfactors/): the posting, the sign-in and sign-up pages, and an application page with one example of each rendering below, served as an Acme career site and its data center host in `tests/test_successfactors.py`.
 
 ## Where the form is
 

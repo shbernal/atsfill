@@ -1,6 +1,6 @@
 # Rippling
 
-Rippling Recruiting's job boards, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/rippling/apply.html](../../tests/pages/rippling/apply.html), served as `ats.rippling.com` in `tests/test_rippling.py`: one example of each rendering below, Rippling's components reduced to their markup and a few lines that act as they do.
+Rippling Recruiting's job boards, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/rippling/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/rippling/apply.html), served as `ats.rippling.com` in `tests/test_rippling.py`: one example of each rendering below, Rippling's components reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 

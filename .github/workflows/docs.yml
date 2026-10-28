@@ -34,7 +34,7 @@ jobs:
       - run: uv run --only-group docs python scripts/run_history.py
         env:
           POSTHOG_READ_KEY: ${{ secrets.POSTHOG_READ_KEY }}
-      - run: uv run --only-group docs zensical build --clean
+      - run: uv run --only-group docs zensical build --clean --strict
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
