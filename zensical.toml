@@ -1,0 +1,63 @@
+[project]
+site_name = "atsfill"
+site_url = "https://shbernal.github.io/atsfill/"
+site_description = "Let your agent apply for you. One CLI for every hiring system."
+repo_url = "https://github.com/shbernal/atsfill"
+repo_name = "shbernal/atsfill"
+edit_uri = "edit/main/docs/"
+copyright = "MIT licensed. Each hiring system's mark belongs to its owner."
+extra_css = ["assets/site.css"]
+exclude_docs = "assets/**/README.md"
+nav = [
+  { "Home" = "index.md" },
+  { "Getting started" = "getting-started.md" },
+  { "Telemetry" = "telemetry.md" },
+  { "Hiring systems" = "adapters/README.md" },
+  { "Decisions" = "adr/README.md" },
+]
+
+[project.theme]
+custom_dir = "overrides"
+language = "en"
+font = false
+favicon = "assets/favicon.svg"
+logo = "assets/favicon.svg"
+features = [
+  "content.code.copy",
+  "content.action.edit",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+]
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to light mode"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/shbernal/atsfill"
+
+[project.markdown_extensions]
+admonition = {}
+attr_list = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.highlight.anchor_linenums = true
+pymdownx.inlinehilite = {}
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
