@@ -26,9 +26,32 @@ One account per user for the whole system, a Y Combinator account (`account.ycom
 
 Applying needs the account's profile complete and visible. Signed in with the profile incomplete, the job page shows "Finish profile to apply" (to `/application/next`, the first incomplete step); with the profile hidden, "Change status to apply".
 
-The profile is a wizard at `www.workatastartup.com/application/<step>`: `personal`, `location`, `role`, `experience`, `skills` (Engineering only), `career`, `share`. Each step saves on its submit button (Continue, Save & next once the profile is complete). Every step of a complete profile loads directly, with its saved values; the page's props (`ProfileWizardPage`, `sectionAppProps`) hold them too.
+The profile is a wizard at `www.workatastartup.com/application/<step>`, read and saved by `atsfill profile workatastartup` (ADR 0017). Its props (`ProfileWizardPage`, `sectionAppProps`) list the steps in `sectionInfo`, each with its status, and name the step shown in `activeSection`: a step asked before the ones it needs are saved shows another, and the read stops there. Every step of a complete profile loads directly, with its saved values. The fixture page is [tests/pages/workatastartup/profile.html](../../tests/pages/workatastartup/profile.html).
 
-- The job search status is on `personal`, radios `share`: `yes` "I'm actively looking for a job", `passive` "I'm open to new opportunities", `no` "I'm not looking for a job / not ready to meet founders yet. HIDE MY PROFILE." `passive` is enough to apply.
+- Steps: `personal`, `location`, `role`, `experience`, `skills` (Engineering only), `career`, `share`.
+- Save & next (Continue on an incomplete profile, Finish on the last step) posts `POST /application/next`, `{from: <step>, profile: {data: {…}}}`, answered `{redirect_to}`. A value the server refuses is 422 with `errors` ("Phone number is an invalid number"): `refused: step_refused: <step>: <errors>`. A required field left empty shows "Required" under it and posts nothing: `refused: step_refused: <step>`.
+- The job search status is `share`, on `personal`: "I'm actively looking for a job", "I'm open to new opportunities", or "I'm not looking for a job / not ready to meet founders yet. HIDE MY PROFILE." Any but the last lets the account apply; which one is the user's answer, never atsfill's.
+- `experience` offers a resume upload, a LinkedIn import, or "fill in your experience manually": atsfill takes the manual path, the only one read back field by field, and fills the first entry of Work History and of Education.
+- The page loads a SEON device fingerprint (`/api/sessions`) on every step.
+
+| Field ids | Field type | Rendering |
+|---|---|---|
+| `first_name`, `last_name`, `email`, `linkedin`, `github`, `experience` (a number), `short_phrase` | `text` | input, labelled |
+| `looking_for`, `proud_project`, `work_summary`, `education_summary` | `text` | textarea |
+| `share`, `yc_affiliation`, `us_authorized`, `us_visa_sponsorship`, `remote`, `relocate`, `in_school`, `equity_importance`, `salary_range_importance` | `choice` | radio fieldset, the labels the options (`us_visa_sponsorship`'s `__no` is labelled Yes) |
+| `role` | `choice` | radio fieldset, each option its `<b>` name |
+| `job_type` | `multi_choice` | checkbox fieldset |
+| `company_sizes_1_10`, `_11_50`, `_51_300`, `_300_+` | `choice` | a grid row of radios, each `aria-label` "<row>: Not Interested\|OK\|Preferred" |
+| `phone_country` | `typeahead` | react-select, "France (+33)" |
+| `phone_number` | `phone` | tel input, formatted as typed |
+| `city_current` | `typeahead` | places combobox, "City, ST, USA" |
+| `eng_type` | `multi_choice` | react-select multi, options on focus, a chip per pick; shown for Engineering. Backspace in its empty box removes the last pick |
+| `work_employer`, `work_title`, `education_school`, `education_field`, `education_degree` | `text` | downshift combobox that takes free text: a suggestion is picked only when it is the answer |
+| `work_location` | `text` | places combobox, the typed text kept |
+| `work_from`, `work_to`, `education_from`, `education_to` | `text`, `MM/YYYY` | month and year selects named `<entry id>_start_date_month`; `work_to` shows while `work_current` is `No` |
+| `work_current` | `choice`, `Yes`/`No` | checkbox "I currently work here" |
+| `skills` | `multi_choice`, each `<skill>: Beginner\|Intermediate\|Advanced` | a react-select search, up to 10, a remove button and a rating radio group per skill |
+| `hidden_companies` | listed unfillable | downshift search of YC companies to be hidden from, left empty |
 
 ## Reading and filling
 

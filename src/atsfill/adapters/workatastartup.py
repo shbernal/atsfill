@@ -3,7 +3,8 @@ and `workatastartup.com/jobs/<id>`), as docs/adapters/workatastartup.md observes
 
 Applying needs a Y Combinator account whose account profile is complete and visible: the form is
 then a dialog on the job's Work at a Startup page, a message and the employer's questions.
-Nothing is sent before Send, so the read-back is the dialog's state.
+Nothing is sent before Send, so the read-back is the dialog's state. The account profile is
+a wizard of profile steps, each saved on its own button: `profile` fills it (ADR 0017).
 """
 
 import html
@@ -12,11 +13,12 @@ import re
 import secrets
 import time
 import urllib.request
+from dataclasses import dataclass
 from functools import cache
 from typing import Any
 from urllib.parse import urlsplit
 
-from atsfill.core import browser, otp
+from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import (
     Blocked,
     Gap,
@@ -26,8 +28,8 @@ from atsfill.core.adapter import (
     SignUpDetails,
     Unsupported,
 )
-from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Request, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Request, Timeout
+from atsfill.core.results import Answer, Condition, Field, FieldType, Is, SideEffect
 
 YC = "www.ycombinator.com"
 WAAS = "www.workatastartup.com"
@@ -39,6 +41,13 @@ CURRENT_USER = f"https://{WAAS}/user/current_user.json"
 USERNAME = "#ycid-input"
 PASSWORD = "#password-input"
 DIALOG = "[role=dialog]"
+PROFILE = f"https://{WAAS}/application"
+WIZARD = "form:has(button[type=submit])"
+PROFILE_TIMEOUT_MS = 20_000
+SAVE_TIMEOUT_MS = 10_000
+SUGGEST_TIMEOUT_S = 5
+SUGGEST_POLL_MS = 250
+KEY_DELAY_MS = 40
 MESSAGE = "message"
 MIN_MESSAGE = 50  # Send stays disabled below it
 MAX_LENGTH = {"text": 250, "url": 2000, "long_text": 5000}
@@ -94,11 +103,13 @@ class WorkAtAStartup:
     known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates a Y Combinator account"),
+        SideEffect("profile", "hiring_system", "profile --answers saves each profile step"),
         SideEffect("submit", "employer", "the message and answers reach the employer's founders"),
     ]
 
     def __init__(self) -> None:
         self._questions: dict[str, dict[str, Any]] = {}
+        self._step = ""
 
     def detect(self, url: str, page: Page | None) -> bool:
         parts = urlsplit(url)
@@ -277,6 +288,428 @@ class WorkAtAStartup:
         if job in (answer.get("job_ids") or []):
             return f"POST /apply {response.status}, job_ids {answer['job_ids']}"
         return None
+
+    def profile_url(self, scope: str | None) -> str:
+        return f"{PROFILE}/personal"
+
+    def profile_steps(self, page: Page) -> list[str]:
+        """The steps the profile has, from the wizard's props: skills only for Engineering."""
+        props = _props(page, "ProfileWizardPage") or {}
+        return [s["name"] for s in (props.get("sectionAppProps") or {}).get("sectionInfo", [])]
+
+    def open_step(self, page: Page, step: str) -> bool:
+        """False where the wizard sends the page to an earlier step, unsaved."""
+        page.goto(f"{PROFILE}/{step}")
+        props = _props(page, "ProfileWizardPage") or {}
+        if (props.get("sectionAppProps") or {}).get("activeSection") != step:
+            return False
+        if step not in STEPS:
+            raise Unsupported(f"unhandled_rendering: a profile step {step!r}")
+        form = page.locator(WIZARD).last
+        form.wait_for(timeout=PROFILE_TIMEOUT_MS)
+        manually = form.get_by_role("button", name="fill in your experience manually")
+        if step == "experience" and manually.count():
+            manually.click()  # an upload or an import cannot be read back field by field
+        self._step = step
+        return True
+
+    def profile_read(self, page: Page) -> list[Field]:
+        form = page.locator(WIZARD).last
+        return [_profile_field(form, c) for c in STEPS[self._step] if c.shown(form)]
+
+    def profile_fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        form = page.locator(WIZARD).last
+        for control in STEPS[self._step]:  # in the page's order: a follow-up after what shows it
+            if control.id in answers:
+                _profile_fill(page, form, control, answers[control.id])
+
+    def profile_read_back(self, page: Page) -> dict[str, Answer]:
+        form = page.locator(WIZARD).last
+        values = {c.id: _value(form, c) for c in STEPS[self._step] if c.shown(form)}
+        return {k: v for k, v in values.items() if v not in (None, "", [])}
+
+    def save(self, page: Page) -> None:
+        """Save & next posts the step to `/application/next`; a field the page refuses shows
+        its error and posts nothing."""
+        form = page.locator(WIZARD).last
+        try:
+            with page.expect_response(
+                lambda r: (
+                    r.request.method == "POST" and urlsplit(r.url).path == "/application/next"
+                ),
+                timeout=SAVE_TIMEOUT_MS,
+            ) as sent:
+                form.locator("button[type=submit]").last.click()
+        except Timeout:
+            said = form.locator("[aria-invalid=true]").count()
+            text = " ".join(
+                form.locator("p.text-red-600, .text-red-500, .text-red-600").all_inner_texts()
+            )
+            raise Refused(
+                f"step_refused: {self._step}: {text.strip() or f'{said} fields invalid'}"
+            ) from None
+        response = sent.value
+        if response.status == 422:
+            try:
+                said = "; ".join(response.json().get("errors") or [])
+            except ValueError:
+                said = ""
+            raise Refused(f"step_refused: {self._step}: {said or response.text()[:200]}")
+        if not response.ok:
+            raise RuntimeError(f"POST /application/next answered {response.status}")
+
+
+@dataclass(frozen=True)
+class Control:
+    """One profile field and how its control is found: `kind` names the rendering, `where`
+    what finds it (an input's name, a combobox's aria-label, a date's name part), `entry` the
+    list it is in, the first entry of Work History or Education."""
+
+    id: str
+    label: str
+    kind: str
+    type: FieldType
+    required: bool
+    where: str = ""
+    entry: str | None = None
+    shown_when: Condition | None = None
+    unfillable: str | None = None
+
+    def locate(self, form: Locator) -> Locator:
+        match self.kind:
+            case "phone":
+                return form.locator("input[type=tel]")
+            case "country" | "combo":
+                return form.locator(f'input[aria-label="{self.where}"]')
+            case "multi" | "skills":
+                return form.get_by_label(self.where, exact=False)
+            case "month":  # the selects' names carry the entry's id: <id>_start_date_month
+                suffix = f"_{self.where}_month"
+                ends = f"substring(@name, string-length(@name) - {len(suffix) - 1}) = '{suffix}'"
+                return _in_entry(form, self.entry, f"select[{ends}]")
+            case "current":
+                return _in_entry(form, self.entry, "input[@name = 'is_current']")
+            case _ if self.entry:
+                tag = "textarea" if self.where == "summary" else "input"
+                return _in_entry(form, self.entry, f"{tag}[@name = '{self.where}']")
+        return form.locator(f'[name="{self.where or self.id}"]')
+
+    def shown(self, form: Locator) -> bool:
+        return self.locate(form).count() > 0
+
+
+def _in_entry(form: Locator, entry: str | None, node: str) -> Locator:
+    """The first entry's control in Work History, which comes before Education, or in
+    Education."""
+    axis = "preceding" if entry == "work" else "following"
+    return form.locator(f"xpath=(.//h4[contains(., 'Education')]/{axis}::{node})[1]")
+
+
+ENGINEERING = Is("role", ["Engineering"])
+YES_NO = ["Yes", "No"]
+SIZES = ["Not Interested", "OK", "Preferred"]
+T, C, M, TA = FieldType.TEXT, FieldType.CHOICE, FieldType.MULTI_CHOICE, FieldType.TYPEAHEAD
+STEPS: dict[str, list[Control]] = {
+    "personal": [
+        Control("first_name", "First Name", "input", T, True),
+        Control("last_name", "Last Name", "input", T, True),
+        Control("email", "Email Address (Personal)", "input", T, True),
+        Control("linkedin", "LinkedIn Profile URL", "input", T, False),
+        Control("phone_country", "Phone country", "country", TA, False, "Phone country"),
+        Control("phone_number", "Phone Number", "phone", FieldType.PHONE, False),
+        Control("share", "What is your job search status?", "radio", C, True),
+        Control("yc_affiliation", "Have you worked at a YC company?", "radio", C, True),
+        Control(
+            "hidden_companies",
+            "YC companies to be hidden from",
+            "combo",
+            T,
+            False,
+            "Company name",
+            unfillable="unhandled_rendering: a list of YC companies to be hidden from",
+        ),
+    ],
+    "location": [
+        Control("city_current", "What city do you live in?", "place", TA, True),
+        Control(
+            "us_authorized",
+            "I am legally authorized to work in the United States.",
+            "radio",
+            C,
+            True,
+        ),
+        Control(
+            "us_visa_sponsorship",
+            "I do not require visa sponsorship to work legally in the United States.",
+            "radio",
+            C,
+            True,
+        ),
+        Control("remote", "Are you open to working remotely?", "radio", C, True),
+        Control("relocate", "Are you willing to relocate?", "radio", C, True),
+    ],
+    "role": [
+        Control("role", "What job function best fits what you're looking for?", "radio", C, True),
+        Control(
+            "eng_type",
+            "Which engineering roles are you most interested in? (Choose up to four)",
+            "multi",
+            M,
+            True,
+            "Which engineering roles",
+            shown_when=ENGINEERING,
+        ),
+        Control("github", "Github", "input", T, False, shown_when=ENGINEERING),
+        Control(
+            "in_school", "Are you a full-time student at a school or bootcamp?", "radio", C, True
+        ),
+        Control("job_type", "What job type(s) are you most interested in?", "checks", M, True),
+        Control("experience", "Years of professional experience", "input", T, True),
+    ],
+    "experience": [
+        Control("work_employer", "Work History: Employer Name", "combo", T, False, "Employer Name"),
+        Control("work_title", "Work History: Title", "combo", T, False, "Title"),
+        Control("work_location", "Work History: Location", "input", T, False, "location", "work"),
+        Control(
+            "work_from", "Work History: From (MM/YYYY)", "month", T, False, "start_date", "work"
+        ),
+        Control(
+            "work_current", "Work History: I currently work here", "current", C, False, entry="work"
+        ),
+        Control(
+            "work_to",
+            "Work History: To (MM/YYYY)",
+            "month",
+            T,
+            False,
+            "end_date",
+            "work",
+            Is("work_current", ["No"]),
+        ),
+        Control("work_summary", "Work History: Summary", "input", T, False, "summary", "work"),
+        Control("education_school", "Education: School Name", "combo", T, False, "School Name"),
+        Control(
+            "education_field",
+            "Education: Field of Study / Major",
+            "combo",
+            T,
+            False,
+            "Field of Study / Major",
+        ),
+        Control("education_degree", "Education: Degree type", "combo", T, False, "Degree type"),
+        Control(
+            "education_from",
+            "Education: From (MM/YYYY)",
+            "month",
+            T,
+            False,
+            "start_date",
+            "education",
+        ),
+        Control(
+            "education_to", "Education: To (MM/YYYY)", "month", T, False, "end_date", "education"
+        ),
+        Control(
+            "education_summary", "Education: Summary", "input", T, False, "summary", "education"
+        ),
+    ],
+    "skills": [
+        Control(
+            "skills",
+            "Technologies and skills, each as `<skill>: Beginner|Intermediate|Advanced` (up to 10)",
+            "skills",
+            M,
+            True,
+            "Which technologies",
+        ),
+    ],
+    "career": [
+        *(
+            Control(f"company_sizes_{r}", label, "grid", C, True, f"company_sizes_{r}")
+            for r, label in (
+                ("1_10", "Seed: 1 - 10 people"),
+                ("11_50", "Small: 11 - 50 people"),
+                ("51_300", "Medium: 51 - 300 people"),
+                ("300_+", "Large: 301+ people"),
+            )
+        ),
+        Control("equity_importance", "How much do you value equity?", "radio", C, True),
+        Control(
+            "salary_range_importance", "Do you have a minimum salary requirement?", "radio", C, True
+        ),
+    ],
+    "share": [
+        Control("short_phrase", "Describe yourself in a short phrase", "input", T, True),
+        Control("looking_for", "What are you looking for in your next role?", "input", T, True),
+        Control("proud_project", "A project you are proud of", "input", T, False),
+    ],
+}
+
+
+def _profile_field(form: Locator, c: Control) -> Field:
+    options = _options(form, c)
+    return Field(
+        c.id,
+        c.label,
+        c.type,
+        c.required,
+        options,
+        prefilled=None if c.unfillable else _value(form, c) or None,
+        unfillable=c.unfillable,
+        shown_when=c.shown_when,
+    )
+
+
+def _options(form: Locator, c: Control) -> list[str] | None:
+    match c.kind:
+        case "radio" | "checks":
+            return form.locator(f'input[name="{c.id}"]').evaluate_all(_LABELS)
+        case "grid":
+            return [
+                a.rsplit(": ", 1)[-1]
+                for a in form.locator(f'input[name="{c.where}"]').evaluate_all(
+                    "es => es.map(e => e.ariaLabel)"
+                )
+            ]
+        case "current":
+            return YES_NO
+    return None
+
+
+_LABELS = """es => es.map(e => {
+  const l = e.closest("label");
+  return (l.querySelector("b") ?? l).textContent.replace(/\\s+/g, " ").trim();
+})"""
+
+
+def _value(form: Locator, c: Control) -> Answer | None:
+    target = c.locate(form)
+    match c.kind:
+        case "radio" | "checks":
+            picked = form.locator(f'input[name="{c.id}"]:checked').evaluate_all(_LABELS)
+            return picked if c.kind == "checks" else (picked[0] if picked else None)
+        case "grid":
+            picked = form.locator(f'input[name="{c.where}"]:checked')
+            return (
+                (picked.get_attribute("aria-label") or "").rsplit(": ", 1)[-1]
+                if picked.count()
+                else None
+            )
+        case "current":
+            return "Yes" if target.is_checked() else "No"
+        case "month":
+            year = target.locator("xpath=following::select[1]")
+            month, year = target.input_value(), year.input_value()
+            return f"{month}/{year}" if month and year else None
+        case "country":
+            return target.evaluate(_SINGLE_VALUE) or None
+        case "multi":
+            return target.evaluate(_CHIPS)
+        case "skills":
+            return form.evaluate(_SKILLS)
+    return target.input_value()
+
+
+# A react-select's shown value, its chips, and the skills each with its level.
+_SINGLE_VALUE = """e => {
+  let box = e;
+  while (box && !/\\(\\+\\d+\\)/.test(box.innerText ?? "")) box = box.parentElement;
+  return box ? box.innerText.match(/[^\\n]*\\(\\+\\d+\\)/)[0].trim() : null;
+}"""
+_CHIPS = """e => {
+  const box = e.closest("[id$=__select]") ?? e.parentElement.parentElement.parentElement;
+  return [...box.querySelectorAll("[aria-label^='Remove ']")].map(c => c.ariaLabel.slice(7));
+}"""
+_SKILLS = """form => {
+  const groups = {};
+  for (const r of form.querySelectorAll("input[type=radio][name^=top_skills_]")) {
+    const cut = r.ariaLabel.lastIndexOf(": ");
+    const [skill, level] = [r.ariaLabel.slice(0, cut), r.ariaLabel.slice(cut + 2)];
+    groups[r.name] ??= skill;
+    if (r.checked) groups[r.name] = `${skill}: ${level}`;
+  }
+  return Object.values(groups);
+}"""
+
+
+def _profile_fill(page: Page, form: Locator, c: Control, answer: Answer) -> None:
+    target = c.locate(form)
+    match c.kind, answer:
+        case "input" | "phone", str():
+            target.fill(answer)
+        case "radio", str():
+            labels = form.locator(f'input[name="{c.id}"]').evaluate_all(_LABELS)
+            form.locator(f'input[name="{c.id}"]').nth(labels.index(answer)).check(force=True)
+        case "checks", list():
+            boxes = form.locator(f'input[name="{c.id}"]')
+            for i, label in enumerate(boxes.evaluate_all(_LABELS)):
+                boxes.nth(i).set_checked(label in answer, force=True)
+        case "grid", str():
+            form.locator(f'input[name="{c.where}"][aria-label="{c.label}: {answer}"]').check(
+                force=True
+            )
+        case "current", str():
+            target.set_checked(answer == "Yes", force=True)
+        case "month", str():
+            month, _, year = answer.partition("/")
+            target.select_option(month)
+            target.locator("xpath=following::select[1]").select_option(year)
+        case "country" | "place", str():
+            _pick(page, c, target, answer, strict=True)
+        case "combo", str():
+            _pick(page, c, target, answer, strict=False, exact=True)
+        case "multi", list():
+            have = _value(form, c) or []
+            for chip in [h for h in have if h not in answer]:
+                form.locator(f'[aria-label="Remove {chip}"]').click()
+            for item in [a for a in answer if a not in have]:
+                _pick(page, c, target, item, strict=True, exact=True)
+        case "skills", list():
+            _skills(page, form, target, c, answer)
+        case kind, _:
+            raise Unsupported(f"unhandled_rendering: cannot fill {c.id}, a {kind}, with {answer!r}")
+
+
+def _pick(
+    page: Page, c: Control, box: Locator, answer: str, strict: bool, exact: bool = False
+) -> None:
+    """Types the answer key by key and picks the first suggestion that matches it; a combobox
+    that takes free text keeps the typed text when none does."""
+    box.click()
+    if box.input_value():  # Backspace in an empty multi-select removes its last pick
+        box.press("Control+a")
+        box.press("Backspace")
+    box.press_sequentially(answer, delay=KEY_DELAY_MS)
+    options = page.locator("[role=option]:visible, li[id^=downshift-][id*=-item-]:visible")
+    field = Field(c.id, c.label, FieldType.TYPEAHEAD, False)
+    deadline = time.monotonic() + SUGGEST_TIMEOUT_S
+    while time.monotonic() < deadline:
+        for option in options.all():
+            text = option.inner_text().strip()
+            if text == answer if exact else matching.matches(field, answer, text):
+                option.click()
+                return
+        page.wait_for_timeout(SUGGEST_POLL_MS)
+    if strict:
+        raise NotTaken(f"no suggestion for {answer!r} in {c.id}")
+    box.press("Escape")
+
+
+def _skills(page: Page, form: Locator, box: Locator, c: Control, answer: list[str]) -> None:
+    """Removes the skills the answer leaves out, adds the others, then picks each level."""
+    wanted: dict[str, str] = {}
+    for item in answer:
+        skill, sep, level = item.rpartition(": ")
+        wanted[skill if sep else level] = level if sep else ""
+    have = [v.rsplit(": ", 1)[0] for v in form.evaluate(_SKILLS)]
+    for skill in [h for h in have if h not in wanted]:
+        form.locator("[aria-label=remove]").nth(have.index(skill)).click()
+        have.remove(skill)
+    for skill in [w for w in wanted if w not in have]:
+        _pick(page, c, box, skill, strict=True, exact=True)
+    for skill, level in wanted.items():
+        if level:
+            form.locator(f'input[type=radio][aria-label="{skill}: {level}"]').check(force=True)
 
 
 def _fields(questions: list[dict[str, Any]]) -> list[Field]:
