@@ -9,7 +9,7 @@
   - [docs/adapters/](docs/adapters/) each hiring system as observed
 
 - Blog
-  - SlopIt blog https://atsfill.slopit.io/, id 639aj5wi. Use the slopit skill.
+  - This project publishes to https://atsfill.slopit.io/; use the slopit skill.
 
 - Rules
   - Public repository. Personal data (answers, resumes, posting URLs, sessions, account emails) is never committed, in code, fixtures or docs: it stays in the data directory, the config file or the gitignored `.tmp/`.
