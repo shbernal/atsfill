@@ -87,8 +87,10 @@ body:has(.home) {
   color: var(--flap-text);
   background: var(--board);
 }
-.wordmark { font-weight: 800; font-size: var(--step-1); color: inherit; text-decoration: none; letter-spacing: -0.01em; }
+.wordmark { font-weight: 800; font-size: var(--step-1); color: inherit; text-decoration: none; letter-spacing: 0.02em; }
 .hall-sign { color: var(--gate); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--step--1); }
+.plane-defs { display: none; }
+.sign-plane { width: 1.9em; height: 0.75em; margin-right: 0.45em; fill: currentColor; transform: rotate(-14deg); vertical-align: -0.05em; }
 .clock { font-family: var(--font-board); font-variant-numeric: tabular-nums; color: var(--board-muted); font-size: var(--step--1); }
 .hall-nav { margin-left: auto; display: flex; gap: var(--space-5); }
 .home .hall-nav a, .hall-nav a { color: inherit; text-decoration: none; font-weight: 600; padding: var(--space-2) 0; }
@@ -101,13 +103,21 @@ body:has(.home) {
 
 /* The board */
 .home > .board-hall { background: var(--board); padding-top: var(--space-6); }
-.offer { display: grid; gap: var(--space-4); margin-bottom: var(--space-7); }
+.offer { display: grid; gap: var(--space-4); margin-bottom: var(--space-4); }
+.offer .kicker {
+  font-family: var(--font-sign);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gate);
+}
 .offer .gates { max-width: 44rem; margin-top: var(--space-3); }
 .offer h1 {
   font-size: var(--step-4);
   font-weight: 800;
   line-height: 1.04;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.005em;
   max-width: 18ch;
   text-wrap: balance;
 }
@@ -169,6 +179,82 @@ body:has(.home) {
 .board .carrier-name { font-weight: 700; }
 .board .posting { color: var(--flap-text); }
 .board .remark { width: 1%; }
+
+/* The runway: a plane rolls, lifts off and leaves the frame, then the next one lines up */
+.runway {
+  --takeoff: 11s;
+  position: relative;
+  height: 7rem;
+  margin-bottom: var(--space-6);
+  overflow: hidden;
+  container-type: inline-size;
+}
+.runway::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0.5rem;
+  height: 0.9rem;
+  border-radius: var(--radius-flap);
+  background:
+    repeating-linear-gradient(90deg, var(--board-muted) 0 1.5rem, transparent 1.5rem 3.5rem) center / 100% 2px no-repeat,
+    var(--board-raised);
+  opacity: 0.8;
+}
+.runway-lights, .runway-lights::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: radial-gradient(circle, var(--board-rule) 0 2px, transparent 2.5px) 0 0 / 1.75rem 4px repeat-x;
+}
+.runway-lights::after {
+  content: "";
+  background-image: radial-gradient(circle, var(--flap-text) 0 2px, transparent 2.5px);
+  mask: linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent) -30% 0 / 30% 100% no-repeat;
+  animation: rabbit 2.4s linear infinite;
+}
+@keyframes rabbit { to { mask-position: 130% 0; } }
+.plane, .plane-shadow { position: absolute; left: 0; bottom: 1.1rem; }
+.plane { width: 4.5rem; height: 1.7rem; fill: var(--flap-text); animation: takeoff var(--takeoff) infinite; }
+.plane-shadow {
+  bottom: 0.55rem;
+  width: 4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #000;
+  filter: blur(3px);
+  animation: shadow var(--takeoff) infinite;
+}
+@keyframes takeoff {
+  0% { transform: translate(-5rem, 0); opacity: 1; animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6); }
+  38% { transform: translate(52cqw, 0) rotate(0); animation-timing-function: ease-in-out; }
+  46% { transform: translate(64cqw, -0.6rem) rotate(-11deg); animation-timing-function: linear; }
+  64% { transform: translate(100cqw, -6.5rem) rotate(-13deg) scale(0.85); opacity: 1; }
+  64.1%, 100% { transform: translate(-5rem, 0); opacity: 0; }
+}
+@keyframes shadow {
+  0% { transform: translateX(-5rem); opacity: 0.7; animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6); }
+  38% { transform: translateX(52cqw); opacity: 0.7; animation-timing-function: ease-out; }
+  52% { transform: translateX(76cqw) scaleX(0.6); opacity: 0; }
+  100% { transform: translateX(-5rem); opacity: 0; }
+}
+
+/* A SUBMITTED row's plane leaves from its remark */
+.remark { position: relative; }
+.departing {
+  position: absolute;
+  right: -0.5rem;
+  top: 50%;
+  width: 2.25rem;
+  height: 0.85rem;
+  fill: var(--ok);
+  pointer-events: none;
+  animation: depart 1.6s cubic-bezier(0.4, 0, 0.9, 0.5) forwards;
+}
+@keyframes depart {
+  from { transform: translate(-3rem, -50%) rotate(0); opacity: 0; }
+  20% { opacity: 1; }
+  to { transform: translate(4rem, -3.5rem) rotate(-18deg); opacity: 0; }
+}
 
 /* Split-flap cells: two halves, a split line, and two leaves that turn */
 .flaps { display: inline-flex; gap: 2px; font-family: var(--font-board); font-weight: 700; }
@@ -272,10 +358,147 @@ body:has(.home) {
   font-size: var(--step-3);
   font-weight: 800;
   line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
   text-wrap: balance;
 }
 .lede { font-size: var(--step-1); line-height: 1.55; color: var(--ink-muted); max-width: 60ch; margin-top: var(--space-4); }
+
+/* The route: four stops on one line, a packet riding it leg by leg */
+.route + .hall { border-top: 1px solid var(--hall-rule); }
+.route-map { --packet-align: 0.5; position: relative; margin-top: var(--space-6); padding-top: var(--space-7); }
+.stops {
+  --dot: 1.25rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-5);
+  position: relative;
+}
+.stop { position: relative; display: grid; gap: var(--space-2); align-content: start; }
+.stop:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: calc(var(--dot) / 2 - 2px);
+  left: calc(var(--dot) / 2);
+  width: calc(100% + var(--space-5));
+  height: 4px;
+  background: var(--ink);
+}
+.stop-dot {
+  width: var(--dot);
+  height: var(--dot);
+  box-sizing: border-box;
+  border: 4px solid var(--ink);
+  border-radius: 50%;
+  background: var(--hall);
+  position: relative;
+  z-index: 1;
+  transition: background-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+.stop.is-here .stop-dot { background: var(--gate); box-shadow: 0 0 0 4px color-mix(in srgb, var(--gate) 35%, transparent); }
+.stop-name {
+  margin-top: var(--space-3);
+  justify-self: start;
+  font-family: var(--font-sign);
+  font-weight: 800;
+  font-size: var(--step-1);
+  line-height: 1.2;
+  background: var(--ink);
+  color: var(--gate);
+  padding: 0.15em 0.45em 0.05em;
+  border-radius: var(--radius-flap);
+}
+.stop-note { color: var(--ink-muted); line-height: 1.5; max-width: 26ch; }
+.stop-file {
+  justify-self: start;
+  font-family: var(--font-board);
+  font-size: var(--step--1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px dashed var(--ink-muted);
+  border-radius: var(--radius-flap);
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition: opacity 300ms ease-out, transform 300ms ease-out, border-color 300ms ease-out;
+}
+[data-route].has-answers .stop-file, [data-route]:not(.is-playing) .stop-file {
+  opacity: 1;
+  transform: none;
+  border-style: solid;
+  border-color: var(--ink);
+}
+.stop-marks { display: flex; gap: var(--space-2); }
+.stop-marks img {
+  width: 24px;
+  height: 24px;
+  padding: 2px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--hall-rule);
+  border-radius: var(--radius-flap);
+}
+
+.packet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: none;
+  padding: 0.2em 0.6em;
+  font: 700 var(--step--1) / 1.4 var(--font-board);
+  white-space: nowrap;
+  background: var(--board);
+  color: var(--flap-text);
+  border-radius: var(--radius-flap);
+  box-shadow: 0 6px 14px -6px #000;
+  pointer-events: none;
+  z-index: 2;
+}
+[data-route].is-playing .packet { display: block; }
+.packet[data-kind="ok"] { color: var(--ok); }
+.packet[data-kind="file"] { background: var(--hall); color: var(--ink); border: 1px solid var(--ink); }
+
+.legs {
+  list-style: none;
+  counter-reset: leg;
+  padding: 0;
+  margin-top: var(--space-7);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(5, auto);
+  grid-auto-flow: column;
+  column-gap: var(--space-6);
+  border-top: 2px solid var(--ink);
+}
+.legs li {
+  counter-increment: leg;
+  position: relative;
+  padding: var(--space-3) var(--space-3) var(--space-3) 2.75rem;
+  border-bottom: 1px solid var(--hall-rule);
+  line-height: 1.5;
+  transition: color 200ms ease-out, background-color 200ms ease-out;
+}
+.legs li::before {
+  content: counter(leg, decimal-leading-zero);
+  position: absolute;
+  left: var(--space-2);
+  top: var(--space-3);
+  font: 700 var(--step--1) / 1.7 var(--font-board);
+  color: var(--ink-muted);
+}
+.legs li::after {
+  content: "";
+  position: absolute;
+  inset: -1px auto 0 0;
+  width: 4px;
+  background: var(--gate);
+  opacity: 0;
+}
+.legs code { font-family: var(--font-board); font-size: 0.9em; }
+[data-route].is-playing .legs li { color: var(--ink-muted); }
+[data-route].is-playing .legs li.is-current { color: var(--ink); background: var(--hall-raised); }
+.legs li.is-current::after { opacity: 1; }
+.legs li.is-current::before { color: var(--ink); }
 
 .steps {
   list-style: none;
@@ -332,7 +555,7 @@ body:has(.home) {
   color: var(--board-muted);
   margin-bottom: var(--space-2);
 }
-.mismatch-value { font-family: var(--font-sign); font-weight: 800; font-size: var(--step-4); line-height: 1; letter-spacing: -0.02em; }
+.mismatch-value { font-family: var(--font-sign); font-weight: 800; font-size: var(--step-4); line-height: 1; letter-spacing: -0.005em; }
 .mismatch-value.is-wrong { color: var(--no); text-decoration: line-through 3px; text-decoration-color: color-mix(in srgb, var(--no) 60%, transparent); }
 .mismatch-remark .flaps { font-size: var(--step-2); }
 .mismatch-remark [data-flaps] .flap { color: var(--no); }
@@ -350,6 +573,16 @@ body:has(.home) {
   border-top: 2px solid var(--ink);
 }
 .carrier-wall li { border-bottom: 1px solid var(--hall-rule); }
+
+/* The hall's lists come up as they scroll in, where the browser ties animation to scroll */
+@supports (animation-timeline: view()) {
+  .steps li, .carrier-wall li, .rules dl > div {
+    animation: arrive linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 80%;
+  }
+}
+@keyframes arrive { from { opacity: 0; transform: translateY(1.5rem); } }
 .carrier-wall a {
   display: flex;
   align-items: center;
@@ -412,7 +645,16 @@ body:has(.home) {
 
 @media (max-width: 60rem) {
   .col-command { display: none; }
-  .steps { grid-template-columns: 1fr; }
+  .steps, .legs { grid-template-columns: 1fr; }
+  .legs { grid-template-rows: none; grid-auto-flow: row; }
+  .route-map { --packet-align: 0; padding-top: var(--space-6); }
+  .stops { grid-template-columns: 1fr; gap: var(--space-7); }
+  .stop { grid-template-columns: var(--dot) 1fr; column-gap: var(--space-4); row-gap: var(--space-2); }
+  .stop > :not(.stop-dot) { grid-column: 2; }
+  .stop-dot { grid-row: 1; }
+  .stop-name { grid-row: 1; margin-top: 0; align-self: center; }
+  .stop:not(:last-child)::after { top: calc(var(--dot) / 2); left: calc(var(--dot) / 2 - 2px); width: 4px; height: calc(100% + var(--space-7)); }
+  .stop-note { max-width: none; }
   .steps li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--hall-rule); }
   .steps li { padding-bottom: var(--space-5); }
   .rules dl > div { grid-template-columns: 1fr; gap: var(--space-2); }
@@ -447,9 +689,16 @@ body:has(.home) {
   .mismatch-remark { grid-column: 1 / -1; }
   .mismatch-remark .flaps { font-size: var(--step-1); }
   .boarding h2 .flaps { font-size: 1.05rem; }
+  .runway { height: 5rem; margin-bottom: var(--space-5); }
+  .plane { width: 3.25rem; height: 1.25rem; }
+  .plane-shadow { width: 3rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .flap .leaf.turning { animation: none; }
   .gate-copy { transition: none; }
+  .stop-dot, .stop-file, .legs li { transition: none; }
+  .runway *, .runway *::after, .steps li, .carrier-wall li, .rules dl > div { animation: none; }
+  .plane { transform: translate(72cqw, -2.5rem) rotate(-12deg); }
+  .plane-shadow { display: none; }
 }

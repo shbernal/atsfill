@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile - JOIN</title>
+<!-- The account profile's general information form (docs/adapters/join.md), as
+     /talent/me?edit=profile renders it: plain inputs, react-select menus for the country and
+     the city, a popover of countries for the phone's code. The saved profile comes from
+     /api/me, Save changes posts UpdateTalentPersonalInformation. -->
+</head>
+<body>
+<div id="app"><p>Loading</p></div>
+<script>
+const COUNTRIES = ["Belgium", "France", "Germany"];
+const CITIES = {Belgium: ["Brussels"], France: ["Lyon", "Paris"], Germany: ["Berlin"]};
+const CODES = [["Germany (Deutschland)", "49"], ["Switzerland (Schweiz)", "41"],
+  ["American Samoa", "1684"], ["Belgium (België)", "32"], ["Canada", "1"], ["France", "33"],
+  ["United States", "1"]];
+const app = document.getElementById("app");
+let saved, state;
+
+function select(name, value, placeholder) {
+  return `<div data-testid="SelectControlContainer"><div>` +
+    (value ? `<div><p>${value}</p></div>` : `<div id="react-select-${name}-placeholder">${placeholder}</div>`) +
+    `<div><input id="select-input-${name}" role="combobox" type="text" value=""></div></div></div>` +
+    `<div class="menu" data-for="${name}"></div>`;
+}
+
+function render() {
+  app.innerHTML = `<form><p>General information</p>
+    <label for="candidate.firstName">First name*</label>
+    <input id="candidate.firstName" name="candidate.firstName" maxlength="30" required value="${state.firstName}">
+    <label for="candidate.lastName">Last name*</label>
+    <input id="candidate.lastName" name="candidate.lastName" maxlength="30" required value="${state.lastName}">
+    <input id="candidate.email" disabled value="${state.email}">
+    <p>Phone number</p>
+    <div data-phone-input="true"><div><button type="button" data-scope="popover" data-part="trigger">` +
+      `<span data-button-label="true">+${state.code}</span></button></div>
+      <input id="candidate.phoneNumber" type="tel" name="candidate.phoneNumber" value="${state.number}" data-value="+${state.code}${state.number}"></div>
+    <div data-scope="popover" data-part="content" hidden><input role="combobox" type="text">` +
+      CODES.map(([name, code]) => `<div role="option" data-code="${code}"><p>${name}</p><p>(+${code})</p></div>`).join("") + `</div>
+    <label>Country of residence*</label><div id="candidate.countryId">${select("country", state.country, "Select a country")}</div>
+    <label>City</label><div data-testid="CityName">${select("city", state.city, "Select city")}</div>
+    <label for="professionalLinks.LINKEDIN">LinkedIn</label>
+    <input id="professionalLinks.LINKEDIN" name="professionalLinks.LINKEDIN" value="${state.linkedin}">
+    <div><button type="submit" disabled><span data-button-label="true">Save changes</span></button></div></form>`;
+}
+
+function dirty() {
+  // the city is not counted: a city change alone keeps Save disabled
+  const keys = ["firstName", "lastName", "code", "number", "country", "linkedin"];
+  return keys.some(k => state[k] !== saved[k]) && state.firstName && state.lastName;
+}
+
+function refresh() {
+  setTimeout(() => { document.querySelector("button[type=submit]").disabled = !dirty(); }, 100);
+}
+
+function menu(name, options) {
+  const box = document.querySelector(`.menu[data-for=${name}]`);
+  box.innerHTML = options.map((o, i) =>
+    `<div id="react-select-${name}-option-${i}" role="option" data-value="${o}"><div><p>${o}</p></div></div>`).join("");
+}
+
+function search(name, text) {
+  if (name === "country") {
+    menu(name, COUNTRIES.filter(c => c.toLowerCase().includes(text.toLowerCase())));
+  } else {  // a request per search, answered a moment later
+    setTimeout(() => menu(name, text ? (CITIES[state.country] || []).filter(
+      c => c.toLowerCase().startsWith(text.toLowerCase())) : []), 200);
+  }
+}
+
+app.addEventListener("click", async e => {
+  const option = e.target.closest("[role=option]");
+  const box = e.target.closest("input[role=combobox]");
+  if (option?.dataset.code) {
+    state.code = option.dataset.code;
+    render(); refresh();
+  } else if (option) {
+    const name = option.id.split("-")[2];
+    state[name] = option.dataset.value;
+    if (name === "country") state.city = "";
+    render(); refresh();
+  } else if (box && box.id.startsWith("select-input-")) {
+    const name = box.id.replace("select-input-", "");
+    if (name === "country") search(name, box.value);
+  } else if (e.target.closest("[data-part=trigger]")) {
+    document.querySelector("[data-part=content]").hidden = false;
+  } else if (e.target.closest("button[type=submit]")) {
+    e.preventDefault();
+    const input = {firstName: state.firstName, lastName: state.lastName,
+      phoneNumber: state.number ? `+${state.code}${state.number}` : "", country: state.country,
+      city: state.city, linkedin: state.linkedin};
+    const sent = await fetch("/candidate-api/graphql?operationName=UpdateTalentPersonalInformation",
+      {method: "POST", body: JSON.stringify({variables: {input}})});
+    const body = await sent.json();
+    if (!body.errors) location.assign("/talent/me");
+  }
+});
+
+app.addEventListener("keydown", e => {
+  if (e.key === "Escape") document.querySelectorAll(".menu").forEach(m => { m.innerHTML = ""; });
+});
+
+app.addEventListener("input", e => {
+  const id = e.target.id;
+  if (id.startsWith("select-input-")) {
+    search(id.replace("select-input-", ""), e.target.value);
+    return;
+  }
+  if (id === "candidate.phoneNumber") {  // digits only
+    e.target.value = e.target.value.replace(/\D/g, "");
+    state.number = e.target.value;
+    e.target.dataset.value = `+${state.code}${state.number}`;
+  } else {
+    state[{"candidate.firstName": "firstName", "candidate.lastName": "lastName",
+      "professionalLinks.LINKEDIN": "linkedin"}[id]] = e.target.value;
+  }
+  refresh();
+});
+
+fetch("/api/me").then(r => r.json()).then(me => {
+  const code = CODES.map(c => c[1]).filter(c => (me.phoneNumber || "").startsWith(`+${c}`))
+    .sort((a, b) => b.length - a.length)[0] || "33";
+  saved = {firstName: me.firstName, lastName: me.lastName, email: me.email, code,
+    number: me.phoneNumber ? me.phoneNumber.slice(code.length + 1) : "", country: me.country,
+    city: me.city || "", linkedin: me.linkedin || ""};
+  state = {...saved};
+  render();
+});
+</script>
+</body>
+</html>

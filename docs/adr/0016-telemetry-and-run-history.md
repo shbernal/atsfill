@@ -38,7 +38,7 @@ PostHog, checked 2026-10-27:
 
 **Run history.** One docs page, per hiring system: a fill run history and a send run history (`read` is sent, not drawn). One mark per posting and version (a release or a pre-release; a dev run's commit is shown, not counted), at its latest run, coloured by its verdict, `pass` or `fail`, newest first; `excluded` is not drawn. Dev runs hollow, user runs filled. A dev run is drawn only when its commit is on `main`; a tree with uncommitted changes sends none. Each mark shows its version, and its commit for a dev run. The window is the last 30 days; with more users, it becomes a release window (the latest stable and the pre-releases after it). A GitHub Action holding the PostHog read key builds it at each docs site deploy, the daily schedule included, for the docs site and the README. Posting hashes never appear publicly.
 
-**Regression.** The same posting hash and command going from `pass` to `fail` within the run history's window. The same version on both sides points at the hiring system; a newer one points at the code. The scheduled Action keeps one `regression` issue per hiring system and command (versions and count, no hashes) and closes it, with the reason, once the regression ends. A dev script resolves the postings behind it to URLs, privately.
+**Failure.** A posting hash and command whose latest run within the run history's window is `fail`, until it passes on another build. Failures are grouped by hiring system, command and reason code: one `failure` issue each (versions and count, no hashes), closed with the reason once none is left. A failure whose posting passed before is a regression: the same version on both sides points at the hiring system, a newer one at the code; the issue says so per row. An issue closed by a fix reopens only when a build containing the fix fails the same way, so older builds still in use never reopen a fixed failure. The scheduled Action and a local hourly triage keep the issues in line; the triage then works one issue per run, claiming it with a label (CONTRIBUTING.md, Triage). A dev script resolves the postings behind an issue to URLs, privately.
 
 **Spam.** The run history's generator drops events whose hiring system, command or version it does not know (the registry, PyPI's releases). The run history is best-effort, not proof. Further measures only if spikes appear.
 
@@ -46,6 +46,6 @@ PostHog, checked 2026-10-27:
 
 ## Consequences
 
-Whether an adapter works is read from runs, its own and users', dated and versioned, instead of from a ladder set by hand. A break shows up without anyone recording it, and a regression issue says whether to look at the hiring system or at the code.
+Whether an adapter works is read from runs, its own and users', dated and versioned, instead of from a ladder set by hand. A break shows up without anyone recording it, and a failure issue says, for a regression, whether to look at the hiring system or at the code.
 
 Runs leave the machine by default. The `basic` event holds no answer and no URL, but its posting hash can be matched to a public posting, and anyone with the project key can write events, so the run history is a signal, not a record. Over the free quota, events stop until the next month.

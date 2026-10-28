@@ -30,7 +30,8 @@ MAX_MARKS = 30  # per run history, newest first
 
 QUERY = f"""
 select properties.system, properties.command, properties.verdict, properties.posting,
-       properties.version, properties.source, properties.commit, toString(timestamp)
+       properties.version, properties.source, properties.commit, toString(timestamp),
+       properties.reason
 from events
 where event = 'run' and timestamp > now() - interval {WINDOW_DAYS} day
 order by timestamp
@@ -48,6 +49,7 @@ class Run:
     source: str  # dev | user
     commit: str | None
     timestamp: str  # ISO 8601, UTC
+    reason: str | None = None  # the reason code
 
 
 def query(key: str, hogql: str = QUERY) -> list[list]:
