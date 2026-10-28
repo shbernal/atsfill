@@ -55,7 +55,8 @@
       <input type="text" class="end-date-picker" placeholder="End Date"></div>
   </div>
 
-  <div class="additional-info-inputs-container">
+  <div class="input-section-container"><div class="section-title">Additional Questions</div></div>
+  <div class="additional-info-inputs-container" style="display: none">
     <div class="text-input-wrapper"><p class="form-label">Why Acme?</p><input type="text"></div>
     <div class="text-area-input-wrapper"><p class="form-label">Tell us more about yourself</p><textarea></textarea></div>
     <div class="number-input-wrapper"><p class="form-label">How many years?</p><input type="number"></div>
@@ -137,6 +138,11 @@
     });
     combo.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
   }
+  for (const header of document.querySelectorAll(".input-section-container"))
+    header.onclick = () => {
+      const inputs = header.nextElementSibling;
+      inputs.style.display = inputs.style.display === "none" ? "" : "none";
+    };
   for (const box of document.querySelectorAll(".yes-no-input-wrapper"))
     for (const b of box.querySelectorAll("button"))
       b.onclick = () => box.querySelectorAll("button").forEach(o => o.classList.toggle("selected", o === b));

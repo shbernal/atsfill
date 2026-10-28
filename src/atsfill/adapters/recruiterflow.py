@@ -166,6 +166,12 @@ class Recruiterflow:
         shown = [
             c for c in self._controls if c.field.id in answers and not c.field.unfillable
         ]  # fmt: skip
+        # a section may start collapsed: its header opens it
+        for section in page.locator(f"{FORM} .input-section-container").all():
+            inputs = section.locator("xpath=following-sibling::*[1]")
+            if inputs.count() and not inputs.is_visible():
+                section.click()
+                inputs.wait_for(timeout=FORM_TIMEOUT_MS)
         # files first: the résumé's parse fills the empty fields
         for c in sorted(shown, key=lambda c: c.kind != "file"):
             _set(page, c, answers[c.field.id])

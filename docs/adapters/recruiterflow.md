@@ -41,6 +41,7 @@ A question of another kind, rich text (3) among them, and a personal or profile 
 
 ## Filling
 
+- A section (Personal Information, Candidate Profile, Additional Questions) is a header over its inputs, which some employers' pages draw collapsed (`display: none`, 1 of 10 in the gate's sample): a collapsed one is opened by its header first.
 - Files first, so the résumé's parse never overwrites an answer; each is waited for until its upload answers and its name is listed.
 - A react-select is opened and the option whose text is the answer clicked; the country is typed first to narrow its long list. A multi select's menu stays open between picks and is closed with Escape.
 - A month picker takes `Jan 2020` typed and Tab; a question's day picker `31 Jan 2020`. A yes/no button and a checkbox are clicked. A parent-child item's group is opened by its plus icon and the item's checkbox clicked.
