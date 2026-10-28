@@ -11,6 +11,7 @@ exclude_docs = "assets/**/README.md"
 nav = [
   { "Home" = "index.md" },
   { "Getting started" = "getting-started.md" },
+  { "Run history" = "run-history.md" },
   { "Telemetry" = "telemetry.md" },
   { "Hiring systems" = "adapters/README.md" },
   { "Decisions" = "adr/README.md" },

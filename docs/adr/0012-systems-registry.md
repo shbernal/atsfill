@@ -16,7 +16,7 @@ One committed file in the package records every mapped freehire `source`, one en
 
 The Camoufox browser build is pinned along with the package (ADR 0004), so a block result compares across machines.
 
-`atsfill status` shows each adapter's scope. The backlog in `docs/adapters/` and one badge per adapter in the README are generated from it.
+`atsfill status` shows each adapter's scope. The backlog in `docs/adapters/` and each adapter's run history image in the README are generated from it.
 
 ## Consequences
 
