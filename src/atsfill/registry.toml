@@ -402,3 +402,4 @@ kind = "ats"
 account = "none"
 hosting = ["hosted"]
 adapter = "jobaffinity"
+scope = { is = "supported", date = 2026-10-28, commit = "02939fd" }
