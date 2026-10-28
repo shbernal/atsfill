@@ -190,6 +190,8 @@ def run(args: argparse.Namespace) -> int:
                 return 2
             emit(session, args.verbose)
             return 0 if args.command == "logout" or session.session == "signed_in" else 1
+    if result.notice:
+        print(f"atsfill: {result.notice}", file=sys.stderr)
     emit(result, args.verbose, args.command)
     return 0 if result.status in OK else 1
 

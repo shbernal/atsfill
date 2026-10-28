@@ -7,6 +7,8 @@
 # hosting   hosted, embedded: where the form is found
 # links_to  an aggregator's: the sources its postings were followed to
 # adapter   the adapter's name, when there is one
+# hosts     a source without an adapter: the hosts its postings are on, subdomains included,
+#           so a run with no adapter still names its source
 # block     vendor, signal, step (posting | form | upload), date, version, camoufox, browser
 # scope     is (ADR 0016), `in_scope` when absent:
 #           supported     date, commit: a dev dry run passed the adapter gate, never demoted
@@ -58,6 +60,7 @@ kind = "board"
 share = 0.1006
 account = "to_read"
 hosting = ["hosted"]
+hosts = ["trudvsem.ru"]
 block = { vendor = "unknown", signal = "empty response to the browser, http 460 to curl, from outside Russia", step = "posting", date = 2026-10-20, version = "0.0.2", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
 
 [oracle]
@@ -97,6 +100,7 @@ kind = "ats"
 share = 0.0244
 account = "none"
 hosting = ["hosted"]
+hosts = ["paycomonline.net"]
 block = { vendor = "hCaptcha", signal = "image challenge on Continue To Application, the step before the form, 3 of 3 employers headless, and again on a virtual display and headed", step = "form", date = 2026-10-20, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
 
 [icims]
@@ -104,6 +108,7 @@ kind = "ats"
 share = 0.0190
 account = "to_read"
 hosting = ["hosted"]
+hosts = ["icims.com"]
 block = { vendor = "hCaptcha", signal = "image challenge on the email step that starts sign-in and sign-up, before the form, 4 employers headless, Next disabled on 2 more", step = "form", date = 2026-10-26, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
 
 [manatal]
@@ -149,6 +154,7 @@ kind = "board"
 share = 0.0157
 account = "to_read"  # Log in to Apply goes to Singpass, Singapore's national digital identity; there is no email sign-up
 hosting = ["hosted"]
+hosts = ["mycareersfuture.gov.sg"]
 scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: national_id_login: applying needs a Singpass sign-in, whose account takes a Singapore NRIC or FIN number; no account can be made for the Test user (7 of 7 employers)" }
 
 [adzuna]
@@ -169,6 +175,7 @@ kind = "ats"
 share = 0.0125
 account = "to_read"
 hosting = ["hosted"]
+hosts = ["taleo.net"]
 scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_rendering: location_levels: a place's state and city list their options only once the level above is picked, so a fresh profile's are not listed (3 of 4 zones walked)" }
 
 [jazzhr]
@@ -192,6 +199,7 @@ kind = "ats"
 share = 0.0108
 account = "to_read"  # Apply opens a talent community step, name, email and mobile number, verified with a one-time code before the form
 hosting = ["hosted"]
+hosts = ["workforcenow.adp.com"]
 scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_up_otp: the talent community step before the form sends a one-time code to the email or mobile number, on every employer that showed it (14 of 15 employers)" }
 
 [eures]
@@ -228,6 +236,7 @@ kind = "ats"
 share = 0.0085
 account = "to_read"  # the sign-in's Create a new account sets a password, asking the name, country and zip code
 hosting = ["hosted"]
+hosts = ["workforceready.com", "yourpayrollhr.com", "saashr.com", "entertimeonline.com"]
 scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: profile_wizard: signed in, the form is the applicant portal's profile wizard, items of a dozen types edited in cards, entry lists, a security question and an electronic signature; not built within the round (1 tenant walked)" }
 
 [adpmyjobs]
@@ -235,6 +244,7 @@ kind = "ats"
 share = 0.0084
 account = "to_read"  # the posting loads only signed in; the sign-in has no password, a one-time code each time
 hosting = ["hosted"]
+hosts = ["myjobs.adp.com"]
 scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_in_otp: every sign-in, the sign-up's included, is a one-time code sent to the email or phone, and the posting loads only signed in (11 of 11 employers)" }
 
 [phenom]
@@ -266,6 +276,7 @@ kind = "ats"
 share = 0.0059
 account = "to_read"
 hosting = ["hosted"]
+hosts = ["hrmdirect.com"]
 scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs" }
 
 [applicantpro]
@@ -273,6 +284,7 @@ kind = "ats"
 share = 0.0057
 account = "none"
 hosting = ["hosted"]
+hosts = ["applicantpro.com"]
 
 [rippling]
 kind = "ats"
@@ -295,6 +307,7 @@ kind = "board"
 share = 0.0047
 account = "to_read"  # Apply needs a SEEK account; its sign-in and sign-up have no password, an emailed one-time code each time
 hosting = ["hosted"]
+hosts = ["jobstreet.com", "jobsdb.com"]
 scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_in_otp: Apply goes to the SEEK sign-in, whose every sign-in and sign-up is a six-digit code emailed to the address, with no password (14 of 15 employers)" }
 
 [whatjobs-uk]

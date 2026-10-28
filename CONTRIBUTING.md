@@ -41,6 +41,8 @@ Tests run in one process by default. The whole suite in parallel, as CI runs it,
 
 For a system that needs an account, the survey and the adapter gate take `--data-dir` set to the data directory holding the Test user's account, and the dry runs fill under it. A round creates that account with `atsfill login <adapter> --user test --create`, never a personal one ([ADR 0013](docs/adr/0013-survey-and-adapter-rounds.md)).
 
+Commands run from a checkout send their telemetry as `source = dev`, with the commit when the tree has no uncommitted changes, so the run history tells development runs from users' ([docs/telemetry.md](docs/telemetry.md)). The test suite and CI never send.
+
 `uv run python -m scripts.backlog` regenerates [docs/adapters/README.md](docs/adapters/README.md) and the README's adapter badges from the registry.
 
 ## Rules

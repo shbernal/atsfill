@@ -124,6 +124,8 @@ The core owns every rule about when a send is allowed; an adapter only knows its
 Every result has a `status` (`ready`, `refused`, `submitted`, `blocked`, `unknown`, `unsupported`) and, when it is not clean, a `reason` code.
 The exit code is 0 for `ready` and `submitted`, 1 otherwise, 2 for a usage error.
 
+Each `read`, `fill` and `send` sends one anonymous event (the system, the command, the status, a hash of the posting, never answers or URLs): [what is sent and how to turn it off](docs/telemetry.md).
+
 ## More
 
 - [Architecture decisions](docs/adr/README.md): the contract, the submit gate, the browser, sessions.

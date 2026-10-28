@@ -101,6 +101,7 @@ class Result:
     checks: list[Check] = field(default_factory=list)
     side_effects: list[SideEffect] = field(default_factory=list)
     evidence: str | None = None
+    notice: str | None = None  # telemetry's, the first time it is on (ADR 0016)
 
 
 @dataclass

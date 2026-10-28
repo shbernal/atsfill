@@ -6,6 +6,7 @@ from dataclasses import dataclass, fields
 from datetime import date
 from functools import cache
 from importlib.resources import files
+from urllib.parse import urlsplit
 
 KINDS = ("ats", "board", "aggregator", "custom")
 ACCOUNTS = ("none", "to_send", "to_read")  # also the backlog order (ADR 0013)
@@ -46,6 +47,7 @@ class Source:
     account: str
     hosting: tuple[str, ...]
     adapter: str | None = None
+    hosts: tuple[str, ...] = ()  # a source without an adapter: where its postings are
     share: float | None = None
     links_to: tuple[str, ...] = ()  # an aggregator's: the sources its postings link to
     block: Block | None = None
@@ -80,6 +82,7 @@ def _source(name: str, entry: dict) -> Source:
         entry["account"],
         tuple(entry.get("hosting", [])),
         entry.get("adapter"),
+        tuple(entry.get("hosts", [])),
         entry.get("share"),
         tuple(entry.get("links_to", [])),
         block,
@@ -119,6 +122,13 @@ def with_scope(text: str, source: str, scope: Scope) -> str:
 
 def for_adapter(name: str) -> Source | None:
     return next((s for s in sources().values() if s.adapter == name), None)
+
+
+def for_url(url: str) -> Source | None:
+    """The source whose `hosts` a URL is on, a subdomain included."""
+    host = urlsplit(url).hostname or ""
+    on = lambda h: host == h or host.endswith(f".{h}")  # noqa: E731
+    return next((s for s in sources().values() if any(map(on, s.hosts))), None)
 
 
 def _backlog_key(s: Source) -> tuple:

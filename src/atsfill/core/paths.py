@@ -12,6 +12,7 @@ TEST_USER = "test"
 USER_NAME = re.compile(r"[a-z0-9-]+")
 RENAMED = {"submit": "submit-allowed", "ack_side_effects": "mute-side-effect-warnings"}
 MOVED = ("sessions", "attempts.jsonl")  # a data directory from before users, the default's
+TELEMETRY = ("off", "basic", "detailed")  # the first is no telemetry (ADR 0016)
 
 
 class ConfigError(Exception):
@@ -72,6 +73,8 @@ def _config() -> dict:
         for old, new in RENAMED.items():
             if old in section:
                 raise ConfigError(f"`{old}` in {path} is now `{new}`")
+    if (level := whole.get("telemetry", "basic")) not in TELEMETRY:
+        raise ConfigError(f"telemetry = {level!r} in {path}: one of {', '.join(TELEMETRY)}")
     return whole
 
 
@@ -82,6 +85,11 @@ def config(user: str) -> dict:
     if user == DEFAULT_USER:
         return {k: v for k, v in whole.items() if k != "users"}
     return whole.get("users", {}).get(user, {})
+
+
+def telemetry() -> str:
+    """The home's telemetry level, a top-level key: `basic` unless the config says otherwise."""
+    return _config().get("telemetry", "basic")
 
 
 def submit_enabled(adapter: str, user: str) -> bool:
