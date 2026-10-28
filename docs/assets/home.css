@@ -87,7 +87,7 @@ body:has(.home) {
   color: var(--flap-text);
   background: var(--board);
 }
-.wordmark { font-weight: 800; font-size: var(--step-1); color: inherit; text-decoration: none; letter-spacing: -0.01em; }
+.wordmark { font-weight: 800; font-size: var(--step-1); color: inherit; text-decoration: none; letter-spacing: 0.02em; }
 .hall-sign { color: var(--gate); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--step--1); }
 .clock { font-family: var(--font-board); font-variant-numeric: tabular-nums; color: var(--board-muted); font-size: var(--step--1); }
 .hall-nav { margin-left: auto; display: flex; gap: var(--space-5); }
@@ -107,7 +107,7 @@ body:has(.home) {
   font-size: var(--step-4);
   font-weight: 800;
   line-height: 1.04;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.005em;
   max-width: 18ch;
   text-wrap: balance;
 }
@@ -272,7 +272,7 @@ body:has(.home) {
   font-size: var(--step-3);
   font-weight: 800;
   line-height: 1.1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.005em;
   text-wrap: balance;
 }
 .lede { font-size: var(--step-1); line-height: 1.55; color: var(--ink-muted); max-width: 60ch; margin-top: var(--space-4); }
@@ -332,7 +332,7 @@ body:has(.home) {
   color: var(--board-muted);
   margin-bottom: var(--space-2);
 }
-.mismatch-value { font-family: var(--font-sign); font-weight: 800; font-size: var(--step-4); line-height: 1; letter-spacing: -0.02em; }
+.mismatch-value { font-family: var(--font-sign); font-weight: 800; font-size: var(--step-4); line-height: 1; letter-spacing: -0.005em; }
 .mismatch-value.is-wrong { color: var(--no); text-decoration: line-through 3px; text-decoration-color: color-mix(in srgb, var(--no) 60%, transparent); }
 .mismatch-remark .flaps { font-size: var(--step-2); }
 .mismatch-remark [data-flaps] .flap { color: var(--no); }

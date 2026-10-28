@@ -22,7 +22,7 @@ colors:
   no: "#ff6b5b"             # REFUSED, on the board
   wait: "#f5a524"           # BLOCKED, UNKNOWN
 typography:
-  sign: { family: "Overpass", weights: [700, 800], tracking: "-0.025em display, +0.08em caps labels" }
+  sign: { family: "Overpass", weights: [700, 800], tracking: "-0.005em display, +0.02em wordmark, +0.08em caps labels" }
   read: { family: "Atkinson Hyperlegible Next", size: "1.0625rem", leading: 1.55 }
   board: { family: "Overpass Mono", weight: 700, features: "tabular-nums" }
   scale: ["0.875rem", "1.0625rem", "1.25rem", "clamp(1.5rem, 1.2rem + 1vw, 2rem)", "clamp(2rem, 1.4rem + 2.2vw, 3.25rem)", "clamp(2.25rem, 1.3rem + 3.4vw, 4.5rem)"]
