@@ -50,9 +50,9 @@ class Run:
     timestamp: str  # ISO 8601, UTC
 
 
-def query(key: str) -> list[list]:
+def query(key: str, hogql: str = QUERY) -> list[list]:
     """The window's `run` events, oldest first, as PostHog's query API returns its rows."""
-    body = json.dumps({"query": {"kind": "HogQLQuery", "query": QUERY}}).encode()
+    body = json.dumps({"query": {"kind": "HogQLQuery", "query": hogql}}).encode()
     request = urllib.request.Request(
         QUERY_URL,
         body,
