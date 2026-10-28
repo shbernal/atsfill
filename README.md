@@ -55,6 +55,7 @@ It is built for agents with a shell: every command prints one JSON document and 
 [![recruiterflow run history](https://shbernal.github.io/atsfill/run-history/recruiterflow.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![jobaffinity run history](https://shbernal.github.io/atsfill/run-history/jobaffinity.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![join run history](https://shbernal.github.io/atsfill/run-history/join.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![workatastartup run history](https://shbernal.github.io/atsfill/run-history/workatastartup.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![wttj run history](https://shbernal.github.io/atsfill/run-history/wttj.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![workday run history](https://shbernal.github.io/atsfill/run-history/workday.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![successfactors run history](https://shbernal.github.io/atsfill/run-history/successfactors.svg)](https://shbernal.github.io/atsfill/run-history/)
@@ -136,6 +137,7 @@ One home can send for more than one user: `--user <name>` gives each their own s
 Given an account's email (`atsfill login <adapter> --email`) and a password source (a `[password-commands]` entry such as `rbw get example.com {email}`, or `--password -` on stdin), atsfill signs in by itself, and again whenever a form command finds the session signed out.
 When a system emails an OTP, on a sign-in, a sign-up or a form, atsfill gets it from the user's `[otp-commands]` entry, a command that reads the mailbox (`{email}` and `{since}` are filled in), and types it in; without one the command ends `blocked: no_otp_command`.
 Where a system's sign-up allows it, `atsfill login <adapter> --create --email <address>` (with `--details <file.json>` where the sign-up asks the user's name, phone or address) creates the account with a password atsfill generates and keeps in the system's secret store, never printed; creating an account is a side effect, never part of `fill` or `send`.
+Where a system applies only from a complete account profile, `atsfill profile <adapter>` reads its profile form and `atsfill profile <adapter> --answers <file.json>` saves it, step by step, skipping the steps that already match; a form command that meets an incomplete profile ends `blocked: profile_incomplete`, naming that command. Saving a profile is a side effect, never part of `fill` or `send` ([ADR 0017](docs/adr/0017-account-profiles.md)).
 
 ## How it works
 

@@ -2,7 +2,7 @@
 
 from typing import Any
 
-__all__ = ["fill", "login", "logout", "read", "report", "send", "status"]
+__all__ = ["fill", "login", "logout", "profile", "read", "report", "send", "status"]
 
 
 def __getattr__(name: str) -> Any:

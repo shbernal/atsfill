@@ -1,9 +1,10 @@
 """A hiring system of one hand-made page, tests/pages/form.html, driven through every outcome."""
 
+from dataclasses import replace
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, otp
-from atsfill.core.adapter import Gap, Refused, SignUpDetails
+from atsfill.core.adapter import Gap, ProfileIncomplete, Refused, SignUpDetails
 from atsfill.core.browser import Page, Request
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
 
@@ -206,3 +207,59 @@ class FakeOtpOnly(FakeAccount):
     def sign_up_by_otp(self, page: Page, email: str, details: SignUpDetails) -> None:
         self.accounts.setdefault(email, details)
         self.sign_in_by_otp(page, email)
+
+
+class FakeProfile(FakeAccount):
+    """The same, whose account profile is a profile form of two steps on tests/pages/form.html:
+    `about` (the name) and `level`, which loads only once `about` is saved. `saved` is what the
+    system holds; `refuses` is what the page says to a save."""
+
+    name = "fakeprofile"
+    side_effects = [
+        *FakeAccount.side_effects,
+        SideEffect("profile", "hiring_system", "profile --answers saves the account profile"),
+    ]
+    STEPS = {"about": [FIELDS[0]], "level": [FIELDS[1]]}
+
+    def __init__(self, server: str) -> None:
+        super().__init__(server)
+        self.saved: dict[str, dict[str, Answer]] = {}
+        self.refuses: str | None = None
+        self.step = ""
+
+    def browser_read(self, page: Page) -> list[Field]:
+        if missing := [s for s in self.STEPS if s not in self.saved]:
+            raise ProfileIncomplete(f"no {', '.join(missing)}")
+        return self.fields
+
+    def profile_url(self, scope: str | None) -> str:
+        return f"{self.server}/form.html?account&profile"
+
+    def profile_steps(self, page: Page) -> list[str]:
+        return list(self.STEPS)
+
+    def open_step(self, page: Page, step: str) -> bool:
+        if step == "level" and "about" not in self.saved:
+            return False
+        page.goto(f"{self.server}/form.html?account&step={step}")
+        self.step = step
+        for field_id, value in self.saved.get(step, {}).items():
+            target = page.locator(f'[name="{field_id}"]')
+            target.fill(str(value)) if field_id == "name" else target.select_option(value)
+        return True
+
+    def profile_read(self, page: Page) -> list[Field]:
+        saved = self.saved.get(self.step, {})
+        return [replace(f, prefilled=saved.get(f.id)) for f in self.STEPS[self.step]]
+
+    def profile_fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        self.fill(page, answers)
+
+    def profile_read_back(self, page: Page) -> dict[str, Answer]:
+        values = self.read_back(page)
+        return {f.id: values[f.id] for f in self.STEPS[self.step]}
+
+    def save(self, page: Page) -> None:
+        if self.refuses:
+            raise Refused(self.refuses)
+        self.saved[self.step] = self.profile_read_back(page)

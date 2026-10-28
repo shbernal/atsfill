@@ -7,7 +7,7 @@ from pathlib import Path
 from atsfill import core
 from atsfill.adapters import adapters
 from atsfill.core import browser, paths
-from atsfill.core.adapter import NeedsAccount, SignUpDetails
+from atsfill.core.adapter import KeepsProfile, NeedsAccount, SignUpDetails
 from atsfill.core.results import ReportResult, Result, SessionReport, Status, StatusReport
 
 OK = {Status.READY, Status.SUBMITTED}
@@ -108,12 +108,21 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="create the account with --email and a password atsfill generates and stores",
     )
+    keeps = [a.name for a in adapters() if isinstance(a, KeepsProfile)]
+    c = with_user(
+        sub.add_parser("profile", help="read an account profile, or save it with --answers")
+    )
+    c.add_argument("adapter", choices=keeps)
+    c.add_argument("--url", help="a posting, for a system with an account per employer")
+    c.add_argument(
+        "--answers", type=answers_file, help="JSON {field_id: value} file to save, - for stdin"
+    )
     login.add_argument(
         "--details",
         type=details_file,
         help="a JSON file of the user's sign-up details (name, phone, address), for --create",
     )
-    for name in ("read", "fill", "send", "status", "login", "logout"):
+    for name in ("read", "fill", "send", "profile", "status", "login", "logout"):
         sub.choices[name].add_argument(
             "-v", "--verbose", action="store_true", help="the whole result, every key, indented"
         )
@@ -165,6 +174,14 @@ def run(args: argparse.Namespace) -> int:
                 data_dir=args.data_dir,
                 sessions=dict(args.session),
             )
+        case "profile":
+            try:
+                result = core.profile(
+                    args.adapter, args.answers, user=args.user, url=args.url, data_dir=args.data_dir
+                )
+            except ValueError as e:
+                print(f"atsfill: {e}", file=sys.stderr)
+                return 2
         case "status":
             report = core.status(data_dir=args.data_dir)
             emit(report, args.verbose)
@@ -199,7 +216,8 @@ def run(args: argparse.Namespace) -> int:
             return 0 if args.command == "logout" or session.session == "signed_in" else 1
     if result.notice:
         print(f"atsfill: {result.notice}", file=sys.stderr)
-    emit(result, args.verbose, args.command)
+    reads = args.command == "read" or (args.command == "profile" and args.answers is None)
+    emit(result, args.verbose, "read" if reads else args.command)
     return 0 if result.status in OK else 1
 
 

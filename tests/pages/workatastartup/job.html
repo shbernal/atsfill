@@ -1,0 +1,97 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Software Engineer at Acme | Work at a Startup</title>
+<!-- A workatastartup.com job page, signed in: its props, its Apply link and the dialog Apply
+opens, rendered as the page's QuestionsForm renders each question type. Send posts /apply. -->
+<div id="app"></div>
+<script>
+const PROPS = {
+  job: {id: 1001, title: "Software Engineer"},
+  profile: {id: 7, minimally_complete: true, shared: true, data: {share: "passive"}},
+  appliedJobIds: [],
+  locationEligible: false,
+  customQuestions: [
+    {id: 11, question_type: "long_text", label: "Why Acme?", required: true, archived_at: null, options: []},
+    {id: 12, question_type: "text", label: " Where do you live?", required: false, archived_at: null, options: []},
+    {id: 13, question_type: "url", label: "Portfolio", required: false, archived_at: null, options: []},
+    {id: 14, question_type: "single_choice", label: "Can you work in the US?", required: true, archived_at: null,
+     options: [{id: 1, label: "Yes"}, {id: 2, label: "No"}]},
+    {id: 15, question_type: "multiple_choice", label: "Which languages?", required: false, archived_at: null,
+     options: [{id: 1, label: "Python"}, {id: 2, label: "Go"}, {id: 3, label: "Rust"}]},
+    {id: 16, question_type: "text", label: "Retired question", required: true, archived_at: "2026-01-01T00:00:00Z", options: []},
+  ],
+};
+const app = document.getElementById("app");
+app.dataset.page = JSON.stringify({component: "jobs/public/pages/JobDetailPage", props: PROPS});
+app.innerHTML = `<h1>Software Engineer</h1><a class="apply">Apply</a>`;
+const answers = {};
+const shown = PROPS.customQuestions.filter(q => q.archived_at === null);
+
+function question(q) {
+  const div = document.createElement("div");
+  div.className = "mt-3";
+  const p = document.createElement("p");
+  p.className = "mb-1 text-sm";
+  p.textContent = q.required ? `${q.label} *` : q.label;
+  div.append(p);
+  if (["text", "url", "long_text"].includes(q.question_type)) {
+    const t = document.createElement("textarea");
+    t.rows = q.question_type === "long_text" ? 5 : 1;
+    t.oninput = () => { answers[q.id] = t.value || null; update(); };
+    div.append(t);
+  } else {
+    const grid = document.createElement("div");
+    grid.className = "grid grid-cols-3 gap-2";
+    for (const o of q.options) {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      if (q.question_type === "single_choice") {
+        input.type = "radio";
+        input.name = `custom_q_${q.id}`;
+        input.onchange = () => { answers[q.id] = o.id; update(); };
+      } else {
+        input.type = "checkbox";
+        input.onchange = () => {
+          const now = (answers[q.id] || []).filter(i => i !== o.id);
+          answers[q.id] = input.checked ? [...now, o.id] : now;
+          update();
+        };
+      }
+      label.append(input, o.label);
+      grid.append(label);
+    }
+    div.append(grid);
+  }
+  return div;
+}
+
+let message, send;
+function update() {
+  const answered = shown.filter(q => q.required).every(q => answers[q.id] != null && answers[q.id].length !== 0);
+  send.disabled = message.value.length < 50 || !answered;
+}
+
+document.querySelector(".apply").onclick = () => {
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  dialog.innerHTML = `<p>Reach out to Jane at Acme</p>
+    <textarea rows="8" placeholder="Hi! My name is Jane Doe and here's a little bit about me..."></textarea>
+    <div class="questions"></div>
+    <label><input type="checkbox" id="apply-open-to-relocation" checked> This role doesn't match your location preferences.
+      Check here if you're open to relocating — we'll update your profile so companies can contact you.</label>
+    <p>Please write at least 50 characters.</p>
+    <button type="submit">Close</button><button type="submit" disabled>Send</button>`;
+  dialog.querySelector(".questions").append(...shown.map(question));
+  message = dialog.querySelector("textarea");
+  message.oninput = update;
+  send = [...dialog.querySelectorAll("button")].find(b => b.textContent === "Send");
+  send.onclick = async () => {
+    const relocation = dialog.querySelector("#apply-open-to-relocation");
+    await fetch("/apply", {method: "POST", body: JSON.stringify({
+      company_id: 40, job_id: PROPS.job.id, message: message.value,
+      custom_question_answers: answers, open_to_relocation: relocation.checked,
+    })});
+  };
+  document.body.append(dialog);
+};
+</script>
