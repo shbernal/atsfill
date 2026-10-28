@@ -1,13 +1,10 @@
 """Whether an adapter is done (ADR 0013): one line per criterion, then PASS or FAIL.
 
     uv run python -m scripts.gate <system> [--fresh] [--employers N] [--data-dir PATH]
-    uv run python -m scripts.gate <system> --broken "<reason>" [--cause system|code|unknown]
-    uv run python -m scripts.gate <system> --cause system|code|unknown
 
-On PASS it records `dry_run_verified` in the registry; `--broken` records `send_broken` (ADR
-0012). Either is its own commit, so the commit it names is the code's. `--cause` alone settles
-the recorded break's cause and keeps the rest of it, its commit too. Never sends. Employers
-and postings are printed as hashes, so the output can go in a public pull request.
+On PASS it records the source as `supported` in the registry (ADR 0016), as its own commit, so
+the commit it names is the code's. Never sends. Employers and postings are printed as hashes,
+so the output can go in a public pull request.
 
 The checks cover the system's files; the whole suite runs in CI, whose check every merge
 requires. A survey row counts when its commit's code is the current commit's.
@@ -23,7 +20,6 @@ import subprocess
 import sys
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import replace
 from datetime import date
 from importlib.metadata import version
 from pathlib import Path
@@ -141,14 +137,14 @@ def public(reason: str | None) -> str:
     return URL.sub(lambda m: f"<{handle(m.group(0))}>", LABEL.sub("", reason or ""))
 
 
-def record(source: str, key: str, value: registry.Verification | registry.Broken) -> None:
-    """Writes `key` into the registry and the files generated from it, as its own commit."""
-    REGISTRY.write_text(registry.with_verification(REGISTRY.read_text(), source, key, value))
+def record(source: str, scope: registry.Scope) -> None:
+    """Writes the scope into the registry and the files generated from it, as its own commit."""
+    REGISTRY.write_text(registry.with_scope(REGISTRY.read_text(), source, scope))
     registry.sources.cache_clear()
     subprocess.run(["uv", "run", "python", "-m", "scripts.backlog"], check=True, cwd=ROOT)
-    message = f"Record {source} as {key.replace('_', ' ')}"
+    message = f"Record {source} as {scope.value.replace('_', ' ')}"
     subprocess.run(["git", "commit", "-qm", message, "--", *GENERATED], check=True, cwd=ROOT)
-    print(f"recorded {key} {value.date} {value.version} ({value.commit}) by {value.by}")
+    print(f"recorded {scope.value} {scope.date} ({scope.commit})")
 
 
 def main() -> None:
@@ -160,12 +156,6 @@ def main() -> None:
         "--data-dir", type=Path, default=survey.CORPUS / "data",
         help="the data directory holding the Test user's accounts, for a system that needs one",
     )  # fmt: skip
-    p.add_argument("--broken", metavar="REASON", help="record that sending is broken")
-    p.add_argument(
-        "--cause", choices=registry.CAUSES,
-        help="the break's cause, `unknown` by default; alone, settles the recorded break's",
-    )  # fmt: skip
-    p.add_argument("--by", default="adapter_gate", help="who records it")
     args = p.parse_args()
     name = args.system
     head = survey.commit()
@@ -175,19 +165,6 @@ def main() -> None:
 
     adapter = next((a for a in adapters() if a.name == name), None)
     source = registry.for_adapter(name)
-    if args.broken:
-        if not (source and short):
-            sys.exit("--broken needs a registry entry and a tree with no uncommitted changes")
-        broken = registry.Broken(
-            date.today(), version("atsfill"), short, args.by, args.broken, args.cause or "unknown"
-        )
-        record(source.name, "send_broken", broken)
-        return
-    if args.cause:
-        if not (source and source.send_broken):
-            sys.exit("--cause alone needs a recorded send_broken")
-        record(source.name, "send_broken", replace(source.send_broken, cause=args.cause))
-        return
 
     line(adapter is not None, "adapter registered in atsfill.adapters.adapters()")
     line(source is not None, "registry entry", source.name if source else "none names it")
@@ -231,11 +208,6 @@ def main() -> None:
         line(len(ready) >= EMPLOYERS, criterion, detail)
         for text in stops(counted):
             print(f"      {text}")
-        if len(ready) < EMPLOYERS and source.send_verified and not source.send_broken:
-            print(
-                f"      {name} is send verified: if the stops above are a regression, record it"
-                f' with `gate {name} --broken "<fields and steps>" --cause unknown`'
-            )
 
         urls = [r["url"] for r in list(ready.values())[:EMPLOYERS]]
         if not isinstance(adapter, ReadsByRequest):
@@ -252,8 +224,7 @@ def main() -> None:
 
     passed = all(results)
     if passed and source and short:
-        v = registry.Verification(date.today(), version("atsfill"), args.by, short)
-        record(source.name, "dry_run_verified", v)
+        record(source.name, registry.Scope("supported", date.today(), short))
     print("PASS" if passed else "FAIL")
     sys.exit(0 if passed else 1)
 

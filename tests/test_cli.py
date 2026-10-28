@@ -113,14 +113,12 @@ def test_a_read_keeps_empty_options_nothing_to_choose(capsys):
     ]
 
 
-def test_a_ready_fill_is_its_status_system_and_warning(capsys):
+def test_a_ready_fill_is_its_status_and_system(capsys):
     checks = [Check("name", "Ada", "Ada", True)]
     result = Result(Status.READY, URL, "fake", fields=FIELDS, checks=checks, side_effects=EFFECTS)
-    result.warning = "not_send_verified: fake is mapped"
     assert emitted(capsys, result, "fill") == {
         "status": "ready",
         "system": "fake",
-        "warning": "not_send_verified: fake is mapped",
     }
 
 

@@ -24,7 +24,7 @@ In scope, even where rare: a pre-recorded video given as a file, an untimed writ
 
 **Optional fields.** An optional field atsfill cannot fill, out of scope or a known gap, is left empty and reported; only a required one stops the form. `browser_read` returns the field with its case attached, the core applies the rule, and `read` shows it before any fill.
 
-**Registry.** A whole source can be out of scope (`out_of_scope = { reason, date }`, ADR 0012), a video-first system for instance: it leaves the backlog's main table for the side table. An `unsupported` entry stays wanted work and names its known gap.
+**Registry.** A whole source can be out of scope (`scope = { is = "out_of_scope", date, reason }`, ADR 0012), a video-first system for instance: it leaves the backlog's main table for the side table. An `in_scope` entry with a reason stays wanted work and names its known gap.
 
 **Adapter gate.** It skips an `out_of_scope` posting as it skips a closed posting or an external step (ADR 0013). A known gap or an unhandled case is not ready.
 

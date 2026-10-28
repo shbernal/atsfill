@@ -349,70 +349,21 @@ def test_a_data_directory_from_before_users_moves_to_the_default_user(fake, conf
     assert not (data / "sessions").exists() and not (data / "attempts.jsonl").exists()
 
 
-VERIFIED = registry.parse("""
+SUPPORTED = registry.parse("""
 [fake]
 kind = "ats"
 account = "none"
 adapter = "fake"
-send_verified = { date = 2026-10-18, version = "0.0.2", by = "user" }
+scope = { is = "supported", date = 2026-10-18, commit = "aaaaaaa" }
 """)
 
 
-def test_a_send_warns_on_an_adapter_not_send_verified(fake, config, url, answers, data):
-    config('submit-allowed = ["fake"]')
-    result = core.send(url, answers, data_dir=data)
-    assert (result.status, result.warning) == (
-        Status.SUBMITTED,
-        "not_send_verified: fake is not in the registry",
-    )
-
-
-def test_a_ready_dry_run_warns_before_the_send(fake, config, url, answers, data):
-    result = core.fill(url, answers, data_dir=data)
-    assert (result.status, result.warning) == (
-        Status.READY,
-        "not_send_verified: fake is not in the registry",
-    )
-
-
-def test_a_send_verified_adapter_sends_without_warning(
-    fake, config, url, answers, data, monkeypatch
-):
-    monkeypatch.setattr(registry, "sources", lambda: VERIFIED)
-    config('submit-allowed = ["fake"]')
-    assert core.send(url, answers, data_dir=data).warning is None
+def test_status_shows_each_adapters_scope(fake, config, data, monkeypatch):
     (state,) = core.status(data_dir=data).adapters
-    assert (state.verified, state.verified_version) == ("send_verified", "0.0.2")
-
-
-BROKEN = registry.parse("""
-[fake]
-kind = "ats"
-account = "none"
-adapter = "fake"
-send_verified = { date = 2026-10-18, version = "0.0.1", by = "user", commit = "aaaaaaa" }
-
-[fake.send_broken]
-date = 2026-10-19
-version = "0.0.2"
-commit = "bbbbbbb"
-by = "user"
-reason = "resume empty"
-""")
-
-
-def test_a_broken_send_warns_and_shows_in_status(fake, config, url, answers, data, monkeypatch):
-    monkeypatch.setattr(registry, "sources", lambda: BROKEN)
-    monkeypatch.setattr(commands, "version", lambda _: "0.0.2")
-    config('submit-allowed = ["fake"]')
-    broken = "send broken since 2026-10-19 (0.0.2), resume empty; last verified 2026-10-18 (0.0.1)"
-    assert core.send(url, answers, data_dir=data).warning == f"send_broken: {broken}"
+    assert state.scope is None
+    monkeypatch.setattr(registry, "sources", lambda: SUPPORTED)
     (state,) = core.status(data_dir=data).adapters
-    assert (state.verified, state.verified_release, state.send_broken) == (
-        "send_verified",
-        "older",
-        broken,
-    )
+    assert state.scope == "supported"
 
 
 class Remembers(Fake):

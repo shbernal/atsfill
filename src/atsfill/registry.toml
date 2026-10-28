@@ -8,17 +8,10 @@
 # links_to  an aggregator's: the sources its postings were followed to
 # adapter   the adapter's name, when there is one
 # block     vendor, signal, step (posting | form | upload), date, version, camoufox, browser
-# mapped, dry_run_verified, send_verified
-#           date, version (the release), commit (the exact code), by; only the user sets
-#           send_verified
-# unsupported
-#           date, version, commit, by, reason: a round that ended without the adapter passing
-#           the adapter gate (ADR 0013), the known gap that stopped it
-# out_of_scope
-#           reason, date: a system atsfill will never fill, it needs the user live (ADR 0014)
-# send_broken
-#           date, version, commit, by, cause (system | code | unknown), reason: a send that
-#           worked fails now; send_verified stays as the last known good
+# scope     is (ADR 0016), `in_scope` when absent:
+#           supported     date, commit: a dev dry run passed the adapter gate, never demoted
+#           in_scope      date, reason: wanted; the known gap a round stopped at (ADR 0013)
+#           out_of_scope  date, reason: never filled, it needs the user live (ADR 0014)
 
 [ashby]
 kind = "ats"
@@ -26,8 +19,7 @@ share = 0.0146
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "ashby"
-send_verified = { date = 2026-10-19, version = "0.0.2", by = "shbernal", commit = "7622376" }
-dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "adapter_gate", commit = "c230c5e" }
+scope = { is = "supported", date = 2026-10-19, commit = "c230c5e" }
 
 [teamtailor]
 kind = "ats"
@@ -35,8 +27,7 @@ share = 0.0122
 account = "none"
 hosting = ["hosted"]
 adapter = "teamtailor"
-send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "9bc6d84" }
-dry_run_verified = { date = 2026-10-25, version = "0.0.3", by = "adapter_gate", commit = "6852a03" }
+scope = { is = "supported", date = 2026-10-25, commit = "6852a03" }
 
 [greenhouse]
 kind = "ats"
@@ -44,7 +35,7 @@ share = 0.0352
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "greenhouse"
-dry_run_verified = { date = 2026-10-19, version = "0.0.2", by = "adapter_gate", commit = "c0fb0c5" }
+scope = { is = "supported", date = 2026-10-19, commit = "c0fb0c5" }
 
 [wttj]
 kind = "board"
@@ -52,8 +43,7 @@ share = 0.0007
 account = "to_send"
 hosting = ["hosted"]
 adapter = "wttj"
-send_verified = { date = 2026-10-20, version = "0.0.3", by = "shbernal", commit = "9bc6d84" }
-dry_run_verified = { date = 2026-10-24, version = "0.0.3", by = "adapter_gate", commit = "90c58c3" }
+scope = { is = "supported", date = 2026-10-24, commit = "90c58c3" }
 
 [workday]
 kind = "ats"
@@ -61,8 +51,7 @@ share = 0.1786
 account = "to_read"
 hosting = ["hosted"]
 adapter = "workday"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-24, version = "0.0.3", by = "adapter_gate", commit = "fdb237a" }
+scope = { is = "supported", date = 2026-10-24, commit = "fdb237a" }
 
 [trudvsem]
 kind = "board"
@@ -70,7 +59,6 @@ share = 0.1006
 account = "to_read"
 hosting = ["hosted"]
 block = { vendor = "unknown", signal = "empty response to the browser, http 460 to curl, from outside Russia", step = "posting", date = 2026-10-20, version = "0.0.2", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [oracle]
 kind = "ats"
@@ -78,8 +66,7 @@ share = 0.0833
 account = "none"
 hosting = ["hosted"]
 adapter = "oracle"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "1b67ce5" }
+scope = { is = "supported", date = 2026-10-20, commit = "1b67ce5" }
 
 [smartrecruiters]
 kind = "ats"
@@ -87,8 +74,7 @@ share = 0.0441
 account = "none"
 hosting = ["hosted"]
 adapter = "smartrecruiters"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "d7eb8e7" }
+scope = { is = "supported", date = 2026-10-20, commit = "d7eb8e7" }
 
 [successfactors]
 kind = "ats"
@@ -96,8 +82,7 @@ share = 0.0350
 account = "to_read"
 hosting = ["hosted"]
 adapter = "successfactors"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-26, version = "0.0.3", by = "adapter_gate", commit = "79c8327" }
+scope = { is = "supported", date = 2026-10-26, commit = "79c8327" }
 
 [ukg]
 kind = "ats"
@@ -105,8 +90,7 @@ share = 0.0349
 account = "to_read"
 hosting = ["hosted"]
 adapter = "ukg"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "a60a17d", by = "agent", reason = "unhandled on the forms the sign-up now reaches, 3 of 8 tenants ready: no gender decline box to tick (3), a State whose condition names no Country (1), a numeric answer read back differently (1)" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unhandled on the forms the sign-up now reaches, 3 of 8 tenants ready: no gender decline box to tick (3), a State whose condition names no Country (1), a numeric answer read back differently (1)" }
 
 [paycom]
 kind = "ats"
@@ -114,7 +98,6 @@ share = 0.0244
 account = "none"
 hosting = ["hosted"]
 block = { vendor = "hCaptcha", signal = "image challenge on Continue To Application, the step before the form, 3 of 3 employers headless, and again on a virtual display and headed", step = "form", date = 2026-10-20, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [icims]
 kind = "ats"
@@ -122,7 +105,6 @@ share = 0.0190
 account = "to_read"
 hosting = ["hosted"]
 block = { vendor = "hCaptcha", signal = "image challenge on the email step that starts sign-in and sign-up, before the form, 4 employers headless, Next disabled on 2 more", step = "form", date = 2026-10-26, version = "0.0.3", camoufox = "0.5.8", browser = "156.0.1-beta.36" }
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [manatal]
 kind = "ats"
@@ -130,8 +112,7 @@ share = 0.0187
 account = "none"
 hosting = ["hosted"]
 adapter = "manatal"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "e682656" }
+scope = { is = "supported", date = 2026-10-20, commit = "e682656" }
 
 [paylocity]
 kind = "ats"
@@ -139,8 +120,7 @@ share = 0.0167
 account = "none"
 hosting = ["hosted"]
 adapter = "paylocity"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "d3edb25" }
+scope = { is = "supported", date = 2026-10-20, commit = "d3edb25" }
 
 [dayforce]
 kind = "ats"
@@ -148,8 +128,7 @@ share = 0.0165
 account = "none"
 hosting = ["hosted"]
 adapter = "dayforce"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "b3f33ce" }
+scope = { is = "supported", date = 2026-10-20, commit = "b3f33ce" }
 
 [workable]
 kind = "ats"
@@ -157,29 +136,25 @@ share = 0.0159
 account = "none"
 hosting = ["hosted"]
 adapter = "workable"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "76fb0fd" }
+scope = { is = "supported", date = 2026-10-20, commit = "76fb0fd" }
 
 [energyjobline]
 kind = "aggregator"
 share = 0.0157
 account = "to_read"
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [mycareersfuture]
 kind = "board"
 share = 0.0157
 account = "to_read"  # Log in to Apply goes to Singpass, Singapore's national digital identity; there is no email sign-up
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "46095c4", by = "agent", reason = "unsupported_flow: national_id_login: applying needs a Singpass sign-in, whose account takes a Singapore NRIC or FIN number; no account can be made for the Test user (7 of 7 employers)" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: national_id_login: applying needs a Singpass sign-in, whose account takes a Singapore NRIC or FIN number; no account can be made for the Test user (7 of 7 employers)" }
 
 [adzuna]
 kind = "aggregator"
 share = 0.0134
 account = "none"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [bamboohr]
 kind = "ats"
@@ -187,16 +162,14 @@ share = 0.0133
 account = "none"
 hosting = ["hosted"]
 adapter = "bamboohr"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "adapter_gate", commit = "b756312" }
+scope = { is = "supported", date = 2026-10-21, commit = "b756312" }
 
 [taleo]
 kind = "ats"
 share = 0.0125
 account = "to_read"
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "284a5e5", by = "agent", reason = "unsupported_rendering: location_levels: a place's state and city list their options only once the level above is picked, so a fresh profile's are not listed (3 of 4 zones walked)" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_rendering: location_levels: a place's state and city list their options only once the level above is picked, so a fresh profile's are not listed (3 of 4 zones walked)" }
 
 [jazzhr]
 kind = "ats"
@@ -204,8 +177,7 @@ share = 0.0118
 account = "none"
 hosting = ["hosted"]
 adapter = "jazzhr"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "2cf848b" }
+scope = { is = "supported", date = 2026-10-20, commit = "2cf848b" }
 
 [lever]
 kind = "ats"
@@ -213,22 +185,19 @@ share = 0.0116
 account = "none"
 hosting = ["hosted"]
 adapter = "lever"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "d35da0b" }
+scope = { is = "supported", date = 2026-10-20, commit = "d35da0b" }
 
 [adp]
 kind = "ats"
 share = 0.0108
 account = "to_read"  # Apply opens a talent community step, name, email and mobile number, verified with a one-time code before the form
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "b5978b4", by = "agent", reason = "unsupported_flow: sign_up_otp: the talent community step before the form sends a one-time code to the email or mobile number, on every employer that showed it (14 of 15 employers)" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_up_otp: the talent community step before the form sends a one-time code to the email or mobile number, on every employer that showed it (14 of 15 employers)" }
 
 [eures]
 kind = "aggregator"
 share = 0.0102
 account = "none"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [hireology]
 kind = "ats"
@@ -236,8 +205,7 @@ share = 0.0101
 account = "none"
 hosting = ["hosted"]
 adapter = "hireology"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "87c2539" }
+scope = { is = "supported", date = 2026-10-20, commit = "87c2539" }
 
 [paycor]
 kind = "ats"
@@ -245,8 +213,7 @@ share = 0.0095
 account = "none"
 hosting = ["hosted", "embedded"]
 adapter = "paycor"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-20, version = "0.0.3", by = "adapter_gate", commit = "98b626f" }
+scope = { is = "supported", date = 2026-10-20, commit = "98b626f" }
 
 [zohorecruit]
 kind = "ats"
@@ -254,24 +221,21 @@ share = 0.0089
 account = "none"
 hosting = ["hosted"]
 adapter = "zohorecruit"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "4f0baa6" }
+scope = { is = "supported", date = 2026-10-22, commit = "4f0baa6" }
 
 [ukgready]
 kind = "ats"
 share = 0.0085
 account = "to_read"  # the sign-in's Create a new account sets a password, asking the name, country and zip code
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "b0cb322", by = "agent", reason = "unsupported_flow: profile_wizard: signed in, the form is the applicant portal's profile wizard, items of a dozen types edited in cards, entry lists, a security question and an electronic signature; not built within the round (1 tenant walked)" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: profile_wizard: signed in, the form is the applicant portal's profile wizard, items of a dozen types edited in cards, entry lists, a security question and an electronic signature; not built within the round (1 tenant walked)" }
 
 [adpmyjobs]
 kind = "ats"
 share = 0.0084
 account = "to_read"  # the posting loads only signed in; the sign-in has no password, a one-time code each time
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "95f2522", by = "agent", reason = "unsupported_flow: sign_in_otp: every sign-in, the sign-up's included, is a one-time code sent to the email or phone, and the posting loads only signed in (11 of 11 employers)" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_in_otp: every sign-in, the sign-up's included, is a one-time code sent to the email or phone, and the posting loads only signed in (11 of 11 employers)" }
 
 [phenom]
 kind = "ats"
@@ -279,8 +243,7 @@ share = 0.0071
 account = "none"
 hosting = ["hosted"]
 adapter = "phenom"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "adapter_gate", commit = "8cab6dd" }
+scope = { is = "supported", date = 2026-10-21, commit = "8cab6dd" }
 
 [breezy]
 kind = "ats"
@@ -288,8 +251,7 @@ share = 0.0069
 account = "none"
 hosting = ["hosted"]
 adapter = "breezy"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-21, version = "0.0.3", by = "adapter_gate", commit = "aac3924" }
+scope = { is = "supported", date = 2026-10-21, commit = "aac3924" }
 
 [recruitee]
 kind = "ats"
@@ -297,23 +259,20 @@ share = 0.0066
 account = "none"
 hosting = ["hosted"]
 adapter = "recruitee"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-25, version = "0.0.3", by = "adapter_gate", commit = "f47f160" }
+scope = { is = "supported", date = 2026-10-25, commit = "f47f160" }
 
 [hrmdirect]
 kind = "ats"
 share = 0.0059
 account = "to_read"
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "211fe03", by = "agent", reason = "unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs" }
 
 [applicantpro]
 kind = "ats"
 share = 0.0057
 account = "none"
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [rippling]
 kind = "ats"
@@ -321,8 +280,7 @@ share = 0.0050
 account = "none"
 hosting = ["hosted"]
 adapter = "rippling"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "e8b7a0a" }
+scope = { is = "supported", date = 2026-10-22, commit = "e8b7a0a" }
 
 [isolvedhire]
 kind = "ats"
@@ -330,22 +288,19 @@ share = 0.0047
 account = "to_read"  # one account for the whole system, signed in per employer's site; Apply now verifies the email or phone with an OTP and asks the same details as the sign-in's sign-up, which sets a password instead
 hosting = ["hosted"]
 adapter = "isolvedhire"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-26, version = "0.0.3", by = "adapter_gate", commit = "867de7d" }
+scope = { is = "supported", date = 2026-10-26, commit = "867de7d" }
 
 [jobstreet]
 kind = "board"
 share = 0.0047
 account = "to_read"  # Apply needs a SEEK account; its sign-in and sign-up have no password, an emailed one-time code each time
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-unsupported = { date = 2026-10-26, version = "0.0.3", commit = "9c63369", by = "agent", reason = "unsupported_flow: sign_in_otp: Apply goes to the SEEK sign-in, whose every sign-in and sign-up is a six-digit code emailed to the address, with no password (14 of 15 employers)" }
+scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_in_otp: Apply goes to the SEEK sign-in, whose every sign-in and sign-up is a six-digit code emailed to the address, with no password (14 of 15 employers)" }
 
 [whatjobs-uk]
 kind = "aggregator"
 share = 0.0043
 account = "none"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [personio]
 kind = "ats"
@@ -353,8 +308,7 @@ share = 0.0041
 account = "none"
 hosting = ["hosted"]
 adapter = "personio"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "ca99247" }
+scope = { is = "supported", date = 2026-10-22, commit = "ca99247" }
 
 [gupy]
 kind = "ats"
@@ -362,8 +316,7 @@ share = 0.0040
 account = "to_read"  # one account for the whole system; its sign-up asks an ID document number, a mobile number and a date of birth
 hosting = ["hosted"]
 adapter = "gupy"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-26, version = "0.0.3", by = "adapter_gate", commit = "566668d" }
+scope = { is = "supported", date = 2026-10-26, commit = "566668d" }
 
 [eightfold]
 kind = "ats"
@@ -371,15 +324,13 @@ share = 0.0040
 account = "none"
 hosting = ["hosted"]
 adapter = "eightfold"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "24e163f" }
+scope = { is = "supported", date = 2026-10-22, commit = "24e163f" }
 
 [startupjobs]
 kind = "aggregator"
 share = 0.0036
 account = "none"
 links_to = ["smartrecruiters", "recruitee"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [pinpoint]
 kind = "ats"
@@ -387,15 +338,13 @@ share = 0.0035
 account = "none"
 hosting = ["hosted"]
 adapter = "pinpoint"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "58b3972" }
+scope = { is = "supported", date = 2026-10-22, commit = "58b3972" }
 
 [radancy]
 kind = "aggregator"
 share = 0.0034
 account = "none"
 links_to = ["icims", "workday"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [join]
 kind = "ats"
@@ -403,15 +352,13 @@ share = 0.0032
 account = "to_send"  # an unknown email reads and fills the form; a known one signs in first
 adapter = "join"
 hosting = ["hosted"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-26, version = "0.0.3", by = "adapter_gate", commit = "bfa5b31" }
+scope = { is = "supported", date = 2026-10-26, commit = "bfa5b31" }
 
 [4dayweek]
 kind = "aggregator"
 share = 0.0031
 account = "none"
 links_to = ["crelate"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [hiringthing]
 kind = "ats"
@@ -419,24 +366,20 @@ share = 0.0028
 account = "none"
 hosting = ["hosted"]
 adapter = "hiringthing"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
-dry_run_verified = { date = 2026-10-22, version = "0.0.3", by = "adapter_gate", commit = "cce148b" }
+scope = { is = "supported", date = 2026-10-22, commit = "cce148b" }
 
 [jibe]
 kind = "aggregator"
 share = 0.0027
 account = "none"
 links_to = ["icims"]
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [telegram]
 kind = "aggregator"
 share = 0.0027
 account = "none"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }
 
 [whatjobs-es]
 kind = "aggregator"
 share = 0.0024
 account = "none"
-mapped = { date = 2026-10-20, version = "0.0.2", by = "agent", commit = "7934b25" }

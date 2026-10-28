@@ -11,7 +11,7 @@ atsfill is a standalone command line tool that gives external application forms 
 - `atsfill read <url>`: the form's fields, the hiring system and its side effects.
 - `atsfill fill <url> --answers <file>`: fills and reads back, never submits (the dry run).
 - `atsfill send <url> --answers <file>`: fills again and submits only when the read-back is clean.
-- `atsfill status`: version, data directory, browser, and every adapter with its verification.
+- `atsfill status`: version, data directory, browser, and every adapter with its scope.
 
 The document holds what its status needs, on one line, without the keys that are null, false or empty, but for an empty `options`, nothing to choose where null is unknown: a `ready` fill is its status, system and any warning. `-v` prints the whole result, indented.
 
