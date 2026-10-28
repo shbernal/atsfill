@@ -6,7 +6,8 @@
 <!-- One rendering of each kind Quick apply showed (docs/adapters/jobstreet.md), not one posting.
      The page routes itself: the posting, then /apply, /role-requirements, /profile and /review,
      loading its data from /graphql as the apply app does. `?linkout` gives an Apply that links
-     out; `?nohistory` a profile without a career history. -->
+     out; `?nohistory` a profile without a career history; `?ended` a session the site ended, whose
+     Quick apply goes to SEEK's sign-in. -->
 </head>
 <body>
 <main id="app"></main>
@@ -33,6 +34,7 @@ function go(step) {
 function posting() {
   const out = params.has("linkout");
   state.nohistory = params.has("nohistory");
+  state.ended = params.has("ended");
   save();
   app.innerHTML = `<h1>Engineer</h1><a data-automation="job-detail-apply" href="${JOB}/apply"
     target="${out ? "_blank" : "_self"}">${out ? "Apply" : "Quick apply"}</a>`;
@@ -143,6 +145,7 @@ function review() {
 async function render() {
   const path = location.pathname;
   if (!path.includes("/apply")) return posting();
+  if (state.ended) return location.assign("https://login.seek.com/login");
   if (!data) await load();
   if (path.endsWith("/role-requirements")) return questions();
   if (path.endsWith("/profile")) return profile();

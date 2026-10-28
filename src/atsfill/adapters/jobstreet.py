@@ -18,6 +18,7 @@ from atsfill.core.adapter import (
     Gap,
     NotTaken,
     Refused,
+    SignedOut,
     SignUpDetails,
     Unsupported,
     known_gap,
@@ -48,7 +49,7 @@ STEP_MOVE_MS = 8_000  # from Continue to the next step's address, when the click
 RERENDER_MS = 1_000
 STEP_ERRORS = "[role=alert]:has-text('please address')"
 SUGGEST_TIMEOUT_S = 8
-SUGGEST_POLL_MS = 250
+POLL_MS = 250
 KEY_DELAY_MS = 40
 DETAILS = ("firstName", "lastName", "currentLocation", "phone")
 VISIBILITY = ["Public", "Standard", "Limited", "Hidden"]
@@ -160,11 +161,11 @@ class Jobstreet:
         page.on("response", on_response)
         try:
             page.goto(f"https://{host}/job/{job[1]}/apply")
-            page.locator(CONTINUE).wait_for(timeout=APPLY_TIMEOUT_MS)
+            _opened(page)
             deadline = time.monotonic() + STEP_TIMEOUT_MS / 1000
             needed = {"GetPersonalDetails", "GetJobApplicationProcess", "GetUser"}
             while not needed <= answers.keys() and time.monotonic() < deadline:
-                page.wait_for_timeout(SUGGEST_POLL_MS)
+                page.wait_for_timeout(POLL_MS)
         finally:
             page.remove_listener("response", on_response)
         if not needed <= answers.keys():
@@ -235,6 +236,19 @@ class Jobstreet:
         except Timeout:
             raise RuntimeError("Submit application left the review step in place") from None
         return f"Submit application moved to {urlsplit(page.url).path}"
+
+
+def _opened(page: Page) -> None:
+    """Waits for the wizard's first step. A session the site ended itself (its tokens refused)
+    sends the page to SEEK's sign-in instead, though `/profile` still holds it."""
+    deadline = time.monotonic() + APPLY_TIMEOUT_MS / 1000
+    while time.monotonic() < deadline:
+        if page.locator(CONTINUE).is_visible():
+            return
+        if urlsplit(page.url).hostname == SIGN_IN_HOST:
+            raise SignedOut("login_required: the site sent Quick apply to SEEK's sign-in")
+        page.wait_for_timeout(POLL_MS)
+    raise RuntimeError("Quick apply showed no first step")
 
 
 def _sign_in(page: Page, email: str, create: bool) -> None:
@@ -460,5 +474,5 @@ def _suggest(page: Page, field: Field, box: Locator, answer: str) -> None:
             if matching.matches(field, answer, option.inner_text().strip()):
                 option.click()
                 return
-        page.wait_for_timeout(SUGGEST_POLL_MS)
+        page.wait_for_timeout(POLL_MS)
     raise NotTaken(f"no suggestion for {answer!r} in {field.id}")

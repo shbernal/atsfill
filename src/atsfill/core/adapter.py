@@ -15,6 +15,14 @@ class Blocked(Exception):
     """
 
 
+class SignedOut(Blocked):
+    """The system's page asks to sign in although `signed_in` found the session holding: the
+    system ended it its own way. The core signs in again and reads once more (ADR 0015).
+
+    The message is `login_required: detail`.
+    """
+
+
 class Unsupported(Exception):
     """What stops the form before any fill: a flow the adapter does not handle, or a fact about
     the posting (`posting_gone`, `external_step`). The message is `code: detail`.

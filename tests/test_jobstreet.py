@@ -8,7 +8,7 @@ import pytest
 
 from atsfill.adapters.jobstreet import Jobstreet
 from atsfill.core import browser, otp
-from atsfill.core.adapter import NotTaken, Refused, SignUpDetails, Unsupported
+from atsfill.core.adapter import NotTaken, Refused, SignedOut, SignUpDetails, Unsupported
 from atsfill.core.results import FieldType
 
 PAGES = Path(__file__).parent / "pages/jobstreet"
@@ -102,6 +102,12 @@ def test_browser_read_lists_the_details_documents_questions_and_visibility(opene
 def test_an_apply_that_links_out_is_an_external_step(page):
     page.goto(f"{JOB}?linkout")
     with pytest.raises(Unsupported, match="external_step"):
+        Jobstreet().browser_read(page)
+
+
+def test_a_session_the_site_ended_is_signed_out(page):
+    page.goto(f"{JOB}?ended")
+    with pytest.raises(SignedOut, match="login_required"):
         Jobstreet().browser_read(page)
 
 
