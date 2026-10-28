@@ -22,7 +22,7 @@ colors:
   no: "#ff6b5b"             # REFUSED, on the board
   wait: "#f5a524"           # BLOCKED, UNKNOWN
 typography:
-  sign: { family: "Overpass", weights: [700, 800], tracking: "-0.025em display, +0.08em caps labels" }
+  sign: { family: "Overpass", weights: [700, 800], tracking: "-0.005em display, +0.02em wordmark, +0.08em caps labels" }
   read: { family: "Atkinson Hyperlegible Next", size: "1.0625rem", leading: 1.55 }
   board: { family: "Overpass Mono", weight: 700, features: "tabular-nums" }
   scale: ["0.875rem", "1.0625rem", "1.25rem", "clamp(1.5rem, 1.2rem + 1vw, 2rem)", "clamp(2rem, 1.4rem + 2.2vw, 3.25rem)", "clamp(2.25rem, 1.3rem + 3.4vw, 4.5rem)"]
@@ -53,7 +53,7 @@ components:
 
 ## Overview
 
-The docs site of a CLI that applies to jobs for an agent. The job hunt is a departures hall: each posting a flight, each hiring system a carrier, each result a remark on a split-flap board, the send a gate that closes on a wrong answer. The bold move is the board itself, played on load; around it, the hall stays quiet.
+The docs site of a CLI that applies to jobs for an agent. The job hunt is a departures hall: each posting a flight, each hiring system a carrier, each result a remark on a split-flap board, the send a gate that closes on a wrong answer. The bold move is the board itself, played on load, under a runway where a plane takes off on a loop; around it, the hall stays quiet, its lists rising in as they scroll.
 
 ## Colors
 
@@ -77,7 +77,7 @@ Small radii: 3px for cells and plates, 6px for panels. Rules are 1px; a 2px ink 
 
 ## Components
 
-Flap cells (two leaves, a split line, CSS rotateX through a character drum), gate lines (the command, a yellow marker, a copy button), sign plates (yellow on ink, the rules' terms), the carrier wall (each system's mark in a white tile, generated from the registry by `scripts.backlog`).
+The runway (one plane, one inline SVG symbol, rolling and lifting off in CSS; the same plane leaves a SUBMITTED row and marks the Departures sign), flap cells (two leaves, a split line, CSS rotateX through a character drum), gate lines (the command, a yellow marker, a copy button), sign plates (yellow on ink, the rules' terms and the route's stops), the route (four stops on one line, You, the agent, atsfill, the hiring system, with a packet riding each leg while its line in the list below is current; still, the list alone), the carrier wall (each system's mark in a white tile, generated from the registry by `scripts.backlog`).
 
 ## Do's and Don'ts
 
