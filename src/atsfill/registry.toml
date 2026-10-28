@@ -47,6 +47,13 @@ hosting = ["hosted"]
 adapter = "wttj"
 scope = { is = "supported", date = 2026-10-24, commit = "90c58c3" }
 
+[workatastartup]
+kind = "board"
+share = 0.0008
+account = "to_send"
+hosting = ["hosted"]
+hosts = ["workatastartup.com", "ycombinator.com"]
+
 [workday]
 kind = "ats"
 share = 0.1786
