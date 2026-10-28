@@ -1,6 +1,7 @@
 import shlex
 from collections.abc import Callable, Generator
 from contextlib import contextmanager, suppress
+from contextvars import ContextVar
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
@@ -31,6 +32,7 @@ from atsfill.core.adapter import (
     ProfileIncomplete,
     ReadsByRequest,
     Refused,
+    SignedOut,
     SignsIn,
     SignsInByOtp,
     SignUpDetails,
@@ -182,12 +184,40 @@ def _opened(
             return
         scope = adapter.account_scope(url) if isinstance(adapter, NeedsAccount) else None
         with otp.source(user, adapter.name, scope):
-            if isinstance(adapter, NeedsAccount) and not (
-                session and adapter.signed_in(page.request, scope)
-            ):
-                yield _sign_in_again(page, adapter, user, mine, url, credentials) or (page, adapter)
-            else:
+            if not isinstance(adapter, NeedsAccount):
                 yield page, adapter
+                return
+            token = _again.set(lambda: _sign_in_again(page, adapter, user, mine, url, None))
+            try:
+                if not (session and adapter.signed_in(page.request, scope)):
+                    yield _sign_in_again(page, adapter, user, mine, url, credentials) or (
+                        page,
+                        adapter,
+                    )
+                else:
+                    yield page, adapter
+            finally:
+                _again.reset(token)
+            if session:  # a system that rotates the session's tokens as the page uses them
+                with suppress(Exception):
+                    browser.save_session(page, session)
+
+
+_again: ContextVar[Callable[[], Result | None] | None] = ContextVar("again", default=None)
+
+
+def _read_signed_in(page: Page, adapter: Adapter) -> list[Field]:
+    """`browser_read`, once more after signing in again where the page asked to sign in although
+    the session held: the result that ends the command instead is raised as `Blocked`."""
+    try:
+        return adapter.browser_read(page)
+    except SignedOut:
+        again = _again.get()
+        if again is None:
+            raise
+        if ended := again():
+            raise Blocked(ended.reason) from None
+        return adapter.browser_read(page)
 
 
 def _sign_in_again(
@@ -338,7 +368,7 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
     """Fills and reads back; `ready` when every answer reads back as given."""
     result = _result(adapter, url, user)
     with _stops(result):
-        _listed(result, adapter.browser_read(page))
+        _listed(result, _read_signed_in(page, adapter))
         if _unfillable(result, answers):
             return result
         if problems := matching.problems(result.fields, answers):
@@ -363,7 +393,7 @@ def _browser_read(data: Path, user: str, url: str, sessions: Sessions | None, se
         def run() -> Result:
             result = _result(adapter, url, user)
             with _stops(result):
-                _listed(result, adapter.browser_read(page))
+                _listed(result, _read_signed_in(page, adapter))
                 _unfillable(result)
             _profile_incomplete(result, adapter, user, url)
             return result

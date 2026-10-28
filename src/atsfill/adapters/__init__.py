@@ -10,6 +10,7 @@ from atsfill.adapters.hiringthing import HiringThing
 from atsfill.adapters.isolvedhire import IsolvedHire
 from atsfill.adapters.jazzhr import JazzHR
 from atsfill.adapters.jobaffinity import JobAffinity
+from atsfill.adapters.jobstreet import Jobstreet
 from atsfill.adapters.join import Join
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
@@ -68,6 +69,7 @@ def adapters() -> list[Adapter]:
         Gupy(),
         UKG(),
         IsolvedHire(),
+        Jobstreet(),
         SuccessFactors(),  # it claims a career site's job path on any host
         Phenom(),  # last: it claims a URL by its path alone
     ]
