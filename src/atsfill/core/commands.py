@@ -453,10 +453,18 @@ def profile(
             page, _ = opened
             result = _result(account, start, user)
             with _stops(result):
-                if answers is None:
-                    _read_profile(page, account, result)
-                else:
-                    _save_profile(page, account, result, answers)
+                try:
+                    if answers is None:
+                        _read_profile(page, account, result)
+                    else:
+                        _save_profile(page, account, result, answers)
+                except OutOfTime as e:  # the result keeps the steps saved before the stop
+                    result.status, result.reason = Status.BLOCKED, f"time_budget: {e}"
+                except Unsupported, NotTaken, Refused, Blocked, ProfileIncomplete, Overlaid:
+                    raise
+                except Exception as e:
+                    result.status = Status.UNSUPPORTED
+                    result.reason = f"adapter_error: {type(e).__name__}: {e}"
             return result
 
     return telemetry.sent("profile", _in_budget(start, run), data)
@@ -477,8 +485,11 @@ def _save_profile(
     page: Page, adapter: KeepsProfile, result: Result, answers: dict[str, Answer]
 ) -> None:
     """Fills, reads back and saves each step that differs from its answers; stops at the first
-    step that refuses, the steps saved before it staying saved."""
-    for step in adapter.profile_steps(page):
+    step that refuses, the steps saved before it staying saved. The steps are listed again after
+    each, since a saved answer can add one."""
+    done: list[str] = []
+    while step := next((s for s in adapter.profile_steps(page) if s not in done), None):
+        done.append(step)
         if not adapter.open_step(page, step):
             raise RuntimeError(f"profile step {step} did not load after the ones before it")
         fields = adapter.profile_read(page)

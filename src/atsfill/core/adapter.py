@@ -210,7 +210,7 @@ class KeepsProfile(Adapter, NeedsAccount, Protocol):
         ...
 
     def profile_steps(self, page: Page) -> list[str]:
-        """The profile's steps, in order, on the page `profile_url` loaded."""
+        """The profile's steps, in order, on the page `profile_url` or a step loaded."""
         ...
 
     def open_step(self, page: Page, step: str) -> bool:

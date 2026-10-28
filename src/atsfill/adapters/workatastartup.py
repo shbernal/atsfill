@@ -7,6 +7,7 @@ Nothing is sent before Send, so the read-back is the dialog's state. The account
 a wizard of profile steps, each saved on its own button: `profile` fills it (ADR 0017).
 """
 
+import contextlib
 import html
 import json
 import re
@@ -44,6 +45,7 @@ DIALOG = "[role=dialog]"
 PROFILE = f"https://{WAAS}/application"
 WIZARD = "form:has(button[type=submit])"
 PROFILE_TIMEOUT_MS = 20_000
+MANUAL_TIMEOUT_MS = 2_000  # a profile with entries shows them, not the choice
 SAVE_TIMEOUT_MS = 10_000
 SUGGEST_TIMEOUT_S = 5
 SUGGEST_POLL_MS = 250
@@ -305,17 +307,20 @@ class WorkAtAStartup:
             return False
         if step not in STEPS:
             raise Unsupported(f"unhandled_rendering: a profile step {step!r}")
-        form = page.locator(WIZARD).last
-        form.wait_for(timeout=PROFILE_TIMEOUT_MS)
-        manually = form.get_by_role("button", name="fill in your experience manually")
-        if step == "experience" and manually.count():
-            manually.click()  # an upload or an import cannot be read back field by field
+        if step == "experience":  # an upload or an import cannot be read back field by field
+            manually = page.get_by_role("button", name="fill in your experience manually")
+            with contextlib.suppress(Timeout):
+                manually.wait_for(timeout=MANUAL_TIMEOUT_MS)
+                manually.click()
+        page.locator(WIZARD).last.wait_for(timeout=PROFILE_TIMEOUT_MS)
         self._step = step
         return True
 
     def profile_read(self, page: Page) -> list[Field]:
         form = page.locator(WIZARD).last
-        return [_profile_field(form, c) for c in STEPS[self._step] if c.shown(form)]
+        # a follow-up is listed before it shows: a fresh profile's role step shows its
+        # questions only once a role is picked
+        return [_profile_field(form, c) for c in STEPS[self._step] if c.shown_when or c.shown(form)]
 
     def profile_fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(WIZARD).last
@@ -406,6 +411,7 @@ def _in_entry(form: Locator, entry: str | None, node: str) -> Locator:
 
 
 ENGINEERING = Is("role", ["Engineering"])
+A_ROLE = Is("role")  # shown once a role is picked
 YES_NO = ["Yes", "No"]
 SIZES = ["Not Interested", "OK", "Preferred"]
 T, C, M, TA = FieldType.TEXT, FieldType.CHOICE, FieldType.MULTI_CHOICE, FieldType.TYPEAHEAD
@@ -463,8 +469,17 @@ STEPS: dict[str, list[Control]] = {
         Control(
             "in_school", "Are you a full-time student at a school or bootcamp?", "radio", C, True
         ),
-        Control("job_type", "What job type(s) are you most interested in?", "checks", M, True),
-        Control("experience", "Years of professional experience", "input", T, True),
+        Control(
+            "job_type",
+            "What job type(s) are you most interested in?",
+            "checks",
+            M,
+            True,
+            shown_when=A_ROLE,
+        ),
+        Control(
+            "experience", "Years of professional experience", "input", T, True, shown_when=A_ROLE
+        ),
     ],
     "experience": [
         Control("work_employer", "Work History: Employer Name", "combo", T, False, "Employer Name"),
@@ -547,14 +562,15 @@ STEPS: dict[str, list[Control]] = {
 
 
 def _profile_field(form: Locator, c: Control) -> Field:
-    options = _options(form, c)
+    shown = c.shown(form)
+    options = _options(form, c) if shown else None
     return Field(
         c.id,
         c.label,
         c.type,
         c.required,
         options,
-        prefilled=None if c.unfillable else _value(form, c) or None,
+        prefilled=(_value(form, c) or None) if shown and not c.unfillable else None,
         unfillable=c.unfillable,
         shown_when=c.shown_when,
     )
