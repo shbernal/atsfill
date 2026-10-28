@@ -6,6 +6,7 @@ import pytest
 
 from atsfill.adapters import adapters
 from atsfill.core import registry
+from scripts import backlog
 
 ROOT = Path(__file__).parents[1]
 
@@ -87,6 +88,11 @@ def test_a_scope_is_written_into_its_entry_only():
     systems = registry.parse(twice)
     assert (systems["a"].scope, systems["b"].scope) == (scope, registry.Scope())
     assert "supported%202026--10--19" in registry._badge(replace(systems["a"], adapter="a"))
+
+
+def test_the_committed_carriers_are_current():
+    committed = (ROOT / "overrides/partials/carriers.html").read_text()
+    assert committed == backlog.carriers(), "run `uv run python -m scripts.backlog`"
 
 
 def test_the_committed_badges_are_current():

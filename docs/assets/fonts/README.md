@@ -1,0 +1,1 @@
+Overpass, Overpass Mono and Atkinson Hyperlegible Next, latin subsets as variable WOFF2 from Fontsource 5.3.0, under the [SIL Open Font License 1.1](https://openfontlicense.org): [Overpass](https://github.com/RedHatOfficial/Overpass), [Atkinson Hyperlegible Next](https://github.com/googlefonts/atkinson-hyperlegible-next).

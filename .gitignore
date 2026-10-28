@@ -12,3 +12,6 @@ build/
 .tmp/
 
 .claude/worktrees/
+
+# The docs site, built by `uv run --group docs zensical build`
+site/
