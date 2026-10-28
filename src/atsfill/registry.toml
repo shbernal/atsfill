@@ -325,7 +325,7 @@ account = "to_read"  # Apply needs a SEEK account without a password, signed in 
 hosting = ["hosted"]
 hosts = ["jobstreet.com", "jobsdb.com"]
 adapter = "jobstreet"
-scope = { is = "in_scope", date = 2026-10-28, reason = "adapter before its gate: 10 of 10 Quick apply dry runs ready; 13 of 24 postings link out to the employer's site" }
+scope = { is = "supported", date = 2026-10-29, commit = "49a997e" }
 
 [whatjobs-uk]
 kind = "aggregator"
