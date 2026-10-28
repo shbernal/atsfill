@@ -9,3 +9,12 @@
   <input type="file" name="cv">
   <button>Submit</button>
 </form>
+<p id="echo"></p>
+<script>
+  // Echoes the name and the file as some systems do: what a snapshot must scrub besides values
+  document.forms[0].addEventListener("input", e => {
+    const f = e.currentTarget;
+    document.getElementById("echo").textContent =
+      `Hello ${f.elements.name.value}, ${f.cv.files[0]?.name ?? ""}`;
+  });
+</script>

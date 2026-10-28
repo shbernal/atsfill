@@ -1,0 +1,2 @@
+- 2026-10-28: the home page is the departures board (the user's pick over the roll's terminal stream); the docs step down to Read in the same palette and type.
+- 2026-10-28: fonts self-hosted, never a font CDN: a privacy-minded project.

@@ -1,8 +1,11 @@
+import json
+
 import pytest
 
 from atsfill import core
-from atsfill.core import commands, paths, telemetry
+from atsfill.core import accounts, commands, paths, snapshot, telemetry
 from atsfill.core.results import Result, Status
+from tests.fake import Fake
 
 URL = "https://Jobs.Example.com/acme/1234?utm_source=x#apply"
 
@@ -17,12 +20,12 @@ def config(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def sent(config, monkeypatch) -> list[dict]:
+def sent(config, monkeypatch) -> list[tuple[str, dict]]:
     """Telemetry as outside the test suite, the events kept instead of sent."""
-    events: list[dict] = []
+    events: list[tuple[str, dict]] = []
     monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     monkeypatch.setattr(telemetry, "_in_tests_or_ci", lambda: False)
-    monkeypatch.setattr(telemetry, "_capture", events.append)
+    monkeypatch.setattr(telemetry, "_capture", events.extend)
     return events
 
 
@@ -102,7 +105,7 @@ def test_a_command_sends_its_event_and_a_notice_once(sent, tmp_path, monkeypatch
     monkeypatch.setattr(commands, "_read", lambda *a: Result(Status.READY, URL, "fake"))
     first = core.read(URL, data_dir=tmp_path / "data")
     second = core.read(URL, data_dir=tmp_path / "data")
-    assert [e["verdict"] for e in sent] == ["pass", "pass"]
+    assert [e["verdict"] for _, e in sent] == ["pass", "pass"]
     assert "DO_NOT_TRACK=1" in (first.notice or "")
     assert second.notice is None
 
@@ -137,6 +140,81 @@ def test_an_unknown_level_is_a_config_error(config):
     config.write_text('telemetry = "full"\n')
     with pytest.raises(paths.ConfigError, match="telemetry"):
         paths.telemetry()
+
+
+@pytest.fixture
+def answers(tmp_path) -> dict:
+    cv = tmp_path / "Jane-Doe-resume.pdf"
+    cv.write_bytes(b"%PDF-1.4")
+    return {"name": "Jane Doe", "level": "Fluent", "langs": ["French"], "cv": str(cv)}
+
+
+@pytest.fixture
+def fake(monkeypatch) -> Fake:
+    adapter = Fake()
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+    return adapter
+
+
+def test_a_failed_fill_keeps_its_page_with_no_answer_left(
+    sent, fake, server, answers, tmp_path, monkeypatch
+):
+    data = tmp_path / "data"
+    accounts.remember(paths.user_dir(data, "default"), "fake", None, "jane@example.com")
+    fake.shows = ["ranking"]
+    result = core.fill(f"{server}/form.html", answers, data_dir=data)
+    assert result.reason.startswith("unhandled_rendering")
+    assert "atsfill report" in (result.report or "")
+    kept = json.loads((data / telemetry.FAILED_RUN).read_text())
+    page = kept["event"]["snapshot"]
+    assert "<form" in page and "Hello" in page and "<script" not in page
+    for secret in ["Jane", "Doe", "Fluent", "French", "resume", "jane@example.com"]:
+        assert secret.lower() not in page.lower(), secret
+    assert [name for name, _ in sent] == ["run"]
+    assert "url" not in sent[0][1]
+
+
+def test_scrub_replaces_whole_words_escaped_forms_and_emails():
+    text = '<p title="Smith &amp; Co">Ann Smith & Co, Annex; write to a.b@c.example</p>'
+    scrubbed = snapshot.scrub(text, {"Smith & Co", "Ann"})
+    assert scrubbed == (
+        '<p title="[scrubbed]">[scrubbed] [scrubbed], Annex; write to [scrubbed]</p>'
+    )
+
+
+def test_a_page_over_the_limit_keeps_its_step(monkeypatch):
+    monkeypatch.setattr(snapshot, "MAX_BYTES", 100)
+    step = "<form><input></form>"
+    assert snapshot.kept(("<html>" + "x" * 200 + step + "</html>", step), set()) == step
+    cut = snapshot.kept(("<html>" + "x" * 200, "<form>" + "x" * 200), set())
+    assert len(cut.encode()) <= 100 and cut.endswith(snapshot.TRUNCATED)
+
+
+def test_detailed_sends_the_report_with_the_run(sent, config, tmp_path):
+    config.write_text('telemetry = "detailed"\n')
+    result = telemetry.sent("fill", Result(Status.REFUSED, URL, "fake", "mismatch: x"), tmp_path)
+    assert [name for name, _ in sent] == ["run", "report"]
+    assert sent[0][1]["url"] == sent[1][1]["url"] == URL
+    assert result.report is None
+    assert core.report(data_dir=tmp_path).reason.startswith("already_reported")
+
+
+def test_report_sends_the_last_failed_run_once(sent, tmp_path):
+    telemetry.sent("fill", Result(Status.REFUSED, URL, "fake", "mismatch: x"), tmp_path)
+    telemetry.sent("fill", Result(Status.READY, URL, "fake"), tmp_path)
+    first, second = core.report(data_dir=tmp_path), core.report(data_dir=tmp_path)
+    assert (first.status, first.url) == ("sent", URL)
+    assert [name for name, _ in sent] == ["run", "run", "report"]
+    assert sent[-1][1]["detail"] == "x"
+    assert (second.status, second.reason.split(":")[0]) == ("refused", "already_reported")
+
+
+def test_report_refuses_when_off_or_nothing_failed(sent, config, tmp_path, monkeypatch):
+    assert core.report(data_dir=tmp_path).reason.startswith("no_failed_run")
+    telemetry.sent("fill", Result(Status.REFUSED, URL, "fake", "mismatch: x"), tmp_path)
+    monkeypatch.setenv("DO_NOT_TRACK", "1")
+    assert core.report(data_dir=tmp_path).reason.startswith("telemetry_off")
+    assert [name for name, _ in sent] == ["run"]
 
 
 def test_a_profile_event_has_no_posting(monkeypatch):

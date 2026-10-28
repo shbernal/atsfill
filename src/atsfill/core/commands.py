@@ -1,6 +1,7 @@
 import shlex
 from collections.abc import Callable, Generator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
 
@@ -15,12 +16,14 @@ from atsfill.core import (
     passwords,
     paths,
     registry,
+    snapshot,
     telemetry,
 )
 from atsfill.core.adapter import (
     Adapter,
     Blocked,
     CreatesAccount,
+    CreatesAccountByOtp,
     KeepsProfile,
     ListsShownFields,
     NeedsAccount,
@@ -29,6 +32,7 @@ from atsfill.core.adapter import (
     ReadsByRequest,
     Refused,
     SignsIn,
+    SignsInByOtp,
     SignUpDetails,
     Unsupported,
 )
@@ -37,6 +41,7 @@ from atsfill.core.results import (
     AdapterStatus,
     Answer,
     Field,
+    ReportResult,
     Result,
     SessionReport,
     Status,
@@ -46,18 +51,26 @@ from atsfill.core.results import (
 type Sessions = dict[str, Path]
 
 
+@dataclass
+class Seen:
+    """What a command saw before it ended, for a result it did not get to make."""
+
+    adapter: str | None = None  # the adapter detected
+    page: tuple[str, str] | None = None  # a failed run's page, for its report (ADR 0016)
+
+
 def _detect(candidates: list[Adapter], url: str, page: Page | None = None) -> Adapter | None:
     return next((a for a in candidates if a.detect(url, page)), None)
 
 
-def login_command(adapter: str, user: str, url: str | None) -> str:
+def login_command(adapter: str, user: str, url: str | None, *more: str) -> str:
     """The `login` command line for one account: its user, and a posting where it is scoped."""
     command = ["atsfill", "login", adapter]
     if user != paths.DEFAULT_USER:
         command += ["--user", user]
     if url:
         command += ["--url", url]
-    return shlex.join(command)
+    return shlex.join([*command, *more])
 
 
 def profile_command(adapter: str, user: str, url: str | None) -> str:
@@ -79,27 +92,38 @@ def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
     return Result(Status.BLOCKED, url, adapter.name, reason=f"login_required: run `{command}`")
 
 
-type Credentials = tuple[str, str]  # email, password
+type Credentials = tuple[str, str | None]  # email, password: None for an account without one
 # Refusals the page states before any account exists: the generated password goes.
 NO_ACCOUNT = {"email_in_use", "email_domain_rejected", "password_rule", "sign_up_details"}
 
 
-def _email_link(reason: str | None, email: str, command: str) -> str | None:
-    """Names the address a verification link went to and the command to run once clicked."""
-    if reason and reason.split(":")[0] == "email_link":
+def _next_step(
+    reason: str | None, email: str, adapter: str, user: str, url: str | None
+) -> str | None:
+    """Names the command to run next: once the verification link sent to the address is
+    clicked, or `--create` for an email the system has no account for."""
+    code = (reason or "").split(":")[0]
+    if code == "email_link":
+        command = login_command(adapter, user, url)
         return f"email_link: click the link sent to {email}, then run `{command}`"
+    if code == "no_account":
+        command = login_command(adapter, user, url, "--email", email, "--create")
+        return f"no_account: {email} has no {adapter} account; run `{command}`"
     return reason
 
 
 def _credentials(
     adapter: NeedsAccount, user: str, mine: Path, scope: str | None, given: str | None = None
 ) -> Credentials | None:
-    """The account's email and a password from its password source, where atsfill can sign in
+    """The account's email and a password from its password source, or no password for an
+    account without one when the user has an OTP command for it, where atsfill can sign in
     through the adapter; None otherwise."""
-    if not isinstance(adapter, SignsIn):
+    if not isinstance(adapter, (SignsIn, SignsInByOtp)):
         return None
     if not (email := accounts.email(mine, adapter.name, scope)):
         return None
+    if isinstance(adapter, SignsInByOtp):
+        return (email, None) if otp.command(user, adapter.name) else None
     password = passwords.password(user, mine, adapter.name, scope, email, given)
     return (email, password) if password else None
 
@@ -110,20 +134,21 @@ def _opened(
     user: str,
     url: str,
     sessions: Sessions | None,
-    detected: list[str],
+    seen: Seen,
     known: Adapter | None = None,
     seconds: float = browser.BUDGET,
 ) -> Generator[tuple[Page, Adapter] | Result]:
     """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
     lands on, else by its page; or the result that ends the command first. An adapter that
     needs an account gets the user's session, and only that adapter's; signed out with a
-    password source, atsfill signs in again (ADR 0015). The adapter's name goes in `detected`
-    once known; `known` skips the detection. The adapters are fresh: none keeps state from
-    another posting (a survey or the adapter gate runs many commands in one process)."""
+    password source, or an OTP command for an account without a password, atsfill signs in
+    again (ADR 0015). The adapter's name goes in `seen` once known; `known` skips the
+    detection. The adapters are fresh: none keeps state from another posting (a survey or the
+    adapter gate runs many commands in one process)."""
     candidates = adapters()
     adapter = known or _detect(candidates, url)
     if adapter:
-        detected.append(adapter.name)
+        seen.adapter = adapter.name
     mine = paths.user_dir(data, user)
     session, credentials = None, None
     if isinstance(adapter, NeedsAccount):
@@ -151,7 +176,7 @@ def _opened(
         if adapter is None and (
             adapter := _detect(candidates, page.url) or _detect(candidates, url, page)
         ):
-            detected.append(adapter.name)
+            seen.adapter = adapter.name
         if adapter is None:
             yield _no_adapter(url)
             return
@@ -173,8 +198,8 @@ def _sign_in_again(
     url: str,
     credentials: Credentials | None,
 ) -> Result | None:
-    """Signs in with the account's password source, stores the session and loads the posting
-    again; the result that ends the command instead, `login_required` without a source."""
+    """Signs in as `_credentials` allows, stores the session and loads the posting again; the
+    result that ends the command instead, `login_required` where it does not."""
     result = Result(Status.BLOCKED, url, adapter.name)
     with _stops(result):
         scope = adapter.account_scope(url)
@@ -183,14 +208,15 @@ def _sign_in_again(
         except passwords.PasswordError as e:
             result.reason = f"password_source: {e}"
             return result
-        if credentials is None or not isinstance(adapter, SignsIn):
+        if credentials is None or not isinstance(adapter, (SignsIn, SignsInByOtp)):
             return _login_required(url, adapter, user)
         session = accounts.session_file(mine, adapter.name, scope)
         accounts.sign_in(page, adapter, scope, *credentials, session)
         page.goto(url)
         return None
-    command = login_command(adapter.name, user, url if adapter.per_employer else None)
-    result.reason = _email_link(result.reason, credentials[0] if credentials else "", command)
+    email = credentials[0] if credentials else ""
+    scoped = url if adapter.per_employer else None
+    result.reason = _next_step(result.reason, email, adapter.name, user, scoped)
     return result
 
 
@@ -271,18 +297,41 @@ def _stops(result: Result) -> Generator[None]:
         result.status, result.reason = Status.BLOCKED, f"overlaid: {e}"
 
 
-def _in_budget(url: str, command: Callable[[list[str]], Result]) -> Result:
+def _in_budget(url: str, seen: Seen, command: Callable[[], Result]) -> Result:
     """Runs a command to a status whatever happens: past the click it reports `unknown` itself,
     before it an error the adapter did not expect means the page is not one it handles. The
     result keeps the adapter detected before the stop."""
-    detected: list[str] = []
     try:
-        return command(detected)
+        return command()
     except OutOfTime as e:
-        return Result(Status.BLOCKED, url, (detected or [None])[-1], f"time_budget: {e}")
+        return Result(Status.BLOCKED, url, seen.adapter, f"time_budget: {e}")
     except Exception as e:
         reason = f"adapter_error: {type(e).__name__}: {e}"
-        return Result(Status.UNSUPPORTED, url, (detected or [None])[-1], reason)
+        return Result(Status.UNSUPPORTED, url, seen.adapter, reason)
+
+
+def _kept(page: Page, seen: Seen, run: Callable[[], Result]) -> Result:
+    """The run's result; a failed run's page goes in `seen`, values stripped, when telemetry
+    is on."""
+    try:
+        result = run()
+    except Exception:
+        _capture(page, seen)
+        raise
+    if telemetry.verdict(result) == "fail":
+        _capture(page, seen)
+    return result
+
+
+def _capture(page: Page, seen: Seen) -> None:
+    with suppress(Exception):  # a page the budget closed has nothing to keep
+        if telemetry.level() != "off":
+            seen.page = snapshot.capture(page)
+
+
+def _secrets(data: Path, user: str, answers: dict[str, Answer], result: Result) -> set[str]:
+    emails = accounts.emails(paths.user_dir(data, user))
+    return snapshot.secrets(answers, result.fields, emails)
 
 
 def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], user: str) -> Result:
@@ -305,19 +354,21 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
     return result
 
 
-def _browser_read(
-    data: Path, user: str, url: str, sessions: Sessions | None, detected: list[str]
-) -> Result:
-    with _opened(data, user, url, sessions, detected) as opened:
+def _browser_read(data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen) -> Result:
+    with _opened(data, user, url, sessions, seen) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
-        result = _result(adapter, url, user)
-        with _stops(result):
-            _listed(result, adapter.browser_read(page))
-            _unfillable(result)
-        _profile_incomplete(result, adapter, user, url)
-        return result
+
+        def run() -> Result:
+            result = _result(adapter, url, user)
+            with _stops(result):
+                _listed(result, adapter.browser_read(page))
+                _unfillable(result)
+            _profile_incomplete(result, adapter, user, url)
+            return result
+
+        return _kept(page, seen, run)
 
 
 def _form_command(
@@ -328,47 +379,60 @@ def _form_command(
     sessions: Sessions | None,
     send: bool,
     resend: bool,
-    detected: list[str],
+    seen: Seen,
 ) -> Result:
     mine = paths.user_dir(data, user)  # before the page takes the lock its first use needs
-    with _opened(data, user, url, sessions, detected) as opened:
+    with _opened(data, user, url, sessions, seen) as opened:
         if isinstance(opened, Result):
             return opened
         page, adapter = opened
-        posting = adapter.posting(page.url)  # past any redirect a link goes through
-        if send and not paths.submit_enabled(adapter.name, user):
-            where = "" if user == paths.DEFAULT_USER else f" under [users.{user}]"
-            reason = (
-                f"submit_not_enabled: add {adapter.name} to `submit-allowed`{where}"
-                f" in {paths.config_file()}"
-            )
-            return Result(Status.REFUSED, url, adapter.name, reason=reason)
-        if send and not resend and attempts.blocks_send(mine, posting):
-            last = attempts.last(mine, posting)
-            reason = f"already_sent: last attempt ended {last}; pass --resend"
-            return Result(Status.REFUSED, url, adapter.name, reason=reason)
-        result = _fill(page, adapter, url, answers, user)
-        _profile_incomplete(result, adapter, user, url)
-        if result.status is not Status.READY:
-            return result
-        if not send:
-            return result
-        attempts.record(mine, posting, attempts.PENDING, url=url)
-        try:
-            result.evidence = adapter.submit(page)
-            if result.evidence:
-                result.status = Status.SUBMITTED
-            else:
-                result.status, result.reason = Status.UNKNOWN, "no_evidence"
-        except Blocked as e:
-            result.status, result.reason = Status.BLOCKED, str(e)
-        except Exception as e:  # after the click, nothing tells a failed send from a sent one
-            result.status = Status.UNKNOWN
-            result.reason = f"error_after_click: {type(e).__name__}: {e}"
-        attempts.record(
-            mine, posting, result.status, evidence=result.evidence, reason=result.reason
+        return _kept(
+            page, seen, lambda: _on_page(page, adapter, mine, user, url, answers, send, resend)
         )
+
+
+def _on_page(
+    page: Page,
+    adapter: Adapter,
+    mine: Path,
+    user: str,
+    url: str,
+    answers: dict[str, Answer],
+    send: bool,
+    resend: bool,
+) -> Result:
+    posting = adapter.posting(page.url)  # past any redirect a link goes through
+    if send and not paths.submit_enabled(adapter.name, user):
+        where = "" if user == paths.DEFAULT_USER else f" under [users.{user}]"
+        reason = (
+            f"submit_not_enabled: add {adapter.name} to `submit-allowed`{where}"
+            f" in {paths.config_file()}"
+        )
+        return Result(Status.REFUSED, url, adapter.name, reason=reason)
+    if send and not resend and attempts.blocks_send(mine, posting):
+        last = attempts.last(mine, posting)
+        reason = f"already_sent: last attempt ended {last}; pass --resend"
+        return Result(Status.REFUSED, url, adapter.name, reason=reason)
+    result = _fill(page, adapter, url, answers, user)
+    _profile_incomplete(result, adapter, user, url)
+    if result.status is not Status.READY:
         return result
+    if not send:
+        return result
+    attempts.record(mine, posting, attempts.PENDING, url=url)
+    try:
+        result.evidence = adapter.submit(page)
+        if result.evidence:
+            result.status = Status.SUBMITTED
+        else:
+            result.status, result.reason = Status.UNKNOWN, "no_evidence"
+    except Blocked as e:
+        result.status, result.reason = Status.BLOCKED, str(e)
+    except Exception as e:  # after the click, nothing tells a failed send from a sent one
+        result.status = Status.UNKNOWN
+        result.reason = f"error_after_click: {type(e).__name__}: {e}"
+    attempts.record(mine, posting, result.status, evidence=result.evidence, reason=result.reason)
+    return result
 
 
 def read(
@@ -380,11 +444,12 @@ def read(
 ) -> Result:
     """Lists the form's fields by a request read when an adapter has one (ADR 0011), else by a
     browser read."""
-    data = paths.data_dir(data_dir)
-    return telemetry.sent("read", _read(data, user, url, sessions), data)
+    data, seen = paths.data_dir(data_dir), Seen()
+    result = _read(data, user, url, sessions, seen)
+    return telemetry.sent("read", result, data, seen.page, _secrets(data, user, {}, result))
 
 
-def _read(data: Path, user: str, url: str, sessions: Sessions | None) -> Result:
+def _read(data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen) -> Result:
     for adapter in adapters():
         if not isinstance(adapter, ReadsByRequest):
             continue
@@ -396,7 +461,7 @@ def _read(data: Path, user: str, url: str, sessions: Sessions | None) -> Result:
                 return Result(Status.UNSUPPORTED, url, adapter.name, f"adapter_error: {e}")
             _unfillable(result)
             return result
-    return _in_budget(url, lambda seen: _browser_read(data, user, url, sessions, seen))
+    return _in_budget(url, seen, lambda: _browser_read(data, user, url, sessions, seen))
 
 
 def fill(
@@ -407,11 +472,11 @@ def fill(
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
-    data = paths.data_dir(data_dir)
+    data, seen = paths.data_dir(data_dir), Seen()
     result = _in_budget(
-        url, lambda seen: _form_command(data, user, url, answers, sessions, False, False, seen)
+        url, seen, lambda: _form_command(data, user, url, answers, sessions, False, False, seen)
     )
-    return telemetry.sent("fill", result, data)
+    return telemetry.sent("fill", result, data, seen.page, _secrets(data, user, answers, result))
 
 
 def send(
@@ -423,11 +488,16 @@ def send(
     data_dir: Path | None = None,
     sessions: Sessions | None = None,
 ) -> Result:
-    data = paths.data_dir(data_dir)
+    data, seen = paths.data_dir(data_dir), Seen()
     result = _in_budget(
-        url, lambda seen: _form_command(data, user, url, answers, sessions, True, resend, seen)
+        url, seen, lambda: _form_command(data, user, url, answers, sessions, True, resend, seen)
     )
-    return telemetry.sent("send", result, data)
+    return telemetry.sent("send", result, data, seen.page, _secrets(data, user, answers, result))
+
+
+def report(*, data_dir: Path | None = None) -> ReportResult:
+    """Sends the last failed run's URL and scrubbed page, once (ADR 0016)."""
+    return telemetry.report(paths.data_dir(data_dir))
 
 
 def profile(
@@ -446,8 +516,10 @@ def profile(
         raise ValueError(f"{adapter} keeps no account profile atsfill fills")
     start = account.profile_url(_scope(account, url))
 
-    def run(detected: list[str]) -> Result:
-        with _opened(data, user, start, None, detected, account, browser.PROFILE_BUDGET) as opened:
+    seen = Seen()
+
+    def run() -> Result:
+        with _opened(data, user, start, None, seen, account, browser.PROFILE_BUDGET) as opened:
             if isinstance(opened, Result):
                 return opened
             page, _ = opened
@@ -467,7 +539,10 @@ def profile(
                     result.reason = f"adapter_error: {type(e).__name__}: {e}"
             return result
 
-    return telemetry.sent("profile", _in_budget(start, run), data)
+    result = _in_budget(start, seen, run)
+    return telemetry.sent(
+        "profile", result, data, None, _secrets(data, user, answers or {}, result)
+    )
 
 
 def _read_profile(page: Page, adapter: KeepsProfile, result: Result) -> None:
@@ -546,6 +621,7 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         users=users,
         adapters=[_adapter_status(a, users) for a in candidates],
         sessions=_sessions(data, users, candidates),
+        run_history=registry.RUN_HISTORY,
     )
 
 
@@ -594,7 +670,9 @@ def login(
     creates the account with a password atsfill generates and stores first (a side effect),
     giving the sign-up the user's `details`; with a password already stored, the account may
     exist, so it signs in with that password and keeps the account's email instead, the
-    `details` finishing a sign-up the account was left in."""
+    `details` finishing a sign-up the account was left in. An account without a password signs
+    in through the user's OTP command in place of a password source, and is created the same
+    way."""
     account, data = _account(adapter), paths.data_dir(data_dir)
     scope = _scope(account, url)
     mine = paths.user_dir(data, user)
@@ -604,8 +682,11 @@ def login(
         raise ValueError("creating an account needs --email")
     if details and not create:
         raise ValueError("--details goes with --create")
+    by_otp = isinstance(account, SignsInByOtp)
+    if password and by_otp:
+        raise ValueError(f"{adapter} signs in with an emailed OTP, not a password")
     try:
-        kept = create and passwords.stored(mine, adapter, scope) is not None
+        kept = create and not by_otp and passwords.stored(mine, adapter, scope) is not None
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
@@ -639,11 +720,8 @@ def login(
         )
     else:
         result = _headless(data, user, account, scope, credentials, session, details)
-        command = login_command(adapter, user, url)
-        report.status, report.reason = (
-            result.status,
-            _email_link(result.reason, credentials[0], command),
-        )
+        report.status = result.status
+        report.reason = _next_step(result.reason, credentials[0], adapter, user, url)
     if report.reason is None:
         report.session = report.status = "signed_in"
     return report
@@ -660,8 +738,9 @@ def _create(
 ) -> SessionReport:
     """Creates the account: refused before the browser opens when `details` lack one the
     sign-up asks; the generated password is stored before the click, and deleted only on a
-    refusal the page states before any account exists."""
-    if not isinstance(account, CreatesAccount):
+    refusal the page states before any account exists. An account without a password gets
+    none."""
+    if not isinstance(account, (CreatesAccount, CreatesAccountByOtp)):
         report.status = Status.UNSUPPORTED
         report.reason = f"no_sign_up: atsfill cannot create a {account.name} account"
         return report
@@ -669,9 +748,10 @@ def _create(
         report.status = Status.REFUSED
         report.reason = f"sign_up_details: no {', '.join(missing)}"
         return report
-    password = passwords.generate()
+    password = None if isinstance(account, CreatesAccountByOtp) else passwords.generate()
     try:
-        passwords.store(mine, account.name, report.scope, password)
+        if password:
+            passwords.store(mine, account.name, report.scope, password)
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
@@ -679,10 +759,14 @@ def _create(
     result = _headless(
         data, report.user, account, report.scope, credentials, report.path, details, create=True
     )
-    command = login_command(account.name, report.user, url)
-    report.status, report.reason = result.status, _email_link(result.reason, email, command)
-    report.password = "stored"
-    if result.status is Status.REFUSED and (result.reason or "").split(":")[0] in NO_ACCOUNT:
+    report.status = result.status
+    report.reason = _next_step(result.reason, email, account.name, report.user, url)
+    report.password = "stored" if password else "none"
+    if (
+        password
+        and result.status is Status.REFUSED
+        and (result.reason or "").split(":")[0] in NO_ACCOUNT
+    ):
         passwords.delete(mine, account.name, report.scope)
         report.password = "deleted"
     if report.reason is None:
@@ -702,16 +786,16 @@ def _headless(
 ) -> Result:
     """Signs in, or creates the account with `create`, through the adapter, an OTP it meets
     from the user's `otp-commands` entry: `ready` once the session is stored."""
-    assert isinstance(account, SignsIn)
+    assert isinstance(account, (SignsIn, SignsInByOtp))
     url = account.login_url(scope)
 
-    def run(_: list[str]) -> Result:
+    def run() -> Result:
         result = Result(Status.READY, url, account.name)
         with open_page(data, None) as page, _stops(result), otp.source(user, account.name, scope):
             accounts.sign_in(page, account, scope, *credentials, session, details, create)
         return result
 
-    return _in_budget(url, run)
+    return _in_budget(url, Seen(), run)
 
 
 def logout(

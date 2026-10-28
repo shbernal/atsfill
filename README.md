@@ -28,11 +28,42 @@ It is built for agents with a shell: every command prints one JSON document and 
 
 ## Supported hiring systems
 
-<!-- badges -->
-![oracle: supported 2026-10-20](https://img.shields.io/badge/oracle-supported%202026--10--20-9ece6a) ![smartrecruiters: supported 2026-10-20](https://img.shields.io/badge/smartrecruiters-supported%202026--10--20-9ece6a) ![greenhouse: supported 2026-10-19](https://img.shields.io/badge/greenhouse-supported%202026--10--19-9ece6a) ![manatal: supported 2026-10-20](https://img.shields.io/badge/manatal-supported%202026--10--20-9ece6a) ![paylocity: supported 2026-10-20](https://img.shields.io/badge/paylocity-supported%202026--10--20-9ece6a) ![dayforce: supported 2026-10-20](https://img.shields.io/badge/dayforce-supported%202026--10--20-9ece6a) ![workable: supported 2026-10-20](https://img.shields.io/badge/workable-supported%202026--10--20-9ece6a) ![ashby: supported 2026-10-19](https://img.shields.io/badge/ashby-supported%202026--10--19-9ece6a) ![bamboohr: supported 2026-10-21](https://img.shields.io/badge/bamboohr-supported%202026--10--21-9ece6a) ![teamtailor: supported 2026-10-25](https://img.shields.io/badge/teamtailor-supported%202026--10--25-9ece6a) ![jazzhr: supported 2026-10-20](https://img.shields.io/badge/jazzhr-supported%202026--10--20-9ece6a) ![lever: supported 2026-10-20](https://img.shields.io/badge/lever-supported%202026--10--20-9ece6a) ![hireology: supported 2026-10-20](https://img.shields.io/badge/hireology-supported%202026--10--20-9ece6a) ![paycor: supported 2026-10-20](https://img.shields.io/badge/paycor-supported%202026--10--20-9ece6a) ![zohorecruit: supported 2026-10-22](https://img.shields.io/badge/zohorecruit-supported%202026--10--22-9ece6a) ![phenom: supported 2026-10-21](https://img.shields.io/badge/phenom-supported%202026--10--21-9ece6a) ![breezy: supported 2026-10-21](https://img.shields.io/badge/breezy-supported%202026--10--21-9ece6a) ![recruitee: supported 2026-10-25](https://img.shields.io/badge/recruitee-supported%202026--10--25-9ece6a) ![rippling: supported 2026-10-22](https://img.shields.io/badge/rippling-supported%202026--10--22-9ece6a) ![personio: supported 2026-10-22](https://img.shields.io/badge/personio-supported%202026--10--22-9ece6a) ![eightfold: supported 2026-10-22](https://img.shields.io/badge/eightfold-supported%202026--10--22-9ece6a) ![pinpoint: supported 2026-10-22](https://img.shields.io/badge/pinpoint-supported%202026--10--22-9ece6a) ![hiringthing: supported 2026-10-22](https://img.shields.io/badge/hiringthing-supported%202026--10--22-9ece6a) ![join: supported 2026-10-26](https://img.shields.io/badge/join-supported%202026--10--26-9ece6a) ![workatastartup: supported 2026-10-28](https://img.shields.io/badge/workatastartup-supported%202026--10--28-9ece6a) ![wttj: supported 2026-10-24](https://img.shields.io/badge/wttj-supported%202026--10--24-9ece6a) ![workday: supported 2026-10-24](https://img.shields.io/badge/workday-supported%202026--10--24-9ece6a) ![successfactors: supported 2026-10-26](https://img.shields.io/badge/successfactors-supported%202026--10--26-9ece6a) ![isolvedhire: supported 2026-10-26](https://img.shields.io/badge/isolvedhire-supported%202026--10--26-9ece6a) ![gupy: supported 2026-10-26](https://img.shields.io/badge/gupy-supported%202026--10--26-9ece6a) ![ukg: in scope 2026-10-26](https://img.shields.io/badge/ukg-in%20scope%202026--10--26-e0af68)
-<!-- /badges -->
+<!-- run-history -->
+[![oracle run history](https://shbernal.github.io/atsfill/run-history/oracle.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![smartrecruiters run history](https://shbernal.github.io/atsfill/run-history/smartrecruiters.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![greenhouse run history](https://shbernal.github.io/atsfill/run-history/greenhouse.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![manatal run history](https://shbernal.github.io/atsfill/run-history/manatal.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![paylocity run history](https://shbernal.github.io/atsfill/run-history/paylocity.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![dayforce run history](https://shbernal.github.io/atsfill/run-history/dayforce.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![workable run history](https://shbernal.github.io/atsfill/run-history/workable.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![ashby run history](https://shbernal.github.io/atsfill/run-history/ashby.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![bamboohr run history](https://shbernal.github.io/atsfill/run-history/bamboohr.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![teamtailor run history](https://shbernal.github.io/atsfill/run-history/teamtailor.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![jazzhr run history](https://shbernal.github.io/atsfill/run-history/jazzhr.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![lever run history](https://shbernal.github.io/atsfill/run-history/lever.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![hireology run history](https://shbernal.github.io/atsfill/run-history/hireology.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![paycor run history](https://shbernal.github.io/atsfill/run-history/paycor.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![zohorecruit run history](https://shbernal.github.io/atsfill/run-history/zohorecruit.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![phenom run history](https://shbernal.github.io/atsfill/run-history/phenom.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![breezy run history](https://shbernal.github.io/atsfill/run-history/breezy.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![recruitee run history](https://shbernal.github.io/atsfill/run-history/recruitee.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![rippling run history](https://shbernal.github.io/atsfill/run-history/rippling.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![personio run history](https://shbernal.github.io/atsfill/run-history/personio.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![eightfold run history](https://shbernal.github.io/atsfill/run-history/eightfold.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![pinpoint run history](https://shbernal.github.io/atsfill/run-history/pinpoint.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![hiringthing run history](https://shbernal.github.io/atsfill/run-history/hiringthing.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![jobaffinity run history](https://shbernal.github.io/atsfill/run-history/jobaffinity.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![join run history](https://shbernal.github.io/atsfill/run-history/join.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![workatastartup run history](https://shbernal.github.io/atsfill/run-history/workatastartup.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![wttj run history](https://shbernal.github.io/atsfill/run-history/wttj.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![workday run history](https://shbernal.github.io/atsfill/run-history/workday.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![successfactors run history](https://shbernal.github.io/atsfill/run-history/successfactors.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![isolvedhire run history](https://shbernal.github.io/atsfill/run-history/isolvedhire.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![gupy run history](https://shbernal.github.io/atsfill/run-history/gupy.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![ukg run history](https://shbernal.github.io/atsfill/run-history/ukg.svg)](https://shbernal.github.io/atsfill/run-history/)
+<!-- /run-history -->
 
-Each badge is a hiring system atsfill has an adapter for: `supported` once a dry run passed on five employers, with its date.
+Each line is a hiring system atsfill has an adapter for, and its [run history](https://shbernal.github.io/atsfill/run-history/): the last 30 days of runs, green when a form filled or an application went through, red when it failed.
 [The systems](docs/adapters/README.md) lists which ones need an account, to read the form or only to send it.
 Any other system returns `unsupported`, so the consumer can fall back to driving a browser itself.
 
@@ -125,7 +156,7 @@ The core owns every rule about when a send is allowed; an adapter only knows its
 Every result has a `status` (`ready`, `refused`, `submitted`, `blocked`, `unknown`, `unsupported`) and, when it is not clean, a `reason` code.
 The exit code is 0 for `ready` and `submitted`, 1 otherwise, 2 for a usage error.
 
-Each `read`, `fill` and `send` sends one anonymous event (the system, the command, the status, a hash of the posting, never answers or URLs): [what is sent and how to turn it off](docs/telemetry.md).
+Each `read`, `fill` and `send` sends one anonymous event (the system, the command, the status, a hash of the posting, never answers or URLs); `atsfill report` sends a failed run's URL and page, scrubbed of your answers, when you ask: [what is sent and how to turn it off](docs/telemetry.md).
 
 ## More
 

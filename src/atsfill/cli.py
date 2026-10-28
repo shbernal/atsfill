@@ -8,7 +8,7 @@ from atsfill import core
 from atsfill.adapters import adapters
 from atsfill.core import browser, paths
 from atsfill.core.adapter import KeepsProfile, NeedsAccount, SignUpDetails
-from atsfill.core.results import Result, SessionReport, Status, StatusReport
+from atsfill.core.results import ReportResult, Result, SessionReport, Status, StatusReport
 
 OK = {Status.READY, Status.SUBMITTED}
 
@@ -83,6 +83,9 @@ def parser() -> argparse.ArgumentParser:
         "--resend", action="store_true", help="send even though an earlier send may have gone"
     )
     sub.add_parser("status", help="version, paths, browser, and each adapter's state")
+    sub.add_parser(
+        "report", help="send the last failed run's URL and page, scrubbed, to the maintainer"
+    )
     sub.add_parser("install-browser", help="download the Camoufox build atsfill is pinned to")
     accounts = [a.name for a in adapters() if isinstance(a, NeedsAccount)]
     for name, text in (
@@ -186,6 +189,10 @@ def run(args: argparse.Namespace) -> int:
             return 1 if signed_out or report.browser != report.browser_pinned else 0
         case "install-browser":
             return browser.install()
+        case "report":
+            sent = core.report(data_dir=args.data_dir)
+            emit(sent, False)
+            return 0 if sent.status == "sent" else 1
         case "login" | "logout":
             where = {"user": args.user, "url": args.url, "data_dir": args.data_dir}
             try:
@@ -215,7 +222,9 @@ def run(args: argparse.Namespace) -> int:
 
 
 def emit(
-    value: Result | StatusReport | SessionReport, verbose: bool, command: str | None = None
+    value: Result | StatusReport | SessionReport | ReportResult,
+    verbose: bool,
+    command: str | None = None,
 ) -> None:
     """Prints the whole value with `verbose`; else what its consumer acts on, on one line."""
     data = dataclasses.asdict(value)

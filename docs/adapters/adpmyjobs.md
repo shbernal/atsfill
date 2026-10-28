@@ -1,6 +1,6 @@
 # ADP MyJobs
 
-ADP's candidate experience (`myjobs.adp.com`), a different product from ADP Workforce Now's career center ([adp.md](adp.md)), observed on live postings on 2026-10-26, headless. No adapter: every sign-in, the first one included, is a one-time code, a known gap.
+ADP's candidate experience (`myjobs.adp.com`), a different product from ADP Workforce Now's career center ([adp.md](adp.md)), observed on live postings on 2026-10-26, headless. No adapter: there is no password, every sign-in, the first one included, is an OTP alone, a known gap: atsfill's sign-in needs a password source (ADR 0015).
 
 ## Where the form is
 
@@ -18,4 +18,5 @@ ADP's candidate experience (`myjobs.adp.com`), a different product from ADP Work
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `sign_in_otp` | every sign-in, the sign-up's included, is a one-time code to the email or phone; signed out, the posting does not load | `unsupported_flow` | 11 of 11 employers |
+| `sign_in_otp_only` | no password: every sign-in, the sign-up's included, is an OTP to the email or phone alone; signed out, the posting does not load | `unsupported_flow` | 11 of 11 employers |
+| `sign_up_phone` | the sign-up requires a phone number | `unsupported_flow` | 4 of 4 employers |

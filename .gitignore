@@ -12,3 +12,9 @@ build/
 .tmp/
 
 .claude/worktrees/
+
+# The docs site, built by `uv run --group docs zensical build`
+site/
+# The run history, written by scripts/run_history.py at each docs deploy
+docs/run-history.md
+docs/run-history/

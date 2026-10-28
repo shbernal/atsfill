@@ -1,6 +1,6 @@
 # ADP
 
-ADP Workforce Now's career center, observed on live postings on 2026-10-26, headless. No adapter: the sign-up before the form verifies the email or the mobile number with a one-time code, a known gap.
+ADP Workforce Now's career center, observed on live postings on 2026-10-26, headless. No adapter: the sign-up before the form requires a mobile number, a known gap. Its OTP can go to the email, which atsfill types in.
 
 ## Where the form is
 
@@ -20,4 +20,4 @@ Applying needs a candidate profile with the employer, made on the step below.
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `sign_up_otp` | the talent community step sends a one-time code to the email or mobile number before the form | `unsupported_flow` | 14 of 15 employers |
+| `sign_up_phone` | the talent community step before the form requires a mobile number, even when its OTP goes to the email | `unsupported_flow` | 14 of 15 employers |

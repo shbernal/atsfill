@@ -183,21 +183,20 @@ def backlog(registry: dict[str, Source] | None = None) -> str:
     return "\n".join(text) + "\n"
 
 
-BADGES = ("<!-- badges -->", "<!-- /badges -->")
-COLORS = {"supported": "9ece6a", "in_scope": "e0af68", "out_of_scope": "565f89"}
+RUN_HISTORY = "https://shbernal.github.io/atsfill/run-history/"  # built by scripts/run_history.py
+RUN_HISTORIES = ("<!-- run-history -->", "<!-- /run-history -->")
 
 
-def _badge(s: Source) -> str:
-    message = " ".join(str(x) for x in (s.scope.value.replace("_", " "), s.scope.date) if x)
-    color = COLORS[s.scope.value]
-    escape = lambda t: t.replace("-", "--").replace("_", "__").replace(" ", "%20")  # noqa: E731
-    url = f"https://img.shields.io/badge/{escape(s.adapter or s.name)}-{escape(message)}-{color}"
-    return f"![{s.adapter}: {message}]({url})"
+def _run_history(s: Source) -> str:
+    """Its image links to the page: an SVG's own links don't survive GitHub's image proxy."""
+    return f"[![{s.adapter} run history]({RUN_HISTORY}{s.adapter}.svg)]({RUN_HISTORY})"
 
 
-def with_badges(readme: str, registry: dict[str, Source] | None = None) -> str:
-    """The README with one badge per adapter between its badge markers."""
+def with_run_histories(readme: str, registry: dict[str, Source] | None = None) -> str:
+    """The README with each adapter's run history between its markers."""
     registry = sources() if registry is None else registry
-    start, end = readme.index(BADGES[0]) + len(BADGES[0]), readme.index(BADGES[1])
-    badges = " ".join(_badge(s) for s in sorted(registry.values(), key=_backlog_key) if s.adapter)
-    return f"{readme[:start]}\n{badges}\n{readme[end:]}"
+    start = readme.index(RUN_HISTORIES[0]) + len(RUN_HISTORIES[0])
+    end = readme.index(RUN_HISTORIES[1])
+    adapters = sorted((s for s in registry.values() if s.adapter), key=_backlog_key)
+    images = "\n".join(_run_history(s) for s in adapters)
+    return f"{readme[:start]}\n{images}\n{readme[end:]}"

@@ -9,6 +9,7 @@ from atsfill.adapters.hireology import Hireology
 from atsfill.adapters.hiringthing import HiringThing
 from atsfill.adapters.isolvedhire import IsolvedHire
 from atsfill.adapters.jazzhr import JazzHR
+from atsfill.adapters.jobaffinity import JobAffinity
 from atsfill.adapters.join import Join
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
@@ -41,6 +42,7 @@ def adapters() -> list[Adapter]:
         WelcomeToTheJungle(),
         WorkAtAStartup(),
         Join(),
+        JobAffinity(),
         SmartRecruiters(),
         Oracle(),
         Manatal(),

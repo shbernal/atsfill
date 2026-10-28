@@ -1,6 +1,6 @@
 # Jobstreet
 
-SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`) and Hong Kong (`hk.jobsdb.com`), observed on live postings on 2026-10-26, headless. No adapter: applying needs a SEEK account whose every sign-in is a one-time code, a known gap.
+SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`) and Hong Kong (`hk.jobsdb.com`), observed on live postings on 2026-10-26, headless. No adapter: applying needs a SEEK account with no password, every sign-in an emailed OTP alone, a known gap: atsfill's sign-in needs a password source (ADR 0015).
 
 ## Where the form is
 
@@ -19,4 +19,4 @@ SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`) and Hong Kong (`
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `sign_in_otp` | every sign-in and sign-up to the SEEK account Apply needs is a six-digit code emailed to the address, with no password | `unsupported_flow` | 14 of 15 employers |
+| `sign_in_otp_only` | no password: every sign-in and sign-up to the SEEK account Apply needs is a six-digit OTP emailed to the address, alone | `unsupported_flow` | 14 of 15 employers |

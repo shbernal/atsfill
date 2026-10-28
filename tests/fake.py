@@ -179,6 +179,36 @@ class FakeOtp(FakeSignIn):
         page.locator("#verify").click()
 
 
+class FakeOtpOnly(FakeAccount):
+    """The same, whose accounts have no password: the sign-in emails an OTP, typed on
+    tests/pages/otp.html, and an email without an account goes on to a register step."""
+
+    side_effects = [
+        *FakeAccount.side_effects,
+        SideEffect("sign_up", "hiring_system", "login --create creates an account"),
+    ]
+    asks = {"name"}
+
+    def __init__(self, server: str) -> None:
+        super().__init__(server)
+        self.accounts: dict[str, SignUpDetails] = {}
+        self.sign_ins = 0
+
+    def login_url(self, scope: str | None) -> str:
+        return f"{self.server}/otp.html"
+
+    def sign_in_by_otp(self, page: Page, email: str) -> None:
+        if email not in self.accounts:
+            raise Refused("no_account")
+        self.sign_ins += 1
+        otp.enter(page.locator("#otp"), email, "the sign-in")
+        page.locator("#verify").click()
+
+    def sign_up_by_otp(self, page: Page, email: str, details: SignUpDetails) -> None:
+        self.accounts.setdefault(email, details)
+        self.sign_in_by_otp(page, email)
+
+
 class FakeProfile(FakeAccount):
     """The same, whose account profile is a profile form of two steps on tests/pages/form.html:
     `about` (the name) and `level`, which loads only once `about` is saved. `saved` is what the

@@ -96,10 +96,10 @@ A user's sign-in on a hiring system, needed by some systems to read or to send: 
 What one account covers on a hiring system: the whole system (no scope), or one tenant where each keeps its own accounts, as on Workday.
 
 **Login**:
-Signing in to an account, which stores its session: by a person in a visible window, or by atsfill with a password source. Also the `login` command.
+Signing in to an account, which stores its session: by a person in a visible window, or by atsfill with a password source, or with the OTP command for an account without a password. Also the `login` command.
 
 **Password source**:
-Where atsfill gets an account's password: `--password -` on stdin, the user's `password-commands` entry, or the secret store for passwords atsfill generated.
+Where atsfill gets an account's password: `--password -` on stdin, the user's `password-commands` entry, or the secret store for passwords atsfill generated. An account without a password has none: the OTP command stands in for it.
 
 **Sign-up details**:
 What creating an account asks of the user besides the email and the password (a name, a phone, an address), passed by the consumer on each `login --create --details` and stored nowhere by atsfill. Not answers: they go to the sign-up, not to a form.

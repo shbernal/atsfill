@@ -1,6 +1,7 @@
 """Anonymous telemetry (ADR 0016): one `run` event per `read`, `fill`, `send` and `profile`,
-built from the command's result. Never in the way: any failure is dropped and the result goes
-back as it came, but for the first-run notice."""
+built from the command's result, and for a failed run a `report` event with its URL and
+scrubbed page, at `detailed` or by `atsfill report`. Never in the way: any failure is dropped
+and the result goes back as it came, but for the notices."""
 
 import hashlib
 import json
@@ -9,6 +10,7 @@ import os
 import subprocess
 import sys
 import uuid
+from collections.abc import Iterable
 from contextlib import suppress
 from functools import cache
 from importlib.metadata import PackageNotFoundError, distribution, version
@@ -18,8 +20,8 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from posthog import Posthog
 
 from atsfill.adapters import adapters
-from atsfill.core import paths, registry
-from atsfill.core.results import Result, Status
+from atsfill.core import paths, registry, snapshot
+from atsfill.core.results import ReportResult, Result, Status
 
 PROJECT_KEY = "phc_xmrdiXySbbZCdUzdbdNUtjMco3rLL2Ko5j4hFrX9fUQ8"  # ingestion only, safe to ship
 HOST = "https://eu.i.posthog.com"
@@ -29,10 +31,16 @@ FLUSH_TIMEOUT_SECONDS = 2  # the SDK's shutdown() waits without one
 GIT_TIMEOUT_SECONDS = 2
 ROOT = Path(__file__).parents[3]  # the checkout, for an editable install
 NOTICE_FILE = "telemetry-notice"  # in the data directory, once the notice was shown
+FAILED_RUN = "failed-run.json"  # in the data directory, the last failed run's report event
+DOCS = "https://github.com/shbernal/atsfill/blob/main/docs/telemetry.md"
 NOTICE = (
     "telemetry: atsfill sends an anonymous event per read, fill, send and profile, no answers"
     ' or URLs; set telemetry = "off" in {config} or DO_NOT_TRACK=1 to stop it:'
-    " https://github.com/shbernal/atsfill/blob/main/docs/telemetry.md"
+    " " + DOCS
+)
+REPORT = (
+    "run `atsfill report` to send this run's URL and page, scrubbed of your answers,"
+    " to the maintainer: " + DOCS
 )
 # Reason codes that say nothing about the adapter: the user's input or a fact about the posting
 EXCLUDED = (
@@ -133,17 +141,23 @@ def event(command: str, result: Result) -> dict:
     return {k: v for k, v in properties.items() if v is not None}
 
 
-def _capture(properties: dict) -> None:
+def _capture(events: list[tuple[str, dict]]) -> None:
+    """Sends the events; raises when the SDK reports a batch it could not send."""
+    failed: list[Exception] = []
     client = Posthog(
         PROJECT_KEY,
         host=HOST,
         timeout=REQUEST_TIMEOUT_SECONDS,
         max_retries=MAX_RETRIES,
         disable_geoip=True,
+        on_error=lambda e, _: failed.append(e),
     )
-    properties = {**properties, "$process_person_profile": False}
-    client.capture("run", distinct_id=str(uuid.uuid4()), properties=properties)
+    for name, properties in events:
+        properties = {**properties, "$process_person_profile": False}
+        client.capture(name, distinct_id=str(uuid.uuid4()), properties=properties)
     client.flush(timeout_seconds=FLUSH_TIMEOUT_SECONDS)
+    if failed:
+        raise failed[0]
 
 
 def _notice(data: Path) -> str | None:
@@ -155,10 +169,68 @@ def _notice(data: Path) -> str | None:
     return NOTICE.format(config=paths.config_file())
 
 
-def sent(command: str, result: Result, data: Path) -> Result:
-    """The result, its event sent at `basic` and `detailed`."""
+def _report(
+    run: dict, result: Result, captured: tuple[str, str] | None, secrets: Iterable[str]
+) -> dict:
+    """The `report` event: the run's, plus its URL, its reason's detail and its page, each
+    scrubbed of the secrets."""
+    detail = (result.reason or "").partition(":")[2].strip()
+    report = {
+        **run,
+        "url": result.url,
+        "detail": snapshot.scrub(detail, secrets) or None,
+        "snapshot": snapshot.kept(captured, secrets) if captured else None,
+    }
+    return {k: v for k, v in report.items() if v is not None}
+
+
+def sent(
+    command: str,
+    result: Result,
+    data: Path,
+    captured: tuple[str, str] | None = None,
+    secrets: Iterable[str] = (),
+) -> Result:
+    """The result, its event sent at `basic` and `detailed`. A failed run is kept for `atsfill
+    report`, and its report sent along at `detailed`, else named in the result."""
     with suppress(Exception):  # never in the way
-        if level() != "off":
-            result.notice = _notice(data)
-            _capture(event(command, result))
+        if (at := level()) == "off":
+            return result
+        result.notice = _notice(data)
+        run = event(command, result)
+        events = [("run", run | {"url": result.url} if at == "detailed" else run)]
+        if verdict(result) == "fail":
+            report = _report(run, result, captured, secrets)
+            (data / FAILED_RUN).write_text(json.dumps({"event": report, "reported": False}))
+            if at == "detailed":
+                events.append(("report", report))
+            else:
+                result.report = REPORT
+        _capture(events)
+        if len(events) > 1:
+            _mark_reported(data)
     return result
+
+
+def _mark_reported(data: Path) -> None:
+    path = data / FAILED_RUN
+    path.write_text(json.dumps(json.loads(path.read_text()) | {"reported": True}))
+
+
+def report(data: Path) -> ReportResult:
+    """Sends the last failed run's report, once, whatever the level but `off`."""
+    if level() == "off":
+        return ReportResult("refused", "telemetry_off: telemetry is off, nothing is sent")
+    path = data / FAILED_RUN
+    if not path.exists():
+        return ReportResult("refused", "no_failed_run: no failed run to report")
+    kept = json.loads(path.read_text())
+    report, url = kept["event"], kept["event"]["url"]
+    if kept["reported"]:
+        return ReportResult("refused", "already_reported: the last failed run was sent", url)
+    try:
+        _capture([("report", report)])
+    except Exception as e:
+        return ReportResult("blocked", f"not_sent: {type(e).__name__}: {e}", url)
+    _mark_reported(data)
+    return ReportResult("sent", url=url)

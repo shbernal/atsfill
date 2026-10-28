@@ -105,6 +105,14 @@ class Result:
     saved: list[str] = field(default_factory=list)  # the profile steps a `profile` run saved
     unloaded: list[str] = field(default_factory=list)  # steps a profile read could not load yet
     notice: str | None = None  # telemetry's, the first time it is on (ADR 0016)
+    report: str | None = None  # how to send a failed run's report, when it was not sent
+
+
+@dataclass
+class ReportResult:
+    status: str  # sent | refused | blocked
+    reason: str | None = None
+    url: str | None = None  # the failed run's posting
 
 
 @dataclass
@@ -116,7 +124,7 @@ class SessionReport:
     path: Path
     status: str | None = None  # a login's outcome: signed_in | refused | blocked | unsupported
     reason: str | None = None  # why a login stored nothing, `code` or `code: detail`
-    password: str | None = None  # after `--create`: stored | deleted, or kept
+    password: str | None = None  # after `--create`: stored | deleted | kept, or none (OTP only)
 
 
 @dataclass
@@ -139,3 +147,4 @@ class StatusReport:
     users: list[str]
     adapters: list[AdapterStatus]
     sessions: list[SessionReport]  # every stored one, of every user
+    run_history: str  # the docs page: whether each adapter works today, from its runs

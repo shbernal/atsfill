@@ -12,6 +12,12 @@
       "sourceType": "github",
       "skillPath": "skills/freehire-search/SKILL.md",
       "computedHash": "4270e283fad426fb213663db4a5b739c10b78bc0dfb35c97a6a10205f919e62d"
+    },
+    "slopit": {
+      "source": "shbernal/skills",
+      "sourceType": "github",
+      "skillPath": "skills/slopit/SKILL.md",
+      "computedHash": "ea4f4bc3a037bfe7aa183c8fc7e2a2cfa333d635168561307ef208da2134de1c"
     }
   }
 }
