@@ -1,6 +1,6 @@
 # Jobstreet
 
-SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`, `id`) and Hong Kong and Thailand (`hk.jobsdb.com`, `th.jobsdb.com`), observed on live postings on 2026-10-26 and 2026-10-28, headless Camoufox. The fixture pages are [tests/pages/jobstreet/job.html](../../tests/pages/jobstreet/job.html), a posting and its Quick apply wizard, and [tests/pages/jobstreet/login.html](../../tests/pages/jobstreet/login.html), SEEK's sign-in, served by `tests/test_jobstreet.py`.
+SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`, `id`) and Hong Kong and Thailand (`hk.jobsdb.com`, `th.jobsdb.com`), observed on live postings on 2026-10-26 and 2026-10-28, headless Camoufox. The fixture pages are [tests/pages/jobstreet/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/job.html), a posting and its Quick apply wizard, and [tests/pages/jobstreet/login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/login.html), SEEK's sign-in, served by `tests/test_jobstreet.py`.
 
 ## Where the form is
 
