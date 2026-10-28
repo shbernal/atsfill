@@ -1,6 +1,6 @@
 # Paylocity
 
-Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/paylocity/apply.html](../../tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
+Paylocity Recruiting's public apply page, observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/paylocity/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/paylocity/apply.html), served as `recruiting.paylocity.com` in `tests/test_paylocity.py`: a two-step form with one example of each rendering below.
 
 ## Where the form is
 

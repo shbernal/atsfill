@@ -1,6 +1,6 @@
 # JobAffinity
 
-JobAffinity's apply pages, observed on live postings, last on 2026-10-28. The fixture pages are [tests/pages/jobaffinity/](../../tests/pages/jobaffinity/): `old.html` and its `questionnaire.html`, and `new.html`, served as `jobaffinity.fr` in `tests/test_jobaffinity.py`: one example of each rendering below.
+JobAffinity's apply pages, observed on live postings, last on 2026-10-28. The fixture pages are [tests/pages/jobaffinity/](https://github.com/shbernal/atsfill/tree/main/tests/pages/jobaffinity/): `old.html` and its `questionnaire.html`, and `new.html`, served as `jobaffinity.fr` in `tests/test_jobaffinity.py`: one example of each rendering below.
 
 ## Where the form is
 

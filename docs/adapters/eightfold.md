@@ -1,6 +1,6 @@
 # Eightfold
 
-Eightfold's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/eightfold/apply.html](../../tests/pages/eightfold/apply.html) with its questions API answer [questions.json](../../tests/pages/eightfold/questions.json), served as `acme.eightfold.ai` in `tests/test_eightfold.py`: one example of each rendering below, Eightfold's controls reduced to their markup and a few lines that act as they do.
+Eightfold's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/eightfold/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/eightfold/apply.html) with its questions API answer [questions.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/eightfold/questions.json), served as `acme.eightfold.ai` in `tests/test_eightfold.py`: one example of each rendering below, Eightfold's controls reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 

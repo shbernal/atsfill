@@ -1,6 +1,6 @@
 # Breezy HR
 
-Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/breezy/apply.html](../../tests/pages/breezy/apply.html), served as a position's application page in `tests/test_breezy.py`: one example of each rendering below.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/breezy/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/breezy/apply.html), served as a position's application page in `tests/test_breezy.py`: one example of each rendering below.
 
 ## Where the form is
 

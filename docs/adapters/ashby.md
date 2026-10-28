@@ -1,6 +1,6 @@
 # Ashby
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/ashby/](../../tests/pages/ashby/), served by a stand-in for Ashby's API in `tests/test_ashby.py`.
+Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/ashby/](https://github.com/shbernal/atsfill/tree/main/tests/pages/ashby/), served by a stand-in for Ashby's API in `tests/test_ashby.py`.
 
 ## Where the form is
 

@@ -1,6 +1,6 @@
 # Personio
 
-Personio's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/personio/apply.html](../../tests/pages/personio/apply.html), served as `acme.jobs.personio.com` in `tests/test_personio.py`: one example of each rendering below.
+Personio's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/personio/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/personio/apply.html), served as `acme.jobs.personio.com` in `tests/test_personio.py`: one example of each rendering below.
 
 ## Where the form is
 

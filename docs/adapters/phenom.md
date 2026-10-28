@@ -1,6 +1,6 @@
 # Phenom
 
-Phenom's apply wizard on employers' careers sites, observed on live postings, last on 2026-10-22. The fixture pages are [tests/pages/phenom/job.html](../../tests/pages/phenom/job.html) and [apply.html](../../tests/pages/phenom/apply.html), configured by [form_schema.json](../../tests/pages/phenom/form_schema.json), [Messages_en_us.json](../../tests/pages/phenom/Messages_en_us.json) and the loaders' answers in [references.json](../../tests/pages/phenom/references.json), served as `careers.acme.example` and Phenom's CDN in `tests/test_phenom.py`: a four-step wizard with one example of each rendering below.
+Phenom's apply wizard on employers' careers sites, observed on live postings, last on 2026-10-22. The fixture pages are [tests/pages/phenom/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/job.html) and [apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/apply.html), configured by [form_schema.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/form_schema.json), [Messages_en_us.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/Messages_en_us.json) and the loaders' answers in [references.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/references.json), served as `careers.acme.example` and Phenom's CDN in `tests/test_phenom.py`: a four-step wizard with one example of each rendering below.
 
 ## Where the form is
 
@@ -8,7 +8,7 @@ Phenom's apply wizard on employers' careers sites, observed on live postings, la
 - The job page's Apply link (`data-ph-at-id=apply-link`, `phw-tk=apply_click`) leads to the wizard, `/<site>/<lang>/apply?jobSeqNo=` (`hvhapply` for some hourly roles, the same configuration), or to the system behind Phenom: Workday, Taleo, iCIMS, ADP, Oracle, Ashby. The job page's `phApp.ddo.jobDetail.data.job.externalApply` says which. The backing system does not decide it. A link to another host is `unsupported`, `external_step`.
 - The wizard is react-jsonschema-form (`form.rjsf`) with Phenom's own widgets, three to eight steps. Only the current step is in the page. Next (`button#next`) posts the step to `/applySubmit`, which creates a Phenom candidate profile on the first step and checks the step server side; the last step's Submit sends the application to the backing system.
 - A cookie banner (Phenom's own `[ph-module=gdpr]`, TrustArc, OneTrust, cookieconsent's `.cc-window`) shows at any time over the form; the blocker's lists hide it. A loading overlay (`.overlaybg`) covers the form while a step loads.
-- A closed posting's job URL and wizard URL both answer `404` with Phenom's error page, its `phApp.pageName` `"404"` ([tests/pages/phenom/404.html](../../tests/pages/phenom/404.html)): `unsupported`, `posting_gone`.
+- A closed posting's job URL and wizard URL both answer `404` with Phenom's error page, its `phApp.pageName` `"404"` ([tests/pages/phenom/404.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/404.html)): `unsupported`, `posting_gone`.
 
 ## Reading the form
 

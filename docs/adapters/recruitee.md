@@ -1,6 +1,6 @@
 # Recruitee
 
-Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/recruitee/apply.html](../../tests/pages/recruitee/apply.html), served as a posting's application page in `tests/test_recruitee.py`.
+Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/recruitee/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/recruitee/apply.html), served as a posting's application page in `tests/test_recruitee.py`.
 
 ## Where the form is
 

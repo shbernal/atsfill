@@ -1,6 +1,6 @@
 # Welcome to the Jungle
 
-Observed on live postings, last on 2026-10-19; the account on 2026-10-24. The fixture pages are [tests/pages/wttj/job.html](../../tests/pages/wttj/job.html), served as a signed-in job page in `tests/test_wttj.py`, and [tests/pages/wttj/account.html](../../tests/pages/wttj/account.html), the sign-in and sign-up forms.
+Observed on live postings, last on 2026-10-19; the account on 2026-10-24. The fixture pages are [tests/pages/wttj/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wttj/job.html), served as a signed-in job page in `tests/test_wttj.py`, and [tests/pages/wttj/account.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wttj/account.html), the sign-in and sign-up forms.
 
 ## Where the form is
 
