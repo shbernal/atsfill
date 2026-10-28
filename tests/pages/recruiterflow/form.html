@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Apply to Placeholder Role at Acme</title>
+<script>var convertedToJSON = {"ACTIVE_JOB_VISIBILITY": [1, 2, 3, 4], "JOB_VISIBILITY_CLOSED": 6, "job_visibility_id": 1, "company_path": "acme", "job_id": 1, "footer_notes": "<p><span>Acme is an equal opportunity employer.</span></p>", "application_form": {"is_empty": false, "personal_info": [{"display_name": "Full Name", "id": 1, "key": "name", "requirement_type": "mandatory", "response_type": "text", "view_field_id": 1}, {"display_name": "Email", "id": 2, "key": "email", "requirement_type": "mandatory", "response_type": "text", "view_field_id": 1}, {"display_name": "Phone", "id": 3, "key": "phone", "requirement_type": "optional", "response_type": "text", "view_field_id": 1}, {"display_name": "Location", "id": 4, "key": "address", "requirement_type": "mandatory", "response_type": "richtext", "view_field_id": 16}, {"display_name": "LinkedIn Profile", "id": 6, "key": "linkedin_profile", "requirement_type": "off", "response_type": "text", "view_field_id": 1}], "candidate_profile": [{"display_name": "Education", "id": 1, "key": "education", "requirement_type": "optional", "response_type": "interval", "view_field_id": 15}, {"display_name": "Resume", "id": 3, "key": "resume", "requirement_type": "mandatory", "response_type": "attachment", "view_field_id": 14}, {"display_name": "Summary", "id": 4, "key": "summary", "requirement_type": "optional", "response_type": "richtext", "view_field_id": 2}, {"display_name": "Cover Letter", "id": 5, "key": "cover_letter", "requirement_type": "off", "response_type": "attachment", "view_field_id": 14}, {"display_name": "Experience", "id": 6, "key": "experience", "requirement_type": "mandatory", "response_type": "interval", "view_field_id": 17}], "questions": [
+{"question_id": 101, "question_text": "Why Acme?", "requirement_type": "mandatory", "response_type_id": "view_field.1", "view_field_id": 1},
+{"question_id": 102, "question_text": "Tell us more\n\nabout yourself", "requirement_type": "optional", "response_type_id": "custom_field.2", "view_field_id": null, "custom_field_view_field_id": 2},
+{"question_id": 103, "question_text": "How many years of experience?", "requirement_type": "mandatory", "response_type_id": "view_field.4", "view_field_id": 4},
+{"question_id": 104, "question_text": "Desired salary?", "requirement_type": "mandatory", "response_type_id": "view_field.5", "view_field_id": 5},
+{"question_id": 105, "question_text": "Earliest start date?", "requirement_type": "optional", "response_type_id": "view_field.6", "view_field_id": 6},
+{"question_id": 106, "question_text": "Are you authorized to work here?", "requirement_type": "mandatory", "response_type_id": "view_field.9", "view_field_id": 9},
+{"choices": ["Online", "Referral", "", "Online"], "question_id": 107, "question_text": "Where did you hear about us?", "requirement_type": "mandatory", "response_type_id": "view_field.10", "view_field_id": 10},
+{"choices": ["Remote", "Hybrid", "On site", ""], "question_id": 108, "question_text": "Which settings suit you?", "requirement_type": "optional", "response_type_id": "custom_field.11", "view_field_id": null, "custom_field_view_field_id": 11},
+{"question_id": 109, "question_text": "Expected salary range", "requirement_type": "optional", "response_type_id": "custom_field.12", "view_field_id": null, "custom_field_view_field_id": 12},
+{"question_id": 110, "question_text": "Upload a work sample", "requirement_type": "optional", "response_type_id": "view_field.14", "view_field_id": 14},
+{"choices": [{"id": 1, "name": "Engineering", "children": [{"id": 2, "name": "Backend"}, {"id": 3, "name": "Other"}]}, {"id": 4, "name": "Design", "children": [{"id": 5, "name": "Product design"}, {"id": 6, "name": "Other"}]}], "question_id": 111, "question_text": "Your specialization", "requirement_type": "mandatory", "response_type_id": "custom_field.19", "view_field_id": null, "custom_field_view_field_id": 19},
+{"question_id": 112, "question_text": "A cover note", "requirement_type": "optional", "response_type_id": "view_field.3", "view_field_id": 3}
+]}};
+    window.applyJobData = convertedToJSON;</script>
+<style>
+  .collapse { display: none; } .collapse.show { display: block; }
+  .menu { border: 1px solid #ccc; } button.selected { outline: 2px solid blue; }
+</style>
+</head>
+<body>
+<div class="rf-careers-cookie-banner-container">This website uses cookies. <a href="#">Got it!</a></div>
+<div class="apply-to-job-form-inputs-container"><form>
+  <div class="form-dnd-container"><p class="form-label">Upload Resume <span class="required">*</span></p>
+    <div class="common-input-wrapper"><div class="dnd-file-input-container"><input type="file" id="fileInput" accept=".doc,.docx,.txt,.rtf,.pdf"></div></div></div>
+
+  <div class="full-name-input-wrapper"><p class="form-label">Full Name <span class="required">*</span></p>
+    <input type="text" name="personal_info.first_name" placeholder="First name">
+    <input type="text" name="personal_info.last_name" placeholder="Last name"></div>
+  <div class="email-input-wrapper"><p class="form-label">Email</p><input type="email" name="personal_info.email"></div>
+  <div class="phone-input-wrapper"><p class="form-label">Phone</p><input type="tel" id="user-phone" name="personal_info.phone"></div>
+  <div class="location-input-wrapper"><p class="form-label">Location <span class="required">*</span></p>
+    <input type="text" name="personal_info.location.city" placeholder="City">
+    <input type="text" name="personal_info.location.state" placeholder="State">
+    <div class="select" data-options="United Kingdom|United States|United States Minor Outlying Islands"><div class="control"><input role="combobox" type="text"></div></div>
+    <input type="text" name="personal_info.location.postal_code" placeholder="Zip code"></div>
+
+  <div class="candidate-profile-inputs-container">
+    <div class="education-input-wrapper">
+      <input type="text" name="candidate_profile.school.0" placeholder="School Name">
+      <input type="text" name="candidate_profile.degree.0" placeholder="Degree">
+      <input type="text" class="start-date-picker" placeholder="Start Date">
+      <input type="text" class="end-date-picker" placeholder="End Date"></div>
+    <div class="text-area-input-wrapper"><p class="form-label">Summary</p><textarea placeholder="Enter summary"></textarea></div>
+    <div class="experience-input-wrapper">
+      <input type="text" name="candidate_profile.company-name.0" placeholder="Company Name">
+      <input type="text" name="candidate_profile.designation.0" placeholder="Title">
+      <div class="is-current-custom-checkbox-container"><input type="checkbox" class="policy-checkbox"> I am currently working in this role</div>
+      <input type="text" class="start-date-picker" placeholder="Start Date">
+      <input type="text" class="end-date-picker" placeholder="End Date"></div>
+  </div>
+
+  <div class="input-section-container"><div class="section-title">Additional Questions</div></div>
+  <div class="additional-info-inputs-container" style="display: none">
+    <div class="text-input-wrapper"><p class="form-label">Why Acme?</p><input type="text"></div>
+    <div class="text-area-input-wrapper"><p class="form-label">Tell us more about yourself</p><textarea></textarea></div>
+    <div class="number-input-wrapper"><p class="form-label">How many years?</p><input type="number"></div>
+    <div class="currency-select-number-input-wrapper"><p class="form-label">Desired salary?</p>
+      <div class="select" data-options="$ USD|€ EUR"><div class="control"><div class="x-singleValue">$ USD</div><input role="combobox" type="text"></div></div>
+      <input type="hidden" name="currency" value="USD"><input type="text" class="number-input" placeholder="Enter amount"></div>
+    <div class="date-input-wrapper"><p class="form-label">Earliest start date?</p><input type="text" placeholder="Select Date"></div>
+    <div class="yes-no-input-wrapper"><p class="form-label">Are you authorized?</p>
+      <button type="button" class="input-styles yes-input">Yes</button><button type="button" class="input-styles no-input">No</button></div>
+    <div class="single-select-input-wrapper"><p class="form-label">Where did you hear about us?</p>
+      <div class="select" data-options="Online|Referral"><div class="control"><input role="combobox" type="text"></div></div></div>
+    <div class="multi-select-input-wrapper"><p class="form-label">Which settings suit you?</p>
+      <div class="select" data-multi data-options="Remote|Hybrid|On site"><div class="control"><input role="combobox" type="text"></div></div></div>
+    <div class="currency-range-select-number-input-wrapper"><p class="form-label">Expected salary range</p>
+      <input type="text" class="number-input" placeholder="Min"> - <input type="text" class="number-input" placeholder="Max"></div>
+    <div class="form-dnd-container"><p class="form-label">Upload a work sample</p><input type="file" id="fileInput" accept=""></div>
+    <div class="parent-child-input-wrapper"><p class="form-label">Your specialization</p>
+      <div class="rf-parent-child-field">
+        <div class="rf-parent-child-field-accordion"><div class="rf-parent-child-field-title-wrapper">
+          <input type="checkbox" class="rf-parent-child-field-header-checkbox-input"> <label class="rf-parent-child-field-header-checkbox-label">Engineering</label>
+          <div class="rf-plus-minus-icon-container">+</div></div>
+          <div class="collapse">
+            <div class="rf-parent-child-field-list"><input type="checkbox" class="rf-parent-child-field-checkbox-input"> <p>Backend</p></div>
+            <div class="rf-parent-child-field-list"><input type="checkbox" class="rf-parent-child-field-checkbox-input"> <p>Other</p></div></div></div>
+        <div class="rf-parent-child-field-accordion"><div class="rf-parent-child-field-title-wrapper">
+          <input type="checkbox" class="rf-parent-child-field-header-checkbox-input"> <label class="rf-parent-child-field-header-checkbox-label">Design</label>
+          <div class="rf-plus-minus-icon-container">+</div></div>
+          <div class="collapse">
+            <div class="rf-parent-child-field-list"><input type="checkbox" class="rf-parent-child-field-checkbox-input"> <p>Product design</p></div>
+            <div class="rf-parent-child-field-list"><input type="checkbox" class="rf-parent-child-field-checkbox-input"> <p>Other</p></div></div></div>
+      </div></div>
+    <div class="tinymce-input-wrapper"><p class="form-label">A cover note</p><div class="editor"></div></div>
+  </div>
+  <div><input type="checkbox" class="policy-checkbox"> <span>Acme is an equal opportunity employer.</span></div>
+  <button type="button" id="submit-application-button">Submit Application</button>
+  <div class="rf-status-message"></div>
+</form></div>
+<script>
+  // react-select, as Recruiterflow draws it: a combobox opens a menu of options; a pick sets a
+  // single value, or adds a multi value with its Remove button
+  let menus = 0;
+  for (const select of document.querySelectorAll(".select")) {
+    const combo = select.querySelector("[role=combobox]"), n = ++menus;
+    const close = () => select.querySelector(".menu")?.remove();
+    const open = () => {
+      if (select.querySelector(".menu")) return;
+      const menu = document.createElement("div");
+      menu.className = "menu";
+      select.dataset.options.split("|").forEach((text, i) => {
+        const option = document.createElement("div");
+        option.id = `react-select-${n}-option-${i}`;
+        option.textContent = text;
+        option.onclick = () => {
+          if (select.hasAttribute("data-multi")) {
+            const chip = document.createElement("div");
+            chip.innerHTML = `<div></div><div role="button"></div>`;
+            chip.firstChild.textContent = text;
+            chip.lastChild.setAttribute("aria-label", `Remove ${text}`);
+            select.querySelector(".control").prepend(chip);
+          } else {
+            select.querySelector(".x-singleValue")?.remove();
+            const value = document.createElement("div");
+            value.className = "x-singleValue";
+            value.textContent = text;
+            select.querySelector(".control").prepend(value);
+            close();
+          }
+          combo.value = "";
+        };
+        menu.append(option);
+      });
+      select.append(menu);
+    };
+    combo.addEventListener("click", open);
+    combo.addEventListener("input", () => {
+      open();
+      for (const o of select.querySelectorAll(".menu > div"))
+        o.style.display = o.textContent.toLowerCase().includes(combo.value.toLowerCase()) ? "" : "none";
+    });
+    combo.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+  }
+  for (const header of document.querySelectorAll(".input-section-container"))
+    header.onclick = () => {
+      const inputs = header.nextElementSibling;
+      inputs.style.display = inputs.style.display === "none" ? "" : "none";
+    };
+  for (const box of document.querySelectorAll(".yes-no-input-wrapper"))
+    for (const b of box.querySelectorAll("button"))
+      b.onclick = () => box.querySelectorAll("button").forEach(o => o.classList.toggle("selected", o === b));
+  for (const icon of document.querySelectorAll(".rf-plus-minus-icon-container"))
+    icon.onclick = () => icon.closest(".rf-parent-child-field-accordion").querySelector(".collapse").classList.toggle("show");
+  // a file is uploaded at once and listed by name in place of its input
+  for (const input of document.querySelectorAll("input[type=file]"))
+    input.onchange = async () => {
+      const file = input.files[0], body = new FormData();
+      body.append("file", file);
+      await fetch("/api/file/upload", {method: "POST", body});
+      const item = document.createElement("div");
+      item.className = "file-list-item";
+      item.textContent = file.name + " ";
+      input.replaceWith(item);
+    };
+  document.querySelector("#submit-application-button").onclick = async () => {
+    const response = await fetch(`${location.pathname}/submit-application`,{method: "POST", body: new FormData()});
+    const answer = await response.json();
+    document.querySelector(".rf-status-message").textContent = answer.message;
+  };
+</script>
+</body>
+</html>
