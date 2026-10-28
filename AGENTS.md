@@ -8,6 +8,9 @@
   - [docs/adr/](docs/adr/README.md) the decisions the design rests on
   - [docs/adapters/](docs/adapters/) each hiring system as observed
 
+- Blog
+  - SlopIt blog https://atsfill.slopit.io/, id 639aj5wi. Key in ~/.config/slopit/639aj5wi. Use the slopit skill.
+
 - Rules
   - Public repository. Personal data (answers, resumes, posting URLs, sessions, account emails) is never committed, in code, fixtures or docs: it stays in the data directory, the config file or the gitignored `.tmp/`.
   - The same goes for names: no employer or user names in code, fixtures, docs, branch names or commit messages. Use generic placeholders (`Acme`, `Jane Doe`).
