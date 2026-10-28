@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Ingénieur F/H - JobAffinity</title></head>
+<body class="candidate-application-body">
+<div class="candidate-application-form-panel" data-cap-step="info" data-cap-wizard="0">
+<form action="/application_form/submission/candidate_application?publication_token=acme0000000000000b" class="candidate-application-form" method="POST">
+  <div class="cap-step js-cap-step" data-step="info">
+    <fieldset class="form-fieldset form-section" name="section_0">
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="cv">
+          <div class="form-group">
+            <label for="_field-cv">
+              CV
+              <span class="required">*</span>
+              <div style="display:inline;"><button class="icon-button" type="button">i</button></div>
+              <div style="display:none;">List of uploaded files</div>
+            </label>
+            <div class="file-upload js-file-upload js-file-upload__cv" data-form-field-name="cv">
+              <input class="js-uploaded-files" name="cv" type="hidden" value="[]">
+              <input id="file-input" multiple="multiple" style="display: none;" type="file">
+              <div class="existing-files"><div class="files-list"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="other_documents">
+          <div class="form-group">
+            <label for="_field-other_documents">
+              Autres documents
+              <span class="required none">*</span>
+            </label>
+            <div class="file-upload js-file-upload js-file-upload__other_documents" data-form-field-name="other_documents">
+              <input class="js-uploaded-files" name="other_documents" type="hidden" value="[]">
+              <input id="file-input" multiple="multiple" style="display: none;" type="file">
+              <div class="existing-files"><div class="files-list"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="title">
+          <div class="form-group">
+            <label for="_field-title">Civilité <span class="required">*</span></label>
+            <select class="custom-select" id="_field-title" name="title" data-onload-select2="True">
+              <option value=""></option>
+              <option value="mr">M.</option>
+              <option value="ms">Mme</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-fields-row__element" data-name="last_name">
+          <div class="form-group">
+            <label for="_field-last_name">Nom de famille <span class="required">*</span></label>
+            <input class="form-control" id="_field-last_name" name="last_name" type="text">
+          </div>
+        </div>
+        <div class="form-fields-row__element" data-name="first_name">
+          <div class="form-group">
+            <label for="_field-first_name">Prénom <span class="required">*</span></label>
+            <input class="form-control" id="_field-first_name" name="first_name" type="text">
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="email">
+          <div class="form-group">
+            <label for="_field-email">Email <span class="required">*</span></label>
+            <input class="form-control" id="_field-email" name="email" type="text">
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="mobile_phone">
+          <div class="form-group">
+            <label for="_field-mobile_phone">Téléphone mobile <span class="required none">*</span></label>
+            <input class="form-control" id="_field-mobile_phone" name="mobile_phone" type="text">
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="availability">
+          <div class="form-group">
+            <label for="_field-availability">Disponibilité <span class="required none">*</span></label>
+            <select class="custom-select" id="_field-availability" name="availability">
+              <option value=""></option>
+              <option value="now">Immédiatement</option>
+              <option value="date">Disponible à partir du...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper none" id="availability_date_row" style="display:none">
+        <div class="form-fields-row__element" data-name="availability_date">
+          <div class="form-group">
+            <label for="_field-availability_date">À partir du <span class="required none">*</span></label>
+            <input class="form-control" id="_field-availability_date" name="availability_date" type="date" disabled>
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="salary_1">
+          <div class="form-group">
+            <label for="_field-salary_1">Salaire annuel <span class="required none">*</span></label>
+            <div class="input-group"><input class="form-control" id="_field-salary_1" name="salary_1" type="number"></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="comment">
+          <div class="form-group">
+            <label for="_field-comment">Commentaire <span class="required none">*</span></label>
+            <textarea class="form-control" id="_field-comment" name="comment"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="form-row-wrapper">
+        <div class="form-fields-row__element" data-name="gdpr_agreement">
+          <div class="custom-control custom-checkbox">
+            <input type="checkbox" name="gdpr_agreement" class="custom-control-input" id="_field-gdpr_agreement">
+            <label for="_field-gdpr_agreement" class="custom-control-label">J'accepte les conditions d'utilisation de mes données personnelles.</label>
+          </div>
+        </div>
+      </div>
+    </fieldset>
+  </div>
+  <div class="form-actions cap-submit-actions js-cap-submit-actions">
+    <button class="primarybutton" type="submit">Envoyer ma candidature</button>
+  </div>
+</form>
+</div>
+<script>
+  // Stands in for JobAffinity's upload widget: the server's answer lists the document, and its
+  // metadata is kept in the hidden input.
+  for (const widget of document.querySelectorAll(".js-file-upload")) {
+    widget.querySelector("input[type=file]").addEventListener("change", e => {
+      const file = e.target.files[0];
+      setTimeout(() => {
+        const item = document.createElement("div");
+        item.className = "file-item";
+        item.textContent = file.name;
+        widget.querySelector(".files-list").append(item);
+        widget.querySelector(".js-uploaded-files").value =
+          JSON.stringify([{sha1: "0000", filename: file.name, size: file.size}]);
+      }, 100);
+    });
+  }
+  const availability = document.getElementById("_field-availability");
+  availability.addEventListener("change", () => {
+    const row = document.getElementById("availability_date_row");
+    const on = availability.value === "date";
+    row.style.display = on ? "" : "none";
+    row.querySelector("input").disabled = !on;
+  });
+  const box = document.getElementById("_field-gdpr_agreement");
+  box.style.cssText = "position:absolute;opacity:0;z-index:-1";
+  const form = document.querySelector(".candidate-application-form");
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    fetch(form.action, {method: "POST", body: new URLSearchParams(new FormData(form))});
+  });
+</script>
+</body>
+</html>
