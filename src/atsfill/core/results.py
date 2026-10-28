@@ -144,3 +144,4 @@ class StatusReport:
     users: list[str]
     adapters: list[AdapterStatus]
     sessions: list[SessionReport]  # every stored one, of every user
+    run_history: str  # the docs page: whether each adapter works today, from its runs

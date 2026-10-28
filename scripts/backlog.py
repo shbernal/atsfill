@@ -1,4 +1,4 @@
-"""Writes docs/adapters/README.md, the README's adapter badges and the docs site's carriers
+"""Writes docs/adapters/README.md, the README's run histories and the docs site's carriers
 from the registry."""
 
 from pathlib import Path
@@ -56,6 +56,6 @@ def _title(adapter: str) -> str:
 if __name__ == "__main__":
     ROOT.joinpath("docs/adapters/README.md").write_text(registry.backlog())
     readme = ROOT / "README.md"
-    readme.write_text(registry.with_badges(readme.read_text()))
+    readme.write_text(registry.with_run_histories(readme.read_text()))
     CARRIERS.parent.mkdir(exist_ok=True)
     CARRIERS.write_text(carriers())

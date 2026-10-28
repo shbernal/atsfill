@@ -500,6 +500,7 @@ def status(*, data_dir: Path | None = None) -> StatusReport:
         users=users,
         adapters=[_adapter_status(a, users) for a in candidates],
         sessions=_sessions(data, users, candidates),
+        run_history=registry.RUN_HISTORY,
     )
 
 

@@ -1,4 +1,3 @@
-from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -87,7 +86,6 @@ def test_a_scope_is_written_into_its_entry_only():
     assert once == twice
     systems = registry.parse(twice)
     assert (systems["a"].scope, systems["b"].scope) == (scope, registry.Scope())
-    assert "supported%202026--10--19" in registry._badge(replace(systems["a"], adapter="a"))
 
 
 def test_the_committed_carriers_are_current():
@@ -95,9 +93,9 @@ def test_the_committed_carriers_are_current():
     assert committed == backlog.carriers(), "run `uv run python -m scripts.backlog`"
 
 
-def test_the_committed_badges_are_current():
+def test_the_committed_run_histories_are_current():
     readme = (ROOT / "README.md").read_text()
-    assert readme == registry.with_badges(readme), "run `uv run python -m scripts.backlog`"
+    assert readme == registry.with_run_histories(readme), "run `uv run python -m scripts.backlog`"
 
 
 def test_a_system_stopped_by_a_known_gap_goes_last_with_its_reason():
@@ -118,7 +116,6 @@ share = 0.1
     rows = [line for line in registry.backlog(systems).splitlines() if line.startswith("| ")]
     assert [r.split(" | ")[0][2:] for r in rows[1:]] == ["open", "stopped"]
     assert "[in scope: x](stopped.md)" in rows[-1]
-    assert "in%20scope%202026--10--21" in registry._badge(systems["stopped"])
 
 
 def test_an_out_of_scope_system_joins_the_side_table_with_its_reason():
