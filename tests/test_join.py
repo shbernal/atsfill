@@ -1,4 +1,5 @@
-"""The JOIN adapter on tests/pages/join: a signed-in posting, its wizard, the account page."""
+"""The JOIN adapter on tests/pages/join: a signed-in posting, its wizard, the account page and
+the account profile's form."""
 
 from pathlib import Path
 
@@ -7,8 +8,8 @@ import pytest
 from atsfill.adapters import join
 from atsfill.adapters.join import Join
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Refused, SignUpDetails
-from atsfill.core.results import FieldType
+from atsfill.core.adapter import Blocked, KeepsProfile, ProfileIncomplete, Refused, SignUpDetails
+from atsfill.core.results import Answer, FieldType
 
 PAGES = Path(__file__).parent / "pages/join"
 JOB = "https://join.com/companies/acme/101-ai-engineer"
@@ -24,12 +25,31 @@ QUESTIONS = [
     {"id": 4, "question": "Your salary expectation?", "options": None, "type": "INTEGER",
      "isRequired": False, "position": 4},
 ]  # fmt: skip
+SAVED = {"type": "candidate", "firstName": "Ada", "lastName": "Placeholder", "email": TAKEN,
+         "phoneNumber": "+33639980000", "country": "France", "city": "Paris"}  # fmt: skip
+ACCOUNT = dict(SAVED)  # the account profile, as `api/me` answers it and the form saves it
+
+
+@pytest.fixture(autouse=True)
+def account():
+    ACCOUNT.clear()
+    ACCOUNT.update(SAVED)
+    return ACCOUNT
 
 
 def serve(route) -> None:
     request = route.request
     url = request.url
-    if "operationName=" in url:
+    if url.endswith("/api/me"):
+        route.fulfill(json=ACCOUNT)
+    elif "operationName=UpdateTalentPersonalInformation" in url:
+        sent = request.post_data_json["variables"]["input"]
+        if ACCOUNT["phoneNumber"] and not sent["phoneNumber"]:
+            route.fulfill(json={"errors": [{"message": "Phone number is invalid: "}]})
+            return
+        ACCOUNT.update(sent)
+        route.fulfill(json={"data": {"updateCandidatePersonalInfo": {"id": 1}}})
+    elif "operationName=" in url:
         operation = url.split("operationName=")[1]
         sent = (request.post_data_json or {}).get("variables", {}).get("input", {})
         body = {
@@ -44,6 +64,8 @@ def serve(route) -> None:
         route.fulfill(json=body)
     elif "/auth/login/candidate" in url:
         route.fulfill(path=PAGES / "account.html")
+    elif "/talent/me" in url:
+        route.fulfill(path=PAGES / "profile.html")
     elif "/auth/candidates/" in url or "/talent/" in url:
         route.fulfill(body="<!doctype html><title>Account</title>", content_type="text/html")
     else:
@@ -169,3 +191,84 @@ def test_sign_up_with_a_short_password_is_refused(signing_in, page, monkeypatch)
     monkeypatch.setattr(join, "BUTTON_TIMEOUT_MS", 300)
     with pytest.raises(Refused, match="^password_rule"):
         signing_in.sign_up(page, "jane@example.com", "short", SignUpDetails(name="Jane Doe"))
+
+
+def test_it_keeps_an_account_profile():
+    assert isinstance(Join(), KeepsProfile)
+
+
+def profile(page) -> Join:
+    adapter = Join()
+    page.goto(adapter.profile_url(None))
+    assert adapter.profile_steps(page) == ["general"]
+    assert adapter.open_step(page, "general")
+    return adapter
+
+
+def test_the_profile_form_lists_its_saved_values(page):
+    fields = {f.id: f for f in profile(page).profile_read(page)}
+    assert {k: f.prefilled for k, f in fields.items()} == {
+        "first_name": "Ada", "last_name": "Placeholder", "phone": "+33639980000",
+        "country": "France", "city": "Paris", "linkedin": None,
+    }  # fmt: skip
+    assert fields["country"].options == ["Belgium", "France", "Germany"]
+    assert fields["first_name"].max_length == 30
+
+
+def test_the_profile_form_reads_back_what_it_is_filled_with_and_saves(page, account):
+    adapter = profile(page)
+    fields = adapter.profile_read(page)
+    answers: dict[str, Answer] = {
+        "first_name": "Jane",
+        "phone": "+1 212 555 0123",  # +1, not American Samoa's +1684
+        "country": "Germany",
+        "city": "Berlin",
+        "linkedin": "https://www.linkedin.com/in/jane-doe",
+    }
+    adapter.profile_fill(page, answers)
+    checks = matching.check(fields, answers, adapter.profile_read_back(page))
+    assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
+    adapter.save(page)
+    assert account["phoneNumber"] == "+12125550123"
+    assert [account[k] for k in ("firstName", "country", "city")] == ["Jane", "Germany", "Berlin"]
+
+
+def test_a_city_change_alone_keeps_save_disabled(page, monkeypatch):
+    monkeypatch.setattr(join, "BUTTON_TIMEOUT_MS", 500)
+    adapter = profile(page)
+    adapter.profile_fill(page, {"city": "Lyon"})
+    assert adapter.profile_read_back(page)["city"] == "Lyon"
+    with pytest.raises(Refused, match="^step_refused: general: the form keeps its Save button"):
+        adapter.save(page)
+
+
+def test_a_saved_phone_cannot_be_emptied(page):
+    adapter = profile(page)
+    page.locator('[id="candidate.phoneNumber"]').fill("")
+    with pytest.raises(Refused, match="^step_refused: general: Phone number is invalid"):
+        adapter.save(page)
+
+
+def test_a_phone_without_its_country_code_is_not_taken(page):
+    with pytest.raises(join.NotTaken, match="no country code"):
+        profile(page).profile_fill(page, {"phone": "0639980000"})
+
+
+def test_a_job_asking_what_the_profile_lacks_names_it(page, account, files, monkeypatch):
+    monkeypatch.setattr(join, "STEP_TIMEOUT_MS", 1_000)
+    account["phoneNumber"] = ""
+    adapter = Join()
+    page.goto(JOB)
+    adapter.browser_read(page)
+    with pytest.raises(ProfileIncomplete, match="^the job asks for a phone$"):
+        adapter.fill(page, {"cv": files[0]})
+    assert page.url.endswith("/apply/personalInformation")
+
+    saving = profile(page)
+    saving.profile_fill(page, {"phone": "+33 6 39 98 00 00"})
+    saving.save(page)
+    adapter = Join()
+    page.goto(JOB)
+    adapter.browser_read(page)
+    with pytest.raises(join.NotTaken, match="^the question-1 step"):  # past personalInformation
+        adapter.fill(page, {"cv": files[0]})

@@ -3,12 +3,16 @@
 Applying is a wizard of one step per page, ending on a review page whose Confirm & apply is the
 send. Signed in, the wizard takes the name from the account and asks the CV, a cover letter and
 the job's screening questions, which the page's own GraphQL query lists. The fill walks the
-steps to the review page, and the read-back is what the review page lists.
+steps to the review page, and the read-back is what the review page lists. What the wizard takes
+from the account (name, phone, country, city, links) is the account profile's, a form of one
+profile step that `profile` saves (ADR 0017).
 """
 
 import json
 import re
 import time
+from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -17,10 +21,10 @@ from atsfill.core.adapter import (
     Blocked,
     Gap,
     NotTaken,
+    ProfileIncomplete,
     Refused,
     SignUpDetails,
     Unsupported,
-    known_gap,
 )
 from atsfill.core.browser import Locator, Page, Request, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, SideEffect
@@ -31,7 +35,13 @@ ME = f"https://{HOST}/api/me"
 GRAPHQL = f"https://{HOST}/candidate-api/graphql"
 LOGIN = f"https://{HOST}/auth/login/candidate?redirectUrl=%2Ftalent%2Fhome"
 UNVERIFIED = "/auth/candidates/unverified-email"
+PROFILE = f"https://{HOST}/talent/me?edit=profile"
+GENERAL = "general"  # the account profile's one profile step
 STEP_TIMEOUT_MS = 20_000
+PROFILE_TIMEOUT_MS = 20_000
+SAVE_TIMEOUT_MS = 20_000
+MENU_TIMEOUT_MS = 5_000
+SUGGEST_TIMEOUT_MS = 10_000  # the city's suggestions come from a request per search
 UPLOAD_TIMEOUT_MS = 30_000
 ACCOUNT_TIMEOUT_MS = 20_000
 SUBMIT_TIMEOUT_MS = 60_000
@@ -57,7 +67,26 @@ CLASS_STEPS = {
     "availability": "AVAILABILITY",
 }
 PROFILE_STEPS = ("personalInformation", "professionalLinks")  # the account profile's
+# What a wizard's profile step can ask that the account profile lacks, by input id.
+LACKS = {
+    "candidate.firstName": "a first name",
+    "candidate.lastName": "a last name",
+    "candidate.phoneNumber": "a phone",
+}
 PDF = [".pdf", "application/pdf"]
+
+# The profile form's controls, by its field ids.
+TEXTS = {
+    "first_name": "candidate.firstName",
+    "last_name": "candidate.lastName",
+    "linkedin": "professionalLinks.LINKEDIN",
+}
+COUNTRY = '[id="candidate.countryId"]'
+CITY = "[data-testid=CityName]"
+PHONE = '[id="candidate.phoneNumber"]'
+DIAL = "[data-phone-input] button"  # the phone's country code, a popover of countries
+POPOVER = "[data-scope=popover][data-part=content]"
+DIAL_CODE = re.compile(r"\(\+(\d+)\)\s*$")  # an option of the popover: `France (+33)`
 
 # The page's own GraphQL request, from the page.
 _FETCH = """async ([url, body]) => (await fetch(url, {method: "POST", body: JSON.stringify(body),
@@ -70,14 +99,26 @@ _REVIEW = """() => [...document.querySelectorAll("a > div")].map(div => {
     ? [label.textContent.trim(), value.textContent.trim()] : null;
 }).filter(Boolean)"""
 
+# A select's value: the paragraph it shows, not an option of its open menu.
+_SHOWN = """root => {
+  const p = [...root.querySelectorAll("p")].find(p => !p.closest("[role=option]"));
+  return p ? p.textContent.trim() : "";
+}"""
+
+# The ids of the inputs that are empty, of those given.
+_EMPTY = (
+    """ids => ids.filter(id => { const e = document.getElementById(id); return e && !e.value; })"""
+)
+
 
 class Join:
     name = "join"
     per_employer = False
     asks = {"name"}  # the account's first and last name
-    known_gaps = {"profile_incomplete": Gap.FLOW}
+    known_gaps: dict[str, Gap] = {}
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the candidate account"),
+        SideEffect("profile", "hiring_system", "profile --answers saves the account profile"),
         SideEffect("upload", "hiring_system", "a file is stored as soon as it is chosen"),
         SideEffect("submit", "employer", "the application reaches the employer"),
     ]
@@ -196,9 +237,11 @@ class Join:
             elif step in PROFILE_STEPS:
                 try:  # shown when the job requires what the account profile lacks
                     _next(page, step)
-                except NotTaken, RuntimeError:
-                    detail = f"the {step} step asks what the account profile lacks"
-                    raise Unsupported(known_gap(self, "profile_incomplete", detail)) from None
+                except NotTaken, RuntimeError:  # Continue disabled, or refused on click
+                    lacks = [LACKS[i] for i in page.evaluate(_EMPTY, list(LACKS))]
+                    raise ProfileIncomplete(
+                        f"the job asks for {' and '.join(lacks) or f'what {step} asks'}"
+                    ) from None
                 continue
             else:
                 raise Unsupported(f"unhandled_rendering: a wizard step {step!r}")
@@ -238,6 +281,83 @@ class Join:
             parts = urlsplit(response.url)
             return f"POST {parts.path}?{parts.query} {response.status}"
         raise RuntimeError(f"POST {response.url} answered {response.status}: {body.get('errors')}")
+
+    def profile_url(self, scope: str | None) -> str:
+        return PROFILE
+
+    def profile_steps(self, page: Page) -> list[str]:
+        return [GENERAL]
+
+    def open_step(self, page: Page, step: str) -> bool:
+        if step != GENERAL:
+            raise Unsupported(f"unhandled_rendering: a profile step {step!r}")
+        if page.url != PROFILE:
+            page.goto(PROFILE)
+        page.locator(f'[id="{TEXTS["first_name"]}"]').wait_for(timeout=PROFILE_TIMEOUT_MS)
+        return True
+
+    def profile_read(self, page: Page) -> list[Field]:
+        """The general information form: the name, the phone, the country and city of residence
+        and the LinkedIn URL. The photo, the bio, the work authorizations and the other links are
+        left as they are, as are the profile's other sections (experience, education, …)."""
+        saved = self.profile_read_back(page)
+        limit = {
+            k: int(page.locator(f'[id="{i}"]').get_attribute("maxlength") or 0) or None
+            for k, i in TEXTS.items()
+        }
+        fields = [
+            Field("first_name", "First name", FieldType.TEXT, True, max_length=limit["first_name"]),
+            Field("last_name", "Last name", FieldType.TEXT, True, max_length=limit["last_name"]),
+            Field("phone", "Phone number, with its country code", FieldType.PHONE, False),
+            Field("country", "Country of residence", FieldType.CHOICE, True, _menu(page, COUNTRY)),
+            Field("city", "City, in the country of residence", FieldType.TYPEAHEAD, False),
+            Field("linkedin", "LinkedIn", FieldType.URL, False),
+        ]  # fmt: skip
+        return [replace(f, prefilled=saved.get(f.id)) for f in fields]
+
+    def profile_fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        """In the form's order: the city is searched in the country of residence."""
+        for field_id, input_id in TEXTS.items():
+            if isinstance(answer := answers.get(field_id), str):
+                page.locator(f'[id="{input_id}"]').fill(answer)
+        if isinstance(answer := answers.get("phone"), str):
+            _phone(page, answer)
+        if isinstance(answer := answers.get("country"), str):
+            _pick(page, COUNTRY, answer, lambda text: text == answer, MENU_TIMEOUT_MS)
+        if isinstance(answer := answers.get("city"), str):
+            _pick(page, CITY, answer, lambda text: True, SUGGEST_TIMEOUT_MS)
+
+    def profile_read_back(self, page: Page) -> dict[str, Answer]:
+        values = {k: page.locator(f'[id="{i}"]').input_value() for k, i in TEXTS.items()}
+        phone = page.locator(PHONE)
+        if phone.input_value():  # `data-value` holds the country code and the number
+            values["phone"] = phone.get_attribute("data-value") or ""
+        values["country"] = _shown(page, COUNTRY)
+        values["city"] = _shown(page, CITY)
+        return {k: v for k, v in values.items() if v}
+
+    def save(self, page: Page) -> None:
+        """Save changes posts `UpdateTalentPersonalInformation`; the button stays disabled while
+        a required field is empty or nothing changed."""
+        button = page.locator("form button[type=submit]").last
+        try:  # it is enabled a moment after the last change
+            page.wait_for_function(
+                "e => !e.disabled", arg=button.element_handle(), timeout=BUTTON_TIMEOUT_MS
+            )
+        except Timeout:
+            raise Refused(
+                f"step_refused: {GENERAL}: the form keeps its Save button disabled"
+            ) from None
+        with page.expect_response(
+            lambda r: "operationName=UpdateTalentPersonalInformation" in r.url,
+            timeout=SAVE_TIMEOUT_MS,
+        ) as sent:
+            button.click()
+        response = sent.value
+        if not response.ok:
+            raise RuntimeError(f"UpdateTalentPersonalInformation answered {response.status}")
+        if errors := response.json().get("errors"):
+            raise Refused(f"step_refused: {GENERAL}: {errors[0].get('message')}")
 
     def _file(self, page: Page, field_id: str, answer: Answer | None) -> None:
         if not isinstance(answer, str):
@@ -346,6 +466,62 @@ def _date(page: Page, answer: str) -> None:
         raise NotTaken(f"the calendar shows no {answer}")
     trigger = day.first.locator("[data-part=table-cell-trigger]")
     (trigger if trigger.count() else day.first).click()
+
+
+def _select(page: Page, container: str) -> tuple[Locator, Locator]:
+    """A select of the profile form: its combobox, and the options its menu shows, whose ids
+    carry the combobox's."""
+    box = page.locator(container).locator("input[role=combobox]")
+    suffix = (box.get_attribute("id") or "").removeprefix("select-input-")
+    return box, page.locator(f'[id^="react-select-{suffix}-option-"]')
+
+
+def _menu(page: Page, container: str) -> list[str]:
+    box, options = _select(page, container)
+    box.click()
+    options.first.wait_for(timeout=MENU_TIMEOUT_MS)
+    texts = [t.strip() for t in options.all_inner_texts()]
+    box.press("Escape")
+    return texts
+
+
+def _pick(page: Page, container: str, answer: str, take: Callable[[str], bool], ms: int) -> None:
+    """Searches the select for the answer and picks the first option `take` accepts."""
+    box, options = _select(page, container)
+    box.click()
+    box.fill(answer)
+    try:
+        options.first.wait_for(timeout=ms)
+    except Timeout:
+        raise NotTaken(f"no option for {answer!r}") from None
+    texts = [t.strip() for t in options.all_inner_texts()]
+    picked = next((i for i, text in enumerate(texts) if take(text)), None)
+    if picked is None:
+        raise NotTaken(f"no option {answer!r} in {texts}")
+    options.nth(picked).click()
+
+
+def _shown(page: Page, container: str) -> str:
+    """A select's value as it shows, empty under its placeholder."""
+    return page.locator(container).first.evaluate(_SHOWN)
+
+
+def _phone(page: Page, answer: str) -> None:
+    """Picks the country whose code starts the answer, the longest of them, then types the rest:
+    the number's input takes digits only."""
+    digits = re.sub(r"\D", "", answer)
+    if not answer.strip().startswith("+"):
+        raise NotTaken(f"the phone {answer!r} has no country code, `+<code> <number>`")
+    page.locator(DIAL).click()
+    options = page.locator(POPOVER).locator("[role=option]")
+    options.first.wait_for(timeout=MENU_TIMEOUT_MS)
+    codes = [m[1] if (m := DIAL_CODE.search(t)) else "" for t in options.all_inner_texts()]
+    starting = [i for i, code in enumerate(codes) if code and digits.startswith(code)]
+    if not starting:
+        raise NotTaken(f"no country code starts the phone {answer!r}")
+    picked = max(starting, key=lambda i: len(codes[i]))
+    options.nth(picked).click()
+    page.locator(PHONE).fill(digits[len(codes[picked]) :])
 
 
 def _email_step(page: Page, email: str) -> bool:
