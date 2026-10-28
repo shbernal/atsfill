@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# SlopIt API client. A project links its blog with a `.slopit` file holding the blog id;
+# the key for that id lives in ~/.config/slopit/<blog_id>, outside the repository.
+set -euo pipefail
+
+api=https://slopit.io/api
+keys=${XDG_CONFIG_HOME:-$HOME/.config}/slopit
+
+usage() {
+  cat >&2 <<'EOF'
+usage: slopit signup <email> <name> <title> [parentSiteUrl]
+       slopit <METHOD> <path> [curl args...]    path under /api/blogs/<blog_id>, e.g. /posts
+EOF
+  exit 2
+}
+
+die() { echo "slopit: $*" >&2; exit 1; }
+
+signup() {
+  (( $# >= 3 )) || usage
+  local root res id
+  root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  [[ -e $root/.slopit ]] && die "$root/.slopit exists: this project already has a blog"
+  res=$(curl -sS --fail-with-body "$api/signup" --json "$(jq -nc \
+    --arg email "$1" --arg name "$2" --arg title "$3" --arg site "${4:-}" \
+    '{$email, $name, $title} + if $site == "" then {} else {parentSiteUrl: $site} end')") \
+    || { echo "$res" >&2; exit 1; }
+  id=$(jq -r .blog_id <<<"$res")
+  mkdir -p "$keys"
+  (umask 077; jq -r .api_key <<<"$res" > "$keys/$id")
+  echo "$id" > "$root/.slopit"
+  jq -c 'del(.api_key, .onboarding_text)' <<<"$res"
+}
+
+request() {
+  (( $# >= 2 )) || usage
+  local method=${1^^} path=$2 dir=$PWD id res status=0
+  shift 2
+  until [[ -f $dir/.slopit ]]; do
+    [[ $dir == / ]] && die "no .slopit file here or above: this project has no blog yet"
+    dir=$(dirname "$dir")
+  done
+  id=$(tr -d '[:space:]' < "$dir/.slopit")
+  [[ -f $keys/$id ]] || die "no key for blog $id: save the key mailed to the owner at signup in $keys/$id"
+  res=$(curl -sS --fail-with-body -X "$method" "$api/blogs/$id${path%/}" \
+    -K <(printf 'header = "Authorization: Bearer %s"\n' "$(<"$keys/$id")") "$@") || status=$?
+  # Every response repeats the same `_links` navigation block
+  jq -c 'if type == "object" then del(._links) else . end' <<<"$res" 2>/dev/null || echo "$res"
+  return $status
+}
+
+case ${1:-} in
+  signup) shift; signup "$@" ;;
+  ''|-h|--help) usage ;;
+  *) request "$@" ;;
+esac
