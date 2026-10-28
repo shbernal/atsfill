@@ -1,6 +1,6 @@
 # JOIN
 
-Observed on live postings on 2026-10-26, headless Camoufox. The fixture pages are [tests/pages/join/job.html](../../tests/pages/join/job.html), a posting and its wizard served signed in by `tests/test_join.py`, and [tests/pages/join/account.html](../../tests/pages/join/account.html), the sign-in and sign-up.
+Observed on live postings on 2026-10-26, headless Camoufox, the account profile on 2026-10-28. The fixture pages are [tests/pages/join/job.html](../../tests/pages/join/job.html), a posting and its wizard served signed in by `tests/test_join.py`, [tests/pages/join/account.html](../../tests/pages/join/account.html), the sign-in and sign-up, and [tests/pages/join/profile.html](../../tests/pages/join/profile.html), the account profile's form.
 
 ## Where the form is
 
@@ -21,6 +21,22 @@ One account per user for the whole system, a JOIN candidate account.
 - The signed-in check is `GET join.com/api/me`: the candidate (`type: candidate`, `confirmedAt` once verified).
 - Signed in, the wizard opens on `authentication` and leaves it for `cv` a moment later. It skips `personalInformation` and `professionalLinks`, taking the name from the account: the steps are `cv`, `coverLetter`, the questions, `review`.
 - atsfill signs in (`login join`) and creates the account (`login join --create --email <address> --details <file>` with a first and a last `name`, which ends `blocked: email_link`); with a password source, a form command signs in again on its own.
+
+## Account profile
+
+What the wizard takes from the account is its profile, kept at `join.com/talent/me`: general information, then experience, education, certifications, projects, languages and skills, each section edited on its own. The general information is a form at `/talent/me?edit=profile`, read and saved by `atsfill profile join` (ADR 0017) as one profile step, `general`. A job that requires a detail it lacks shows `personalInformation` in the wizard (see below). The page is in the account's language (Paramètres, Langue de l'application), the country names too.
+
+| Field id | Field type | Rendering |
+|---|---|---|
+| `first_name`, `last_name` | `text`, required, 30 characters | input |
+| `phone` | `phone`, answered `+<code> <number>` | a country code button opening a popover of countries ("France (+33)", Germany and Switzerland first), then a tel input that keeps digits only; `data-value` holds the code and the number |
+| `country` | `choice`, required | react-select, preset from the visitor's location; its menu lists every country |
+| `city` | `typeahead` | react-select, suggestions from `GetPlacesAutocomplete` within the country of residence |
+| `linkedin` | `url` | input |
+
+- atsfill picks the code the answer starts with, the longest of those listed, so `+1 684…` is American Samoa and `+1 212…` the first `+1`.
+- The photo, the bio, the work authorizations, the other links and the other sections are not listed and stay as they are.
+- Save changes (`button[type=submit]`) posts `UpdateTalentPersonalInformation` and returns to `/talent/me`. It stays disabled until a field changes, and a city changed alone does not count: `refused: step_refused: general`, saved only along with another change. A saved phone cannot be emptied: the mutation answers "Phone number is invalid".
 
 ## Reading and filling
 
@@ -43,18 +59,12 @@ The question counts are postings, from 11 employers whose posting asks screening
 - atsfill lists the CV (required) and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
 - The fill walks the wizard from `cv` to `review`, answering each step, and stops there; a step it does not know stops it as `unhandled_rendering`. Continue is the footer's last button (its label is in the job's language); one left disabled means a required answer is missing.
 - A question of a class has a step named for it (`workAuthorization`, `salaryExpectation`); the others are `question-<n>`, numbered among themselves. A work authorization's cards hold the option and a description; a salary is `#salaryExpectationAmount`.
-- `personalInformation` (photo, name, country, city, phone) shows only when the job requires what the account profile lacks, a phone on some jobs: atsfill stops there, the known gap `profile_incomplete`.
+- `personalInformation` (photo, name, country, city, phone) shows when the job requires what the account profile lacks, a phone on 13 of 45 sample postings. Continue is then disabled, or enabled and going nowhere. atsfill leaves the step as it is: the form command ends `blocked: profile_incomplete: the job asks for a phone`, naming `atsfill profile join`. With a phone in the profile, the same jobs pass the step.
 - A file is stored on upload, before Continue: the step then shows the file in place of its input.
 - A choice's cards are its options in order, each a letter, the option and, for a work authorization, a description; a boolean's read in the job's language (`Ja`, `Nein`) and are answered `Yes`, `No` by position.
 - `coverLetter` is asked by some jobs only, optional where seen: it is left without one, and not listed.
 - The calendar is paged with its previous and next buttons to the answer's month.
 - The read-back is each question as its step was left (the checked card, the picked day, the input), and the CV by name from the review page: the review shows a classed question under a label of its own and its answer reworded (`€50,000`, an availability in the account's language).
-
-## Known gaps
-
-| Gap | What | Code | Postings |
-|---|---|---|---|
-| `profile_incomplete` | the job requires a detail the account profile lacks (a phone), so the wizard shows `personalInformation`, which atsfill does not fill | `unsupported_flow` | 13 of 45 in the sample, 2 of 10 at the adapter gate |
 
 ## Submitting
 

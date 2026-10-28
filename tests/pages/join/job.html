@@ -93,12 +93,21 @@ function render() {
       `<button type="button" data-testid="ApplyButton">Apply now</button>`;
     return;
   }
-  if (step === "authentication") {
-    setTimeout(() => go("cv"), 300);  // the wizard learns the account, then leaves
+  if (step === "authentication") {  // the wizard learns the account, then leaves
+    fetch("/api/me").then(r => r.json()).then(me => {
+      // the job requires a phone: an account profile without one is asked it after the CV
+      if (!me.phoneNumber) STEPS.splice(1, 0, "personalInformation");
+      setTimeout(() => go("cv"), 300);
+    });
     app.innerHTML = "<p>Loading</p>";
     return;
   }
-  if (step === "cv" || step === "coverLetter") {
+  if (step === "personalInformation") {  // Continue stays where it is while the phone is empty
+    app.innerHTML = `<h2>Personal information</h2><input id="candidate.firstName" value="Ada">` +
+      `<input id="candidate.lastName" value="Placeholder">` +
+      `<div data-phone-input="true"><input id="candidate.phoneNumber" type="tel" value=""></div>` +
+      footer(true);
+  } else if (step === "cv" || step === "coverLetter") {
     app.innerHTML = upload(step) + footer(step === "coverLetter" || !!state.files.cv);
   } else if (step.startsWith("question-")) {
     app.innerHTML = question(QUESTIONS[Number(step.split("-")[1]) - 1]);
@@ -141,7 +150,7 @@ app.addEventListener("click", async e => {
   } else if (target.type === "submit") {
     const sent = await fetch("/candidate-api/graphql?operationName=ApplyToJob", {method: "POST", body: "{}"});
     app.innerHTML = sent.ok ? "<h1>Sent</h1>" : "<h1>Error</h1>";
-  } else if (target.textContent === "Weiter" && !target.disabled) {
+  } else if (target.textContent === "Weiter" && !target.disabled && step !== "personalInformation") {
     go(STEPS[STEPS.indexOf(step) + 1]);
   }
 });
