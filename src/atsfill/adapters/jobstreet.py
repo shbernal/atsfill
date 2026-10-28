@@ -9,6 +9,7 @@ step's inputs as they stood when it was left.
 
 import re
 import time
+from contextlib import suppress
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -246,6 +247,8 @@ def _opened(page: Page) -> None:
         if page.locator(CONTINUE).is_visible():
             return
         if urlsplit(page.url).hostname == SIGN_IN_HOST:
+            with suppress(Timeout):  # its redirects done: a navigation meanwhile is aborted
+                page.get_by_label("Email address").wait_for(timeout=SIGN_IN_TIMEOUT_MS)
             raise SignedOut("login_required: the site sent Quick apply to SEEK's sign-in")
         page.wait_for_timeout(POLL_MS)
     raise RuntimeError("Quick apply showed no first step")
