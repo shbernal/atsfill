@@ -25,8 +25,8 @@ from importlib.metadata import version
 from pathlib import Path
 
 from atsfill.adapters import adapters
-from atsfill.core import browser, paths, registry
-from atsfill.core.adapter import ReadsByRequest
+from atsfill.core import accounts, browser, paths, registry
+from atsfill.core.adapter import NeedsAccount, ReadsByRequest
 from scripts import survey
 
 ROOT = Path(__file__).parents[1]
@@ -78,9 +78,14 @@ def same_code(commit: str | None, head: str) -> bool:
 
 
 def parity(adapter: ReadsByRequest, url: str, data: Path) -> str | None:
-    """None when the request read and the browser read list the same fields; else what differs."""
+    """None when the request read and the browser read list the same fields; else what differs.
+    The browser read runs under the Test user's session where the system needs an account."""
     by_request = adapter.request_read(url) or []
-    with browser.open_page(data) as page:
+    session = None
+    if isinstance(adapter, NeedsAccount):
+        mine = paths.user_dir(data, paths.TEST_USER)
+        session = accounts.session_file(mine, adapter.name, adapter.account_scope(url))
+    with browser.open_page(data, session if session and session.exists() else None) as page:
         page.goto(url)
         adapter.detect(url, page)
         in_browser = adapter.browser_read(page)

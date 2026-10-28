@@ -1,6 +1,6 @@
 # Dayforce
 
-Dayforce's career sites (`jobs.dayforcehcm.com`) and their guest application, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/dayforce/apply.html](../../tests/pages/dayforce/apply.html), served with the JSON it and the adapter read in `tests/test_dayforce.py`: one example of each rendering below.
+Dayforce's career sites (`jobs.dayforcehcm.com`) and their guest application, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/dayforce/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/dayforce/apply.html), served with the JSON it and the adapter read in `tests/test_dayforce.py`: one example of each rendering below.
 
 ## Where the form is
 

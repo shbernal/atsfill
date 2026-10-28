@@ -1,6 +1,6 @@
 # Zoho Recruit
 
-Zoho Recruit's career sites, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/zohorecruit/job.html](../../tests/pages/zohorecruit/job.html) with its form API answer [form.json](../../tests/pages/zohorecruit/form.json), served as `acme.zohorecruit.com` in `tests/test_zohorecruit.py`: one example of each rendering below, Zoho's Lyte components reduced to their markup and a few lines that act as they do.
+Zoho Recruit's career sites, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/zohorecruit/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/zohorecruit/job.html) with its form API answer [form.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/zohorecruit/form.json), served as `acme.zohorecruit.com` in `tests/test_zohorecruit.py`: one example of each rendering below, Zoho's Lyte components reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 

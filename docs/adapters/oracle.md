@@ -1,6 +1,6 @@
 # Oracle
 
-Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last on 2026-10-27. The fixture pages are [tests/pages/oracle/](../../tests/pages/oracle/), served as an employer's site in `tests/test_oracle.py`: the email step with its OTP step, and one single-page form, holding a known address's draft resume with one example of each rendering below.
+Oracle Recruiting Cloud's Candidate Experience, observed on live postings, last on 2026-10-27. The fixture pages are [tests/pages/oracle/](https://github.com/shbernal/atsfill/tree/main/tests/pages/oracle/), served as an employer's site in `tests/test_oracle.py`: the email step with its OTP step, and one single-page form, holding a known address's draft resume with one example of each rendering below.
 
 ## Where the form is
 

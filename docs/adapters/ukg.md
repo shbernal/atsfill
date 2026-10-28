@@ -1,6 +1,6 @@
 # UKG
 
-UKG Pro Recruiting's job boards and application form, observed on live postings, last on 2026-10-27. The fixture page is [tests/pages/ukg/apply.html](../../tests/pages/ukg/apply.html), served as an Acme tenant in `tests/test_ukg.py`: the form with one example of each rendering below.
+UKG Pro Recruiting's job boards and application form, observed on live postings, last on 2026-10-27. The fixture page is [tests/pages/ukg/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/ukg/apply.html), served as an Acme tenant in `tests/test_ukg.py`: the form with one example of each rendering below.
 
 ## Where the form is
 

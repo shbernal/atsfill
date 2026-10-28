@@ -1,6 +1,6 @@
 # BambooHR
 
-BambooHR's careers sites, observed on live postings, last on 2026-10-21. The fixture page is [tests/pages/bamboohr/job.html](../../tests/pages/bamboohr/job.html) with its detail JSON [detail.json](../../tests/pages/bamboohr/detail.json), served as `acme.bamboohr.com` in `tests/test_bamboohr.py`: one example of each rendering below.
+BambooHR's careers sites, observed on live postings, last on 2026-10-21. The fixture page is [tests/pages/bamboohr/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/bamboohr/job.html) with its detail JSON [detail.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/bamboohr/detail.json), served as `acme.bamboohr.com` in `tests/test_bamboohr.py`: one example of each rendering below.
 
 ## Where the form is
 

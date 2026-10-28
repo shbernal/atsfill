@@ -10,6 +10,7 @@ from atsfill.adapters.hiringthing import HiringThing
 from atsfill.adapters.isolvedhire import IsolvedHire
 from atsfill.adapters.jazzhr import JazzHR
 from atsfill.adapters.jobaffinity import JobAffinity
+from atsfill.adapters.jobstreet import Jobstreet
 from atsfill.adapters.join import Join
 from atsfill.adapters.lever import Lever
 from atsfill.adapters.manatal import Manatal
@@ -28,6 +29,7 @@ from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.ukg import UKG
 from atsfill.adapters.welcomekit import WelcomeKit
 from atsfill.adapters.workable import Workable
+from atsfill.adapters.workatastartup import WorkAtAStartup
 from atsfill.adapters.workday import Workday
 from atsfill.adapters.wttj import WelcomeToTheJungle
 from atsfill.adapters.zohorecruit import ZohoRecruit
@@ -41,6 +43,7 @@ def adapters() -> list[Adapter]:
         Teamtailor(),
         Greenhouse(),
         WelcomeToTheJungle(),
+        WorkAtAStartup(),
         Join(),
         JobAffinity(),
         WelcomeKit(),
@@ -68,6 +71,7 @@ def adapters() -> list[Adapter]:
         Gupy(),
         UKG(),
         IsolvedHire(),
+        Jobstreet(),
         SuccessFactors(),  # it claims a career site's job path on any host
         Phenom(),  # last: it claims a URL by its path alone
     ]

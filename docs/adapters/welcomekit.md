@@ -1,6 +1,6 @@
 # WelcomeKit
 
-WelcomeKit, Welcome to the Jungle's ATS (sold as Welcome to the Jungle Solutions), observed on live postings, last on 2026-10-29. Its forms need no account. The fixture pages are [tests/pages/welcomekit/](../../tests/pages/welcomekit/): `old.html`, served as `welcomekit.co`, and `new.html` with its job's `new.json`, served as `ats.welcometothejungle.com` and its API in `tests/test_welcomekit.py`: one example of each rendering below.
+WelcomeKit, Welcome to the Jungle's ATS (sold as Welcome to the Jungle Solutions), observed on live postings, last on 2026-10-29. Its forms need no account. The fixture pages are [tests/pages/welcomekit/](https://github.com/shbernal/atsfill/tree/main/tests/pages/welcomekit/): `old.html`, served as `welcomekit.co`, and `new.html` with its job's `new.json`, served as `ats.welcometothejungle.com` and its API in `tests/test_welcomekit.py`: one example of each rendering below.
 
 ## Where the form is
 

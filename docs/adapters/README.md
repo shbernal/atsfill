@@ -1,8 +1,8 @@
 # Hiring systems
 
-Generated from [src/atsfill/registry.toml](../../src/atsfill/registry.toml) by `uv run python -m scripts.backlog`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked and stopped by a known gap last, then by share of postings.
+Generated from [src/atsfill/registry.toml](https://github.com/shbernal/atsfill/blob/main/src/atsfill/registry.toml) by `uv run python -m scripts.backlog`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked and stopped by a known gap last, then by share of postings.
 
-The registry covers 90.2% of postings.
+The registry covers 90.3% of postings.
 
 | Source | Kind | Share | Account | Hosting | Block | Scope |
 |---|---|---|---|---|---|---|
@@ -34,10 +34,12 @@ The registry covers 90.2% of postings.
 | jobaffinity | ats |  | none | hosted |  | [supported](jobaffinity.md) |
 | welcomekit | ats |  | none | hosted |  | [supported](welcomekit.md) |
 | join | ats | 0.3% | to_send | hosted |  | [supported](join.md) |
+| workatastartup | board | 0.1% | to_send | hosted |  | [supported](workatastartup.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [supported](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [supported](workday.md) |
 | successfactors | ats | 3.5% | to_read | hosted |  | [supported](successfactors.md) |
 | isolvedhire | ats | 0.5% | to_read | hosted |  | [supported](isolvedhire.md) |
+| jobstreet | board | 0.5% | to_read | hosted |  | [supported](jobstreet.md) |
 | gupy | ats | 0.4% | to_read | hosted |  | [supported](gupy.md) |
 | paycom | ats | 2.4% | none | hosted | hCaptcha at form | in scope |
 | trudvsem | board | 10.1% | to_read | hosted | unknown at posting | in scope |
@@ -49,7 +51,6 @@ The registry covers 90.2% of postings.
 | ukgready | ats | 0.9% | to_read | hosted |  | in scope: unsupported_flow: profile_wizard: signed in, the form is the applicant portal's profile wizard, items of a dozen types edited in cards, entry lists, a security question and an electronic signature; not built within the round (1 tenant walked) |
 | adpmyjobs | ats | 0.8% | to_read | hosted |  | in scope: unsupported_flow: sign_in_otp_only: no password, every sign-in, the sign-up's included, is an OTP alone, and the posting loads only signed in (11 of 11 employers) |
 | hrmdirect | ats | 0.6% | to_read | hosted |  | in scope: unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs |
-| jobstreet | board | 0.5% | to_read | hosted |  | in scope: unsupported_flow: sign_in_otp_only: Apply goes to the SEEK sign-in, with no password, every sign-in and sign-up a six-digit OTP emailed to the address, alone (14 of 15 employers) |
 
 Aggregators, employer-built forms and out-of-scope systems ([ADR 0014](../adr/0014-out-of-scope.md)), counted and not adapted:
 

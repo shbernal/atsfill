@@ -1,7 +1,7 @@
-"""Anonymous telemetry (ADR 0016): one `run` event per `read`, `fill` and `send`, built from
-the command's result, and for a failed run a `report` event with its URL and scrubbed page, at
-`detailed` or by `atsfill report`. Never in the way: any failure is dropped and the result goes
-back as it came, but for the notices."""
+"""Anonymous telemetry (ADR 0016): one `run` event per `read`, `fill`, `send` and `profile`,
+built from the command's result, and for a failed run a `report` event with its URL and
+scrubbed page, at `detailed` or by `atsfill report`. Never in the way: any failure is dropped
+and the result goes back as it came, but for the notices."""
 
 import hashlib
 import json
@@ -34,8 +34,8 @@ NOTICE_FILE = "telemetry-notice"  # in the data directory, once the notice was s
 FAILED_RUN = "failed-run.json"  # in the data directory, the last failed run's report event
 DOCS = "https://github.com/shbernal/atsfill/blob/main/docs/telemetry.md"
 NOTICE = (
-    "telemetry: atsfill sends an anonymous event per read, fill and send, no answers or URLs;"
-    ' set telemetry = "off" in {config} or DO_NOT_TRACK=1 to stop it:'
+    "telemetry: atsfill sends an anonymous event per read, fill, send and profile, no answers"
+    ' or URLs; set telemetry = "off" in {config} or DO_NOT_TRACK=1 to stop it:'
     " " + DOCS
 )
 REPORT = (
@@ -125,6 +125,7 @@ def origin() -> tuple[str, str | None]:
 
 
 def event(command: str, result: Result) -> dict:
+    """The event's properties; a `profile` run has no posting to hash (ADR 0017)."""
     source, commit = origin()
     properties = {
         "system": _system(result),
@@ -133,7 +134,7 @@ def event(command: str, result: Result) -> dict:
         "status": result.status.value,
         "reason": _code(result.reason),
         "version": version("atsfill"),
-        "posting": posting_hash(_posting(result)),
+        "posting": None if command == "profile" else posting_hash(_posting(result)),
         "source": source,
         "commit": commit,
     }

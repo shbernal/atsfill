@@ -45,6 +45,7 @@ def sent(config, monkeypatch) -> list[tuple[str, dict]]:
         (Status.UNSUPPORTED, "no_adapter: no adapter for this hiring system", "unsupported"),
         (Status.REFUSED, "mismatch: level", "fail"),
         (Status.BLOCKED, "login_wall", "fail"),
+        (Status.BLOCKED, "profile_incomplete: no about, run `atsfill profile x`", "fail"),
         (Status.UNSUPPORTED, "unsupported_rendering: g: x", "fail"),
         (Status.UNSUPPORTED, "adapter_error: KeyError: x", "fail"),
         (Status.UNKNOWN, "no_evidence", "fail"),
@@ -214,3 +215,9 @@ def test_report_refuses_when_off_or_nothing_failed(sent, config, tmp_path, monke
     monkeypatch.setenv("DO_NOT_TRACK", "1")
     assert core.report(data_dir=tmp_path).reason.startswith("telemetry_off")
     assert [name for name, _ in sent] == ["run"]
+
+
+def test_a_profile_event_has_no_posting(monkeypatch):
+    monkeypatch.setattr(telemetry, "origin", lambda: ("user", None))
+    event = telemetry.event("profile", Result(Status.READY, "https://example.com/profile", "x"))
+    assert (event["command"], event["verdict"], "posting" in event) == ("profile", "pass", False)

@@ -1,6 +1,6 @@
 # Paycor
 
-Paycor Recruiting's apply pages (the former Newton), observed on live postings, last on 2026-10-20. The fixture pages are [tests/pages/paycor/](../../tests/pages/paycor/), served as `recruitingbypaycor.com` in `tests/test_paycor.py`: the self-identification pages, the qualifying questions and a form with one example of each rendering below.
+Paycor Recruiting's apply pages (the former Newton), observed on live postings, last on 2026-10-20. The fixture pages are [tests/pages/paycor/](https://github.com/shbernal/atsfill/tree/main/tests/pages/paycor/), served as `recruitingbypaycor.com` in `tests/test_paycor.py`: the self-identification pages, the qualifying questions and a form with one example of each rendering below.
 
 ## Where the form is
 

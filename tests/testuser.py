@@ -136,6 +136,8 @@ def _option(field: Field) -> str:
 
 def _text(field: Field) -> str:
     value = next((v for pattern, v in BY_LABEL if pattern.search(field.label)), TEXT)
+    if field.min_length:
+        value = " ".join([value] * (field.min_length // len(value) + 1))
     return value[: field.max_length] if field.max_length else value
 
 

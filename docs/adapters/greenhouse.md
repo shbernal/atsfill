@@ -1,6 +1,6 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-25; the OTP step from the page's script, 2026-10-27. The fixture page is [tests/pages/greenhouse/job.html](../../tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-25; the OTP step from the page's script, 2026-10-27. The fixture page is [tests/pages/greenhouse/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 

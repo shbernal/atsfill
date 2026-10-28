@@ -1,6 +1,6 @@
 # Workday
 
-Workday's candidate sites and their apply wizard, observed on live postings, last on 2026-10-24. The fixture pages are [tests/pages/workday/login.html](../../tests/pages/workday/login.html) and [apply.html](../../tests/pages/workday/apply.html), with the posting, apply flow and questionnaire JSON beside them, served as an Acme tenant in `tests/test_workday.py`: the login page's outcomes, and a wizard with one example of each rendering below.
+Workday's candidate sites and their apply wizard, observed on live postings, last on 2026-10-24. The fixture pages are [tests/pages/workday/login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workday/login.html) and [apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workday/apply.html), with the posting, apply flow and questionnaire JSON beside them, served as an Acme tenant in `tests/test_workday.py`: the login page's outcomes, and a wizard with one example of each rendering below.
 
 ## Where the form is
 

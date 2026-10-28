@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Candidate Sign In - SEEK</title>
+<!-- SEEK's sign-in as observed (docs/adapters/jobstreet.md): the email, a code button that asks
+     for the recaptcha once, the OTP that sends itself at six digits. An email without an account
+     goes to the site's "Register a new account?", which this page also serves by its path. -->
+</head>
+<body>
+<main id="app"></main>
+<script>
+const KNOWN = "ada@example.com";
+const OTP = "123456";
+const SITE = "https://ph.jobstreet.com";
+const app = document.getElementById("app");
+
+if (location.pathname.includes("signin-confirmation")) {
+  app.innerHTML = `<h1>Register a new account?</h1>
+    <input type="checkbox" id="privacy-chkbox"><label for="privacy-chkbox">I agree</label>
+    <input type="checkbox" id="marketing-chkbox"><label for="marketing-chkbox">Send me news</label>
+    <button type="button">Register new account</button>`;
+  app.querySelector("button").addEventListener("click", () => {
+    if (!app.querySelector("#privacy-chkbox").checked) return;
+    location.href = `${SITE}/?registered`;
+  });
+} else {
+  let asked = 0;
+  app.innerHTML = `<label for="emailAddress">Email address</label><input id="emailAddress">
+    <button type="button">Email me a sign in code</button><p id="said"></p>`;
+  app.querySelector("button").addEventListener("click", () => {
+    if (!asked++) {
+      app.querySelector("#said").innerText = "Please complete the recaptcha.";
+      return;
+    }
+    const email = app.querySelector("#emailAddress").value;
+    app.innerHTML = `<h1>Check your email for a code</h1>
+      <input aria-label="verification input" maxlength="6"><p id="said"></p>`;
+    const box = app.querySelector("input");
+    box.addEventListener("input", () => {
+      if (box.value.length < 6) return;
+      if (box.value !== OTP) {
+        app.querySelector("#said").innerText = "That code is incorrect.";
+        return;
+      }
+      location.href = email === KNOWN ? `${SITE}/` : `${SITE}/oauth/signin-confirmation`;
+    });
+  });
+}
+</script>
+</body>
+</html>

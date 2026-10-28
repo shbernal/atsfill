@@ -15,6 +15,14 @@ class Blocked(Exception):
     """
 
 
+class SignedOut(Blocked):
+    """The system's page asks to sign in although `signed_in` found the session holding: the
+    system ended it its own way. The core signs in again and reads once more (ADR 0015).
+
+    The message is `login_required: detail`.
+    """
+
+
 class Unsupported(Exception):
     """What stops the form before any fill: a flow the adapter does not handle, or a fact about
     the posting (`posting_gone`, `external_step`). The message is `code: detail`.
@@ -46,6 +54,11 @@ class Refused(Exception):
 
     The message is the result's reason, `code` or `code: detail`.
     """
+
+
+class ProfileIncomplete(Exception):
+    """The system will not apply from the account profile as it is: incomplete, or kept from
+    employers. The message is what it lacks; the core names the `profile` command (ADR 0017)."""
 
 
 class NotTaken(Exception):
@@ -217,6 +230,39 @@ class FinishesSignUp(CreatesAccount, Protocol):
     def finish_sign_up(self, page: Page, email: str, password: str, details: SignUpDetails) -> None:
         """Signs in as `sign_in` does and, where the system shows the unfinished step, gives it
         `details` as `sign_up` would."""
+        ...
+
+
+@runtime_checkable
+class KeepsProfile(Adapter, NeedsAccount, Protocol):
+    """An adapter whose system keeps an account profile, edited through a profile form of one
+    or more profile steps (ADR 0017). The core walks the steps; the adapter knows each page.
+    `account_scope` gives the same scope for `profile_url(scope)` as for the scope's postings."""
+
+    def profile_url(self, scope: str | None) -> str:
+        """Where the profile form starts."""
+        ...
+
+    def profile_steps(self, page: Page) -> list[str]:
+        """The profile's steps, in order, on the page `profile_url` or a step loaded."""
+        ...
+
+    def open_step(self, page: Page, step: str) -> bool:
+        """Loads a step; False where the system shows it only once the earlier ones are saved."""
+        ...
+
+    def profile_read(self, page: Page) -> list[Field]:
+        """The open step's fields, the saved values as `prefilled`; ids unique across steps."""
+        ...
+
+    def profile_fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        """Fills the open step with the answers to its fields."""
+        ...
+
+    def profile_read_back(self, page: Page) -> dict[str, Answer]: ...
+
+    def save(self, page: Page) -> None:
+        """Saves the open step. Raises `Refused` with what the page said when it will not."""
         ...
 
 

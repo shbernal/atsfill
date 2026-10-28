@@ -1,6 +1,6 @@
 # Hireology
 
-Hireology's careers sites, observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/hireology/description.html](../../tests/pages/hireology/description.html) with its form API answer [form.json](../../tests/pages/hireology/form.json), served as `careers.hireology.com` and `api.hireology.com` in `tests/test_hireology.py`: one example of each rendering below.
+Hireology's careers sites, observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/hireology/description.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/hireology/description.html) with its form API answer [form.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/hireology/form.json), served as `careers.hireology.com` and `api.hireology.com` in `tests/test_hireology.py`: one example of each rendering below.
 
 ## Where the form is
 

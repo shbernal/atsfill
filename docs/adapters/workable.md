@@ -1,6 +1,6 @@
 # Workable
 
-Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/workable/apply.html](../../tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
+Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/workable/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
 
 ## Where the form is
 

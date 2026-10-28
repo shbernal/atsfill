@@ -1,6 +1,6 @@
 # isolved Hire
 
-isolved Applicant Tracking's career sites, observed on live postings on 2026-10-26 and 2026-10-27, headless, with the Test user's account. The fixture pages are [tests/pages/isolvedhire/](../../tests/pages/isolvedhire/), served as an Acme site by `tests/test_isolvedhire.py`: the sign-in and sign-up ([account.html](../../tests/pages/isolvedhire/account.html), [sign-up.html](../../tests/pages/isolvedhire/sign-up.html)), the wizard ([apply.html](../../tests/pages/isolvedhire/apply.html)) and its steps as `/apply/view.php` serves them ([steps.html](../../tests/pages/isolvedhire/steps.html)), one example of each rendering.
+isolved Applicant Tracking's career sites, observed on live postings on 2026-10-26 and 2026-10-27, headless, with the Test user's account. The fixture pages are [tests/pages/isolvedhire/](https://github.com/shbernal/atsfill/tree/main/tests/pages/isolvedhire/), served as an Acme site by `tests/test_isolvedhire.py`: the sign-in and sign-up ([account.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/account.html), [sign-up.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/sign-up.html)), the wizard ([apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/apply.html)) and its steps as `/apply/view.php` serves them ([steps.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/steps.html)), one example of each rendering.
 
 ## Where the form is
 

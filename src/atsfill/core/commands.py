@@ -1,6 +1,7 @@
 import shlex
 from collections.abc import Callable, Generator
 from contextlib import contextmanager, suppress
+from contextvars import ContextVar
 from dataclasses import dataclass
 from importlib.metadata import version
 from pathlib import Path
@@ -24,11 +25,14 @@ from atsfill.core.adapter import (
     Blocked,
     CreatesAccount,
     CreatesAccountByOtp,
+    KeepsProfile,
     ListsShownFields,
     NeedsAccount,
     NotTaken,
+    ProfileIncomplete,
     ReadsByRequest,
     Refused,
+    SignedOut,
     SignsIn,
     SignsInByOtp,
     SignUpDetails,
@@ -69,6 +73,20 @@ def login_command(adapter: str, user: str, url: str | None, *more: str) -> str:
     if url:
         command += ["--url", url]
     return shlex.join([*command, *more])
+
+
+def profile_command(adapter: str, user: str, url: str | None) -> str:
+    """The `profile` command line for one account, as `login_command` gives `login`'s."""
+    return login_command(adapter, user, url).replace(" login ", " profile ", 1)
+
+
+def _profile_incomplete(result: Result, adapter: Adapter, user: str, url: str) -> None:
+    """Names the `profile` command in a `profile_incomplete` reason (ADR 0017)."""
+    if (result.reason or "").partition(":")[0] != "profile_incomplete":
+        return
+    scoped = isinstance(adapter, NeedsAccount) and adapter.per_employer
+    command = profile_command(adapter.name, user, url if scoped else None)
+    result.reason = f"{result.reason}, run `{command}`"
 
 
 def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
@@ -114,17 +132,23 @@ def _credentials(
 
 @contextmanager
 def _opened(
-    data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen
+    data: Path,
+    user: str,
+    url: str,
+    sessions: Sessions | None,
+    seen: Seen,
+    known: Adapter | None = None,
+    seconds: float = browser.BUDGET,
 ) -> Generator[tuple[Page, Adapter] | Result]:
     """The loaded page and the adapter that claims it by its URL, else by the URL a redirect
     lands on, else by its page; or the result that ends the command first. An adapter that
     needs an account gets the user's session, and only that adapter's; signed out with a
     password source, or an OTP command for an account without a password, atsfill signs in
-    again (ADR 0015). The adapter's name goes in `seen`
-    once known. The adapters are fresh: none keeps state from another
-    posting (a survey or the adapter gate runs many commands in one process)."""
+    again (ADR 0015). The adapter's name goes in `seen` once known; `known` skips the
+    detection. The adapters are fresh: none keeps state from another posting (a survey or the
+    adapter gate runs many commands in one process)."""
     candidates = adapters()
-    adapter = _detect(candidates, url)
+    adapter = known or _detect(candidates, url)
     if adapter:
         seen.adapter = adapter.name
     mine = paths.user_dir(data, user)
@@ -143,7 +167,7 @@ def _opened(
                 yield _login_required(url, adapter, user)
                 return
             session = None
-    with open_page(data, session) as page:
+    with open_page(data, session, seconds) as page:
         try:
             page.goto(url)
         except browser.Timeout:
@@ -160,12 +184,40 @@ def _opened(
             return
         scope = adapter.account_scope(url) if isinstance(adapter, NeedsAccount) else None
         with otp.source(user, adapter.name, scope):
-            if isinstance(adapter, NeedsAccount) and not (
-                session and adapter.signed_in(page.request, scope)
-            ):
-                yield _sign_in_again(page, adapter, user, mine, url, credentials) or (page, adapter)
-            else:
+            if not isinstance(adapter, NeedsAccount):
                 yield page, adapter
+                return
+            token = _again.set(lambda: _sign_in_again(page, adapter, user, mine, url, None))
+            try:
+                if not (session and adapter.signed_in(page.request, scope)):
+                    yield _sign_in_again(page, adapter, user, mine, url, credentials) or (
+                        page,
+                        adapter,
+                    )
+                else:
+                    yield page, adapter
+            finally:
+                _again.reset(token)
+            if session:  # a system that rotates the session's tokens as the page uses them
+                with suppress(Exception):
+                    browser.save_session(page, session)
+
+
+_again: ContextVar[Callable[[], Result | None] | None] = ContextVar("again", default=None)
+
+
+def _read_signed_in(page: Page, adapter: Adapter) -> list[Field]:
+    """`browser_read`, once more after signing in again where the page asked to sign in although
+    the session held: the result that ends the command instead is raised as `Blocked`."""
+    try:
+        return adapter.browser_read(page)
+    except SignedOut:
+        again = _again.get()
+        if again is None:
+            raise
+        if ended := again():
+            raise Blocked(ended.reason) from None
+        return adapter.browser_read(page)
 
 
 def _sign_in_again(
@@ -269,6 +321,8 @@ def _stops(result: Result) -> Generator[None]:
         result.status, result.reason = Status.REFUSED, str(e)
     except Blocked as e:
         result.status, result.reason = Status.BLOCKED, str(e)
+    except ProfileIncomplete as e:
+        result.status, result.reason = Status.BLOCKED, f"profile_incomplete: {e}"
     except Overlaid as e:
         result.status, result.reason = Status.BLOCKED, f"overlaid: {e}"
 
@@ -314,7 +368,7 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
     """Fills and reads back; `ready` when every answer reads back as given."""
     result = _result(adapter, url, user)
     with _stops(result):
-        _listed(result, adapter.browser_read(page))
+        _listed(result, _read_signed_in(page, adapter))
         if _unfillable(result, answers):
             return result
         if problems := matching.problems(result.fields, answers):
@@ -339,8 +393,9 @@ def _browser_read(data: Path, user: str, url: str, sessions: Sessions | None, se
         def run() -> Result:
             result = _result(adapter, url, user)
             with _stops(result):
-                _listed(result, adapter.browser_read(page))
+                _listed(result, _read_signed_in(page, adapter))
                 _unfillable(result)
+            _profile_incomplete(result, adapter, user, url)
             return result
 
         return _kept(page, seen, run)
@@ -389,6 +444,7 @@ def _on_page(
         reason = f"already_sent: last attempt ended {last}; pass --resend"
         return Result(Status.REFUSED, url, adapter.name, reason=reason)
     result = _fill(page, adapter, url, answers, user)
+    _profile_incomplete(result, adapter, user, url)
     if result.status is not Status.READY:
         return result
     if not send:
@@ -472,6 +528,101 @@ def send(
 def report(*, data_dir: Path | None = None) -> ReportResult:
     """Sends the last failed run's URL and scrubbed page, once (ADR 0016)."""
     return telemetry.report(paths.data_dir(data_dir))
+
+
+def profile(
+    adapter: str,
+    answers: dict[str, Answer] | None = None,
+    *,
+    user: str = paths.DEFAULT_USER,
+    url: str | None = None,
+    data_dir: Path | None = None,
+) -> Result:
+    """Reads the account profile's profile form, or with `answers` saves it step by step: a
+    step whose read-back already matches is not saved again (ADR 0017). `url` is a posting,
+    for a system with an account per employer."""
+    account, data = _account(adapter), paths.data_dir(data_dir)
+    if not isinstance(account, KeepsProfile):
+        raise ValueError(f"{adapter} keeps no account profile atsfill fills")
+    start = account.profile_url(_scope(account, url))
+
+    seen = Seen()
+
+    def run() -> Result:
+        with _opened(data, user, start, None, seen, account, browser.PROFILE_BUDGET) as opened:
+            if isinstance(opened, Result):
+                return opened
+            page, _ = opened
+            result = _result(account, start, user)
+            with _stops(result):
+                try:
+                    if answers is None:
+                        _read_profile(page, account, result)
+                    else:
+                        _save_profile(page, account, result, answers)
+                except OutOfTime as e:  # the result keeps the steps saved before the stop
+                    result.status, result.reason = Status.BLOCKED, f"time_budget: {e}"
+                except Unsupported, NotTaken, Refused, Blocked, ProfileIncomplete, Overlaid:
+                    raise
+                except Exception as e:
+                    result.status = Status.UNSUPPORTED
+                    result.reason = f"adapter_error: {type(e).__name__}: {e}"
+            return result
+
+    result = _in_budget(start, seen, run)
+    return telemetry.sent(
+        "profile", result, data, None, _secrets(data, user, answers or {}, result)
+    )
+
+
+def _read_profile(page: Page, adapter: KeepsProfile, result: Result) -> None:
+    """Lists each step's fields up to the first one the system will not load yet; a read never
+    saves."""
+    steps = adapter.profile_steps(page)
+    for i, step in enumerate(steps):
+        if not adapter.open_step(page, step):
+            result.unloaded = steps[i:]
+            return
+        _listed(result, result.fields + adapter.profile_read(page))
+
+
+def _save_profile(
+    page: Page, adapter: KeepsProfile, result: Result, answers: dict[str, Answer]
+) -> None:
+    """Fills, reads back and saves each step that differs from its answers; stops at the first
+    step that refuses, the steps saved before it staying saved. The steps are listed again after
+    each, since a saved answer can add one."""
+    done: list[str] = []
+    while step := next((s for s in adapter.profile_steps(page) if s not in done), None):
+        done.append(step)
+        if not adapter.open_step(page, step):
+            raise RuntimeError(f"profile step {step} did not load after the ones before it")
+        fields = adapter.profile_read(page)
+        _listed(result, result.fields + fields)
+        ids = {f.id for f in fields}
+        mine = {k: v for k, v in answers.items() if k in ids}
+        step_result = Result(Status.READY, result.url, fields=fields)
+        if _unfillable(step_result, mine):
+            result.status, result.reason = step_result.status, step_result.reason
+            return
+        if problems := matching.problems(fields, mine):
+            result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
+            return
+        checks = matching.check(fields, mine, adapter.profile_read_back(page))
+        if not all(c.match for c in checks):
+            adapter.profile_fill(page, mine)
+            checks = matching.check(fields, mine, adapter.profile_read_back(page))
+            if mismatched := [c.field_id for c in checks if not c.match]:
+                result.checks += checks
+                result.status, result.reason = Status.REFUSED, f"mismatch: {', '.join(mismatched)}"
+                return
+            adapter.save(page)
+            result.saved.append(step)
+        result.checks += checks
+    listed = {f.id for f in result.fields}
+    if unknown := [k for k in answers if k not in listed]:
+        result.status = Status.REFUSED
+        result.reason = "invalid_answers: " + "; ".join(f"no field {k}" for k in unknown)
 
 
 def _sessions(data: Path, users: list[str], candidates: list[Adapter]) -> list[SessionReport]:

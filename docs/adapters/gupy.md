@@ -1,6 +1,6 @@
 # Gupy
 
-Observed on live postings of 13 employers, last on 2026-10-26, with the Test user's account. The fixture page is [tests/pages/gupy/apply.html](../../tests/pages/gupy/apply.html), served with [forms.json](../../tests/pages/gupy/forms.json) as an Acme posting in `tests/test_gupy.py`: the register step's screens in turn, with one example of each question type.
+Observed on live postings of 13 employers, last on 2026-10-26, with the Test user's account. The fixture page is [tests/pages/gupy/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/gupy/apply.html), served with [forms.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/gupy/forms.json) as an Acme posting in `tests/test_gupy.py`: the register step's screens in turn, with one example of each question type.
 
 ## Where the form is
 

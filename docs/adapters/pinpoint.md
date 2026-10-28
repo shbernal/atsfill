@@ -1,6 +1,6 @@
 # Pinpoint
 
-Pinpoint's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/pinpoint/apply.html](../../tests/pages/pinpoint/apply.html), served as `acme.pinpointhq.com` in `tests/test_pinpoint.py`: one example of each rendering below, a small script standing in for React.
+Pinpoint's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/pinpoint/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/pinpoint/apply.html), served as `acme.pinpointhq.com` in `tests/test_pinpoint.py`: one example of each rendering below, a small script standing in for React.
 
 ## Where the form is
 
