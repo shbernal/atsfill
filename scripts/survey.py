@@ -144,7 +144,9 @@ def commit() -> str | None:
 def survey(url: str, employer: str, source: str | None, data: Path, cv: Path) -> dict:
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
     with browser.open_page(data) as page:
-        response = page.goto(url)
+        response = None
+        with suppress(browser.Timeout):  # a page whose load never fires (a tag that hangs) too
+            response = page.goto(url)
         with suppress(browser.Timeout):  # a page that keeps polling is still labelled
             page.wait_for_load_state("networkidle", timeout=IDLE_MS)
         found = probe(page, url, response)
