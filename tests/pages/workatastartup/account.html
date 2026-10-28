@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Y Combinator account</title>
+<!-- account.ycombinator.com: the sign-in (the email, then the password, then on some sign-ins
+the emailed OTP) and, with `signUpActive` in the query, the sign-up. Each posts as the live page
+does; a 200 leaves for Work at a Startup. -->
+<div id="app"></div>
+<script>
+const app = document.getElementById("app");
+const done = () => { location.href = "https://www.workatastartup.com/"; };
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", body: JSON.stringify(body)});
+  return [r.status, await r.json()];
+}
+if (location.search.includes("signUpActive")) {
+  app.innerHTML = `<p>Sign up to access Work at a Startup</p>
+    <input type="text"><input type="text"><input type="email">
+    <input type="text" name="username" id="ycid-input"><input type="password" name="password" id="password-input">
+    <button type="submit">Sign up</button><p class="error"></p>`;
+  app.querySelector("button").onclick = async () => {
+    const [first, last, email] = app.querySelectorAll("input");
+    const [status, body] = await post("/sign_up", {first_name: first.value, last_name: last.value,
+      email: email.value, username: app.querySelector("#ycid-input").value,
+      password: app.querySelector("#password-input").value});
+    if (status === 200) return done();
+    app.querySelector(".error").textContent = Object.values(body.errors).join(" ");
+  };
+} else {
+  app.innerHTML = `<p>Log in or sign up to access Work at a Startup</p>
+    <input type="text" name="username" id="ycid-input"><button type="submit">Continue</button>`;
+  app.querySelector("button").onclick = async () => {
+    const email = app.querySelector("#ycid-input").value;
+    await post("/start_sign_in", {username: email});
+    app.innerHTML = `<input type="email" name="username" id="ycid-input" value="${email}">
+      <input type="password" name="password" id="password-input">
+      <button type="submit">Log in with password</button><button type="button">Send login link</button>
+      <p class="error"></p>`;
+    app.querySelector("button[type=submit]").onclick = async () => {
+      const [status, body] = await post("/sign_in", {username: email,
+        password: app.querySelector("#password-input").value});
+      if (status === 422) return void (app.querySelector(".error").textContent = "Password doesn't match.");
+      if (!body.email_code) return done();
+      app.innerHTML = `<p>We've sent an email to ${email}.</p>
+        <p>Open the link in the email we just sent, or enter its code:</p>
+        <input type="text"><button type="submit">Verify code</button><button type="button">Back</button>`;
+      app.querySelector("button[type=submit]").onclick = async () => {
+        const [status] = await post("/sign_in/email_code", {code: app.querySelector("input").value});
+        if (status === 200) done();
+      };
+    };
+  };
+}
+</script>
