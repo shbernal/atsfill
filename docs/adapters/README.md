@@ -32,7 +32,7 @@ The registry covers 90.2% of postings.
 | hiringthing | ats | 0.3% | none | hosted |  | [supported](hiringthing.md) |
 | recruiterflow | ats | 0.1% | none | hosted |  | [supported](recruiterflow.md) |
 | jobaffinity | ats |  | none | hosted |  | [supported](jobaffinity.md) |
-| welcomekit | ats |  | none | hosted |  | [in scope](welcomekit.md) |
+| welcomekit | ats |  | none | hosted |  | [supported](welcomekit.md) |
 | join | ats | 0.3% | to_send | hosted |  | [supported](join.md) |
 | wttj | board | 0.1% | to_send | hosted |  | [supported](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [supported](workday.md) |
