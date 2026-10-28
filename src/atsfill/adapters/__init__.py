@@ -26,6 +26,7 @@ from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.successfactors import SuccessFactors
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.ukg import UKG
+from atsfill.adapters.welcomekit import WelcomeKit
 from atsfill.adapters.workable import Workable
 from atsfill.adapters.workday import Workday
 from atsfill.adapters.wttj import WelcomeToTheJungle
@@ -42,6 +43,7 @@ def adapters() -> list[Adapter]:
         WelcomeToTheJungle(),
         Join(),
         JobAffinity(),
+        WelcomeKit(),
         SmartRecruiters(),
         Oracle(),
         Manatal(),

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Welcome to the Jungle - ATS</title>
+</head>
+<body>
+<h1>Engineer</h1>
+<form novalidate="">
+<h4>Personal information</h4>
+<div><label for="_r_e_">First name<svg aria-hidden="true" class="name-asterisk"></svg></label><input data-testid="firstname-input" id="_r_e_" required="" type="text" name="firstname"></div>
+<div><label for="_r_h_">Last name<svg aria-hidden="true" class="name-asterisk"></svg></label><input data-testid="lastname-input" id="_r_h_" required="" type="text" name="lastname"></div>
+<div><label for="_r_k_">Email address<svg aria-hidden="true" class="name-asterisk"></svg></label><input data-testid="email-input" id="_r_k_" required="" type="email" name="email"></div>
+<div><label for="_r_n_">LinkedIn profile URL</label><input data-testid="linkedin-url-input" id="_r_n_" type="url" name="linkedin_url"></div>
+<div><label for="_r_q_">Phone number</label><input data-testid="phone-number-input" id="_r_q_" type="tel" name="phone_number"></div>
+<div><label for="_r_t_">Personal website URL</label><input data-testid="personal-website-url-input" id="_r_t_" type="url" name="personal_website_url"></div>
+<div data-testid="file-input-cv"><label for="_r_10_">Resume<svg aria-hidden="true" class="name-asterisk"></svg></label><div><button type="button" data-testid="browse-file-button-cv">Browse files...</button><br><input accept=".pdf" data-testid="file-upload-cv" required="" type="file" name="cv"></div></div>
+<h4>Questions</h4>
+<div><label for="_r_13_">Are you available three days a week on site?<svg aria-hidden="true" class="name-asterisk"></svg></label><div class="mt-sm flex gap-sm"><button type="button" data-selected="false" data-testid="board-boolean-field-true">Yes</button><button type="button" data-selected="false" data-testid="board-boolean-field-false">No</button></div></div>
+<div><label for="_r_16_">Why Acme?<svg aria-hidden="true" class="name-asterisk"></svg></label><textarea data-testid="custom-question-textarea-1" name="custom_questions.1.answer" id="_r_16_" required=""></textarea></div>
+<div data-testid="file-input-custom_questions.2.answer"><label for="_r_19_">Portfolio</label><div><button type="button">Browse files...</button><br><input accept=".pdf" type="file" name="custom_questions.2.answer"></div></div>
+<div><label for="_r_1c_">Do you hold a driving licence?</label><div class="mt-sm flex gap-sm"><button type="button" data-selected="false" data-testid="board-boolean-field-true">Yes</button><button type="button" data-selected="false" data-testid="board-boolean-field-false">No</button></div></div>
+<p data-testid="gdpr-notice">Acme processes your data for the purpose of assessing and managing your application.</p>
+<button type="submit" data-testid="submit-application-button">Submit application</button>
+</form>
+<script>
+  // What the React app does: a boolean button toggles its answer, a file is uploaded at once
+  // and named in a ticked badge, the input emptied; Submit posts the form as JSON.
+  for (const pair of document.querySelectorAll(".flex")) {
+    for (const button of pair.querySelectorAll("button")) {
+      button.addEventListener("click", () => {
+        const on = button.dataset.selected !== "true";
+        pair.querySelectorAll("button").forEach(b => (b.dataset.selected = "false"));
+        button.dataset.selected = String(on);
+      });
+    }
+  }
+  for (const input of document.querySelectorAll("input[type=file]")) {
+    input.addEventListener("change", async () => {
+      const file = input.files[0];
+      await fetch("https://api.ats.welcometothejungle.com/api/v1/assets/presigned-url", {method: "POST"});
+      input.parentElement.querySelector(".badge")?.remove();
+      const badge = document.createElement("div");
+      badge.className = "badge";
+      badge.innerHTML = '<svg aria-hidden="true" class="name-check"></svg><span></span>';
+      badge.querySelector("span").textContent = `${file.name} (1KB)`;
+      input.parentElement.append(badge);
+      input.value = "";
+    });
+  }
+  document.querySelector("form").addEventListener("submit", event => {
+    event.preventDefault();
+    const [, org, job] = location.pathname.match(/^\/board\/([^/]+)\/job\/([^/]+)/);
+    fetch(`https://api.ats.welcometothejungle.com/api/v1/board/organizations/${org}/jobs/${job}/apply`,
+      {method: "POST", body: "{}", headers: {"content-type": "application/json"}});
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta content='text/html; charset=utf-8' http-equiv='content-type'>
+<title>Welcome to the Jungle Solutions ATS</title>
+</head>
+<body>
+<h1>Candidature pour Engineer chez Acme</h1>
+<form class="simple_form new_candidate" id="new_candidate" enctype="multipart/form-data" action="/candidates?j=ACME_abc123&amp;o=AbCdEf" accept-charset="UTF-8" method="post"><input type="hidden" name="authenticity_token" value="token" autocomplete="off">
+<div class="block">
+<h2>Informations générales</h2>
+<div class="form-inputs">
+<div class="form-group hidden candidate_referrer"><div class="form-control-wrapper"><input class="form-control hidden" autocomplete="off" type="hidden" name="candidate[referrer]" id="candidate_referrer"></div></div>
+<div class="grid with-2-columns with-gutter-xs">
+<div class="col"><div class="form-group string required candidate_profile_firstname"><label class="control-label string required" for="candidate_profile_attributes_firstname">Prénom <abbr title="required">*</abbr></label><div class="form-control-wrapper"><input class="form-control string required" required="required" aria-required="true" type="text" name="candidate[profile_attributes][firstname]" id="candidate_profile_attributes_firstname"></div></div></div>
+<div class="col"><div class="form-group email required candidate_profile_email"><label class="control-label email required" for="candidate_profile_attributes_email">Email <abbr title="required">*</abbr></label><div class="form-control-wrapper"><input class="form-control string email required" required="required" aria-required="true" type="email" name="candidate[profile_attributes][email]" id="candidate_profile_attributes_email"></div></div></div>
+<div class="col"><div class="form-group tel required candidate_profile_phone"><label class="control-label tel required" for="candidate_profile_attributes_phone">Téléphone <abbr title="required">*</abbr></label><div class="form-control-wrapper"><input class="form-control string tel required" required="required" aria-required="true" type="tel" name="candidate[profile_attributes][phone]" id="candidate_profile_attributes_phone"></div></div></div>
+<div class="col col-full">
+<div class="form-group address">
+<label>Adresse</label>
+<div class="grid with-3-columns with-gutter-xs">
+<div class="col"><div class="form-group string optional candidate_profile_zip_code"><div class="form-control-wrapper"><input class="form-control string optional zip_code" placeholder="Code postal" type="text" name="candidate[profile_attributes][zip_code]" id="candidate_profile_attributes_zip_code"></div></div></div>
+<div class="col"><div class="form-group select optional candidate_profile_country_code"><div class="form-control-wrapper"><select class="form-control select optional country_code" name="candidate[profile_attributes][country_code]" id="candidate_profile_attributes_country_code"><option value="FR" selected="selected">France</option>
+<option value="GB">United Kingdom</option>
+<option value="US">United States</option></select></div></div></div>
+</div>
+</div>
+</div>
+<div class="col col-full">
+<div class="form-group file optional candidate_profile_image"><label class="control-label file optional" for="candidate_profile_attributes_image">Photo de profil</label><div class="form-control-wrapper"><input class="form-control file optional" type="file" name="candidate[profile_attributes][image]" id="candidate_profile_attributes_image"></div></div>
+</div>
+</div>
+</div>
+</div>
+<div class="block">
+<h2>Votre profil</h2>
+<div class="form-inputs">
+<div class="form-group file required candidate_resume"><label class="control-label file required" for="candidate_resume">CV <abbr title="required">*</abbr></label><div class="form-control-wrapper"><input class="form-control file required" accept="application/pdf" required="required" aria-required="true" type="file" name="candidate[resume]" id="candidate_resume"></div><p class="help-block">Format autorisé : PDF. Poids maximum : 5 Mo.</p></div>
+<input autocomplete="off" type="hidden" name="candidate[resume_cache]" id="candidate_resume_cache">
+</div>
+</div>
+<div class="block">
+<h2>Votre présence sur Internet</h2>
+<div class="form-inputs">
+<div class="form-group string optional candidate_profile_media_linkedin"><label class="control-label string optional" for="candidate_profile_attributes_media_linkedin">Linkedin</label><div class="form-control-wrapper"><input class="form-control string optional" placeholder="https://fr.linkedin.com/pub/moi/" type="text" name="candidate[profile_attributes][media_linkedin]" id="candidate_profile_attributes_media_linkedin"></div></div>
+</div>
+</div>
+<div class="block">
+<h2>Quelques questions...</h2>
+<div class="form-inputs" id="application-questions">
+<div class="form-group hidden candidate_answers[0][question]"><div class="form-control-wrapper"><input class="form-control hidden" value="Quand serais-tu disponible ?" autocomplete="off" type="hidden" name="candidate[answers[0][question]]" id="candidate_answers[0][question]"></div></div>
+<div class="form-group text required candidate_answers[0][answer]"><label class="control-label text required" for="candidate_answers[0][answer]">Quand serais-tu disponible ? <abbr title="required">*</abbr></label><div class="form-control-wrapper"><textarea class="form-control text required textarea-medium" required="required" aria-required="true" name="candidate[answers[0][answer]]" id="candidate_answers[0][answer]"></textarea></div></div>
+</div>
+</div>
+<div class="block transparent">
+<div class="form-consent">
+<div class="form-group checkbox-input">
+<label for="candidate_consent"><input name="candidate[consent]" type="hidden" value="0" autocomplete="off"><input type="checkbox" value="1" name="candidate[consent]" id="candidate_consent">
+<div class="icheckbox"></div>
+J'accepte que mes données soient traitées par Acme pour le compte du recruteur dans le cadre de ma candidature
+</label></div>
+</div>
+</div>
+<div class="block transparent">
+<input type="submit" name="commit" value="Je valide ma candidature ›" class="btn btn-default btn btn-primary btn-lg" data-disable-with="Je valide ma candidature ›">
+</div>
+</form>
+</body>
+</html>
