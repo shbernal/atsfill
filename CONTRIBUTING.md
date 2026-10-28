@@ -43,6 +43,8 @@ For a system that needs an account, the survey and the adapter gate take `--data
 
 Commands run from a checkout send their telemetry as `source = dev`, with the commit when the tree has no uncommitted changes, so the run history tells development runs from users' ([docs/telemetry.md](docs/telemetry.md)). The test suite and CI never send.
 
+`uv run python -m scripts.regressions <system> <command>` lists the postings behind a `regression` issue, with their URLs and the builds on both sides: from the run's event at `detailed`, else by hashing freehire's postings of that system; one not found, usually closed, is printed unresolved. It needs `POSTHOG_READ_KEY` in `.env`, and its output stays local.
+
 `uv run python -m scripts.backlog` regenerates [docs/adapters/README.md](docs/adapters/README.md), the README's adapter badges and the docs site's carriers from the registry.
 
 ## Docs site
