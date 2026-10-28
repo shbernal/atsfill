@@ -20,6 +20,7 @@ from atsfill.adapters.personio import Personio
 from atsfill.adapters.phenom import Phenom
 from atsfill.adapters.pinpoint import Pinpoint
 from atsfill.adapters.recruitee import Recruitee
+from atsfill.adapters.recruiterflow import Recruiterflow
 from atsfill.adapters.rippling import Rippling
 from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.adapters.successfactors import SuccessFactors
@@ -54,6 +55,7 @@ def adapters() -> list[Adapter]:
         Lever(),
         Dayforce(),
         Recruitee(),
+        Recruiterflow(),
         Breezy(),
         BambooHR(),
         ZohoRecruit(),
