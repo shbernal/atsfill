@@ -87,7 +87,7 @@ An overlay that shows a short message for a few seconds and goes by itself, such
 _Avoid_: notice
 
 **Side effect**:
-Something the hiring system or the employer receives before the submit, such as a field saved as it is typed or an uploaded resume, or an account created. Muted per user with `mute-side-effect-warnings`.
+Something the hiring system or the employer receives before the submit, such as a field saved as it is typed or an uploaded resume, an account created or a profile step saved. Muted per user with `mute-side-effect-warnings`.
 
 **Account**:
 A user's sign-in on a hiring system, needed by some systems to read or to send: one per user, hiring system and account scope.
@@ -116,7 +116,19 @@ _Avoid_: code, verification code, PIN
 The user's `otp-commands` entry for an adapter, or for `all`: a command atsfill runs while the OTP step waits, until it prints the OTP emailed since the step asked for it.
 
 **Account profile**:
-What a hiring system keeps about an account and prefills its forms from.
+What a hiring system keeps about an account and prefills its forms from. Some systems apply only from a complete one.
+
+**Profile form**:
+The form an account profile is edited through, in one or more profile steps. Only the `profile` command fills it, never `fill` or `send`.
+_Avoid_: wizard, onboarding
+
+**Profile step**:
+One page of a profile form, which the hiring system saves on its own.
+_Avoid_: section
+
+**Save**:
+Writing one profile step to the hiring system: a side effect, repeatable, never an application.
+_Avoid_: submit (for a profile)
 
 **Prefilled**:
 Said of a field that holds a value before any answer, from the account profile, or one the page sets and takes no other for (today's date, read-only). A required field prefilled may go unanswered.
@@ -127,7 +139,7 @@ The value a page starts a field with, not from the account profile: the employer
 ## Answers and read-back
 
 **Answers**:
-The user's map from field id to value for one form.
+The user's map from field id to value for one form, or for one account profile's profile form.
 _Avoid_: responses, profile
 
 **Fill**:
