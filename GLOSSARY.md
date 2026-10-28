@@ -192,9 +192,6 @@ _Avoid_: gap, coverage gap
 **Unhandled**:
 Said of a rendering or an error nobody has looked at yet, with no known gap behind it: `unhandled_rendering` or `adapter_error`.
 
-**Warning**:
-A code a dry run that ends `ready`, or a send that went ahead anyway, carries about its adapter's verification: `not_send_verified` or `send_broken`.
-
 **Evidence**:
 A URL or network response that proves a submit went through. Never page text.
 
@@ -211,7 +208,7 @@ Where atsfill keeps the home's device identity and lock, and each user's session
 ## Registry
 
 **Registry**:
-The committed record of every mapped source: its kind, share, account need, block and verification.
+The committed record of every mapped source: its kind, share, account need, block and scope.
 
 **Source**:
 freehire's label for where a posting was indexed. The registry has one entry per source; only an ATS or a board is a hiring system.
@@ -228,12 +225,32 @@ A source's fraction of freehire's postings, worldwide, on the date it was measur
 **Block**:
 A bot protection that stopped Camoufox on a hiring system, recorded with its vendor, signal and step.
 
-**Verification**:
-How far an adapter has been proven: `mapped`, `dry_run_verified`, then `send_verified`, each recorded with its date, release and commit. Only the user sets `send_verified`.
-_Avoid_: adapter state
+**Scope**:
+Where a source stands with atsfill: `out_of_scope`, `in_scope` (wanted, no adapter passing the adapter gate yet) or `supported` (a dev run's dry run passed, recorded with its date and commit, never demoted). Whether an adapter works today is the run history's to say.
+_Avoid_: verification, adapter state
 
-**Send broken**:
-A send-verified adapter whose send fails now. The last send verification stays as the last known good.
+## Telemetry
+
+**Telemetry**:
+The anonymous events atsfill sends to PostHog after each `read`, `fill` and `send`, at the level the config's `telemetry` key sets: `off`, `basic` (the default: system, command, verdict, status and reason code, version, posting hash) or `detailed` (also the posting URL and a report).
+_Avoid_: analytics, tracking
+
+**Verdict**:
+What one run says about its adapter, classified by the core from its status and reason: `pass`, `fail`, `excluded` (the run says nothing about the adapter) or `unsupported`.
+_Avoid_: outcome, result
+
+**Report**:
+The `report` event: a scrubbed snapshot of a failed run's failing step, input values stripped, sent at `detailed` or by `atsfill report`.
+
+**Dev run**:
+A run from a checkout of the repository rather than an installed release, sent with `source = dev` and its commit.
+
+**Run history**:
+The docs page that draws, per hiring system and for `fill` and `send`, the latest verdict of each posting and version over a window.
+_Avoid_: dashboard, status page
+
+**Regression**:
+A posting and command whose verdict went from `pass` to `fail` within the run history's window, kept as one `regression` issue per hiring system and command.
 
 ## Development
 
@@ -268,7 +285,7 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 - "Gate" meant both the submit gate and the adapter gate. Always qualify it.
 - "Dependent" meant both a follow-up, which shows on an answer, and a dependent list, whose options change with an answer and which always shows. The first is a follow-up; a dependent list is not one.
 - "Inventory" meant both a round's surveyed postings (now the sample) and the field type × rendering table (still the inventory).
-- "Adapter state" meant both the verification and the whole `status` row for an adapter. The ladder is the verification; "state" is left to the session (`signed_in`, `signed_out`, `missing`).
+- "Adapter state" meant both a source's registry standing and the whole `status` row for an adapter. The first is the scope; "state" is left to the session (`signed_in`, `signed_out`, `missing`).
 - "Session" meant both the stored browser state and an agent's working session. The agent's is an agent run.
 - "Profile" meant the answers, the device identity and the account profile. Only the account profile keeps the word, never bare.
 - "Login" is the act of signing in; the session is what it stores.
@@ -277,6 +294,7 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 - "Sample" meant the round's sample, a skipped posting, and drawing postings outside the sample. Only the first keeps the word.
 - "Job board" meant both a board, which takes the application, and an aggregator, which links out.
 - "System" meant both a hiring system and any registry entry. A registry entry is a source; "system" is a hiring system.
+- "Outcome" meant both a status and an attempt's recorded result, and a verdict would have made three. A run's verdict about its adapter is the verdict.
 - "Refusal" means the `refused` status only. A low reCAPTCHA score is `blocked`.
 - A **Block** (a bot protection in the registry) is not the `blocked` status, which also covers OTPs, login walls and the time budget.
 - "Gap" meant both a known gap and anything atsfill could not fill. A form it cannot fill is out of scope, a known gap or unhandled; "gap" alone is not used.

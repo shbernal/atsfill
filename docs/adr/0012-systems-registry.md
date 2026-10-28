@@ -1,5 +1,7 @@
 # 0012. Systems registry
 
+Verification, send broken, the warnings and the verification badges are superseded by ADR 0016.
+
 ## Context
 
 Which hiring system gets the next adapter depends on how many postings it carries, whether it needs an account, and whether it lets Camoufox through. Without a record, those findings stay in one agent run's local log, and a block seen on one machine cannot be compared with one seen on another.
