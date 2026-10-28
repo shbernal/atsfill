@@ -29,3 +29,6 @@ Each hiring system's own mark, from its website, shown to say atsfill supports i
 | Workday | `workday.png` | https://www.workday.com/favicon.ico |
 | Dayforce | `dayforce.png` | https://www.dayforce.com/favicon.ico |
 | BambooHR | `bamboohr.png` | https://www.bamboohr.com/favicon.ico |
+| Personio | `personio.png` | https://img.logo.dev/personio.com |
+| HiringThing | `hiringthing.png` | https://img.logo.dev/hiringthing.com |
+| JobAffinity | `jobaffinity.png` | https://www.jobaffinity.fr/images/apple-touch-icon.png |
