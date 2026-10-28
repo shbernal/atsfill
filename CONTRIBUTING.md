@@ -43,7 +43,31 @@ For a system that needs an account, the survey and the adapter gate take `--data
 
 Commands run from a checkout send their telemetry as `source = dev`, with the commit when the tree has no uncommitted changes, so the run history tells development runs from users' ([docs/telemetry.md](docs/telemetry.md)). The test suite and CI never send.
 
-`uv run python -m scripts.regressions <system> <command>` lists the postings behind a `regression` issue, with their URLs and the builds on both sides: from the run's event at `detailed`, else by hashing freehire's postings of that system; one not found, usually closed, is printed unresolved. It needs `POSTHOG_READ_KEY` in `.env`, and its output stays local.
+`uv run python -m scripts.failures <system> <command> [reason]` lists the postings behind a `failure` issue, with their URLs and builds: from the run's event at `detailed`, else by hashing freehire's postings of that system; one not found, usually closed, is printed unresolved. It needs `POSTHOG_READ_KEY` in `.env`, and its output stays local.
+
+## Triage
+
+`scripts/triage.sh` works the `failure` issues, one per run, run hourly by a systemd user timer on the maintainer's machine. It syncs them, claims the oldest open one no triage has taken with `agent:working`, and runs a headless agent on it with `scripts/triage.md` in `.claude/worktrees/triage` at `origin/main`. The agent dry-runs, never sends, and opens a pull request it never merges. It ends on one label, `agent:done`, `cannot-reproduce`, `agent:skip` or `agent:stuck`, and a later run never takes the issue again. A reopened issue loses that label. A claim left by an interrupted run is released once, then labelled `agent:stuck`. To hand an issue back to triage, remove its label.
+
+```ini
+# ~/.config/systemd/user/atsfill-triage.service
+[Service]
+Type=oneshot
+Environment=PATH=%h/.local/share/mise/shims:/usr/bin
+ExecStart=/usr/bin/flock -n %t/atsfill-triage.lock %h/Work/atsfill/scripts/triage.sh
+
+# ~/.config/systemd/user/atsfill-triage.timer
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+`systemctl --user enable --now atsfill-triage.timer` starts it, `journalctl --user -u atsfill-triage` shows its runs, and `TRIAGE_BUDGET_USD` caps one run's spend.
+
+## Other scripts
 
 `uv run python -m scripts.backlog` regenerates [docs/adapters/README.md](docs/adapters/README.md), the README's adapter badges and the docs site's carriers from the registry.
 

@@ -19,5 +19,5 @@ One file per decision, numbered in the order they were taken. A decision that ch
 | [0013](0013-survey-and-adapter-rounds.md) | A survey script, an adapter gate script, and one agent round per system |
 | [0014](0014-out-of-scope.md) | Out of scope is what needs the user live; out of scope, known gap and unhandled told apart at run time |
 | [0015](0015-users-and-accounts.md) | Users of one home, accounts scoped per employer, password sources and account creation |
-| [0016](0016-telemetry-and-run-history.md) | Anonymous telemetry to PostHog, a verdict per run, scope in the registry, a run history and regression issues |
+| [0016](0016-telemetry-and-run-history.md) | Anonymous telemetry to PostHog, a verdict per run, scope in the registry, a run history and failure issues |
 | [0017](0017-account-profiles.md) | Account profiles: a profile form per hiring system, read and saved by the `profile` command, never by `fill` or `send` |

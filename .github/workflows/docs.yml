@@ -2,7 +2,7 @@ name: Docs
 
 # The docs site on GitHub Pages: built from docs/ with Zensical on every push to `main`, and
 # daily so the run history, queried from PostHog at build time, stays fresh without a push.
-# After the deploy, the same events keep the `regression` issues in line.
+# After the deploy, the same events keep the `failure` issues in line.
 on:
   push:
     branches: [main]
@@ -40,7 +40,7 @@ jobs:
           path: site
       - id: deployment
         uses: actions/deploy-pages@v5
-      - run: uv run --only-group docs python -m scripts.regressions --sync
+      - run: uv run --only-group docs python -m scripts.failures --sync
         env:
           POSTHOG_READ_KEY: ${{ secrets.POSTHOG_READ_KEY }}
           GH_TOKEN: ${{ github.token }}

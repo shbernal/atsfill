@@ -261,8 +261,14 @@ A run from a checkout of the repository rather than an installed release, sent w
 The docs page that draws, per hiring system and for `fill` and `send`, the latest verdict of each posting and version over a window.
 _Avoid_: dashboard, status page
 
+**Failure**:
+A posting and command whose latest verdict within the run history's window is `fail`, until it passes on another build, kept as one `failure` issue per hiring system, command and reason code.
+
 **Regression**:
-A posting and command whose verdict went from `pass` to `fail` within the run history's window, kept as one `regression` issue per hiring system and command.
+A failure whose posting passed before: on the same build, it points at the hiring system; on an older one, at the code.
+
+**Triage**:
+The local hourly agent run that takes one open `failure` issue, confirms it with a dry run and opens a pull request fixing it.
 
 ## Development
 
