@@ -5,7 +5,7 @@ SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`
 ## Where the form is
 
 - A posting is `<site>/job/<id>`. Its Apply button (`[data-automation=job-detail-apply]`) links to `/job/<id>/apply` either way: "Quick apply" (`target=_self`) opens SEEK's wizard, "Apply" (`target=_blank`, `isLinkOut` in the page's data) sends the signed-in candidate to the employer's own site, `unsupported: external_step` before any sign-in. 13 of 24 postings linked out.
-- Cloudflare guards every site: a plain HTTP client is answered 403, and a posting sometimes shows its "Just a moment..." check first, which passes on its own or, held past a minute, is `blocked: captcha`.
+- Cloudflare guards every site: a plain HTTP client is answered 403, and a posting sometimes shows its "Just a moment..." check first, which passes on its own; held past a minute, it passed on a reload every time seen, and a second hold is `blocked: captcha`.
 - The wizard is client-side routed: `/apply` (documents and personal details), `/apply/role-requirements` (the employer's questions, absent when there are none, as on `hk.jobsdb.com`), `/apply/profile` (the SEEK profile), `/apply/review`. A step's address loaded directly sends back to `/apply`. Continue (`[data-testid=continue-button]`) moves on, or stays with "Before you can continue with the application, please address the following issues" listing what is missing.
 - The profile step re-renders as its queries come back, and a Continue clicked meanwhile does nothing: atsfill clicks again while the step neither moves nor shows an error.
 
@@ -29,7 +29,7 @@ The page loads `GetPersonalDetails` (the profile's name, phone with its calling 
 | `/apply` | `phone` | `phone` | a calling code select (`#countryCallingCode`, `Philippines (+63)`) and `#phoneNumber`; "recommended" | 5 walked |
 | `/apply` | `resume` | `file` | Upload (`#resume-fileFile`), then a radio named for the file; or "Don't include a resumé" | 5 walked |
 | `/apply` | `coverLetter` | `text` | "Write a cover letter" with its box, or "Don't include a cover letter" (an upload too, not filled) | 5 walked |
-| `/apply/role-requirements` | `question.<id>` | `choice` | `SingleChoiceQuestion`: a native select named `questionnaire.<id>` | 2 of 2 walked |
+| `/apply/role-requirements` | `question.<id>` | `choice` | `SingleChoiceQuestion`: a native select named `questionnaire.<id>`, or radios (`Ya`, `Tidak`) whose labels take the click | selects on 9 postings, radios on 1 |
 | `/apply/role-requirements` | `question.<id>` | `multi_choice` | `MultipleChoiceQuestion` | not walked |
 | `/apply/review` | `profileVisibility` | `choice` | Public, Standard, Limited, Hidden radios, while the profile has none | 2 walked |
 

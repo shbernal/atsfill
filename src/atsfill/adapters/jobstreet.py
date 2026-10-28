@@ -32,7 +32,8 @@ APPLY = "[data-automation=job-detail-apply]"
 CONTINUE = "[data-testid=continue-button]"
 SUBMIT = "[data-testid=review-submit-application]"
 SAVE_DETAILS = "[data-automation=personal-details-save-button]"
-CHALLENGE = "Just a moment..."  # Cloudflare's interstitial, which passes on its own or never
+CHALLENGE = "Just a moment..."  # Cloudflare's interstitial: it passes on its own, or on a reload
+CHALLENGE_TRIES = 2
 SIGN_IN_TIMEOUT_MS = 90_000  # SEEK's sign-in takes up to ~50 s to show its form
 TURNSTILE_TIMEOUT_S = 45  # Cloudflare's widget passes on its own headless within seconds
 TURNSTILE_POLL_MS = 3_000
@@ -137,12 +138,16 @@ class Jobstreet:
         if not job:
             raise RuntimeError(f"{page.url} is not a Jobstreet job")
         apply = page.locator(APPLY).first
-        try:
-            apply.wait_for(timeout=APPLY_TIMEOUT_MS)
-        except Timeout:
-            if page.title() == CHALLENGE:
-                raise Blocked("captcha: Cloudflare's check kept the posting") from None
-            raise RuntimeError("the posting shows no Apply button") from None
+        for attempt in range(CHALLENGE_TRIES):  # a check held once passed on the next load
+            try:
+                apply.wait_for(timeout=APPLY_TIMEOUT_MS)
+                break
+            except Timeout:
+                if page.title() != CHALLENGE:
+                    raise RuntimeError("the posting shows no Apply button") from None
+                if attempt == CHALLENGE_TRIES - 1:
+                    raise Blocked("captcha: Cloudflare's check kept the posting") from None
+                page.reload()
         if apply.get_attribute("target") == "_blank":  # Apply, not Quick apply: `isLinkOut`
             raise Unsupported("external_step: the job applies on the employer's site")
         host = urlsplit(page.url).hostname
@@ -405,11 +410,15 @@ def _answer(page: Page, field: Field, answer: Answer) -> None:
         raise Unsupported(f"unhandled_rendering: {field.id} shows no select or boxes")
     wanted = answer if isinstance(answer, list) else [answer]
     for box in boxes.all():
-        label = page.locator(f'label[for="{box.get_attribute("id")}"]').inner_text().strip()
-        if any(matching.matches(field, str(w), label) for w in wanted):
-            box.check(force=True)
-        elif box.get_attribute("type") == "checkbox":
-            box.uncheck(force=True)
+        label = page.locator(f'label[for="{box.get_attribute("id")}"]')
+        text = label.inner_text().strip()
+        wanted_here = any(matching.matches(field, str(w), text) for w in wanted)
+        if box.get_attribute("type") == "radio" and not wanted_here:
+            continue
+        if box.is_checked() != wanted_here:  # the input is styled away: its label takes the click
+            browser.click(label)
+        if box.is_checked() != wanted_here:
+            raise NotTaken(f"{field.id} did not take {text!r}")
 
 
 def _continue(page: Page) -> None:
