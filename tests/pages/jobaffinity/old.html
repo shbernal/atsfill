@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Ingénieur F/H - JobAffinity</title>
+<style>
+.adress-fields {
+  display: none;
+}
+</style>
+</head>
+<body>
+<div id="stabilo-haut">
+  <p>
+    <span class="name_head">Étape :</span>
+    <span class="current-step">Informations générales</span>
+    <span class="step-separator">&gt;</span>
+    <span class="">Questionnaire</span>
+  </p>
+</div>
+<fieldset>
+  <form method="post" enctype="multipart/form-data" action="/newcandidate/upload_async" id="js-cv-form">
+    <div class="form-group">
+      <label class="description">CV <span class="required">*</span></label>
+      <ul class="js-newcandidate__uploaded__body" style="display:none">
+        <li class="js-newcandidate__uploaded__item"><span class="js-newcandidate__uploaded__name"></span></li>
+      </ul>
+      <label class="btn-upload">Ajouter un document <input name="file" type="file" id="form_cv"></label>
+    </div>
+  </form>
+  <form method="post" enctype="multipart/form-data" action="/newcandidate/upload_async" id="js-other-form">
+    <div class="doc-field">
+      <label class="description">Autres documents</label>
+      <ul class="js-newcandidate__uploaded__body" style="display:none">
+        <li class="js-newcandidate__uploaded__item"><span class="js-newcandidate__uploaded__name"></span></li>
+      </ul>
+      <label class="btn-upload">Ajouter un document <input type="file" name="file" id="form_other"></label>
+    </div>
+  </form>
+</fieldset>
+<form id="identity" method="post" action="https://jobaffinity.fr/apply/acme0000000000000a?session_id=5e55" class="medium-form">
+  <input type="hidden" name="job_id" value="1001">
+  <input type="hidden" name="wizard_id" id="wizard_id" value="w1zard00">
+  <input type="hidden" name="uploaded_cv" id="js-uploaded-cv" value="[]">
+  <fieldset>
+    <h2>Coordonnées</h2>
+    <div id="newcandidate__analyze__progress" style="display:none">Analyse du CV en cours…</div>
+    <div class="form-group">
+      <label for="form_title">Civilité <span class="required">*</span></label>
+      <select name="title" id="form_title"><option value=""> </option><option value="1">M.</option><option value="2">Mme</option></select>
+    </div>
+    <div class="form-group">
+      <label for="form_lastname">Nom de famille <span class="required">*</span></label>
+      <input type="text" name="lastName" id="form_lastname">
+    </div>
+    <div class="form-group">
+      <label for="form_firstname">Prénom <span class="required">*</span></label>
+      <input type="text" name="firstName" id="form_firstname">
+    </div>
+    <div class="form-group">
+      <label for="form_eMail">Email <span class="required">*</span></label>
+      <input type="text" name="eMail" id="form_eMail">
+    </div>
+    <div class="adress-fields">
+      <div class="form-group">
+        <label for="form_address">Adresse</label>
+        <input type="text" name="address" id="form_address">
+      </div>
+    </div>
+    <div class="phone-fields">
+      <div class="form-group">
+        <label for="form_mobilePhone">Téléphone mobile</label>
+        <input type="text" name="mobilePhone" id="form_mobilePhone">
+      </div>
+    </div>
+  </fieldset>
+  <fieldset class="question-fields">
+    <div class="form-group">
+      <label for="availability">Disponibilité</label>
+      <select name="availability" id="availability">
+        <option value="">Choisissez...</option>
+        <option value="now">Immédiate</option>
+        <option value="1m">Préavis de 1 mois</option>
+        <option value="date">Disponible à partir du...</option>
+      </select>
+    </div>
+    <div id="availability_date">
+      <div class="form-group">
+        <label for="_identity-availability_date-field">À partir du</label>
+        <input type="text" name="availability_date" id="_identity-availability_date-field">
+        <div class="form-text">(JJ/MM/AAAA)</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="form_salary_1">Salaire annuel</label>
+      <input type="text" name="salary_1" id="form_salary_1">
+    </div>
+    <div class="experience-field">
+      <div class="form-group">
+        <label for="form_experience">Années d'expérience</label>
+        <input type="text" name="experience" id="form_experience">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="form_comment">Informations complémentaires</label>
+      <textarea name="comment" id="form_comment"></textarea>
+    </div>
+  </fieldset>
+  <div class="form-group">
+    <div class="custom-control custom-checkbox">
+      <input type="checkbox" name="gdpr_agreement" class="custom-control-input" id="_identity-gdpr_agreement-field">
+      <label for="_identity-gdpr_agreement-field" class="custom-control-label">Vous confirmez avoir pris connaissance et validé <span>les conditions d'utilisation de vos données personnelles.</span></label>
+    </div>
+  </div>
+  <input type="submit" value="Valider">
+</form>
+<script>
+  // Stands in for JobAffinity's upload: the server's answer lists the document by its name.
+  for (const id of ["js-cv-form", "js-other-form"]) {
+    const form = document.getElementById(id);
+    form.querySelector("input[type=file]").addEventListener("change", e => {
+      const file = e.target.files[0];
+      setTimeout(() => {
+        form.querySelector(".js-newcandidate__uploaded__name").textContent = file.name;
+        form.querySelector(".js-newcandidate__uploaded__body").style.display = "";
+      }, 100);
+    });
+  }
+  const from = document.getElementById("availability_date");
+  const availability = document.getElementById("availability");
+  const toggle = () => { from.style.display = availability.value === "date" ? "" : "none"; };
+  availability.addEventListener("change", toggle);
+  toggle();
+  // The checkbox is drawn under its label, which takes the click.
+  const box = document.getElementById("_identity-gdpr_agreement-field");
+  box.style.cssText = "position:absolute;opacity:0;z-index:-1";
+</script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Ingénieur F/H - JobAffinity</title></head>
+<body>
+<form method="POST" action="https://jobaffinity.fr/newcandidate/questionnaire/w1zard00/1001?session_id=5e55&amp;ui=False" id="questionnaire" class="medium-form newcandidate-questionnaire">
+  <input value="77" type="hidden" name="questionnaire_id" id="questionnaire_id">
+  <div class="medium-form questionnaire-input">
+    <div class="js-form-item questionnaire-question-block">
+      <div class="form-group">
+        <label for="_question-11">Quel métier vous intéresse ? <span class="required">*</span></label>
+        <select name="question_11" id="_question-11">
+          <option value="">Sélectionner...</option>
+          <option value="101">
+            Ingénieur
+          </option><option value="102">
+            Technicien
+          </option>
+        </select>
+      </div>
+    </div>
+    <div class="js-form-item questionnaire-question-block">
+      <div class="input-control-label">Quel type de contrat recherchez-vous ? <span class="required">*</span></div>
+      <table class="questionnaire-multicol"><tbody><tr><td><ul>
+        <li><div class="form-group"><div class="custom-control custom-radio">
+          <input type="radio" name="question_12" value="201" id="_question-12-201" class="custom-control-input">
+          <label for="_question-12-201" class="custom-control-label">CDI</label>
+        </div></div></li>
+        <li><div class="form-group"><div class="custom-control custom-radio">
+          <input type="radio" name="question_12" value="202" id="_question-12-202" class="custom-control-input">
+          <label for="_question-12-202" class="custom-control-label">CDD</label>
+        </div></div></li>
+      </ul></td></tr></tbody></table>
+    </div>
+    <div class="js-form-item questionnaire-question-block">
+      <div class="form-group">
+        <label for="_question-13">Sur quelle ville avez-vous envie de travailler ?</label>
+        <input type="text" name="question_13" id="_question-13">
+      </div>
+    </div>
+  </div>
+  <input type="submit" value="Valider">
+</form>
+<script>
+  for (const radio of document.querySelectorAll("input[type=radio]"))
+    radio.style.cssText = "position:absolute;opacity:0;z-index:-1";
+</script>
+</body>
+</html>

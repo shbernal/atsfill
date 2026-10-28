@@ -396,3 +396,9 @@ account = "none"
 kind = "aggregator"
 share = 0.0024
 account = "none"
+
+[jobaffinity]
+kind = "ats"
+account = "none"
+hosting = ["hosted"]
+adapter = "jobaffinity"
