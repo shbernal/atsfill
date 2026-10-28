@@ -53,7 +53,7 @@ components:
 
 ## Overview
 
-The docs site of a CLI that applies to jobs for an agent. The job hunt is a departures hall: each posting a flight, each hiring system a carrier, each result a remark on a split-flap board, the send a gate that closes on a wrong answer. The bold move is the board itself, played on load; around it, the hall stays quiet.
+The docs site of a CLI that applies to jobs for an agent. The job hunt is a departures hall: each posting a flight, each hiring system a carrier, each result a remark on a split-flap board, the send a gate that closes on a wrong answer. The bold move is the board itself, played on load, under a runway where a plane takes off on a loop; around it, the hall stays quiet, its lists rising in as they scroll.
 
 ## Colors
 
@@ -77,7 +77,7 @@ Small radii: 3px for cells and plates, 6px for panels. Rules are 1px; a 2px ink 
 
 ## Components
 
-Flap cells (two leaves, a split line, CSS rotateX through a character drum), gate lines (the command, a yellow marker, a copy button), sign plates (yellow on ink, the rules' terms), the carrier wall (each system's mark in a white tile, generated from the registry by `scripts.backlog`).
+The runway (one plane, one inline SVG symbol, rolling and lifting off in CSS; the same plane leaves a SUBMITTED row and marks the Departures sign), flap cells (two leaves, a split line, CSS rotateX through a character drum), gate lines (the command, a yellow marker, a copy button), sign plates (yellow on ink, the rules' terms), the carrier wall (each system's mark in a white tile, generated from the registry by `scripts.backlog`).
 
 ## Do's and Don'ts
 

@@ -1,11 +1,13 @@
-// The home page's board: the split-flap remarks play the example run, the clock keeps local
-// time, and the gate lines copy their command. Without script the board shows its final state.
+// The home page's board: the split-flap remarks play the example run, a SUBMITTED row's plane
+// departs, the other flap signs turn as they scroll in, the clock keeps local time, and the gate
+// lines copy their command. Without script every sign shows its final state.
 (() => {
   const DRUM = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:·-";
   const FLIP_MS = 55; // one leaf, as --flip in home.css
   const STAGGER_MS = 700; // between rows
   const CHECKING_MS = 900; // how long a row stays CHECKING before its result
   const COPIED_MS = 1600;
+  const DEPART_MS = 1600; // as .departing in home.css
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const wait = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -54,13 +56,38 @@
     await wait(CHECKING_MS);
     row.dataset.remark = kind;
     await show(flaps, result);
+    if (kind === "submitted") depart(row.querySelector(".remark"));
+  }
+
+  function depart(remark) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    use.setAttribute("href", "#plane");
+    svg.setAttribute("class", "departing");
+    svg.setAttribute("aria-hidden", "true");
+    svg.append(use);
+    remark.append(svg);
+    setTimeout(() => svg.remove(), DEPART_MS);
+  }
+
+  function blank(scope) {
+    for (const cell of scope.querySelectorAll(".flap")) cell.textContent = "";
+  }
+
+  // Run once, the first time el scrolls into view
+  function whenSeen(el, then) {
+    const seen = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        seen.disconnect();
+        then();
+      }
+    });
+    seen.observe(el);
   }
 
   async function run(board) {
     const rows = [...board.querySelectorAll("tbody tr")];
-    for (const row of rows) {
-      for (const cell of row.querySelectorAll(".flap")) cell.textContent = "";
-    }
+    blank(board);
     rows.forEach((row, i) => wait(i * STAGGER_MS).then(() => play(row)));
   }
 
@@ -87,13 +114,12 @@
   document.querySelectorAll("[data-clock]").forEach(clock);
   document.querySelectorAll("[data-copy]").forEach(copying);
   const board = document.querySelector("[data-board]");
-  if (board && !still) {
-    const seen = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) {
-        seen.disconnect();
-        run(board);
-      }
-    });
-    seen.observe(board);
+  if (!still) {
+    if (board) whenSeen(board, () => run(board));
+    for (const flaps of document.querySelectorAll("[data-flaps]")) {
+      if (board?.contains(flaps)) continue;
+      blank(flaps);
+      whenSeen(flaps, () => show(flaps, flaps.dataset.flaps));
+    }
   }
 })();

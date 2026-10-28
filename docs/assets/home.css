@@ -89,6 +89,8 @@ body:has(.home) {
 }
 .wordmark { font-weight: 800; font-size: var(--step-1); color: inherit; text-decoration: none; letter-spacing: 0.02em; }
 .hall-sign { color: var(--gate); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; font-size: var(--step--1); }
+.plane-defs { display: none; }
+.sign-plane { width: 1.9em; height: 0.75em; margin-right: 0.45em; fill: currentColor; transform: rotate(-14deg); vertical-align: -0.05em; }
 .clock { font-family: var(--font-board); font-variant-numeric: tabular-nums; color: var(--board-muted); font-size: var(--step--1); }
 .hall-nav { margin-left: auto; display: flex; gap: var(--space-5); }
 .home .hall-nav a, .hall-nav a { color: inherit; text-decoration: none; font-weight: 600; padding: var(--space-2) 0; }
@@ -101,7 +103,15 @@ body:has(.home) {
 
 /* The board */
 .home > .board-hall { background: var(--board); padding-top: var(--space-6); }
-.offer { display: grid; gap: var(--space-4); margin-bottom: var(--space-7); }
+.offer { display: grid; gap: var(--space-4); margin-bottom: var(--space-4); }
+.offer .kicker {
+  font-family: var(--font-sign);
+  font-size: var(--step--1);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gate);
+}
 .offer .gates { max-width: 44rem; margin-top: var(--space-3); }
 .offer h1 {
   font-size: var(--step-4);
@@ -169,6 +179,82 @@ body:has(.home) {
 .board .carrier-name { font-weight: 700; }
 .board .posting { color: var(--flap-text); }
 .board .remark { width: 1%; }
+
+/* The runway: a plane rolls, lifts off and leaves the frame, then the next one lines up */
+.runway {
+  --takeoff: 11s;
+  position: relative;
+  height: 7rem;
+  margin-bottom: var(--space-6);
+  overflow: hidden;
+  container-type: inline-size;
+}
+.runway::before {
+  content: "";
+  position: absolute;
+  inset: auto 0 0.5rem;
+  height: 0.9rem;
+  border-radius: var(--radius-flap);
+  background:
+    repeating-linear-gradient(90deg, var(--board-muted) 0 1.5rem, transparent 1.5rem 3.5rem) center / 100% 2px no-repeat,
+    var(--board-raised);
+  opacity: 0.8;
+}
+.runway-lights, .runway-lights::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: radial-gradient(circle, var(--board-rule) 0 2px, transparent 2.5px) 0 0 / 1.75rem 4px repeat-x;
+}
+.runway-lights::after {
+  content: "";
+  background-image: radial-gradient(circle, var(--flap-text) 0 2px, transparent 2.5px);
+  mask: linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent) -30% 0 / 30% 100% no-repeat;
+  animation: rabbit 2.4s linear infinite;
+}
+@keyframes rabbit { to { mask-position: 130% 0; } }
+.plane, .plane-shadow { position: absolute; left: 0; bottom: 1.1rem; }
+.plane { width: 4.5rem; height: 1.7rem; fill: var(--flap-text); animation: takeoff var(--takeoff) infinite; }
+.plane-shadow {
+  bottom: 0.55rem;
+  width: 4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #000;
+  filter: blur(3px);
+  animation: shadow var(--takeoff) infinite;
+}
+@keyframes takeoff {
+  0% { transform: translate(-5rem, 0); opacity: 1; animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6); }
+  38% { transform: translate(52cqw, 0) rotate(0); animation-timing-function: ease-in-out; }
+  46% { transform: translate(64cqw, -0.6rem) rotate(-11deg); animation-timing-function: linear; }
+  64% { transform: translate(100cqw, -6.5rem) rotate(-13deg) scale(0.85); opacity: 1; }
+  64.1%, 100% { transform: translate(-5rem, 0); opacity: 0; }
+}
+@keyframes shadow {
+  0% { transform: translateX(-5rem); opacity: 0.7; animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6); }
+  38% { transform: translateX(52cqw); opacity: 0.7; animation-timing-function: ease-out; }
+  52% { transform: translateX(76cqw) scaleX(0.6); opacity: 0; }
+  100% { transform: translateX(-5rem); opacity: 0; }
+}
+
+/* A SUBMITTED row's plane leaves from its remark */
+.remark { position: relative; }
+.departing {
+  position: absolute;
+  right: -0.5rem;
+  top: 50%;
+  width: 2.25rem;
+  height: 0.85rem;
+  fill: var(--ok);
+  pointer-events: none;
+  animation: depart 1.6s cubic-bezier(0.4, 0, 0.9, 0.5) forwards;
+}
+@keyframes depart {
+  from { transform: translate(-3rem, -50%) rotate(0); opacity: 0; }
+  20% { opacity: 1; }
+  to { transform: translate(4rem, -3.5rem) rotate(-18deg); opacity: 0; }
+}
 
 /* Split-flap cells: two halves, a split line, and two leaves that turn */
 .flaps { display: inline-flex; gap: 2px; font-family: var(--font-board); font-weight: 700; }
@@ -350,6 +436,16 @@ body:has(.home) {
   border-top: 2px solid var(--ink);
 }
 .carrier-wall li { border-bottom: 1px solid var(--hall-rule); }
+
+/* The hall's lists come up as they scroll in, where the browser ties animation to scroll */
+@supports (animation-timeline: view()) {
+  .steps li, .carrier-wall li, .rules dl > div {
+    animation: arrive linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 80%;
+  }
+}
+@keyframes arrive { from { opacity: 0; transform: translateY(1.5rem); } }
 .carrier-wall a {
   display: flex;
   align-items: center;
@@ -447,9 +543,15 @@ body:has(.home) {
   .mismatch-remark { grid-column: 1 / -1; }
   .mismatch-remark .flaps { font-size: var(--step-1); }
   .boarding h2 .flaps { font-size: 1.05rem; }
+  .runway { height: 5rem; margin-bottom: var(--space-5); }
+  .plane { width: 3.25rem; height: 1.25rem; }
+  .plane-shadow { width: 3rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .flap .leaf.turning { animation: none; }
   .gate-copy { transition: none; }
+  .runway *, .runway *::after, .steps li, .carrier-wall li, .rules dl > div { animation: none; }
+  .plane { transform: translate(72cqw, -2.5rem) rotate(-12deg); }
+  .plane-shadow { display: none; }
 }
