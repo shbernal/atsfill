@@ -60,13 +60,24 @@ jobs:
       - run: uv run python -c "import atsfill.cli"
       - run: uv run pytest tests/test_browser.py -k lock
 
-  # The check the ruleset requires: green only when lint, every shard and Windows are.
-  check:
-    if: always()
-    needs: [lint, test, windows]
+  # The docs site, built strict as the deploy builds it. The run history is PostHog's at
+  # deploy; here it is written from no runs, so its page and its links exist.
+  docs:
     runs-on: ubuntu-26.04
     steps:
-      - run: test "${{ needs.lint.result }}" = success && test "${{ needs.test.result }}" = success && test "${{ needs.windows.result }}" = success
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: echo '[]' > "$RUNNER_TEMP/runs.json"
+      - run: uv run --only-group docs python scripts/run_history.py --from "$RUNNER_TEMP/runs.json"
+      - run: uv run --only-group docs zensical build --clean --strict
+
+  # The check the ruleset requires: green only when lint, every shard, Windows and the docs are.
+  check:
+    if: always()
+    needs: [lint, test, windows, docs]
+    runs-on: ubuntu-26.04
+    steps:
+      - run: test "${{ needs.lint.result }}" = success && test "${{ needs.test.result }}" = success && test "${{ needs.windows.result }}" = success && test "${{ needs.docs.result }}" = success
 
   commit-check:
     runs-on: ubuntu-26.04
