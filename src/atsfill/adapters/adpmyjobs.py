@@ -10,6 +10,7 @@ and the read-back is each page's values before its Next.
 
 import re
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field, replace
 from html import unescape
 from typing import Any
@@ -31,6 +32,7 @@ SIGN_IN_STEP_TIMEOUT_MS = 30_000
 SIGNED_IN_TIMEOUT_MS = 60_000
 POSTING_TIMEOUT_MS = 45_000
 SECTION_TIMEOUT_MS = 45_000
+LOAD_TRIES = 3
 SUBMIT_TIMEOUT_MS = 90_000
 SETTLE_MS = 1_500  # an answer shows its follow-ups, a Next saves and routes
 OPTION_TIMEOUT_MS = 10_000
@@ -123,6 +125,8 @@ class ADPMyJobs:
             if time.monotonic() > deadline:
                 raise RuntimeError("the posting loaded without a session token")
             page.wait_for_timeout(SETTLE_MS)
+        with suppress(Timeout):  # left with its requests in flight, the workflow can spin
+            page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
         applications = self._get(page, APPLICATIONS).get("jobApplications") or []
         if application := next((a for a in applications if a.get("reqID") == req), None):
             status = application.get("applicationStatusCode") or {}
@@ -223,7 +227,14 @@ class ADPMyJobs:
         page.wait_for_url(
             lambda u: "workflowComponent=" in u, timeout=SECTION_TIMEOUT_MS, wait_until="commit"
         )
-        page.get_by_role("button", name="Next").wait_for(timeout=SECTION_TIMEOUT_MS)
+        for attempt in range(LOAD_TRIES):  # loaded directly, it can spin: a reload shows it
+            try:
+                page.get_by_role("button", name="Next").wait_for(timeout=SECTION_TIMEOUT_MS)
+                return
+            except Timeout:
+                if attempt == LOAD_TRIES - 1:
+                    raise
+                page.reload()
 
     def _workflow(self, page: Page) -> list[Section]:
         assignment = self._assignment(page)
@@ -544,6 +555,8 @@ def _to_page(page: Page, section: Section, ids: set[str]) -> None:
     later page, or on its review, whose Next would send, goes back with Previous."""
     if not ids or section.component.startswith("prescreen"):
         return
+    with suppress(Timeout):  # Next shows before the page's questions
+        page.locator("adp-form-group").first.wait_for(timeout=SECTION_TIMEOUT_MS)
     for _ in range(len(section.pages) + 1):
         if ids & set(_groups(page)):
             return
