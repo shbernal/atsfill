@@ -6,7 +6,7 @@ Hiring systems differ in the details that decide whether a send works: a combobo
 
 ## Decision
 
-An adapter is one module per hiring system with five steps the core calls in order, an optional `request_read(url)` that lists the fields without a browser (ADR 0011), and an optional `shown_fields(page)` that lists, once filled, the fields the page shows (ADR 0005):
+An adapter is one module per hiring system with five steps the core calls in order, an optional `request_read(url)` that lists the fields without a browser (ADR 0011), an optional `shown_fields(page)` that lists, once filled, the fields the page shows (ADR 0005), and an optional `open_form(page, url)` for a form on another page than the posting: the core has it load the form in place of the posting when the adapter claims the posting by its URL, so the browser loads one page, not two (Ashby's `/application`, Lever's `/apply`). A page claimed only once loaded, such as an embed on an employer's domain, keeps its second load:
 
 | Step | Does |
 |---|---|

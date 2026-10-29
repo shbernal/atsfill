@@ -12,7 +12,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Blocked, Gap, Unsupported, known_gap
-from atsfill.core.browser import HTTP_TIMEOUT_S, Page
+from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Response
 from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = "www.careers-page.com"
@@ -183,6 +183,7 @@ class Manatal:
 
     def __init__(self) -> None:
         self._entries: list[dict[str, Any]] = []
+        self._loaded: Response | None = None  # the form's GET `open_form` caught
 
     def detect(self, url: str, page: Page | None) -> bool:
         parts = urlsplit(url).path.strip("/").split("/")
@@ -210,13 +211,20 @@ class Manatal:
         except OSError, ValueError, KeyError, TypeError:
             return None
 
-    def browser_read(self, page: Page) -> list[Field]:
+    def open_form(self, page: Page, url: str) -> None:
+        """Loads `/apply`, listening first for the form's GET."""
         with page.expect_response(
             lambda r: r.request.method == "GET" and "/application-form/" in r.url,
             timeout=LOAD_TIMEOUT_MS,
         ) as loaded:
-            page.goto(_posting(page.url) + "/apply")
-        response = loaded.value
+            page.goto(_posting(url) + "/apply")
+        self._loaded = loaded.value
+
+    def browser_read(self, page: Page) -> list[Field]:
+        if self._loaded is None:
+            self.open_form(page, page.url)
+        assert self._loaded
+        response, self._loaded = self._loaded, None
         if response.headers.get("x-amzn-waf-action") == "challenge":
             raise Blocked("captcha: AWS WAF challenge")
         if not response.ok:

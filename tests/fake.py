@@ -97,6 +97,13 @@ class FakeOpens(Fake):
         return "Apply created the application" if self.opens == 1 else None
 
 
+class FakeOpensForm(Fake):
+    """The same form, the posting at `?fake` and its form at form.html, which it opens itself."""
+
+    def open_form(self, page: Page, url: str) -> None:
+        page.goto(url.replace("button.html?fake", "form.html"))
+
+
 class FakeAccount(Fake):
     """The same form on a system that needs an account, signed in by tests/pages/login.html."""
 
