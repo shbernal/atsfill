@@ -53,9 +53,13 @@ def _title(adapter: str) -> str:
     return doc.read_text().splitlines()[0].removeprefix("# ") if doc.exists() else adapter
 
 
-if __name__ == "__main__":
+def main() -> None:
     ROOT.joinpath("docs/adapters/README.md").write_text(registry.backlog())
     readme = ROOT / "README.md"
     readme.write_text(registry.with_run_histories(readme.read_text()))
     CARRIERS.parent.mkdir(exist_ok=True)
     CARRIERS.write_text(carriers())
+
+
+if __name__ == "__main__":
+    main()

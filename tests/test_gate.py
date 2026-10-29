@@ -1,5 +1,7 @@
+from pathlib import Path
+
 from atsfill.core import browser
-from scripts import gate
+from scripts import backlog, gate
 
 
 def test_skipped_postings_are_listed_apart_from_not_ready():
@@ -49,3 +51,11 @@ def test_an_embedded_form_is_claimed_once_its_page_is_open(tmp_path, monkeypatch
         assert keep("https://www.example.com/careers/1")
         assert not keep("https://www.example.com/careers/2")
     assert not gate.claims("greenhouse", None)("https://www.example.com/careers/1")
+
+
+def test_the_record_commit_names_every_file_the_backlog_writes(monkeypatch):
+    written = []
+    monkeypatch.setattr(Path, "write_text", lambda self, text: written.append(self))
+    monkeypatch.setattr(Path, "mkdir", lambda self, **_: None)
+    backlog.main()
+    assert written and set(written) <= set(gate.GENERATED)
