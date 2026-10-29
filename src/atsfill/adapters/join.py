@@ -58,7 +58,9 @@ QUESTIONS = """query JobScreeningQuestions($input: JobScreeningQuestionsInput!) 
   }
 }"""
 YES_NO = ["Yes", "No"]  # a boolean's cards, in this order, in the job's language
-FILES = {"cv": "cv"}  # a file field, by its step
+FILES = {"cv": "cv", "coverLetter": "coverLetter"}  # a file field, by its step
+# The documents a job asks, by their type in the wizard's `documentsConfig`
+DOCUMENTS = {"CV": ("cv", "CV"), "COVER_LETTER": ("coverLetter", "Cover letter")}
 # A question of a class has a step of its own; the others are `question-<n>`, in order.
 CLASS_STEPS = {
     "workAuthorization": "WORK_AUTHORIZATION",
@@ -200,11 +202,6 @@ class Join:
         answered = page.evaluate(_FETCH, [f"{GRAPHQL}?operationName=JobScreeningQuestions", body])
         questions = answered["data"]["jobScreeningQuestions"]["questions"]
         self._questions = sorted(questions, key=lambda q: q.get("position") or 0)
-        fields = [
-            Field("cv", "CV", FieldType.FILE, True, accept=PDF),
-            *(_question(q) for q in self._questions),
-        ]
-        self._fields = {f.id: f for f in fields if not f.unfillable}
         browser.click(page.locator("[data-testid=ApplyButton]").locator("visible=true").first)
         page.wait_for_url("**/apply/**", timeout=STEP_TIMEOUT_MS)
         # the wizard opens on `authentication`, and leaves it once it knows the account
@@ -216,6 +213,16 @@ class Join:
             page.wait_for_timeout(POLL_MS)
         if _step(page) == "authentication":
             raise Blocked("login_required: run `atsfill login join`")
+        # the wizard's page names the documents the job asks, each required or optional
+        raw = page.locator("script#__NEXT_DATA__").text_content() or "{}"
+        state = json.loads(raw)["props"]["pageProps"].get("initialState") or {}
+        documents = (state.get("job") or {}).get("documentsConfig") or [{"type": "CV"}]
+        fields = [
+            *(Field(*DOCUMENTS[d["type"]], FieldType.FILE, d.get("constraint") != "OPTIONAL",
+                    accept=PDF) for d in documents if d["type"] in DOCUMENTS),
+            *(_question(q) for q in self._questions),
+        ]  # fmt: skip
+        self._fields = {f.id: f for f in fields if not f.unfillable}
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
@@ -232,8 +239,6 @@ class Join:
                 field_id = f"question.{question['id']}"
                 if field_id in self._fields:
                     self._question(page, question, answers.get(field_id))
-            elif step == "coverLetter":  # asked by some jobs only: left without one
-                pass
             elif step in PROFILE_STEPS:
                 try:  # shown when the job requires what the account profile lacks
                     _next(page, step)

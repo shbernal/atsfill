@@ -98,13 +98,14 @@ def test_browser_read_lists_the_files_and_the_questions(opened, page):
     _, fields = opened
     assert [(f.id, f.type, f.required) for f in fields] == [
         ("cv", FieldType.FILE, True),
+        ("coverLetter", FieldType.FILE, False),
         ("question.1", FieldType.CHOICE, True),
         ("question.2", FieldType.CHOICE, True),
         ("question.3", FieldType.DATE, True),
         ("question.4", FieldType.TEXT, False),
     ]
-    assert fields[2].options == ["Yes", "No"]
-    assert fields[4].label == "Your salary expectation? (a number)"
+    assert fields[3].options == ["Yes", "No"]
+    assert fields[5].label == "Your salary expectation? (a number)"
     assert page.url.endswith("/apply/cv")  # the wizard left `authentication` on its own
 
 
@@ -112,6 +113,7 @@ def test_every_answer_reads_back_from_the_review_page(opened, page, files):
     adapter, fields = opened
     answers = {
         "cv": files[0],
+        "coverLetter": files[1],
         "question.1": "Fluent",
         "question.2": "Yes",
         "question.3": "2026-03-15",
@@ -129,6 +131,22 @@ def test_a_required_step_left_unanswered_is_not_taken(opened, page):
     adapter, _ = opened
     with pytest.raises(join.NotTaken, match="cv step keeps Continue disabled"):
         adapter.fill(page, {})
+
+
+def test_a_job_requiring_a_cover_letter_lists_it_required(page, files, monkeypatch):
+    monkeypatch.setattr(join, "CONTINUE_TIMEOUT_S", 1)
+    adapter = Join()
+    page.goto("https://join.com/companies/acme/102-ai-engineer")
+    fields = {f.id: f for f in adapter.browser_read(page)}
+    assert fields["coverLetter"].required
+    with pytest.raises(join.NotTaken, match="coverLetter step keeps Continue disabled"):
+        adapter.fill(page, {"cv": files[0]})
+
+    adapter = Join()
+    page.goto("https://join.com/companies/acme/102-ai-engineer")
+    adapter.browser_read(page)
+    with pytest.raises(join.NotTaken, match="^the question-1 step"):  # past coverLetter
+        adapter.fill(page, {"cv": files[0], "coverLetter": files[1]})
 
 
 def test_detection_and_posting():
