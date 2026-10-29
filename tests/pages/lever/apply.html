@@ -305,6 +305,7 @@
     dropdown.style.display = "flex";
   });
   document.getElementById("btn-submit").addEventListener("click", () => {
+    if (document.body.dataset.stalled) return;  // the post never answers
     if (document.body.dataset.challenge) {  // hCaptcha asks the visitor: its second frame covers the page
       document.querySelectorAll("#h-captcha iframe")[1].style.visibility = "visible";
       return;

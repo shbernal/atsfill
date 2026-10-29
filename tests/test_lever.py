@@ -165,6 +165,14 @@ def test_an_hcaptcha_challenge_is_blocked(page, monkeypatch):
         adapter.submit(page)
 
 
+def test_a_timeout_without_a_challenge_is_an_error(page, monkeypatch):
+    monkeypatch.setattr("atsfill.adapters.lever.SUBMIT_TIMEOUT_MS", 1_000)
+    adapter, _ = opened(page)
+    page.evaluate("document.body.dataset.stalled = 'yes'")
+    with pytest.raises(browser.Timeout):
+        adapter.submit(page)
+
+
 def test_posting_urls():
     adapter = Lever()
     for url in (

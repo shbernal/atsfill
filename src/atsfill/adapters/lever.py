@@ -19,7 +19,7 @@ from atsfill.core.results import Answer, Field, FieldType, SideEffect
 HOSTS = re.compile(r"^jobs\.(eu\.)?lever\.co$")
 JOB = re.compile(r"^/([^/]+)/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b")
 FORM = "form#application-form"
-CAPTCHA = "#h-captcha"  # its frames are hidden until hCaptcha asks the visitor a challenge
+CAPTCHA = "iframe[src*='hcaptcha.com']"  # hidden until hCaptcha asks the visitor a challenge
 FORM_TIMEOUT_MS = 30_000
 UPLOAD_TIMEOUT_MS = 30_000
 SUGGEST_TIMEOUT_MS = 10_000
@@ -189,7 +189,7 @@ class Lever:
         try:
             page.wait_for_url(re.compile(r"/thanks\b"), timeout=SUBMIT_TIMEOUT_MS)
         except Timeout:
-            if page.locator(f"{CAPTCHA} iframe").locator("visible=true").count():
+            if page.locator(CAPTCHA).locator("visible=true").count():
                 raise Blocked("captcha: hCaptcha asked for a challenge") from None
             raise
         return page.url
