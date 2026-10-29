@@ -12,6 +12,7 @@ import re
 import time
 from contextlib import suppress
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from html import unescape
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
@@ -35,12 +36,12 @@ POSTING = re.compile(r"^/(?P<site>[^/]+)/cx/(?:job/(?P<job>\d+)|job-details)")
 API = "https://my.adp.com/myadp_prefix/mycareer/api"
 QUESTIONNAIRES = f"{API}/rm/staffing/v3/work-fulfillment/recruiting-questionnaires"
 APPLICATIONS = f"https://{HOST}/cx/staffing/v2/job-applications"
+APPLICANT = f"https://{HOST}/cx/staffing/v2/job-applicant"  # the candidate profile
 SIGN_IN_TIMEOUT_MS = 60_000  # the sign-in page takes ~20 s to render its form
 SIGN_IN_STEP_TIMEOUT_MS = 30_000
 SIGNED_IN_TIMEOUT_MS = 60_000
 POSTING_TIMEOUT_MS = 45_000
 SECTION_TIMEOUT_MS = 45_000
-LOAD_TRIES = 3
 SUBMIT_TIMEOUT_MS = 90_000
 SETTLE_MS = 1_500  # an answer shows its follow-ups, a Next saves and routes
 OPTION_TIMEOUT_MS = 10_000
@@ -48,6 +49,7 @@ UPLOAD_TIMEOUT_MS = 60_000
 KEY_DELAY_MS = 40
 SKIPPED = {"INSTRUCTIONS", "HEADER"}
 YES_NO = ["Yes", "No"]
+DATE = "%m/%d/%Y"  # a date picker's typed form
 
 _FETCH = """async ([url, role, site]) => {
   const headers = {myjobstoken: sessionStorage.getItem('myJobsToken') ?? ''};
@@ -71,6 +73,8 @@ class Section:
     fields: list[Field] = field(default_factory=list)
     pages: list[set[str]] = field(default_factory=list)  # the question ids on each page
     review: bool = False  # the pages end on a review of the answers, before that last Next
+    # A page of entries by its number: what its Add button names, and how many it needs
+    entries: dict[int, tuple[str, int]] = field(default_factory=dict)
 
 
 class ADPMyJobs:
@@ -124,6 +128,9 @@ class ADPMyJobs:
         if found is None:
             raise RuntimeError(f"{page.url} is not an ADP MyJobs posting")
         site, req = found
+        # Left before it settles, the first page's loader wedges the tab: no workflow shows in it
+        with suppress(Timeout):
+            page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
         settings = _career_site(page, site)
         self._site_id = str(settings["externalId"])
         if not (settings.get("enabledFeatures") or {}).get("candidateApplicationWorkflow"):
@@ -202,6 +209,7 @@ class ADPMyJobs:
             for number, ids in enumerate(section.pages or [set()]):
                 _on_section(page, section)
                 _to_page(page, section, ids)
+                _add_entries(page, section, number)
                 if unlisted := _unlisted(page, section):
                     raise NotTaken(f"{section.title} shows {unlisted}, which the read did not list")
                 self._answer(page, section, answers)
@@ -234,6 +242,12 @@ class ADPMyJobs:
         role = url.startswith(API)
         return page.evaluate(_FETCH, [url, role, self._site_id if "/api/rm/" in url else ""])
 
+    def _profile_name(self, page: Page) -> str:
+        """The candidate profile's name, first and last, as ADP has it on file."""
+        found = self._get(page, APPLICANT).get("jobApplicants") or [{}]
+        name = (found[0].get("person") or {}).get("personName") or {}
+        return " ".join(n for n in (name.get("givenName"), name.get("familyName1")) if n)
+
     def _assignment(self, page: Page) -> str:
         assignment = parse_qs(urlsplit(page.url).query).get("assignmentId")
         if not assignment:
@@ -244,20 +258,7 @@ class ADPMyJobs:
         page.wait_for_url(
             lambda u: "workflowComponent=" in u, timeout=SECTION_TIMEOUT_MS, wait_until="commit"
         )
-        workflow = page.url
-        for attempt in range(LOAD_TRIES):  # it can spin: loaded again from the posting, it shows
-            try:
-                page.get_by_role("button", name="Next").wait_for(timeout=SECTION_TIMEOUT_MS)
-                return
-            except Timeout:
-                if attempt == LOAD_TRIES - 1:
-                    raise
-                site = urlsplit(workflow).path.split("/")[1]
-                req = parse_qs(urlsplit(workflow).query)["reqId"][0]
-                page.goto(f"https://{HOST}/{site}/cx/job-details?reqId={req}")
-                with suppress(Timeout):
-                    page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
-                page.goto(workflow)
+        page.get_by_role("button", name="Next").wait_for(timeout=SECTION_TIMEOUT_MS)
 
     def _workflow(self, page: Page) -> list[Section]:
         assignment = self._assignment(page)
@@ -292,8 +293,13 @@ class ADPMyJobs:
             if "questions" not in p:
                 listed = self._get(page, f"{url}&sectionID={p['sectionID']}")
                 p = next(iter(listed.get("questionSections") or []), {})
-            questions += p.get("questions") or []
-            section.pages.append({q["questionID"] for q in p.get("questions") or []})
+            asked = p.get("questions") or []
+            if "sectionRepeatMin" in (labels := _labels(p)):  # each entry's questions, `<id>_<n>`
+                needed = int(labels["sectionRepeatMin"])
+                section.entries[len(section.pages)] = (labels["sectionRepeatLabel"], needed)
+                asked = [q for q in asked if _entry(q) <= needed]
+            questions += asked
+            section.pages.append({q["questionID"] for q in asked})
         # A form of pages that is not open yet lists none: the fill stops on its questions,
         # which a read once it is open lists.
         fields = [f for q in questions if (f := self._question(page, section, q, questions))]
@@ -316,7 +322,7 @@ class ADPMyJobs:
         default = raw.get("answerDefaultValue")
         options: list[str] | None = None
         match kind:
-            case "TEXT" | "EMAIL":
+            case "TEXT" | "EMAIL" | "LONGTEXT":
                 type_ = FieldType.TEXT
             case "PHONENUMBER":
                 type_ = FieldType.PHONE
@@ -325,8 +331,13 @@ class ADPMyJobs:
                 self._codes[field_id] = {"true": "Yes", "false": "No"}
             case "UPLOAD":
                 type_ = FieldType.FILE
-            case "ESIGNATURE":
+            case "DATE":  # a saved one in epoch milliseconds, midnight in the US
+                type_ = FieldType.DATE
+                if default:
+                    default = datetime.fromtimestamp(int(default) / 1000, UTC).date().isoformat()
+            case "ESIGNATURE":  # refused unless it is the profile's name
                 type_, label = FieldType.TEXT, "Electronic signature: your full legal name"
+                default = self._profile_name(page)
             case (
                 "SELECTION"
                 | "COUNTRIES"
@@ -403,8 +414,13 @@ class ADPMyJobs:
                 case "Single choice":
                     self._codes[ids[qid]] = labels
                     f = Field(ids[qid], label, FieldType.CHOICE, True, list(labels.values()))
+                case "Multiple choice":
+                    self._codes[ids[qid]] = labels
+                    f = Field(ids[qid], label, FieldType.MULTI_CHOICE, True, list(labels.values()))
                 case "Free form":
                     f = Field(ids[qid], label, FieldType.TEXT, True)
+                case "Calendar":
+                    f = Field(ids[qid], label, FieldType.DATE, True)
                 case other:
                     reason = f"unhandled_rendering: {label!r} is a {other} question"
                     f = Field(ids[qid], label, FieldType.TEXT, True, unfillable=reason)
@@ -423,7 +439,7 @@ class ADPMyJobs:
                 continue  # not shown: its condition is unmet
             if _value(box, f, self._codes.get(f.id, {})) == answers[f.id]:
                 continue  # a list's default, the profile's value
-            _set(page, box, f, str(answers[f.id]), self._codes.get(f.id, {}))
+            _set(page, box, f, answers[f.id], self._codes.get(f.id, {}))
             page.wait_for_timeout(SETTLE_MS if f.type is FieldType.CHOICE else 0)
 
     def _read(self, page: Page, section: Section) -> dict[str, Answer]:
@@ -610,6 +626,25 @@ def _to_page(page: Page, section: Section, ids: set[str]) -> None:
     raise RuntimeError(f"{section.title} shows another page than the one to fill")
 
 
+def _entry(question: dict[str, Any]) -> int:
+    """Which entry of a page of entries a question belongs to; 0 for the page's own."""
+    labels = {x["code"]: x["value"] for x in question.get("questionLabels") or []}
+    return int(labels.get("repeatIndex", 0))
+
+
+def _add_entries(page: Page, section: Section, number: int) -> None:
+    """A page of entries lists none until its Add button adds one, folded under its title
+    (`Employer 1`): adds the entries it needs, and unfolds each."""
+    label, needed = section.entries.get(number, ("", 0))
+    for n in range(1, needed + 1):
+        title = page.get_by_text(f"{label} {n}", exact=True)
+        if not title.count():
+            page.get_by_role("button", name=f"Add {label}").click()
+            title.wait_for(timeout=SECTION_TIMEOUT_MS)
+        if not page.locator(f'adp-form-group[data-name$="_{n}"]').first.is_visible():
+            title.click()
+
+
 def _groups(page: Page) -> list[str]:
     return page.locator("adp-form-group").evaluate_all("es => es.map(e => e.dataset.name)")
 
@@ -644,12 +679,27 @@ def _box(page: Page, section: Section, f: Field) -> Locator:
     question = f.id.removeprefix(f"{section.component}.")
     if section.component.startswith("prescreen"):
         labelled = f'[aria-labelledby="{question}-error"]:not(sdf-radio-button)'
-        return page.locator(f"#{question}, {labelled}").first
+        boxes = page.locator(f"#{question}, {labelled}")
+        return boxes if f.type is FieldType.MULTI_CHOICE else boxes.first  # a box per option
     return page.locator(f'adp-form-group[data-name="{question}"]').first
 
 
-def _set(page: Page, box: Locator, f: Field, answer: str, codes: dict[str, str]) -> None:
+def _set(page: Page, box: Locator, f: Field, answer: Answer, codes: dict[str, str]) -> None:
     by_label = {v: k for k, v in codes.items()}
+    if isinstance(answer, list):  # a prescreen's options, a checkbox each
+        chosen = {by_label.get(a, a) for a in answer}
+        for option in box.all():
+            if (option.get_attribute("aria-checked") == "true") != (
+                option.get_attribute("value") in chosen
+            ):
+                option.click()
+        return
+    if f.type is FieldType.DATE:
+        target = box.locator("input").first
+        target.fill("")
+        target.press_sequentially(datetime.fromisoformat(answer).strftime(DATE), delay=KEY_DELAY_MS)
+        target.press("Tab")
+        return
     if f.type is FieldType.FILE:
         _upload(page, box, f, answer)
         return
@@ -729,6 +779,13 @@ def _upload(page: Page, box: Locator, f: Field, answer: str) -> None:
 
 
 def _value(box: Locator, f: Field, codes: dict[str, str]) -> Answer | None:
+    if f.type is FieldType.MULTI_CHOICE:
+        checked = [o.get_attribute("value") or "" for o in box.all()
+                   if o.get_attribute("aria-checked") == "true"]  # fmt: skip
+        return [codes.get(c, c) for c in checked] or None
+    if f.type is FieldType.DATE:
+        typed = box.locator("input").first.input_value()
+        return datetime.strptime(typed, DATE).date().isoformat() if typed else None
     if f.type is FieldType.FILE:  # the upload's text, its buttons icons alone: the file's name
         lines = box.locator("dynamic-form-sdf-upload").inner_text().splitlines()
         return next((t.strip() for t in lines if t.strip()), None)
@@ -756,5 +813,5 @@ def _value(box: Locator, f: Field, codes: dict[str, str]) -> Answer | None:
 
 def _errors(page: Page) -> str:
     """Each question's error, from the text kept for screen readers."""
-    said = page.locator("rm-sr-field-error, sdf-alert-inline").all_text_contents()
+    said = page.locator("rm-sr-field-error, sdf-alert-inline, sdf-alert").all_text_contents()
     return "; ".join(dict.fromkeys(t.strip() for t in said if t.strip())) or "no error shown"

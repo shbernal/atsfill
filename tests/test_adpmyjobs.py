@@ -1,6 +1,6 @@
 """The ADP MyJobs adapter on tests/pages/adpmyjobs/app.html, with ADP's API served here: the
 sign-in, Apply that sends, and a workflow of a statement, contact, prescreen, documents and a
-form of pages."""
+form of pages, one of them a page of entries."""
 
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -76,6 +76,13 @@ PRESCREEN = [
      "questionDescription": "Are you 18 or older?",
      "possibleAnswers": [{"answerId": "41", "answerLabel": "Yes"},
                          {"answerId": "42", "answerLabel": "No"}]},
+    {"questionId": "q_5", "questionType": "Calendar", "orderId": 5,
+     "questionDescription": "Date you are available for work:", "possibleAnswers": []},
+    {"questionId": "q_6", "questionType": "Multiple choice", "orderId": 6,
+     "questionDescription": "Availability (select one or more):",
+     "possibleAnswers": [{"answerId": "61", "answerLabel": "Full-Time"},
+                         {"answerId": "62", "answerLabel": "Part-Time"},
+                         {"answerId": "63", "answerLabel": "Weekends"}]},
 ]  # fmt: skip
 DOCUMENTS = [{"questionID": "resume", "answerDataTypeCode": "UPLOAD", "requiredIndicator": True,
               "questionText": "Resume"}]  # fmt: skip
@@ -89,11 +96,35 @@ FORM = [
         {"questionID": "names", "answerDataTypeCode": "TEXT", "questionText": "Their names"},
         {"questionID": "date", "answerDataTypeCode": "DATETIME", "disabledIndicator": True,
          "answerDefaultValue": ""}]},
+    {"sectionID": "p3", "sectionTitle": "Employment History"},
     {"sectionID": "p2", "sectionTitle": "eSignature"},
     {"sectionID": "9999999999999", "sectionTitle": "",
      "sectionLabels": [{"code": "sectionReview", "value": "true"}]},
 ]  # fmt: skip
 SIGNATURE = [{"questionID": "sign", "answerDataTypeCode": "ESIGNATURE", "questionText": ""}]
+
+
+def entry(n: int) -> list[dict]:
+    index = [{"code": "repeatIndex", "value": str(n)}, {"code": "repeatType", "value": "REPEAT"}]
+    start = {"answerDefaultValue": "1795842000000"} if n == 1 else {}  # 2026-11-28, saved
+    return [
+        {"questionID": f"employer_{n}", "answerDataTypeCode": "TEXT", "requiredIndicator": True,
+         "questionText": "Employer", "questionLabels": index},
+        {"questionID": f"start_{n}", "answerDataTypeCode": "DATE", "questionText": "Start Date",
+         "questionLabels": index, **start},
+        {"questionID": f"duties_{n}", "answerDataTypeCode": "LONGTEXT",
+         "questionText": "Job Duties", "questionLabels": index},
+    ]  # fmt: skip
+
+
+EMPLOYMENT = {"sectionID": "p3", "sectionTitle": "Employment History",
+              "sectionLabels": [{"code": "sectionRepeatLabel", "value": "Employer"},
+                                {"code": "sectionRepeatMin", "value": "1"},
+                                {"code": "sectionRepeatMax", "value": "2"}],
+              "questions": [{"questionID": "opening", "answerDataTypeCode": "INSTRUCTIONS",
+                             "questionText": "Your most recent employer first"},
+                            *entry(1), *entry(2)]}  # fmt: skip
+APPLICANT = {"person": {"personName": {"givenName": "Ada", "familyName1": "Placeholder"}}}
 CODES["YN"] = [("true", "Yes"), ("false", "No")]
 SECTIONS = [
     ("data_privacy", "Data Privacy Statement"),
@@ -121,6 +152,8 @@ class Ats:
             return {"settings": {"externalId": "43", "enabledFeatures": {}}}
         if path.endswith("/job-applications"):
             return {"jobApplications": self.applications}
+        if path.endswith("/job-applicant"):
+            return {"jobApplicants": [APPLICANT]}
         if path.endswith("/assignment-creation"):
             self.applications.append({"reqID": "5001", "assignmentID": "77",
                                       "applicationStatusCode": {"label": "CONTINUE",
@@ -145,6 +178,8 @@ class Ats:
         if section == "appbuilder_eform":
             if query.get("sectionID") == ["p2"]:
                 return {"questionSections": [{"sectionID": "p2", "questions": SIGNATURE}]}
+            if query.get("sectionID") == ["p3"]:
+                return {"questionSections": [EMPLOYMENT]}
             return {"questionSections": FORM}
         questions = {"data_privacy": STATEMENT, "contact": CONTACT, "documents": DOCUMENTS}
         return {"questionSections": [{"sectionID": "1", "questions": questions[section]}]}
@@ -209,8 +244,9 @@ def test_the_read_agrees_to_the_statement_then_lists_every_section(opened, ats):
         "contact.emailAddress", "contact.phoneType", "contact.extension", "contact.phone",
         "contact.country", "contact.state", "contact.zip", "contact.smsOptIn",
         "prescreen1.q_1", "prescreen1.q_2", "prescreen1.q_3", "prescreen1.q_4",
-        "documents.resume", "appbuilder_eform.relatives", "appbuilder_eform.names",
-        "appbuilder_eform.sign",
+        "prescreen1.q_5", "prescreen1.q_6", "documents.resume", "appbuilder_eform.relatives",
+        "appbuilder_eform.names", "appbuilder_eform.employer_1", "appbuilder_eform.start_1",
+        "appbuilder_eform.duties_1", "appbuilder_eform.sign",
     ]  # fmt: skip
     assert by_id["contact.emailAddress"].prefilled == "ada@example.com"
     assert by_id["contact.extension"].shown_when == Is("contact.phoneType", ["Work"])
@@ -225,11 +261,17 @@ def test_the_read_agrees_to_the_statement_then_lists_every_section(opened, ats):
     assert by_id["prescreen1.q_2"].shown_when == Is("prescreen1.q_1", ["Yes"])
     assert by_id["prescreen1.q_3"].shown_when == Is("prescreen1.q_1", ["No"])
     assert by_id["prescreen1.q_4"].shown_when == Is("prescreen1.q_3")
+    assert by_id["prescreen1.q_5"].type is FieldType.DATE
+    assert by_id["prescreen1.q_6"].type is FieldType.MULTI_CHOICE
+    assert by_id["prescreen1.q_6"].shown_when == Is("prescreen1.q_5")
     assert by_id["documents.resume"].type is FieldType.FILE
     assert by_id["appbuilder_eform.names"].required_when == Is(
         "appbuilder_eform.relatives", ["Yes"]
     )
     assert not isinstance(by_id["prescreen1.q_4"].shown_when, AnyOf)
+    assert by_id["appbuilder_eform.start_1"].type is FieldType.DATE
+    assert by_id["appbuilder_eform.start_1"].prefilled == "2026-11-28"
+    assert by_id["appbuilder_eform.sign"].prefilled == "Ada Placeholder"
 
 
 def test_fill_walks_every_section_and_page_up_to_the_review(opened, page, ats, resume):
@@ -242,9 +284,12 @@ def test_fill_walks_every_section_and_page_up_to_the_review(opened, page, ats, r
         "prescreen1.q_1": "No",
         "prescreen1.q_3": "50000",
         "prescreen1.q_4": "Yes",
+        "prescreen1.q_5": "2026-12-01",
+        "prescreen1.q_6": ["Full-Time", "Weekends"],
         "documents.resume": resume,
         "appbuilder_eform.relatives": "No",
-        "appbuilder_eform.sign": "Ada Placeholder",
+        "appbuilder_eform.employer_1": "Acme",
+        "appbuilder_eform.duties_1": "Placeholder answer",
     }
     adapter.fill(page, answers)
     assert ats.saved == {"data_privacy", "contact", "prescreen1", "documents"}
@@ -261,8 +306,13 @@ def test_fill_walks_every_section_and_page_up_to_the_review(opened, page, ats, r
         "prescreen1.q_1": "No",
         "prescreen1.q_3": "50000",
         "prescreen1.q_4": "Yes",
+        "prescreen1.q_5": "2026-12-01",
+        "prescreen1.q_6": ["Full-Time", "Weekends"],
         "documents.resume": "CV Ada.pdf",
         "appbuilder_eform.relatives": "No",
+        "appbuilder_eform.employer_1": "Acme",
+        "appbuilder_eform.start_1": "2026-11-28",
+        "appbuilder_eform.duties_1": "Placeholder answer",
         "appbuilder_eform.sign": "Ada Placeholder",
     }
     assert adapter.submit(page) == "the page said Application Submitted!"

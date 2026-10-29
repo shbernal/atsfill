@@ -254,7 +254,7 @@ account = "to_read"  # a candidate profile per career site without a password, s
 hosting = ["hosted"]
 hosts = ["myjobs.adp.com"]
 adapter = "adpmyjobs"
-scope = { is = "in_scope", date = 2026-10-29, reason = "adapter before its gate: Apply sends the application, the form follows it; 2 of 2 workflows walked ready" }
+scope = { is = "supported", date = 2026-10-29, commit = "a14e403" }
 
 [phenom]
 kind = "ats"

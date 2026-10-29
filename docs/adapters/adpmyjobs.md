@@ -8,7 +8,7 @@ ADP's candidate experience (`myjobs.adp.com`), a different product from ADP Work
 
 - A posting is `myjobs.adp.com/<career site>/cx/job/<id>`, one employer per career site, a single-page app. Signed out it shows the employer's header and Sign in; signed in, that address renders nothing, and the posting is `/<career site>/cx/job-details?reqId=<id>`. A posting gone shows "Problem with the service", and no Apply.
 - Apply POSTs `my.adp.com/myadp_prefix/mycareer/api/staffing/v2/job-application/assignment-creation` (`{reqId}`), its answer sometimes slower than a minute, and the application exists from then on: `myjobs.adp.com/cx/staffing/v2/job-applications` lists it `APPLICATION_SUBMITTED`, label `CONTINUE`, My Jobs says "Application submitted!", and the posting shows Applied instead of Apply. There is no withdraw.
-- What follows is the application's workflow, `/<career site>/cx/app?reqId=<id>&assignmentId=<application>&workflowComponent=<section>`, one section at a time and in order. A posting applied to is continued there, at the first section not completed: the address without `workflowComponent` spins forever.
+- What follows is the application's workflow, `/<career site>/cx/app?reqId=<id>&assignmentId=<application>&workflowComponent=<section>`, one section at a time and in order. A posting applied to is continued there, at the first section not completed: the address without `workflowComponent` spins forever. Left before its requests settle, a career site's first page wedges its tab: every workflow loaded in that tab after spins, a reload and a new tab beside it included, while one opened once it is idle shows (12 of 12, against 1 in 3 spinning without the wait).
 - The workflow (`recruiting-questionnaires/WORKFLOW?assignmentID=`) lists its sections, each with `component`, `completionStatusCode` and `isBackEnabled` (false but on E-Signature): Data Privacy Statement, Contact Information, Select Source, Preliminary Questions, Documents, Electronic Signature Notice and Consent, Equal Employment Opportunity Information, Application Form, in an order and selection each employer sets. On a new application it lists only the first section, a privacy statement, until that one is saved.
 - Each section's Next saves it (`recruiting-questionnaires/<application>/answers?formType=<section>&submit=true`, then a `job-application.change` event) and moves the address to the next section. The last section's Next completes the application: the page says "Application Submitted!", at the same address.
 
@@ -35,20 +35,25 @@ Each question is an `adp-form-group[data-name=<questionID>]` whose class names i
 | Type | Field | Rendering | Seen on |
 |---|---|---|---|
 | `TEXT`, `EMAIL` | `text` | `sdf-input`'s input; disabled, the profile's value as text (email, name), not filled and read back as listed | every employer |
+| `LONGTEXT` | `text` | `sdf-textarea` | Application Form, 1 employer |
+| `DATE` | `date` | `sdf-date-picker`, its input typed MM/DD/YYYY; a saved one comes as epoch milliseconds, midnight in the US | Application Form, 1 employer |
 | `PHONENUMBER` | `phone` | `sdf-phone-number-input`: a country select and an input showing `+1 202 555 0143`; E.164 typed picks the country | every employer |
 | `SELECTION`, `COUNTRIES`, `STATES`, `LOOKUP`, `MONTHS`, `DAYS_OF_MONTH` | `choice` | `sdf-select-simple`: its frame opens a floating pane of `sdf-select-item`s, a long list its first items and a filter box (`#select-filter-input`); the pick shows in `#selected-label` | every employer |
 | `RADIO` | `choice` | `sdf-radio-button[value=<code>]`, the label in its shadow root | EEO questions |
 | `BOOLEAN` | `choice` (Yes, No) | `sdf-radio-button` `true` and `false` | SMS opt-in, AI opt-out |
 | `CHECKBOX` | `choice` (Yes, No) | `sdf-checkbox`, `aria-checked` | the statements' agree box |
 | `UPLOAD` | `file` | an upload button opens a pane with a file input and Save; the question then shows the file's name | Documents, 2 employers |
-| `ESIGNATURE` | `text` | Accept and Decline radios, and the full legal name typed | Application Form, 1 employer |
+| `ESIGNATURE` | `text` | Accept and Decline radios, and the full legal name typed; "Signature must contain your first and last name exactly as we have on file" refuses another than the candidate profile's (`job-applicant`), which it is prefilled with | Application Form, 2 employers |
 | prescreen Single choice | `choice` | `sdf-radio-group#<question>`, or a `sdf-select-simple` for three answers or more | every employer |
 | prescreen Free form | `text` | `sdf-textarea` | 2 employers |
+| prescreen Calendar | `date` | `sdf-date-picker`, as `DATE` | 1 employer |
+| prescreen Multiple choice | `multi_choice` | a `sdf-checkbox` per answer, `value` its id, `aria-label` its label | 1 employer |
 
 - The read lists the open sections from the API; a section completed by an earlier run is sent and has no way back, and is left out. A first section that is only a statement to agree to (one required box) is agreed and saved by the read, as ADP lists the rest only after it.
 - A question that shows on another's answer has that condition (`dependencies`), one required on another's answer has it as `required_when`; a prescreen question shows once an answer leads to it, an Instructions passing on its own condition. `INSTRUCTIONS`, `HEADER` and disabled questions without a value (the e-signature's date) are not fields.
 - The fill answers each section in order, each question once it shows, and Next; on a form of pages each page and its Next, checking first that the page open is the one to fill (a form reopened on its review goes back with Previous). It stops before the last Next: on the last section's last page, or its review. A page that shows a question the read did not list stops the fill: the Application Form, when it was not open at the read, lists its pages once open.
 - A section's Next that does not move names the errors kept for screen readers (`rm-sr-field-error`): "ZIP or postcode is not in state", "City [London] is not a valid city within State [DC]". ADP checks the address's city and ZIP against its state.
+- A page of entries (Employment History, Education History, Licenses) has `sectionRepeatLabel`, `sectionRepeatMin` and `sectionRepeatMax`; its questions are listed once per possible entry, `<id>_<n>` with a `repeatIndex`, each copy required when the question is. The page shows none until "Add <label>" adds one, folded under its title (`Employer 1`) until that is clicked; Next with fewer than the minimum says "You must enter at least 1 Employer entries." (`sdf-alert`). The read lists the entries the minimum asks, and the fill adds and unfolds them.
 - The read-back is each section's values on the page before its Next.
 
 ## Known gaps
