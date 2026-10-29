@@ -115,7 +115,10 @@ class Ats:
         parts = urlsplit(url)
         path, query = parts.path, parse_qs(parts.query)
         if path.endswith("/career-site/acmecareers"):
-            return {"settings": {"externalId": "42"}}
+            features = {"candidateApplicationWorkflow": True}
+            return {"settings": {"externalId": "42", "enabledFeatures": features}}
+        if path.endswith("/career-site/legacycareers"):
+            return {"settings": {"externalId": "43", "enabledFeatures": {}}}
         if path.endswith("/job-applications"):
             return {"jobApplications": self.applications}
         if path.endswith("/assignment-creation"):
@@ -278,6 +281,13 @@ def test_a_section_the_page_refuses_names_its_error(opened, page):
     adapter, _ = opened
     with pytest.raises(NotTaken, match="Phone Type is required"):
         adapter.fill(page, {"contact.zip": "20001"})
+
+
+def test_a_site_whose_workflow_is_on_adp_recruiting_stops_before_apply(page, ats):
+    page.goto("https://myjobs.adp.com/legacycareers/cx/job/5001")
+    with pytest.raises(Unsupported, match="unsupported_flow: recruiting_workflow"):
+        ADPMyJobs().open(page)
+    assert not ats.applications
 
 
 def test_a_posting_that_will_not_load_is_gone(page, monkeypatch):

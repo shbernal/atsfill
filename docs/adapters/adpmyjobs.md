@@ -51,6 +51,12 @@ Each question is an `adp-form-group[data-name=<questionID>]` whose class names i
 - A section's Next that does not move names the errors kept for screen readers (`rm-sr-field-error`): "ZIP or postcode is not in state", "City [London] is not a valid city within State [DC]". ADP checks the address's city and ZIP against its state.
 - The read-back is each section's values on the page before its Next.
 
+## Known gaps
+
+| Gap | What | Code | Postings |
+|---|---|---|---|
+| `recruiting_workflow` | a career site without `candidateApplicationWorkflow` in its settings (`enabledFeatures`) continues each application on ADP Recruiting (`recruiting.adp.com/srccar`), another product with its own login, after Apply: My Jobs' Next Steps go there and the MyJobs workflow page stays blank. atsfill stops before Apply | `unsupported_flow` | 4 of 10 career sites |
+
 ## Submitting
 
 The last section's Next is the send's last click (the application itself was sent by Apply); the evidence is the page saying "Application Submitted!". Seen once, on an application the Test user had opened.

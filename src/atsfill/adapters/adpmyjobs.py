@@ -17,7 +17,16 @@ from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
 
 from atsfill.core import matching, otp
-from atsfill.core.adapter import Blocked, NotTaken, Refused, SignedOut, SignUpDetails, Unsupported
+from atsfill.core.adapter import (
+    Blocked,
+    Gap,
+    NotTaken,
+    Refused,
+    SignedOut,
+    SignUpDetails,
+    Unsupported,
+    known_gap,
+)
 from atsfill.core.browser import Locator, Page, Request, Timeout
 from atsfill.core.results import Answer, AnyOf, Condition, Field, FieldType, Is, SideEffect
 
@@ -68,7 +77,7 @@ class ADPMyJobs:
     name = "adpmyjobs"
     per_employer = True  # a candidate profile per career site: the scope is the site
     asks = {"name", "phone"}
-    known_gaps: dict = {}
+    known_gaps = {"recruiting_workflow": Gap.FLOW}
     side_effects = [
         SideEffect("sign_up", "employer", "login --create creates the career site's profile"),
         SideEffect("load", "employer", "Apply sends the application before the form shows"),
@@ -115,7 +124,11 @@ class ADPMyJobs:
         if found is None:
             raise RuntimeError(f"{page.url} is not an ADP MyJobs posting")
         site, req = found
-        self._site_id = _site_id(page, site)
+        settings = _career_site(page, site)
+        self._site_id = str(settings["externalId"])
+        if not (settings.get("enabledFeatures") or {}).get("candidateApplicationWorkflow"):
+            detail = f"{site} continues each application on ADP Recruiting, after Apply"
+            raise Unsupported(known_gap(self, "recruiting_workflow", detail))
         page.goto(f"https://{HOST}/{site}/cx/job-details?reqId={req}")
         deadline = time.monotonic() + POSTING_TIMEOUT_MS / 1000
         while not page.evaluate("() => !!sessionStorage.getItem('myJobsToken')"):
@@ -432,15 +445,16 @@ def _posting(url: str) -> tuple[str, str] | None:
     return (match["site"].lower(), req) if req else None
 
 
-def _site_id(page: Page, site: str) -> str:
-    """The career site's id, which ADP's API asks with each request."""
+def _career_site(page: Page, site: str) -> dict[str, Any]:
+    """The career site's settings: its id, which ADP's API asks with each request, and the
+    features it enables."""
     found = page.evaluate(
         "url => fetch(url).then(r => r.ok ? r.json() : null)",
         f"https://{HOST}/public/staffing/v1/career-site/{site}",
     )
     if not found:
         raise Unsupported(f"posting_gone: no career site {site}")
-    return str(found["settings"]["externalId"])
+    return found["settings"]
 
 
 def _sign_in(page: Page, email: str, details: SignUpDetails | None) -> None:
