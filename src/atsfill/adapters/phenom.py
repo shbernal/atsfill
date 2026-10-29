@@ -8,6 +8,7 @@ fields, dependent lists): a request read or a browser read interprets them witho
 step. Filling walks the wizard on a fresh session, each step's answers read back before Next.
 """
 
+import hashlib
 import http.cookiejar
 import json
 import re
@@ -23,7 +24,7 @@ from pathlib import PurePath
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from atsfill.core import browser, matching
+from atsfill.core import browser, matching, paths
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Locator, Overlaid, Page, Timeout
 from atsfill.core.results import (
@@ -67,6 +68,7 @@ PICK_TRIES = 3
 MAX_STEPS = 12
 OPTIONS_TIMEOUT_S = 8
 LOADERS_AT_ONCE = 8  # a loader request a country: 245 on one site
+COUNTRIES_KEPT_S = 24 * 3600  # a site's country fields, kept between reads
 YES_NO = ["Yes", "No"]
 NO_YES = ["No", "Yes"]
 MONTH = " (MM/YYYY)"
@@ -1005,7 +1007,7 @@ class _Config:
         values, texts = self.listed.get(path) or ([], [])
         held, _ = self.prefilled(path)
         codes = sorted(values, key=lambda c: c != held)
-        parts = self.calls(payload, [{"countryCode": c} for c in codes])
+        parts = self.country_parts(payload, codes)
         by_id: dict[str, dict[Any, dict[str, Any]]] = {}
         for code, part in zip(codes, parts, strict=True):
             part = get(part, "applyGetReferences.data")
@@ -1016,6 +1018,24 @@ class _Config:
                 by_id.setdefault(raw["id"], {})[code] = raw
         shown = dict(zip(values, texts, strict=False))
         return [_by_country(path, rows, codes, shown) for rows in by_id.values()]
+
+    def country_parts(self, payload: str, codes: list[Any]) -> list[Any]:
+        """Each country's loader answer, kept a day for the site: a read posts one a country,
+        and two reads in a row get `/applySubmit` refused (403) on one site."""
+        key = hashlib.sha1(f"{self.ph.get('locale')} {payload}".encode()).hexdigest()[:12]
+        path = paths.cache_dir() / "phenom" / f"{self.ph.get('refNum')}-{key}.json"
+        kept: dict[str, Any] = {}
+        with suppress(OSError, ValueError):
+            if time.time() - path.stat().st_mtime < COUNTRIES_KEPT_S:
+                kept = json.loads(path.read_text())
+        missing = [c for c in codes if str(c) not in kept]
+        if missing:
+            parts = self.calls(payload, [{"countryCode": c} for c in missing])
+            kept |= {str(c): p for c, p in zip(missing, parts, strict=True) if p is not None}
+            with suppress(OSError):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(kept))
+        return [kept.get(str(c)) for c in codes]
 
     def date_range(
         self, p: dict, u: dict, path: str, nav: Any, when: Condition | None

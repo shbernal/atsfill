@@ -60,6 +60,14 @@ def _move_to_default(data: Path) -> None:
                 (data / name).rename(default / name)
 
 
+def cache_dir() -> Path:
+    """Public data atsfill can fetch again, kept to spare a hiring system the requests:
+    `$XDG_CACHE_HOME/atsfill` on Linux (`~/.cache/atsfill`), `~/.atsfill/cache` elsewhere."""
+    if xdg := os.environ.get("XDG_CACHE_HOME"):
+        return Path(xdg) / "atsfill"
+    return Path.home() / (".cache/atsfill" if LINUX else ".atsfill/cache")
+
+
 def config_file() -> Path:
     if xdg := os.environ.get("XDG_CONFIG_HOME"):
         return Path(xdg) / "atsfill/config.toml"

@@ -4,7 +4,7 @@ The login, the session paths and the attempts' place are superseded by ADR 0015 
 
 ## Decision
 
-Everything atsfill keeps lives under one data directory: `$XDG_STATE_HOME/atsfill` on Linux (`~/.local/state/atsfill` when the variable is unset), `~/.atsfill` elsewhere. `--data-dir` (or `ATSFILL_DATA_DIR`) moves it. The config file (ADR 0006) lives apart, in the config directory. Created `0700`.
+Everything atsfill keeps lives under one data directory: `$XDG_STATE_HOME/atsfill` on Linux (`~/.local/state/atsfill` when the variable is unset), `~/.atsfill` elsewhere. `--data-dir` (or `ATSFILL_DATA_DIR`) moves it. The config file (ADR 0006) lives apart, in the config directory. Created `0700`. Public data atsfill can fetch again, kept to spare a hiring system the requests (Phenom's country fields), lives apart too, in the cache directory: `$XDG_CACHE_HOME/atsfill` (`~/.cache/atsfill`), `~/.atsfill/cache` elsewhere, shared by every data directory.
 
 ```
 identity.json             the device identity every launch reuses (ADR 0004)
