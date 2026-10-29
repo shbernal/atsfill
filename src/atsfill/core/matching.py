@@ -6,6 +6,7 @@ from pathlib import Path, PurePath
 from urllib.parse import urlsplit
 
 from atsfill.core.conditions import Form, describe
+from atsfill.core.countries import ALPHA_3
 from atsfill.core.results import Answer, Check, Field, FieldType
 
 
@@ -25,14 +26,21 @@ def _in_options(field: Field, values: list[str], form: Form | None) -> bool:
     return options is None or all(v in options for v in values)
 
 
+def _place(part: str) -> str:
+    """A place's part, a country's name as its alpha-3 code, which some suggestions show."""
+    part = part.strip()
+    return ALPHA_3.get(part, part).casefold()
+
+
 def _picked_from(answer: str, suggestion: str) -> bool:
     """The suggestion starts with the answer, or holds its comma-separated parts in order:
-    "Paris" and "Paris, France" both pick "Paris, Île-de-France, France"."""
+    "Paris" and "Paris, France" both pick "Paris, Île-de-France, France" and
+    "Paris, Île-de-France, FRA"."""
     answer, suggestion = _norm(answer).casefold(), _norm(suggestion).casefold()
     if suggestion.startswith(answer):
         return True
-    parts = iter(p.strip() for p in suggestion.split(","))
-    return all(any(p == wanted.strip() for p in parts) for wanted in answer.split(","))
+    parts = iter(_place(p) for p in suggestion.split(","))
+    return all(any(p == _place(wanted) for p in parts) for wanted in answer.split(","))
 
 
 def _absolute_url(value: str) -> bool:

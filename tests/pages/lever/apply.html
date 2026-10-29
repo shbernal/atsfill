@@ -291,7 +291,9 @@
   const results = document.querySelector(".dropdown-results");
   place.addEventListener("input", () => {
     results.innerHTML = "";
-    for (const name of [`${place.value}, Greater London, England, GBR`, `${place.value}, ON, CAN`]) {
+    const city = place.value.split(",")[0];  // Lever suggests places, its country as a code
+    const names = city === "Nowhere" ? [] : [`${city}, Greater London, England, GBR`, `${city}, ON, CAN`];
+    for (const name of names) {
       const option = document.createElement("div");
       option.className = "dropdown-location";
       option.textContent = name;
