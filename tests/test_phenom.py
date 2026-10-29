@@ -393,7 +393,7 @@ def test_a_site_refusing_its_loaders_is_blocked(page):
     page.route("**/applySubmit", refused)
     try:
         page.goto(JOB)
-        with pytest.raises(Blocked, match="blocked_by_system: .*403"):
+        with pytest.raises(Blocked, match="rate_limited: .*403"):
             Phenom().browser_read(page)
     finally:
         page.unroute("**/applySubmit")
