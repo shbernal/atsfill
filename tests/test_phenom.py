@@ -25,7 +25,10 @@ def served(url: str, body: bytes | str | None) -> bytes | None:
     if url.endswith("/applySubmit"):
         posted = json.loads(body or "{}")  # a step, else a loader
         key = posted["formData"].get("applyddokey") or posted["ddoKey"]
-        return json.dumps(REFERENCES[key]).encode()
+        answer = REFERENCES[key]
+        if key == "getCountrySpecificFields":  # each country's own
+            answer = answer[posted["formData"]["countryCode"]]
+        return json.dumps(answer).encode()
     if url.startswith(CONFIG):
         name = url.rsplit("/", 1)[-1]
         return (PAGES / name).read_bytes() if (PAGES / name).exists() else None
@@ -81,6 +84,7 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
         "firstName",
         "country",
         "cntryFields.city",
+        "cntryFields.region",
         "state",
         "phoneWidget.countryPhoneCode",
         "phoneWidget.phoneNumber",
@@ -108,6 +112,11 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
     assert resume.accept == [".doc", ".docx", ".pdf", ".txt"]
     assert fields["firstName"].label == "First Name" and fields["firstName"].required
     assert fields["country"].options == ["Canada", "United States"]
+    # each country's fields, a request a country
+    assert fields["cntryFields.city"].shown_when is None and fields["cntryFields.city"].required
+    region = fields["cntryFields.region"]
+    assert region.shown_when == Is("country", ["Canada"]) and region.required
+    assert region.options == ["Alberta", "Ontario"]
     # the list under the country before any; any other country's costs a request
     assert fields["state"].label == "State" and fields["state"].options is None
     assert fields["state"].option_sets == [
@@ -200,6 +209,19 @@ def test_the_next_answer_does_not_drop_the_country_the_page_takes_later(opened, 
     assert str(passed.value).endswith("did not pass: state: This field is required")
 
 
+def test_a_country_other_than_the_jobs_shows_its_own_fields(opened, page, resume):
+    adapter, fields = opened
+    given = answers(resume) | {
+        "country": "Canada", "state": "Ontario", "cntryFields.region": "Alberta",
+        "phoneWidget.countryPhoneCode": "Canada (+1)",
+    }  # fmt: skip
+    assert not matching.problems(fields, given)
+    adapter.fill(page, given)
+    checks = matching.check(fields, given, adapter.read_back(page))
+    assert [c for c in checks if not c.match] == []
+    assert "cntryFields.region" in adapter.shown_fields(page)
+
+
 def test_a_step_the_wizard_turns_down_does_not_take_its_answers(opened, page, resume, monkeypatch):
     refused = {"status": "failure", "statusType": "VALIDATION_ERROR",
                "statusMessage": "Employee is not found for referral"}  # fmt: skip
@@ -236,9 +258,9 @@ def test_a_list_under_two_parents_keys_its_set_on_both():
     ui = {"country": {"ui:widget": "select"}, "region": {"ui:widget": "select"}, "city": city}
     posted = []
 
-    def post(body):
-        posted.append(body["formData"])
-        return {"applyGetReferences": {"data": {"values": [{"key": "1", "label": "Austin"}]}}}
+    def post(bodies):
+        posted.extend(body["formData"] for body in bodies)
+        return [{"applyGetReferences": {"data": {"values": [{"key": "1", "label": "Austin"}]}}}]
 
     reader = _Config({"locale": "en_us"}, {"schema": schema, "uiSchema": ui}, {}, post)
     raw = {r["id"]: r for r in reader.object(schema, ui, "", None, False, None)}["city"]
@@ -271,7 +293,7 @@ def test_a_source_table_keyed_by_source_is_one_option_set_per_source():
     }  # fmt: skip
     ui = {"source": {"htmlType": "choice"}, "applicantSource": {"htmlType": "choice"}}
     config = {"schema": schema, "uiSchema": ui, "workflow": [flow]}
-    reader = _Config({"locale": "en_us"}, config, {}, lambda body: {})
+    reader = _Config({"locale": "en_us"}, config, {}, lambda bodies: [{}] * len(bodies))
     raw = {r["id"]: r for r in reader.object(schema, ui, "", None, False, None)}
     field = phenom._field(raw["applicantSource"])
     assert field.options is None and raw["applicantSource"]["parent"] == "source"
@@ -365,7 +387,7 @@ def test_rules_on_answers_become_conditions():
     }  # fmt: skip
     ui = {"visa": {"ui:widget": "select"}, "box": {"ui:widget": "checkbox"},
           "locale": {"htmlType": "hidden"}}  # fmt: skip
-    reader = _Config({"locale": "en_us"}, {"schema": schema, "uiSchema": ui}, {}, lambda _: None)
+    reader = _Config({"locale": "en_us"}, {"schema": schema, "uiSchema": ui}, {}, lambda bodies: [None] * len(bodies))
     raws = reader.object(schema, ui, "", None, False, None)
     for raw in raws:
         for key in ("when", "required_when"):

@@ -42,6 +42,8 @@ const STEPS = [
     {id: "firstName", kind: "text", label: "First Name", required: true},
     {id: "country", kind: "select", label: "Country", required: true, options: [["CAN", "Canada"], ["USA", "United States"]]},
     {id: "cntryFields.city", kind: "text", label: "City", required: true},
+    {id: "cntryFields.region", kind: "select", label: "Province", required: true,
+     options: [["CAN-AB", "Alberta"], ["CAN-ON", "Ontario"]], shownWhen: ["country", "CAN"]},
     {id: "state", kind: "select", label: "State", required: true, options: []},
     {id: "phoneWidget.countryPhoneCode", kind: "select", label: "Country Phone Code", required: true,
      options: [["CAN_1", "Canada (+1)"], ["FRA_33", "France (+33)"], ["USA_1", "United States of America (+1)"]],
