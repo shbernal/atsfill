@@ -332,8 +332,8 @@ class WorkAtAStartup:
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def save(self, page: Page) -> None:
-        """Save & next posts the step to `/application/next`; a field the page refuses shows
-        its error and posts nothing."""
+        """Save & next posts the step to `/application/next`, then goes to the step it answers;
+        a field the page refuses shows its error and posts nothing."""
         form = page.locator(WIZARD).last
         try:
             with page.expect_response(
@@ -360,6 +360,12 @@ class WorkAtAStartup:
             raise Refused(f"step_refused: {self._step}: {said or response.text()[:200]}")
         if not response.ok:
             raise RuntimeError(f"POST /application/next answered {response.status}")
+        try:
+            to = response.json().get("redirect_to")
+        except ValueError:
+            to = None
+        if to:  # the page goes there next: a navigation started meanwhile would be cut short
+            page.wait_for_url(f"**{urlsplit(to).path}", timeout=SAVE_TIMEOUT_MS)
 
 
 @dataclass(frozen=True)
