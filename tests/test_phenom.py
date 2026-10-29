@@ -10,7 +10,7 @@ import pytest
 from atsfill.adapters import phenom
 from atsfill.adapters.phenom import Phenom, _Config
 from atsfill.core import browser, matching
-from atsfill.core.adapter import NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Unsupported
 from atsfill.core.results import AllOf, AnyOf, FieldType, Is, OptionSet
 
 PAGES = Path(__file__).parent / "pages/phenom"
@@ -384,6 +384,19 @@ def test_a_closed_posting_is_gone(page):
             adapter.browser_read(page)
     finally:
         page.unroute(at_gone)
+
+
+def test_a_site_refusing_its_loaders_is_blocked(page):
+    def refused(route):
+        route.fulfill(status=403, content_type="text/html", body="<H1>403 ERROR</H1>")
+
+    page.route("**/applySubmit", refused)
+    try:
+        page.goto(JOB)
+        with pytest.raises(Blocked, match="blocked_by_system: .*403"):
+            Phenom().browser_read(page)
+    finally:
+        page.unroute("**/applySubmit")
 
 
 def test_a_first_step_other_than_the_form_is_a_known_gap(page, monkeypatch):
