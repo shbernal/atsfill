@@ -6,7 +6,7 @@ import pytest
 
 from atsfill.adapters.lever import Lever, _field
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import Blocked, Unsupported
 from atsfill.core.results import Answer, FieldType
 
 PAGE = Path(__file__).parent / "pages/lever/apply.html"
@@ -26,6 +26,8 @@ def serve(route) -> None:
         route.fulfill(content_type="text/html", body="<h3>Application submitted!</h3>")
     elif "/0000" in url:
         route.fulfill(status=404, content_type="text/html", body="<title>Not found</title>")
+    elif "hcaptcha.com" in url:
+        route.fulfill(content_type="text/html", body="")
     else:
         route.fulfill(path=PAGE)
 
@@ -38,6 +40,7 @@ def page(tmp_path_factory):
     ):
         mp.setattr("atsfill.adapters.lever.FORM_TIMEOUT_MS", 1_000)
         page.context.route("https://jobs.lever.co/**", serve)
+        page.context.route("https://newassets.hcaptcha.com/**", serve)
         yield page
 
 
@@ -152,6 +155,14 @@ def test_a_posting_gone(page):
 def test_submit_returns_the_thanks_page(page):
     adapter, _ = opened(page)
     assert adapter.submit(page) == POSTING + "/thanks"
+
+
+def test_an_hcaptcha_challenge_is_blocked(page, monkeypatch):
+    monkeypatch.setattr("atsfill.adapters.lever.SUBMIT_TIMEOUT_MS", 1_000)
+    adapter, _ = opened(page)
+    page.evaluate("document.body.dataset.challenge = 'shown'")
+    with pytest.raises(Blocked, match="captcha"):
+        adapter.submit(page)
 
 
 def test_posting_urls():

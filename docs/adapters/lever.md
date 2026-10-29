@@ -44,4 +44,5 @@ Every field is a named control, and the name is the field's id: `name`, `urls[Li
 ## Read-back and submit
 
 - Nothing but the resume reaches Lever before submit, so the read-back is the page.
-- Every form carries an hCaptcha (`#h-captcha`), run on submit (`#btn-submit`); the form then posts to `…/apply` and Lever shows `…/thanks`, the evidence. A visible hCaptcha challenge is `blocked: captcha`. Not observed on a send yet.
+- Every form carries an hCaptcha (`#h-captcha`), run on submit (`#btn-submit`); the form then posts to `…/apply` and Lever shows `…/thanks`, the evidence. Not observed on a send yet.
+- hCaptcha renders two `hcaptcha-enclave.html` frames in `#h-captcha`, both titled "Widget containing checkbox for hCaptcha security challenge" and hidden. A challenge makes one of them visible, fixed over the whole page: any visible frame there, with no thanks page, is `blocked: captcha`. Seen on 2 sends (2026-10-28).

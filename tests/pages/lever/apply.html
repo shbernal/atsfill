@@ -265,6 +265,10 @@
  </div>
  <input name="resumeStorageId" type="hidden" value=""/>
  <input id="hcaptchaResponseInput" name="h-captcha-response" type="hidden" value=""/>
+ <div class="h-captcha" id="h-captcha">
+  <iframe src="https://newassets.hcaptcha.com/captcha/v1/0/static/hcaptcha-enclave.html#frame=enclave" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden;" title="Widget containing checkbox for hCaptcha security challenge"></iframe>
+  <iframe src="https://newassets.hcaptcha.com/captcha/v1/0/static/hcaptcha-enclave.html#frame=enclave" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; visibility: hidden;" title="Widget containing checkbox for hCaptcha security challenge"></iframe>
+ </div>
  <div class="section page-centered application-form last-section-apply">
   <button class="postings-btn template-btn-submit" id="btn-submit" type="button">Submit application</button>
  </div>
@@ -301,6 +305,10 @@
     dropdown.style.display = "flex";
   });
   document.getElementById("btn-submit").addEventListener("click", () => {
+    if (document.body.dataset.challenge) {  // hCaptcha asks the visitor: its second frame covers the page
+      document.querySelectorAll("#h-captcha iframe")[1].style.visibility = "visible";
+      return;
+    }
     const form = document.getElementById("application-form");
     form.action = window.location.pathname;
     form.submit();
