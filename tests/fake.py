@@ -81,6 +81,22 @@ class Fake:
         return page.url if self.evidence else None
 
 
+class FakeOpens(Fake):
+    """The same form on a system that sends the application to show it: the first open sends,
+    later ones continue that application; `open_raises` is what opening raises instead."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.opens = 0
+        self.open_raises: Exception | None = None
+
+    def open(self, page: Page) -> str | None:
+        if self.open_raises:
+            raise self.open_raises
+        self.opens += 1
+        return "Apply created the application" if self.opens == 1 else None
+
+
 class FakeAccount(Fake):
     """The same form on a system that needs an account, signed in by tests/pages/login.html."""
 

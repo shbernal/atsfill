@@ -9,7 +9,7 @@ from atsfill.core import attempts, commands, registry, telemetry
 from atsfill.core.adapter import Blocked, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Field, FieldType, Is, Status
-from tests.fake import FIELDS, Fake, FakeProfile
+from tests.fake import FIELDS, Fake, FakeOpens, FakeProfile
 from tests.test_accounts import storage_state
 
 
@@ -291,6 +291,50 @@ def test_a_blocked_send_can_be_retried(fake, config, url, answers, data):
     assert (result.status, result.reason) == (Status.BLOCKED, "captcha_score")
     fake.submit_raises = None
     assert core.send(url, answers, data_dir=data).status is Status.SUBMITTED
+
+
+@pytest.fixture
+def opens(monkeypatch) -> FakeOpens:
+    adapter = FakeOpens()
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+    return adapter
+
+
+def test_a_form_that_sends_to_open_needs_the_adapter_in_the_config_even_to_read(
+    opens, config, url, data
+):
+    result = core.read(url, data_dir=data)
+    assert result.status is Status.REFUSED
+    assert (result.reason or "").startswith("submit_not_enabled: add fake")
+    assert (result.reason or "").endswith("opening its form sends the application")
+    assert opens.opens == 0
+
+
+def test_opening_sends_once_and_its_own_send_goes_through(opens, config, url, answers, data):
+    config('submit-allowed = ["fake"]')
+    mine = data / "users/default"
+    assert core.fill(url, answers, data_dir=data).status is Status.READY
+    assert attempts.last(mine, url) == attempts.OPENED
+    assert core.fill(url, answers, data_dir=data).status is Status.READY  # continues it
+    assert core.send(url, answers, data_dir=data).status is Status.SUBMITTED
+    assert (core.send(url, answers, data_dir=data).reason or "").startswith("already_sent")
+
+
+def test_an_unexpected_error_opening_may_have_sent(opens, config, url, answers, data):
+    config('submit-allowed = ["fake"]')
+    opens.open_raises = RuntimeError("no form")
+    assert core.fill(url, answers, data_dir=data).status is Status.UNSUPPORTED
+    opens.open_raises = None
+    assert (core.send(url, answers, data_dir=data).reason or "").startswith(
+        "already_sent: last attempt ended unknown"
+    )
+
+
+def test_a_stop_before_opening_records_nothing(opens, config, url, answers, data):
+    config('submit-allowed = ["fake"]')
+    opens.open_raises = Unsupported("posting_gone: closed")
+    assert core.fill(url, answers, data_dir=data).reason == "posting_gone: closed"
+    assert attempts.last(data / "users/default", url) is None
 
 
 def test_status_lists_each_adapter_per_user(fake, config, data):

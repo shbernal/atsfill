@@ -32,6 +32,7 @@ from atsfill.core.adapter import (
     ProfileIncomplete,
     ReadsByRequest,
     Refused,
+    SendsToOpen,
     SignedOut,
     SignsIn,
     SignsInByOtp,
@@ -206,18 +207,53 @@ def _opened(
 _again: ContextVar[Callable[[], Result | None] | None] = ContextVar("again", default=None)
 
 
-def _read_signed_in(page: Page, adapter: Adapter) -> list[Field]:
-    """`browser_read`, once more after signing in again where the page asked to sign in although
-    the session held: the result that ends the command instead is raised as `Blocked`."""
-    try:
+def _read_signed_in(page: Page, adapter: Adapter, mine: Path, user: str, url: str) -> list[Field]:
+    """`browser_read`, the form opened first where opening it sends, once more after signing in
+    again where the page asked to sign in although the session held: the result that ends the
+    command instead is raised as `Blocked`."""
+
+    def read() -> list[Field]:
+        if isinstance(adapter, SendsToOpen):
+            _open(page, adapter, mine, user, url)
         return adapter.browser_read(page)
+
+    try:
+        return read()
     except SignedOut:
         again = _again.get()
         if again is None:
             raise
         if ended := again():
             raise Blocked(ended.reason) from None
-        return adapter.browser_read(page)
+        return read()
+
+
+def _open(page: Page, adapter: SendsToOpen, mine: Path, user: str, url: str) -> None:
+    """Opens a form whose system sends the application to show it, under a send's rules: the
+    adapter in `submit-allowed`, and the send recorded `opened`, which the send of that same
+    application does not count against (ADR 0006). An error past the adapter's own stops may
+    follow the send: it is recorded `unknown`."""
+    if not paths.submit_enabled(adapter.name, user):
+        raise Refused(f"{_not_enabled(adapter, user)}; opening its form sends the application")
+    posting = adapter.posting(page.url)
+    try:
+        evidence = adapter.open(page)
+    except SignedOut, Unsupported, Blocked:
+        raise
+    except Exception as e:
+        reason = f"error_after_click: {type(e).__name__}: {e}"
+        attempts.record(mine, posting, Status.UNKNOWN, reason=reason)
+        raise
+    if evidence:
+        attempts.record(mine, posting, attempts.OPENED, evidence=evidence, url=url)
+
+
+def _not_enabled(adapter: Adapter, user: str) -> str:
+    where = "" if user == paths.DEFAULT_USER else f" under [users.{user}]"
+    return (
+        f"submit_not_enabled: add {adapter.name} to `submit-allowed`{where}"
+        f" in {paths.config_file()}"
+    )
 
 
 def _sign_in_again(
@@ -364,11 +400,13 @@ def _secrets(data: Path, user: str, answers: dict[str, Answer], result: Result) 
     return snapshot.secrets(answers, result.fields, emails)
 
 
-def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], user: str) -> Result:
+def _fill(
+    page: Page, adapter: Adapter, mine: Path, url: str, answers: dict[str, Answer], user: str
+) -> Result:
     """Fills and reads back; `ready` when every answer reads back as given."""
     result = _result(adapter, url, user)
     with _stops(result):
-        _listed(result, _read_signed_in(page, adapter))
+        _listed(result, _read_signed_in(page, adapter, mine, user, url))
         if _unfillable(result, answers):
             return result
         if problems := matching.problems(result.fields, answers):
@@ -385,6 +423,7 @@ def _fill(page: Page, adapter: Adapter, url: str, answers: dict[str, Answer], us
 
 
 def _browser_read(data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen) -> Result:
+    mine = paths.user_dir(data, user)
     with _opened(data, user, url, sessions, seen) as opened:
         if isinstance(opened, Result):
             return opened
@@ -393,7 +432,7 @@ def _browser_read(data: Path, user: str, url: str, sessions: Sessions | None, se
         def run() -> Result:
             result = _result(adapter, url, user)
             with _stops(result):
-                _listed(result, _read_signed_in(page, adapter))
+                _listed(result, _read_signed_in(page, adapter, mine, user, url))
                 _unfillable(result)
             _profile_incomplete(result, adapter, user, url)
             return result
@@ -433,17 +472,12 @@ def _on_page(
 ) -> Result:
     posting = adapter.posting(page.url)  # past any redirect a link goes through
     if send and not paths.submit_enabled(adapter.name, user):
-        where = "" if user == paths.DEFAULT_USER else f" under [users.{user}]"
-        reason = (
-            f"submit_not_enabled: add {adapter.name} to `submit-allowed`{where}"
-            f" in {paths.config_file()}"
-        )
-        return Result(Status.REFUSED, url, adapter.name, reason=reason)
+        return Result(Status.REFUSED, url, adapter.name, reason=_not_enabled(adapter, user))
     if send and not resend and attempts.blocks_send(mine, posting):
         last = attempts.last(mine, posting)
         reason = f"already_sent: last attempt ended {last}; pass --resend"
         return Result(Status.REFUSED, url, adapter.name, reason=reason)
-    result = _fill(page, adapter, url, answers, user)
+    result = _fill(page, adapter, mine, url, answers, user)
     _profile_incomplete(result, adapter, user, url)
     if result.status is not Status.READY:
         return result

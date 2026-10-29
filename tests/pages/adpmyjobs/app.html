@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acme Careers</title>
+<!-- ADP MyJobs as observed (docs/adapters/adpmyjobs.md), one rendering of each kind, not one
+     employer. The page routes itself: `/<site>/auth` the sign-in, `/<site>/cx/job-details` the
+     posting and its Apply, `/<site>/cx/app` the workflow, one section at a time, drawn from the
+     questionnaires tests/test_adpmyjobs.py serves on ADP's API. Unlike ADP's, its widgets live
+     in the light DOM. -->
+<style>
+  .hidden { display: none; }
+  sdf-select-item { display: block; }
+  sdf-checkbox, sdf-radio-button, sdf-button, [part=frame] {
+    display: inline-block; min-width: 1em; min-height: 1em; border: 1px solid;
+  }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const SITE = location.pathname.split("/")[1];
+const API = "https://my.adp.com/myadp_prefix/mycareer/api";
+const FORMS = `${API}/rm/staffing/v3/work-fulfillment/recruiting-questionnaires`;
+const params = new URLSearchParams(location.search);
+const app = document.getElementById("app");
+const OTP = "123456";
+const KNOWN = "ada@example.com";
+
+async function api(url, init = {}) {
+  const headers = {myjobstoken: sessionStorage.getItem("myJobsToken"), ...(init.headers || {})};
+  const response = await fetch(url, {...init, headers, credentials: "include"});
+  return response.json();
+}
+
+function button(text, id = "") {
+  return `<sdf-button role="button" ${id ? `id="${id}"` : ""} tabindex="0">${text}</sdf-button>`;
+}
+
+// The sign-in: the email, a profile for an unknown one, the passcode, the employer's policy.
+function auth() {
+  app.innerHTML = `<label for="email">Email Address</label><input id="email">${button("Continue")}`;
+  app.querySelector("sdf-button").onclick = () => {
+    const email = app.querySelector("#email").value;
+    if (email === KNOWN) return passcode();
+    app.innerHTML = `<h1>Create your candidate profile</h1>
+      <input placeholder="Enter phone number" id="phone">
+      <label for="first">First Name</label><input id="first">
+      <label for="last">Last Name</label><input id="last">
+      <input type="checkbox" id="policy"><label for="policy">Employer privacy policy</label>
+      ${button("Continue")}`;
+    app.querySelector("sdf-button").onclick = () => {
+      if (!app.querySelector("#policy").checked || !app.querySelector("#phone").value) return;
+      sessionStorage.setItem("profile", app.querySelector("#first").value);
+      app.innerHTML = `<h1>Select your verification method</h1>
+        <label><input type="radio" name="m">Text Message</label>
+        <label><input type="radio" name="m" id="mail">Email Message</label>${button("Send passcode")}`;
+      app.querySelector("sdf-button").onclick = () => {
+        if (app.querySelector("#mail").checked) passcode();
+      };
+    };
+  };
+}
+
+function passcode() {
+  app.innerHTML = `<label for="code">Passcode</label><input id="code">`;
+  const box = app.querySelector("#code");
+  box.oninput = () => {
+    if (box.value !== OTP) return;
+    app.innerHTML = `<h2>Employer Privacy Policy</h2>${button("Disagree")}${button("Agree")}`;
+    app.querySelectorAll("sdf-button")[1].onclick = () => {
+      document.cookie = "SMSESSION=ok; path=/";
+      location.href = `/${SITE}/cx`;
+    };
+  };
+}
+
+async function posting() {
+  sessionStorage.setItem("myJobsToken", "token");
+  if (params.get("reqId") === "404") {
+    app.innerHTML = "<p>Problem with the service. Please try again after sometime</p>";
+    return;
+  }
+  const applied = (await api("https://myjobs.adp.com/cx/staffing/v2/job-applications"))
+    .jobApplications.some(a => a.reqID === params.get("reqId"));
+  app.innerHTML = `<h1>Engineer</h1>${button(applied ? "Applied" : "Apply")}`;
+  if (applied) return;
+  app.querySelector("sdf-button").onclick = async () => {
+    const made = await api(`${API}/staffing/v2/job-application/assignment-creation`,
+      {method: "POST", body: JSON.stringify({reqId: params.get("reqId")})});
+    const workflow = await api(`${FORMS}/WORKFLOW?assignmentID=${made.assignmentId}&rmapp=forms`);
+    const first = workflow.questionSections[0].sectionLabels.find(l => l.code === "component");
+    route(`?reqId=${params.get("reqId")}&assignmentId=${made.assignmentId}` +
+      `&workflowComponent=${first.value}`);
+  };
+}
+
+function route(query) {
+  history.pushState({}, "", `/${SITE}/cx/app${query}`);
+  workflow();
+}
+
+// The workflow: the open section, page by page, each saved by Next.
+let section = null, pages = [], number = 0;
+
+async function workflow() {
+  sessionStorage.setItem("myJobsToken", "token");
+  const query = new URLSearchParams(location.search);
+  const assignment = query.get("assignmentId");
+  const listed = await api(`${FORMS}/WORKFLOW?assignmentID=${assignment}&rmapp=forms`);
+  section = listed.questionSections.find(s => s.completionStatusCode !== "completed");
+  if (!section) {
+    app.innerHTML = "<h1>Application Submitted!</h1>";
+    return;
+  }
+  const component = section.sectionLabels.find(l => l.code === "component").value;
+  if (query.get("workflowComponent") !== component) {
+    query.set("workflowComponent", component);
+    return route(`?${query}`);
+  }
+  if (component.startsWith("prescreen")) {
+    const asked = await api(`${API}/staffing/v2/job-application/workflow/${assignment}/prescreen.questions`);
+    return prescreen(asked.prescreeningQuestions);
+  }
+  const form = await api(`${FORMS}/${section.sectionID}?assignmentID=${assignment}&rmapp=forms`);
+  pages = form.questionSections;
+  number = 0;
+  await draw();
+}
+
+async function draw() {
+  const query = new URLSearchParams(location.search);
+  let shown = pages[number];
+  if (shown.sectionLabels?.some(l => l.code === "sectionReview")) {
+    app.innerHTML = `<h2>Review</h2>${button("Previous")}${button("Next")}`;
+    return controls();
+  }
+  if (!shown.questions) {
+    const one = await api(`${FORMS}/${section.sectionID}?assignmentID=${query.get("assignmentId")}` +
+      `&sectionID=${shown.sectionID}&rmapp=forms`);
+    shown = pages[number] = one.questionSections[0];
+  }
+  app.innerHTML = `<h2>${section.sectionTitle}</h2>` +
+    shown.questions.map(group).join("") + (number ? button("Previous") : "") + button("Next");
+  app.querySelectorAll("adp-form-group").forEach(wire);
+  controls();
+}
+
+function group(q) {
+  const kind = {TEXT: "sdf-input", EMAIL: "sdf-input", PHONENUMBER: "sdf-phone-number",
+    SELECTION: "sdf-single-select", STATES: "sdf-single-select", COUNTRIES: "sdf-single-select",
+    LOOKUP: "sdf-single-select", RADIO: "radio-group", BOOLEAN: "sdf-yes-no",
+    CHECKBOX: "checkbox", UPLOAD: "sdf-upload", ESIGNATURE: "e-signature",
+    INSTRUCTIONS: "instructions", HEADER: "header", DATETIME: "sdf-date-time"}[q.answerDataTypeCode];
+  const label = q.questionLabels?.find(l => l.code.endsWith("_USA_label"))?.value ?? q.questionText ?? "";
+  const value = q.answerDefaultValue ?? "";
+  const inner = {
+    "sdf-input": `<sdf-input><input value="${value}"></sdf-input>`,
+    "sdf-phone-number": `<sdf-phone-number-input><input value="${value}"></sdf-phone-number-input>`,
+    "sdf-single-select": `<sdf-select-simple filterable="">
+      <div part="frame" role="button">${value}</div><input id="select-filter-input" class="hidden">
+      <div class="list hidden"></div><span id="selected-label">${value}</span></sdf-select-simple>`,
+    "radio-group": `<sdf-radio-group></sdf-radio-group>`,
+    "sdf-yes-no": `<sdf-radio-group>${radio("true", "Yes")}${radio("false", "No")}</sdf-radio-group>`,
+    "checkbox": `<sdf-checkbox role="checkbox" aria-checked="false"></sdf-checkbox>`,
+    "sdf-upload": `<dynamic-form-sdf-upload><div class="file-uploader"></div>
+      <sdf-button icon="action-upload" role="button" aria-label="upload"></sdf-button></dynamic-form-sdf-upload>`,
+    "e-signature": `<dynamic-form-e-signature>${radio("ACCEPT", "Accept")}${radio("DECLINE", "Decline")}
+      <sdf-input><input></sdf-input></dynamic-form-e-signature>`,
+  }[kind] ?? "";
+  const shown = q.disabledIndicator ? `<p>${value}</p>` : inner;  // a value the page keeps
+  return `<adp-form-group data-name="${q.questionID}" class="van-type-${kind}" data-link="${
+    q.links?.[0]?.href ?? ""}" data-required="${q.requiredIndicator}">
+    <label>${label}</label>${shown}<rm-sr-field-error></rm-sr-field-error></adp-form-group>`;
+}
+
+function radio(value, text) {
+  return `<sdf-radio-button role="radio" value="${value}" aria-checked="false">${text}</sdf-radio-button>`;
+}
+
+async function wire(g) {
+  g.querySelectorAll("sdf-radio-button").forEach(choose);
+  const box = g.querySelector("sdf-checkbox");
+  if (box) box.onclick = () => box.setAttribute("aria-checked", String(box.getAttribute("aria-checked") !== "true"));
+  const select = g.querySelector("sdf-select-simple");
+  if (select) {
+    const items = (await api(`${API}/rm${g.dataset.link}&$skip=0&$top=1000`)).listItems;
+    if (g.classList.contains("van-type-radio-group")) {
+      g.querySelector("sdf-radio-group").innerHTML = items.map(i => radio(i.codeValue, i.longName)).join("");
+      g.querySelectorAll("sdf-radio-button").forEach(choose);
+    }
+    const list = select.querySelector(".list"), filter = select.querySelector("input");
+    const show = text => list.innerHTML = items.filter(i => i.longName.includes(text)).slice(0, 3)
+      .map(i => `<sdf-select-item role="option" aria-label="${i.longName}" value="${i.codeValue}">${i.longName}</sdf-select-item>`).join("");
+    select.querySelector("[part=frame]").onclick = () => {
+      list.classList.remove("hidden"); filter.classList.remove("hidden"); show("");
+    };
+    filter.oninput = () => show(filter.value);
+    list.onclick = e => {
+      select.querySelector("#selected-label").textContent = e.target.getAttribute("aria-label");
+      list.classList.add("hidden"); filter.classList.add("hidden");
+    };
+  } else if (g.classList.contains("van-type-radio-group")) {
+    const items = (await api(`${API}/rm${g.dataset.link}&$skip=0&$top=1000`)).listItems;
+    g.querySelector("sdf-radio-group").innerHTML = items.map(i => radio(i.codeValue, i.longName)).join("");
+    g.querySelectorAll("sdf-radio-button").forEach(choose);
+  }
+  const upload = g.querySelector("sdf-button[icon=action-upload]");
+  if (upload) upload.onclick = () => {
+    const pane = document.createElement("div");
+    pane.innerHTML = `<input type="file">${button("Save", "accept-button")}`;
+    document.body.append(pane);
+    pane.querySelector("#accept-button").onclick = () => {
+      g.querySelector(".file-uploader").textContent = pane.querySelector("input").files[0].name;
+      pane.remove();
+    };
+  };
+}
+
+function choose(r) {
+  r.onclick = () => {
+    r.parentElement.querySelectorAll("sdf-radio-button").forEach(o => o.setAttribute("aria-checked", "false"));
+    r.setAttribute("aria-checked", "true");
+    r.parentElement.setAttribute("value", r.getAttribute("value"));
+    r.parentElement.dispatchEvent(new Event("change"));
+  };
+}
+
+function answerOf(g) {
+  const checked = g.querySelector("sdf-radio-button[aria-checked=true]");
+  if (g.querySelector("dynamic-form-e-signature")) return checked ? g.querySelector("input").value : "";
+  if (checked) return checked.getAttribute("value");
+  if (g.querySelector("sdf-checkbox")) return g.querySelector("sdf-checkbox").getAttribute("aria-checked") === "true";
+  if (g.querySelector("sdf-select-simple")) return g.querySelector("#selected-label").textContent;
+  if (g.querySelector(".file-uploader")) return g.querySelector(".file-uploader").textContent;
+  return g.querySelector("input")?.value ?? "";
+}
+
+function controls() {
+  const [back, next] = [...app.querySelectorAll("sdf-button")].filter(b => !b.closest("adp-form-group"))
+    .reduce((out, b) => (out[b.textContent === "Next" ? 1 : 0] = b, out), []);
+  if (back) back.onclick = () => { number -= 1; draw(); };
+  next.onclick = async () => {
+    const missing = [...app.querySelectorAll("adp-form-group[data-required=true]")]
+      .filter(g => answerOf(g) === "" || answerOf(g) === false);
+    missing.forEach(g => g.querySelector("rm-sr-field-error").textContent =
+      `${g.querySelector("label").textContent} is required`);
+    if (missing.length) return;
+    if (number < pages.length - 1) {
+      number += 1;
+      return draw();
+    }
+    const query = new URLSearchParams(location.search);
+    await api(`${FORMS}/${query.get("assignmentId")}/answers?formType=${section.sectionID}&submit=true`,
+      {method: "POST", body: "[]"});
+    workflow();
+  };
+}
+
+// Preliminary questions: one form, each question shown once an answer leads to it.
+function prescreen(questions) {
+  app.innerHTML = `<form id="prescreeningForm"></form>${button("Next")}`;
+  const form = app.querySelector("form");
+  const show = q => {
+    if (!q || form.querySelector(`[data-q="${q.questionId}"]`)) return;
+    const row = document.createElement("div");
+    row.className = "section-row";
+    row.dataset.q = q.questionId;
+    const answers = q.possibleAnswers;
+    row.innerHTML = q.questionType === "Free form"
+      ? `<sdf-textarea aria-labelledby="${q.questionId}-error"><textarea></textarea></sdf-textarea>`
+      : `<sdf-radio-group id="${q.questionId}">${answers.map(a => radio(a.answerId, a.answerLabel)).join("")}</sdf-radio-group>`;
+    form.append(row);
+    const after = answer => {
+      const target = answer?.branchingQuestionId || (answer?.endOfQuestionIndicator ? null
+        : questions[questions.indexOf(q) + 1]?.questionId);
+      show(questions.find(x => x.questionId === target));
+    };
+    row.querySelectorAll("sdf-radio-button").forEach(r => { choose(r); r.addEventListener("click",
+      () => after(answers.find(a => a.answerId === r.getAttribute("value")))); });
+    row.querySelector("textarea")?.addEventListener("input", () => after(null));
+  };
+  show(questions[0]);
+  app.querySelector("sdf-button").onclick = async () => {
+    const query = new URLSearchParams(location.search);
+    await api(`${FORMS}/${query.get("assignmentId")}/answers?formType=${section.sectionID}&submit=true`,
+      {method: "POST", body: "[]"});
+    workflow();
+  };
+}
+
+if (location.pathname.endsWith("/auth")) auth();
+else if (location.pathname.endsWith("/cx/job-details")) posting();
+else if (location.pathname.endsWith("/cx/app")) workflow();
+else app.innerHTML = `<h1>${SITE} careers</h1>`;
+</script>
+</body>
+</html>
