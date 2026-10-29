@@ -5,6 +5,7 @@ The form is server-rendered HTML: every field is a named control, and its name i
 id. Nothing but the resume reaches Lever before submit, so the read-back is the page.
 """
 
+import json
 import re
 from contextlib import suppress
 from datetime import date
@@ -159,7 +160,9 @@ class Lever:
         # the resume is parsed into the form, so it goes first and is waited for
         for name, answer in sorted(answers.items(), key=lambda a: a[0] != "resume"):
             values = [answer] if isinstance(answer, str) else answer
-            controls = page.locator(f"{FORM} [name='{name}']:not([type=hidden])")
+            # a name can hold an employer's free text, quotes included
+            quoted = json.dumps(name, ensure_ascii=False)
+            controls = page.locator(f"{FORM} [name={quoted}]:not([type=hidden])")
             match self._kinds[name]:
                 case "file":
                     _attach(controls.first, values[0], resume=name == "resume")

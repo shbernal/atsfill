@@ -10,7 +10,7 @@ Observed on live postings, last on 2026-10-20. The fixture page is [tests/pages/
 
 ## Reading the form
 
-Every field is a named control, and the name is the field's id: `name`, `urls[LinkedIn]`, `cards[<card>][field<n>]`, `eeo[gender]`, `surveysResponses[<survey>][responses][field<n>]`, `consent[store]`. A question sits in a `.application-question`; its label is `.application-label .text` or `.application-label`. Required ones carry `<span class="required">✱</span>` or a `required` attribute (a consent box has only the attribute). Each rendering and on how many of 40 postings (2026-10-20):
+Every field is a named control, and the name is the field's id: `name`, `urls[LinkedIn]`, `cards[<card>][field<n>]`, `eeo[gender]`, `surveysResponses[<survey>][responses][field<n>]`, `consent[store]`. A link's name is the employer's free text, quotes included: `urls[Please write in English, we won't read others]`. A question sits in a `.application-question`; its label is `.application-label .text` or `.application-label`. Required ones carry `<span class="required">✱</span>` or a `required` attribute (a consent box has only the attribute). Each rendering and on how many of 40 postings (2026-10-20):
 
 | Rendering | Field type | Postings |
 |---|---|---|

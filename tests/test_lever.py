@@ -13,6 +13,7 @@ PAGE = Path(__file__).parent / "pages/lever/apply.html"
 POSTING = "https://jobs.lever.co/acme/0a1b2c3d-0000-4000-8000-123456789abc"
 CARD = "cards[11111111-1111-1111-1111-111111111111]"
 SURVEY = "surveysResponses[22222222-2222-2222-2222-222222222222][responses][field0]"
+OTHER = "urls[We can't read a resume that isn't in English]"  # an employer's free text
 
 
 def serve(route) -> None:
@@ -72,6 +73,7 @@ def test_browser_read_opens_the_application(page):
         "pronouns",
         "opportunityLocationId",
         "urls[LinkedIn]",
+        OTHER,
         *(f"{CARD}[field{n}]" for n in range(6)),
         SURVEY,
         "eeo[gender]",
@@ -118,6 +120,7 @@ def test_every_answer_reads_back(page, resume):
         "pronouns": ["They/them"],
         "opportunityLocationId": "Shelbyville",
         "urls[LinkedIn]": "https://example.com",
+        OTHER: "https://example.org",
         f"{CARD}[field0]": "50000",
         f"{CARD}[field1]": "Placeholder answer.",
         f"{CARD}[field2]": "No",
