@@ -36,7 +36,7 @@ Each question is an `adp-form-group[data-name=<questionID>]` whose class names i
 |---|---|---|---|
 | `TEXT`, `EMAIL` | `text` | `sdf-input`'s input; disabled, the profile's value as text (email, name), not filled and read back as listed | every employer |
 | `PHONENUMBER` | `phone` | `sdf-phone-number-input`: a country select and an input showing `+1 202 555 0143`; E.164 typed picks the country | every employer |
-| `SELECTION`, `COUNTRIES`, `STATES`, `LOOKUP` | `choice` | `sdf-select-simple`: its frame opens a floating pane of `sdf-select-item`s, a long list its first items and a filter box (`#select-filter-input`); the pick shows in `#selected-label` | every employer |
+| `SELECTION`, `COUNTRIES`, `STATES`, `LOOKUP`, `MONTHS`, `DAYS_OF_MONTH` | `choice` | `sdf-select-simple`: its frame opens a floating pane of `sdf-select-item`s, a long list its first items and a filter box (`#select-filter-input`); the pick shows in `#selected-label` | every employer |
 | `RADIO` | `choice` | `sdf-radio-button[value=<code>]`, the label in its shadow root | EEO questions |
 | `BOOLEAN` | `choice` (Yes, No) | `sdf-radio-button` `true` and `false` | SMS opt-in, AI opt-out |
 | `CHECKBOX` | `choice` (Yes, No) | `sdf-checkbox`, `aria-checked` | the statements' agree box |

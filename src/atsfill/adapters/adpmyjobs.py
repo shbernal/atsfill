@@ -244,14 +244,20 @@ class ADPMyJobs:
         page.wait_for_url(
             lambda u: "workflowComponent=" in u, timeout=SECTION_TIMEOUT_MS, wait_until="commit"
         )
-        for attempt in range(LOAD_TRIES):  # loaded directly, it can spin: a reload shows it
+        workflow = page.url
+        for attempt in range(LOAD_TRIES):  # it can spin: loaded again from the posting, it shows
             try:
                 page.get_by_role("button", name="Next").wait_for(timeout=SECTION_TIMEOUT_MS)
                 return
             except Timeout:
                 if attempt == LOAD_TRIES - 1:
                     raise
-                page.reload()
+                site = urlsplit(workflow).path.split("/")[1]
+                req = parse_qs(urlsplit(workflow).query)["reqId"][0]
+                page.goto(f"https://{HOST}/{site}/cx/job-details?reqId={req}")
+                with suppress(Timeout):
+                    page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
+                page.goto(workflow)
 
     def _workflow(self, page: Page) -> list[Section]:
         assignment = self._assignment(page)
@@ -321,7 +327,15 @@ class ADPMyJobs:
                 type_ = FieldType.FILE
             case "ESIGNATURE":
                 type_, label = FieldType.TEXT, "Electronic signature: your full legal name"
-            case "SELECTION" | "COUNTRIES" | "STATES" | "RADIO" | "LOOKUP":
+            case (
+                "SELECTION"
+                | "COUNTRIES"
+                | "STATES"
+                | "RADIO"
+                | "LOOKUP"
+                | "MONTHS"
+                | "DAYS_OF_MONTH"
+            ):
                 type_ = FieldType.CHOICE
                 self._codes[field_id] = self._options(page, raw, questions)
                 options = list(self._codes[field_id].values())
@@ -333,7 +347,10 @@ class ADPMyJobs:
         prefilled = self._codes.get(field_id, {}).get(default, default) if default else None
         if raw.get("disabledIndicator"):
             self._fixed.add(field_id)
-        return Field(field_id, label, type_, required, options, prefilled=prefilled)
+        return Field(
+            field_id, label, type_, required, options, prefilled=prefilled,
+            max_length=raw.get("maxLength"), min_length=raw.get("minLength"),
+        )  # fmt: skip
 
     def _options(
         self, page: Page, raw: dict[str, Any], questions: list[dict[str, Any]]
@@ -712,9 +729,9 @@ def _upload(page: Page, box: Locator, f: Field, answer: str) -> None:
 
 
 def _value(box: Locator, f: Field, codes: dict[str, str]) -> Answer | None:
-    if f.type is FieldType.FILE:  # the question's text, under its label: the file's name
-        lines = [line.strip() for line in box.inner_text().splitlines()]
-        return next((t for t in reversed(lines) if t and t.rstrip("*").strip() != f.label), None)
+    if f.type is FieldType.FILE:  # the upload's text, its buttons icons alone: the file's name
+        lines = box.locator("dynamic-form-sdf-upload").inner_text().splitlines()
+        return next((t.strip() for t in lines if t.strip()), None)
     if box.locator("dynamic-form-e-signature").count():
         accepted = box.locator('sdf-radio-button[value="ACCEPT"][aria-checked="true"]').count()
         return box.locator("sdf-input input").input_value() if accepted else None
