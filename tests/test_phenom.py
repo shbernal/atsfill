@@ -10,7 +10,7 @@ import pytest
 from atsfill.adapters import phenom
 from atsfill.adapters.phenom import Phenom, _Config
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import AllOf, AnyOf, FieldType, Is, OptionSet
 
 PAGES = Path(__file__).parent / "pages/phenom"
@@ -23,8 +23,9 @@ REFERENCES = json.loads((PAGES / "references.json").read_text())
 def served(url: str, body: bytes | str | None) -> bytes | None:
     """What the fixture serves at `url`: a page, the configuration, a loader's answer."""
     if url.endswith("/applySubmit"):
-        posted = json.loads(body or "{}")["formData"]
-        return json.dumps(REFERENCES[posted["applyddokey"]]).encode()
+        posted = json.loads(body or "{}")  # a step, else a loader
+        key = posted["formData"].get("applyddokey") or posted["ddoKey"]
+        return json.dumps(REFERENCES[key]).encode()
     if url.startswith(CONFIG):
         name = url.rsplit("/", 1)[-1]
         return (PAGES / name).read_bytes() if (PAGES / name).exists() else None
@@ -188,6 +189,23 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
     assert [c for c in checks if not c.match] == []
     shown = adapter.shown_fields(page)
     assert "jsqData.Q1.a_dot_a" in shown and not set(shown) - {f.id for f in fields}
+
+
+def test_the_next_answer_does_not_drop_the_country_the_page_takes_later(opened, page, resume):
+    adapter, _ = opened
+    given = answers(resume)
+    del given["state"]  # its list would set the country again
+    with pytest.raises(RuntimeError, match="step 1 did not pass") as passed:
+        adapter.fill(page, given)
+    assert str(passed.value).endswith("did not pass: state: This field is required")
+
+
+def test_a_step_the_wizard_turns_down_does_not_take_its_answers(opened, page, resume, monkeypatch):
+    refused = {"status": "failure", "statusType": "VALIDATION_ERROR",
+               "statusMessage": "Employee is not found for referral"}  # fmt: skip
+    monkeypatch.setitem(REFERENCES, "applySubmit", {"applySubmit": {"response": refused}})
+    with pytest.raises(NotTaken, match="^step 1: Employee is not found for referral$"):
+        opened[0].fill(page, answers(resume))
 
 
 def test_a_dependent_list_takes_the_options_its_parent_leaves(opened, resume):

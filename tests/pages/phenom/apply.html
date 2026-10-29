@@ -77,6 +77,10 @@ const STEPS = [
   ]},
 ];
 const values = {};
+let countryChange, shownCountry, answersSince = 0;
+document.getElementById("root").addEventListener("input", e => {
+  if (e.target.id !== "country" && ++answersSince === 2) clearTimeout(countryChange);
+}, true);
 
 function stepIndex() {
   const step = new URLSearchParams(location.search).get("step");
@@ -206,11 +210,23 @@ function field(f) {
     }
     if (f.autocomplete) select.setAttribute("autocomplete", f.autocomplete);
     if (f.required) select.required = true;
-    select.value = values[f.id] || "";
+    select.value = (f.id === "country" ? shownCountry : values[f.id]) || "";
     select.addEventListener("change", () => {
+      if (f.id === "country") {  // taken a moment later with its fields, unless two answers
+        shownCountry = select.value;  // come first: then it is still shown, yet the step lacks it
+        clearTimeout(countryChange);
+        answersSince = 0;
+        countryChange = setTimeout(() => {
+          values.country = select.value;
+          values.state = "";
+          fetch("/applySubmit", {method: "POST", body: JSON.stringify({formData: {
+            applyddokey: "getCountrySpecificFields", countryCode: select.value}})}).then(render);
+        }, 600);
+        return;
+      }
       values[f.id] = select.value;
-      if (f.id === "country" || f.id === "sourceType") {  // a list that follows, a moment later
-        values[f.id === "country" ? "state" : "applicantSource"] = "";
+      if (f.id === "sourceType") {  // a list that follows, a moment later
+        values.applicantSource = "";
         setTimeout(render, 300);
       }
       if (step().fields.some(other => other.shownWhen?.[0] === f.id)) render();
@@ -284,9 +300,14 @@ function render() {
       }
       return;
     }
-    const next = STEPS[stepIndex() + 1];
-    history.pushState({}, "", `${location.pathname}?jobSeqNo=ACMEUS1001EXTERNALENUS&step=${stepIndex() + 2}&stepname=${next.name}`);
-    setTimeout(render, 200);
+    fetch("/applySubmit", {method: "POST", body: JSON.stringify({ddoKey: "applySubmit",
+      formData: {...values, stepNum: step.name, isLastStep: false}})})
+      .then(r => r.json()).then(answer => {
+        if (answer.applySubmit.response.status === "failure") return;  // stays, showing nothing
+        const next = STEPS[stepIndex() + 1];
+        history.pushState({}, "", `${location.pathname}?jobSeqNo=ACMEUS1001EXTERNALENUS&step=${stepIndex() + 2}&stepname=${next.name}`);
+        setTimeout(render, 200);
+      });
   });
   document.getElementById("root").replaceChildren(form);
 }

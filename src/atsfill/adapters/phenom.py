@@ -14,8 +14,8 @@ import re
 import time
 import urllib.request
 import uuid
-from collections.abc import Callable, Iterable, Iterator, Sequence
-from contextlib import suppress
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
+from contextlib import contextmanager, suppress
 from datetime import date
 from html import unescape
 from pathlib import PurePath
@@ -57,7 +57,8 @@ UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 SETTLE_S = 1.0
 QUIET_S = 2.0  # no request in flight this long: a parsed resume is back
-UPLOAD_POLL_S = 0.25
+LOADS_QUIET_S = 1.0  # longer than the page waits (0.3 s) to send a country's request
+POLL_S = 0.25
 LINK_TIMEOUT_S = 15
 FILL_ROUNDS = 6  # an answer shows a follow-up, which can show another
 PICK_TRIES = 3
@@ -339,7 +340,13 @@ class Phenom:
             for _ in range(FILL_ROUNDS):  # an answer can show a field, or reset one
                 step = self._step(page, answers)
                 for raw in [raw for raw in step if not self._holds(raw, answers, kept)]:
-                    _fill(page, raw, answers[raw["id"]])
+                    if not self._raws[raw["id"]].get("loads"):
+                        _fill(page, raw, answers[raw["id"]])
+                        continue
+                    # the page sends its request a moment later; two answers before drop it
+                    with _requests(page) as pending:
+                        _fill(page, raw, answers[raw["id"]])
+                        _quiet(pending, LOADS_QUIET_S, STEP_TIMEOUT_MS / 1000)
                 time.sleep(2 * SETTLE_S)  # a reset comes a moment after the answer
                 again = self._step(page, answers)
                 kept = _read_step(page, again)
@@ -645,6 +652,7 @@ class _Config:
             )
         out = [raw]
         if html == "country":
+            raw["loads"] = "getCountrySpecificFields" in (get(u, "apiConfig.payload") or "")
             out += self.country_fields(p, u, path, nav)
         return out
 
@@ -1198,21 +1206,38 @@ def _has_next(page: Page) -> bool:
 
 
 def _next(page: Page, number: int) -> None:
-    """Clicks Next and waits for the step after `number`; a step that shows errors raises."""
+    """Clicks Next and waits for the step after `number`; a step that shows errors, or that
+    `/applySubmit` turns down, raises: an answer it refuses (`VALIDATION_ERROR`) is not taken."""
     form = page.locator(FORM)
     before = page.url
-    _click(page, form.locator(NEXT))
-    deadline = time.monotonic() + STEP_TIMEOUT_MS / 1000
-    while time.monotonic() < deadline:
-        time.sleep(SETTLE_S)
-        if page.url != before and page.locator(FORM).count():
-            with_controls = page.locator(f"{FORM} {NEXT}, {FORM} button[type=submit]")
-            if with_controls.count():
-                return
-        if errors := page.locator(FORM).evaluate(_ERRORS) if page.locator(FORM).count() else []:
-            shown = "; ".join(f"{dom}: {message}" for dom, message in errors)
-            raise RuntimeError(f"step {number} did not pass: {shown}")
-    raise RuntimeError(f"step {number} did not pass in time")
+    answered: list[dict[str, Any]] = []
+
+    def on_response(response: Any) -> None:
+        with suppress(Exception):  # another request, or no JSON
+            if json.loads(response.request.post_data)["ddoKey"] == "applySubmit":
+                answered.append(get(response.json(), "applySubmit.response") or {})
+
+    page.on("response", on_response)
+    try:
+        _click(page, form.locator(NEXT))
+        deadline = time.monotonic() + STEP_TIMEOUT_MS / 1000
+        while time.monotonic() < deadline:
+            time.sleep(SETTLE_S)
+            if page.url != before and page.locator(FORM).count():
+                with_controls = page.locator(f"{FORM} {NEXT}, {FORM} button[type=submit]")
+                if with_controls.count():
+                    return
+            if refused := next((a for a in answered if a.get("status") == "failure"), None):
+                code, detail = refused.get("statusCode"), refused.get("statusMessage")
+                if refused.get("statusType") == "VALIDATION_ERROR":  # the page shows nothing
+                    raise NotTaken(f"step {number}: {detail}")
+                raise RuntimeError(f"step {number} did not pass: {code}: {detail}")
+            if errors := page.locator(FORM).evaluate(_ERRORS) if page.locator(FORM).count() else []:
+                shown = "; ".join(f"{dom}: {message}" for dom, message in errors)
+                raise RuntimeError(f"step {number} did not pass: {shown}")
+        raise RuntimeError(f"step {number} did not pass in time")
+    finally:
+        page.remove_listener("response", on_response)
 
 
 def _click(page: Page, target: Locator) -> None:
@@ -1318,8 +1343,31 @@ def _upload(page: Page, path: str) -> None:
     """Attaches the resume, taken once Phenom's `/fileUpload` answers or the page shows its
     name, and waits for its parse, which fills and clears fields when it comes back: until
     the page's requests have settled."""
-    pending: set[Any] = set()
     uploaded: list[bool] = []  # Phenom's `/fileUpload` took it
+
+    def ended(request: Any) -> None:
+        if "/fileUpload" in request.url and (response := request.response()) and response.ok:
+            uploaded.append(True)
+
+    page.on("requestfinished", ended)
+    try:
+        with _requests(page) as pending:
+            page.locator(RESUME).first.set_input_files(path)
+            name = PurePath(path).stem[:12]  # shown, at times shortened, once uploaded
+            deadline = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000
+            while not uploaded and not page.evaluate(_SHOWS, name):
+                if time.monotonic() > deadline:
+                    raise RuntimeError("the resume upload did not show the file")
+                time.sleep(POLL_S)
+            _quiet(pending, QUIET_S, UPLOAD_TIMEOUT_MS / 1000)
+    finally:
+        page.remove_listener("requestfinished", ended)
+
+
+@contextmanager
+def _requests(page: Page) -> Generator[set[Any]]:
+    """The page's requests in flight, while in the block."""
+    pending: set[Any] = set()
 
     def started(request: Any) -> None:
         if request.resource_type in ("xhr", "fetch"):
@@ -1327,29 +1375,25 @@ def _upload(page: Page, path: str) -> None:
 
     def ended(request: Any) -> None:
         pending.discard(request)
-        if "/fileUpload" in request.url and (response := request.response()) and response.ok:
-            uploaded.append(True)
 
     page.on("request", started)
     page.on("requestfinished", ended)
     page.on("requestfailed", ended)
     try:
-        page.locator(RESUME).first.set_input_files(path)
-        name = PurePath(path).stem[:12]  # shown, at times shortened, once uploaded
-        deadline = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000
-        while not uploaded and not page.evaluate(_SHOWS, name):
-            if time.monotonic() > deadline:
-                raise RuntimeError("the resume upload did not show the file")
-            time.sleep(UPLOAD_POLL_S)
-        deadline, quiet_since = time.monotonic() + UPLOAD_TIMEOUT_MS / 1000, time.monotonic()
-        while time.monotonic() < deadline and time.monotonic() - quiet_since < QUIET_S:
-            time.sleep(UPLOAD_POLL_S)
-            if pending:
-                quiet_since = time.monotonic()
+        yield pending
     finally:
         page.remove_listener("request", started)
         page.remove_listener("requestfinished", ended)
         page.remove_listener("requestfailed", ended)
+
+
+def _quiet(pending: set[Any], seconds: float, timeout_s: float) -> None:
+    """Waits until no request has been in flight for `seconds`, `timeout_s` at most."""
+    deadline, quiet_since = time.monotonic() + timeout_s, time.monotonic()
+    while time.monotonic() < deadline and time.monotonic() - quiet_since < seconds:
+        time.sleep(POLL_S)
+        if pending:
+            quiet_since = time.monotonic()
 
 
 def _fill(page: Page, raw: dict[str, Any], answer: Answer) -> None:
