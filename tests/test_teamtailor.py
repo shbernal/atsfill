@@ -10,7 +10,7 @@ import pytest
 
 from atsfill.adapters.teamtailor import Teamtailor, _stored_name
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Unsupported
+from atsfill.core.adapter import Held, Unsupported
 from atsfill.core.results import FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/teamtailor/new.html"
@@ -212,7 +212,7 @@ def test_submit_stops_on_the_emailed_verification_link(opened, page):
     opened[0].fill(page, {"question:100": "Oui"})
     page.route("**/thanks", verify)
     try:
-        with pytest.raises(Blocked, match="^email_link: "):
+        with pytest.raises(Held):
             opened[0].submit(page)
     finally:
         page.unroute("**/thanks", verify)

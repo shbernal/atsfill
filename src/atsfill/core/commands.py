@@ -25,6 +25,7 @@ from atsfill.core.adapter import (
     Blocked,
     CreatesAccount,
     CreatesAccountByOtp,
+    Held,
     KeepsProfile,
     ListsShownFields,
     NeedsAccount,
@@ -503,6 +504,8 @@ def _on_page(
             result.status = Status.SUBMITTED
         else:
             result.status, result.reason = Status.UNKNOWN, "no_evidence"
+    except Held as e:
+        result.status, result.evidence, result.reason = Status.SUBMITTED, page.url, f"held: {e}"
     except Blocked as e:
         result.status, result.reason = Status.BLOCKED, str(e)
     except Exception as e:  # after the click, nothing tells a failed send from a sent one

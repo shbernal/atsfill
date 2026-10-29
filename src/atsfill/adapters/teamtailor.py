@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, html, matching
-from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported, known_gap
+from atsfill.core.adapter import Gap, Held, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Response
 from atsfill.core.html import Node
 from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
@@ -239,7 +239,7 @@ class Teamtailor:
         browser.click(page.locator(f"{FORM} [type=submit]"))
         page.wait_for_url(SENT, timeout=SUBMIT_TIMEOUT_MS, wait_until="domcontentloaded")
         if page.url.split("?")[0].endswith(EMAIL_LINK):
-            raise Blocked("email_link: click the link emailed to the applicant to complete it")
+            raise Held("click the link emailed to the applicant to complete it")
         return page.url
 
     def _fill(self, form: Locator, field_id: str, answer: Answer) -> None:
