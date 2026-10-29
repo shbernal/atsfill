@@ -205,10 +205,11 @@ scope = { is = "supported", date = 2026-10-20, commit = "d35da0b" }
 [adp]
 kind = "ats"
 share = 0.0108
-account = "to_read"  # Apply opens a talent community step, name, email and a required mobile number, verified with an emailed OTP, then the application's wizard
+account = "to_read"  # a candidate profile per employer without a password, made on its talent community step and signed in by an emailed OTP
 hosting = ["hosted"]
 hosts = ["workforcenow.adp.com"]
-scope = { is = "in_scope", date = 2026-10-26, reason = "unsupported_flow: sign_up_phone: the talent community step before the form requires a mobile number, even when its OTP goes to the email (14 of 15 employers)" }
+adapter = "adp"
+scope = { is = "in_scope", date = 2026-10-29 }
 
 [eures]
 kind = "aggregator"
