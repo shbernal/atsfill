@@ -26,7 +26,7 @@ from urllib.parse import urlsplit
 from atsfill import core
 from atsfill.core import browser, paths
 from atsfill.core.browser import Page, Response
-from atsfill.core.results import Status
+from atsfill.core.results import Result, Status
 from tests import testuser
 from tests.checkout import MAIN
 
@@ -141,6 +141,16 @@ def commit() -> str | None:
     return None if git("status", "--porcelain").strip() else git("rev-parse", "HEAD").strip()
 
 
+def _past_posting(read: Result, result: Result) -> bool:
+    """Whether atsfill got past the posting's page load, whatever the probe's one load met."""
+    return (
+        result.status is Status.READY
+        or bool(read.fields)
+        or case(result.reason) in ("out_of_scope", "known_gap")
+        or code(result.reason) in ("login_required", *NOT_A_BLOCK)
+    )
+
+
 def survey(url: str, employer: str, source: str | None, data: Path, cv: Path) -> dict:
     key = hashlib.sha1(url.encode()).hexdigest()[:12]
     with browser.open_page(data) as page:
@@ -159,6 +169,8 @@ def survey(url: str, employer: str, source: str | None, data: Path, cv: Path) ->
         )
         result = core.fill(url, answers, user=paths.TEST_USER, data_dir=data)
     step = None
+    if found.label == "block" and _past_posting(read, result):
+        found.label = found.vendor = found.signal = None  # a challenge atsfill went on to pass
     if found.label == "block":
         step = "posting"
     elif result.status is Status.BLOCKED and (result.reason or "").startswith("login_required"):
