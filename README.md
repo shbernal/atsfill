@@ -67,7 +67,10 @@ It is built for agents with a shell: every command prints one JSON document and 
 [![adpmyjobs run history](https://shbernal.github.io/atsfill/run-history/adpmyjobs.svg)](https://shbernal.github.io/atsfill/run-history/)
 <!-- /run-history -->
 
-Each line is a hiring system atsfill has an adapter for, and its [run history](https://shbernal.github.io/atsfill/run-history/): the last 30 days of runs, green when a form filled or an application went through, red when it failed.
+Each line is a hiring system atsfill has an adapter for, and its [run history](https://shbernal.github.io/atsfill/run-history/): the last 30 days of runs, one mark per posting and version, newest first.
+
+![run history legend](https://shbernal.github.io/atsfill/run-history/legend.svg)
+
 [The systems](docs/adapters/README.md) lists which ones need an account, to read the form or only to send it.
 Any other system returns `unsupported`, so the consumer can fall back to driving a browser itself.
 
