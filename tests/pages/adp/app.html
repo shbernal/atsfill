@@ -11,7 +11,7 @@
 <style>
   .hidden { display: none; }
   sdf-select-item, [role=option] { display: block; }
-  sdf-radio-button, sdf-button, [part=frame], wfn-dropdown-list {
+  sdf-radio-button, sdf-button, [part=frame], wfn-dropdown-list, wfn-radio-button {
     display: inline-block; min-width: 1em; min-height: 1em; border: 1px solid;
   }
 </style>
@@ -166,6 +166,12 @@ function radios(label, items, ids = {}) {
       role="radio" aria-checked="false">${text}</sdf-radio-button>`).join("")}</sdf-radio-group>`;
 }
 
+// A pair of wfn-radio-buttons, each holding the group's value
+function pair([id1, v1], [id2, v2], value = "") {
+  return [[id1, v1], [id2, v2]].map(([id, v]) =>
+    `<wfn-radio-button id="${id}" value="${v}" radio-group-value="${value}">${v}</wfn-radio-button>`).join("");
+}
+
 function personal() {
   const name = sessionStorage.getItem("profile") || "Ada";
   return input("personalInfomationFirstName", "First Name", name, true) +
@@ -217,6 +223,10 @@ function questions() {
         ? `<div><span>$</span><input id="desiredSalaryId" class="number" type="text"></div>`
         : `<input id="desiredSalaryId" class="number" type="text">${sdfSelect("add_info_select_box",
           currencies, "Select currency type")}`}</div>`) +
+    (all["/jobApplication/applicantReferralIndicator"]?.hidden === false ? `<div>
+      <span id="employeeRefferalIndicator">Did any of our employees inform you about this position?</span>
+      <div id="refferalOptions">${pair(["yes", "Yes"], ["no", "No"], "No")}</div>
+      <div id="refferalEmplDetailBlock"></div></div>` : "") +
     `<div id="commentBlock"><textarea id="commentTextArea"></textarea></div>`;
 }
 
@@ -243,6 +253,20 @@ function attest() {
 }
 
 function wire() {
+  // Yes on the referral shows who: an employee's name or a position ID, and a box
+  app.addEventListener("click", e => {
+    const radio = e.target.closest("wfn-radio-button");
+    if (!radio) return;
+    radio.parentElement.querySelectorAll("wfn-radio-button")
+      .forEach(r => r.setAttribute("radio-group-value", radio.getAttribute("value")));
+    if (radio.id === "yes" && !app.querySelector("#employeeName")) {
+      app.querySelector("#refferalEmplDetailBlock").innerHTML =
+        "<label>Please provide Employee Name or Position ID.</label>";
+      app.querySelector("#refferalEmplDetailBlock").insertAdjacentHTML("afterend",
+        `<div id="refferalOptions">${pair(["employeeName", "Employee Name"], ["positionId", "Position ID"])}</div>
+         <div><input id="add_info_text_box" type="text" aria-required="true"></div>`);
+    }
+  });
   app.querySelectorAll("sdf-radio-button").forEach(r => r.onclick = () => {
     r.parentElement.querySelectorAll("sdf-radio-button").forEach(o => o.setAttribute("aria-checked", "false"));
     r.setAttribute("aria-checked", "true");

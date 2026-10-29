@@ -43,6 +43,7 @@ Every employer of the 16 showed the same steps: Personal Information, Resume, Qu
 | | `Number Field` | `text` | `input#question_<n>`, shown formatted | 1 |
 | | `Date Field` | `date` | `input#question_<n>`, typed MM/DD/YYYY | 1 |
 | | desired pay | `choice`, `text`, `choice` | where the meta does not hide `requestedPayRate`: Annually or Hourly (`sdf-radio-group`), the amount (`#desiredSalaryId`), the currency (`sdf-select-simple#add_info_select_box`), or at one employer no list and `$` fixed before the amount, read back as US dollars | 6 |
+| | referral | `choice` (Yes, No), then `choice` and `text` | where the meta does not hide `applicantReferralIndicator`: "Did any of our employees inform you about this position?", a pair of `wfn-radio-button`s (`#refferalOptions`, each holding the group's value in `radio-group-value`), No by default; Yes shows Employee Name or Position ID, another pair, and its box (`#add_info_text_box`), both required | 1 of the gate's 10 |
 | | comment | `text` | "Do you want to tell us anything else about yourself?" `textarea#commentTextArea`, where the meta does not hide `comment` | 6 |
 | Voluntary Self-ID | gender, ethnicity, race | `choice` | react-select comboboxes (`#vsidGender`, `#vsidEthinicity`, `#vsidRace`), race enabled once ethnicity is Not Hispanic or Latino; a decline box | 14 |
 | | veteran, disability | `choice` | `sdf-radio-group`s whose radios' values are the meta's codes (`Y`, `N`, `D`), their labels the meta's but for a period | where the indicators enable them |

@@ -66,6 +66,7 @@ TRANSFORMS = {
         ("USD", "United States Dollar"), ("CAD", "Canada Dollar")
     ),
     "/jobApplication/comment": {"optional": True, "hidden": False},
+    "/jobApplication/applicantReferralIndicator": {"optional": True, "hidden": False},
     f"{PERSON}/address/countrySubdivisionLevel1": codes(
         ("AL", "US-Alabama"), ("DC", "US-District of Columbia")
     ),
@@ -177,7 +178,8 @@ def test_the_read_lists_each_step_from_the_page_and_the_meta(opened, ats):
         "personal.address_line1", "personal.city", "personal.state", "personal.postal_code",
         "personal.county", "resume", "question.q1", "question.q2", "question.q3", "question.q4",
         "question.q5", "question.q6", "question.q7", "question.q7.currency", "question.q8",
-        "question.q9", "pay.rate", "pay.amount", "pay.currency", "comment", "self_id.gender",
+        "question.q9", "pay.rate", "pay.amount", "pay.currency", "referral", "referral.by",
+        "referral.who", "comment", "self_id.gender",
         "self_id.ethnicity", "self_id.race", "self_id.veteran", "attestation",
     ]  # fmt: skip
     assert by_id["personal.first_name"].prefilled == "Ada"
@@ -232,6 +234,9 @@ def complete(resume: str) -> dict:
         "pay.rate": "Hourly",
         "pay.amount": "40",
         "pay.currency": "Canada Dollar ( CAD )",
+        "referral": "Yes",
+        "referral.by": "Employee Name",
+        "referral.who": "Jane Doe",
         "self_id.gender": "Prefer not to say",
         "self_id.veteran": "I decline to self-identify",
         "attestation": "Yes",

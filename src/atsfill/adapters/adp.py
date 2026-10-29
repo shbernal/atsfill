@@ -73,6 +73,7 @@ LABELS = {"home_phone": "Home Phone Number", "mobile_phone": "Mobile Number*"}
 SHOWN_BY_COUNTRY = {"county"}  # once a country with counties is picked
 ADDRESS_MAX = 30  # "Address Line 1 must not exceed 30 characters"
 FIXED = {"personal.email"}  # the verified email, read only
+QUESTIONS = "#question_0, #questionYes_0, #desiredSalaryId, #refferalOptions, #commentTextArea"
 
 # Voluntary Self-ID: its lists and radio groups, each with the meta's indicator that shows it
 # and its code list; a radio's value is its code
@@ -162,11 +163,12 @@ class ADP:
             (n := i["nameCode"]).get("codeValue") or n.get("shortName"): i.get("indicatorValue")
             for i in control.get("customIndicators") or []
         }
+        asked = self._questions(control, transforms)
         self._steps = [
             Step("Personal Information", PERSONAL[0][1], self._personal(page, transforms)),
             Step("Resume", "input[type=file]", [self._resume()]),
-            Step("Questions", "#question_0, #desiredSalaryId, #commentTextArea",
-                 self._questions(control, transforms)),
+            # A step that asks nothing has no box of its own: Next moves past it
+            Step("Questions", QUESTIONS if asked else "", asked),
         ]  # fmt: skip
         if "Voluntary Self-ID" in shown:
             fields = self._self_id(transforms, indicators)
@@ -303,6 +305,23 @@ class ADP:
                 Field("pay.currency", "Desired salary: currency", FieldType.CHOICE, required,
                       currencies or None),
             ]  # fmt: skip
+        referral = transforms.get("/jobApplication/applicantReferralIndicator") or {}
+        if referral and not referral.get("hidden"):
+            self._boxes |= {  # Yes shows who: an employee's name or a position ID
+                "referral": "#refferalOptions:has(#yes)",
+                "referral.by": "#refferalOptions:has(#employeeName)",
+                "referral.who": "#add_info_text_box",
+            }
+            label = "Did any of our employees inform you about this position?"
+            yes = Is("referral", ["Yes"])
+            fields += [
+                Field("referral", label, FieldType.CHOICE, not referral.get("optional"), YES_NO,
+                      default="No"),
+                Field("referral.by", "Please provide Employee Name or Position ID.",
+                      FieldType.CHOICE, True, ["Employee Name", "Position ID"], shown_when=yes),
+                Field("referral.who", "Employee name or position ID", FieldType.TEXT, True,
+                      shown_when=yes),
+            ]  # fmt: skip
         comment = transforms.get("/jobApplication/comment") or {}
         if comment and not comment.get("hidden"):
             self._boxes["comment"] = "#commentTextArea"
@@ -347,7 +366,9 @@ class ADP:
                 _react_pick(page, box, f, one)
             return
         tag = box.evaluate("e => e.tagName")
-        if tag == "SDF-RADIO-GROUP":
+        if box.locator("wfn-radio-button").count():
+            box.locator(f'wfn-radio-button[value="{answer}"]').click()
+        elif tag == "SDF-RADIO-GROUP":
             _radio(box, f, answer, self._codes.get(f.id, {}))
         elif tag == "SDF-SELECT-SIMPLE":
             _sdf_pick(page, box, f, answer)
@@ -630,6 +651,8 @@ def _upload(page: Page, box: Locator, path: str) -> None:
 
 
 _VALUE = """e => {
+  const pair = e.querySelector('wfn-radio-button');  // each holds the group's value
+  if (pair) return pair.getAttribute('radio-group-value') || null;
   if (e.tagName === 'SDF-RADIO-GROUP') {
     const on = e.querySelector('sdf-radio-button[aria-checked="true"]');
     return on ? on.getAttribute('value') : null;
