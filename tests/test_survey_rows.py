@@ -21,3 +21,16 @@ def test_a_refused_row_keeps_each_failing_checks_answer_and_read_back(
     row = survey.survey(f"{server}/form.html", "Acme", None, data, cv)
     assert (row["status"], row["reason"]) == ("refused", "mismatch: name")
     assert row["mismatches"] == [{"field_id": "name", "answer": "Ada", "read_back": "Adax"}]
+
+
+def test_a_challenge_the_read_went_on_to_pass_is_no_block(server, tmp_path, monkeypatch):
+    monkeypatch.setattr(commands, "adapters", lambda: [Fake()])
+    monkeypatch.setattr(survey, "CORPUS", tmp_path / "corpus")
+    monkeypatch.setattr(survey, "MAIN", tmp_path)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "conf"))
+    monkeypatch.setattr(testuser, "answers", lambda fields, cv, photo, video: {"name": "Ada"})
+    challenge = survey.Probe("", "block", "cf-mitigated: challenge", "Cloudflare")
+    monkeypatch.setattr(survey, "probe", lambda page, url, response: challenge)
+    cv = testuser.resume(tmp_path / "resume.pdf")
+    row = survey.survey(f"{server}/form.html", "Acme", None, paths.data_dir(tmp_path / "data"), cv)
+    assert (row["status"], row["label"], row["vendor"], row["step"]) == ("ready", None, None, None)

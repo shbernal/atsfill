@@ -173,6 +173,10 @@ class SuccessFactors:
 
     def sign_in(self, page: Page, email: str, password: str) -> None:
         self._candidate(page)
+        if page.locator(QUICK_APPLY).count():  # its sign-in is a dialog, beside its sign-up
+            raise Unsupported(
+                known_gap(self, "quick_apply_sign_up", "the application is a Quick Apply page")
+            )
         if not page.locator(SIGN_IN).count():
             page.locator(SIGN_IN_LINK).first.click()
             page.locator(SIGN_IN).wait_for(timeout=LANDING_TIMEOUT_MS)

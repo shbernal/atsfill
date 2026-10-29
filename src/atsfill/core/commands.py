@@ -98,6 +98,9 @@ def _login_required(url: str, adapter: NeedsAccount, user: str) -> Result:
 type Credentials = tuple[str, str | None]  # email, password: None for an account without one
 # Refusals the page states before any account exists: the generated password goes.
 NO_ACCOUNT = {"email_in_use", "email_domain_rejected", "password_rule", "sign_up_details"}
+# A sign-in's refusals that find no account with the password: a stored one may be from a
+# sign-up blocked before the account existed.
+NOT_SIGNED_UP = {"wrong_password", "no_account"}
 
 
 def _next_step(
@@ -750,10 +753,11 @@ def login(
     if password and by_otp:
         raise ValueError(f"{adapter} signs in with an emailed OTP, not a password")
     try:
-        kept = create and not by_otp and passwords.stored(mine, adapter, scope) is not None
+        stored = passwords.stored(mine, adapter, scope) if create and not by_otp else None
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
+    kept = stored is not None
     if email and not kept:
         accounts.remember(mine, adapter, scope, email)
     if create and not kept:
@@ -784,6 +788,23 @@ def login(
         )
     else:
         result = _headless(data, user, account, scope, credentials, session, details)
+        if (
+            kept
+            and isinstance(account, CreatesAccount)
+            and (result.reason or "").split(":")[0] in NOT_SIGNED_UP
+            and credentials[1] == stored
+        ):
+            # a sign-up blocked before the account existed: sign up again, same password
+            return _create(
+                report,
+                account,
+                url,
+                mine,
+                credentials[0],
+                details or SignUpDetails(),
+                data,
+                kept=credentials[1],
+            )
         report.status = result.status
         report.reason = _next_step(result.reason, credentials[0], adapter, user, url)
     if report.reason is None:
@@ -799,10 +820,12 @@ def _create(
     email: str,
     details: SignUpDetails,
     data: Path,
+    kept: str | None = None,
 ) -> SessionReport:
     """Creates the account: refused before the browser opens when `details` lack one the
     sign-up asks; the generated password is stored before the click, and deleted only on a
-    refusal the page states before any account exists. An account without a password gets
+    refusal the page states before any account exists. A `kept` password, stored by an
+    earlier sign-up, is used again and never deleted. An account without a password gets
     none."""
     if not isinstance(account, (CreatesAccount, CreatesAccountByOtp)):
         report.status = Status.UNSUPPORTED
@@ -812,9 +835,9 @@ def _create(
         report.status = Status.REFUSED
         report.reason = f"sign_up_details: no {', '.join(missing)}"
         return report
-    password = None if isinstance(account, CreatesAccountByOtp) else passwords.generate()
+    password = kept or (None if isinstance(account, CreatesAccountByOtp) else passwords.generate())
     try:
-        if password:
+        if password and not kept:
             passwords.store(mine, account.name, report.scope, password)
     except passwords.PasswordError as e:
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
@@ -825,9 +848,10 @@ def _create(
     )
     report.status = result.status
     report.reason = _next_step(result.reason, email, account.name, report.user, url)
-    report.password = "stored" if password else "none"
+    report.password = "kept" if kept else "stored" if password else "none"
     if (
         password
+        and not kept
         and result.status is Status.REFUSED
         and (result.reason or "").split(":")[0] in NO_ACCOUNT
     ):

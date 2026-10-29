@@ -303,7 +303,7 @@ One agent run that adds or repairs one adapter, ending in a pull request or a re
 - "Gate" meant both the submit gate and the adapter gate. Always qualify it.
 - "Dependent" meant both a follow-up, which shows on an answer, and a dependent list, whose options change with an answer and which always shows. The first is a follow-up; a dependent list is not one.
 - "Inventory" meant both a round's surveyed postings (now the sample) and the field type × rendering table (still the inventory).
-- "Adapter state" meant both a source's registry standing and the whole `status` row for an adapter. The first is the scope; "state" is left to the session (`signed_in`, `signed_out`, `missing`).
+- "Adapter state" meant both a source's registry standing and the whole `status` row for an adapter. The first is the scope; "state" is left to the session (`signed_in`, `signed_out`, `unknown`, `missing`).
 - "Session" meant both the stored browser state and an agent's working session. The agent's is an agent run.
 - "Profile" meant the answers, the device identity and the account profile. Only the account profile keeps the word, never bare.
 - "Login" is the act of signing in; the session is what it stores.

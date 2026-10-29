@@ -119,10 +119,12 @@ class Jobstreet:
     def login_url(self, scope: str | None) -> str:
         return f"https://{scope}/oauth/login?returnUrl=%2F"
 
-    def signed_in(self, request: Request, scope: str | None) -> bool:
+    def signed_in(self, request: Request, scope: str | None) -> bool | None:
         """The site's `/profile` redirects an account to `/profile/me` and shows a visitor its
-        page. Cloudflare answers 403 outside the browser, so a session there reads signed out."""
+        page. Cloudflare can answer 403 outside the browser, which tells neither."""
         response = request.get(f"https://{scope}/profile", max_redirects=0)
+        if response.status == 403 or response.headers.get("cf-mitigated") == "challenge":
+            return None
         return response.status in (302, 307) and response.headers.get("location", "").endswith(
             "/profile/me"
         )
