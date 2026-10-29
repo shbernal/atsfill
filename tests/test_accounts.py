@@ -75,6 +75,15 @@ def test_status_and_logout(account, data, capsys):
     assert run(parser().parse_args(["--data-dir", str(data), "status"])) == 0
 
 
+def test_a_session_the_system_cannot_tell_is_unknown(account, data, capsys, monkeypatch):
+    session = data / "users/default/sessions/fakeaccount.json"
+    session.parent.mkdir(parents=True)
+    storage_state(session, "ok")
+    monkeypatch.setattr(account, "signed_in", lambda request, scope: None)  # a challenge page
+    assert run(parser().parse_args(["--data-dir", str(data), "status"])) == 0
+    assert json.loads(capsys.readouterr().out)["sessions"][0]["session"] == "unknown"
+
+
 def test_no_session_is_login_required(account, data, url, monkeypatch):
     monkeypatch.setattr(commands, "open_page", None)  # refused before any launch
     result = core.fill(url, {"name": "Ada"}, data_dir=data)

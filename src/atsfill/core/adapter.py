@@ -122,8 +122,9 @@ class NeedsAccount(Protocol):
 
     def login_url(self, scope: str | None) -> str: ...
 
-    def signed_in(self, request: Request, scope: str | None) -> bool:
-        """Whether the cookies `request` carries are signed in, from one request to the system."""
+    def signed_in(self, request: Request, scope: str | None) -> bool | None:
+        """Whether the cookies `request` carries are signed in, from one request to the system;
+        None when its answer cannot tell, such as a bot protection's challenge."""
         ...
 
 

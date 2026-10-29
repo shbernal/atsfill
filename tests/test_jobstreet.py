@@ -3,12 +3,14 @@ sign-in."""
 
 import json
 from pathlib import Path
+from typing import cast
 
 import pytest
 
 from atsfill.adapters.jobstreet import Jobstreet
 from atsfill.core import browser, otp
 from atsfill.core.adapter import NotTaken, Refused, SignedOut, SignUpDetails, Unsupported
+from atsfill.core.browser import Request
 from atsfill.core.results import FieldType
 
 PAGES = Path(__file__).parent / "pages/jobstreet"
@@ -109,6 +111,30 @@ def test_a_session_the_site_ended_is_signed_out(page):
     page.goto(f"{JOB}?ended")
     with pytest.raises(SignedOut, match="login_required"):
         Jobstreet().browser_read(page)
+
+
+class Answered:
+    """A request answered `status` with `headers`, whatever it asks."""
+
+    def __init__(self, status: int, headers: dict[str, str]) -> None:
+        self.status, self.headers = status, headers
+
+    def get(self, url: str, **kwargs) -> Answered:
+        return self
+
+
+@pytest.mark.parametrize(
+    ("status", "headers", "signed_in"),
+    [
+        (307, {"location": "/profile/me"}, True),
+        (200, {}, False),
+        (403, {}, None),  # Cloudflare outside the browser
+        (200, {"cf-mitigated": "challenge"}, None),
+    ],
+)
+def test_the_session_check_reads_profile(status, headers, signed_in):
+    request = cast(Request, Answered(status, headers))
+    assert Jobstreet().signed_in(request, "ph.jobstreet.com") is signed_in
 
 
 def test_fill_walks_the_steps_and_reads_back_each(opened, page, resume):
