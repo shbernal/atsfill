@@ -53,6 +53,7 @@ It is built for agents with a shell: every command prints one JSON document and 
 [![pinpoint run history](https://shbernal.github.io/atsfill/run-history/pinpoint.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![hiringthing run history](https://shbernal.github.io/atsfill/run-history/hiringthing.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![recruiterflow run history](https://shbernal.github.io/atsfill/run-history/recruiterflow.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![werecruit run history](https://shbernal.github.io/atsfill/run-history/werecruit.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![jobaffinity run history](https://shbernal.github.io/atsfill/run-history/jobaffinity.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![welcomekit run history](https://shbernal.github.io/atsfill/run-history/welcomekit.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![join run history](https://shbernal.github.io/atsfill/run-history/join.svg)](https://shbernal.github.io/atsfill/run-history/)

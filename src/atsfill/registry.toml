@@ -428,3 +428,10 @@ account = "none"
 hosting = ["hosted"]
 adapter = "welcomekit"
 scope = { is = "supported", date = 2026-10-29, commit = "238798d" }
+
+[werecruit]
+kind = "ats"
+share = 0.0007
+account = "none"
+hosting = ["hosted"]
+adapter = "werecruit"
