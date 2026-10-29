@@ -152,7 +152,7 @@ class Lever:
         # the resume is parsed into the form, so it goes first and is waited for
         for name, answer in sorted(answers.items(), key=lambda a: a[0] != "resume"):
             values = [answer] if isinstance(answer, str) else answer
-            controls = page.locator(f"{FORM} [name='{name}']:not([type=hidden])")
+            controls = page.locator(f"{FORM} [name={_quoted(name)}]:not([type=hidden])")
             match self._kinds[name]:
                 case "file":
                     _attach(controls.first, values[0], resume=name == "resume")
@@ -215,6 +215,11 @@ def _field(raw: dict[str, Any]) -> Field:
     return Field(
         raw["id"], raw["label"], KINDS[kind], raw["required"], options, raw.get("maxLength")
     )
+
+
+def _quoted(name: str) -> str:
+    """A control name as a CSS string: an employer names its links, quotes and all."""
+    return '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def _option(controls: Locator, value: str) -> Locator | None:
