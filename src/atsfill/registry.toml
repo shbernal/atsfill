@@ -420,3 +420,10 @@ account = "none"
 hosting = ["hosted"]
 adapter = "jobaffinity"
 scope = { is = "supported", date = 2026-10-28, commit = "02939fd" }
+
+[welcomekit]
+kind = "ats"
+account = "none"
+hosting = ["hosted"]
+adapter = "welcomekit"
+scope = { is = "supported", date = 2026-10-29, commit = "238798d" }
