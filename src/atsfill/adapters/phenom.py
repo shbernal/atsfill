@@ -44,6 +44,7 @@ SEQ = re.compile(r"^/[a-z]{2,8}/[a-z]{2}/job/([A-Za-z0-9]+)")
 CDN = "https://cdn-prod-static.phenompeople.com/CareerConnectResources"
 FORM = "form.rjsf"
 NEXT = "button#next"
+TERMS = "terms"  # a notice some sites' wizard opens on, its one button accepting it
 SUBMIT = "button#submit, button.btn-submit, button[type=submit].btn-navigate:not(#next)"
 RESUME = ".resume-upload-wrapper input[type=file]"
 RESUME_ID = "resume"
@@ -267,6 +268,11 @@ class Phenom:
         SideEffect(
             "fill",
             "hiring_system",
+            "an employer notice the wizard opens on (`page=terms`) is accepted to reach the form",
+        ),
+        SideEffect(
+            "fill",
+            "hiring_system",
             "each step is submitted to Phenom on Next, which keeps an account profile from the"
             " first step",
         ),
@@ -355,6 +361,7 @@ class Phenom:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         page.context.clear_cookies()
         self._open(page, fresh=True)
+        self._accept_terms(page)
         self._kept, self._shown = {}, {}
         if RESUME_ID in answers and page.locator(RESUME).count():
             _upload(page, _one(answers[RESUME_ID]))
@@ -414,16 +421,30 @@ class Phenom:
         if fresh or not page.url.startswith(self._apply):
             page.goto(self._apply, wait_until="domcontentloaded")
         _check_open(page)
+        self._wait_for_step(page)
+
+    def _wait_for_step(self, page: Page) -> None:
         try:
             page.locator(f"{FORM} {NEXT}, {FORM} button[type=submit]").first.wait_for(
                 state="attached", timeout=FORM_TIMEOUT_MS
             )
         except Timeout:
-            query = parse_qs(urlsplit(page.url).query)
-            if step := (query.get("stepname") or query.get("page") or [None])[0]:
+            if step := _step_name(page.url):
                 gap = known_gap(self, "first_step", f"the wizard opens on {step!r}")
                 raise Unsupported(gap) from None
             raise RuntimeError("no application step on the page") from None
+
+    def _accept_terms(self, page: Page) -> None:
+        """Accepts the terms some sites' wizard opens on, a step with no field before the form."""
+        if _step_name(page.url) != TERMS:
+            return
+        _click(page, page.locator(FORM).locator(SUBMIT).first)
+        try:
+            page.wait_for_url(lambda url: _step_name(url) != TERMS, timeout=STEP_TIMEOUT_MS)
+        except Timeout:
+            gap = known_gap(self, "first_step", "the wizard stays on its terms once accepted")
+            raise Unsupported(gap) from None
+        self._wait_for_step(page)
 
     def _step(self, page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
         """The answered fields the current step shows, in the configuration's order."""
@@ -1235,6 +1256,12 @@ def _seq(url: str) -> str | None:
     if match := SEQ.match(parts.path):
         return match[1]
     return parse_qs(parts.query).get("jobSeqNo", [None])[0]
+
+
+def _step_name(url: str) -> str | None:
+    """The wizard's step as its URL names it (`stepname=`, `page=`), if it does."""
+    query = parse_qs(urlsplit(url).query)
+    return (query.get("stepname") or query.get("page") or [None])[0]
 
 
 def _apply_url(page: Page) -> str:

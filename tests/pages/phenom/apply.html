@@ -282,6 +282,21 @@ function shown(f) {
   return !f.shownWhen || values[f.shownWhen[0]] === f.shownWhen[1];
 }
 
+// A site's wizard opens on its terms (`page=terms`) where `window.TERMS` is set: one button
+// accepting them, no resume, then the form (`page=applyForm`).
+function terms() {
+  const accept = el("button", {type: "submit", class: "btn primary-button btn-submit"}, "I Accept");
+  const form = el("form", {class: "rjsf"}, el("h3", {}, "Terms and Conditions"), accept);
+  form.addEventListener("submit", e => {
+    e.preventDefault();
+    history.pushState({}, "", `${location.pathname}?jobSeqNo=ACMEUS1001EXTERNALENUS&page=applyForm`);
+    document.querySelector(".resume-section").hidden = false;
+    setTimeout(render, 200);
+  });
+  document.querySelector(".resume-section").hidden = true;
+  document.getElementById("root").replaceChildren(form);
+}
+
 function render() {
   const step = STEPS[stepIndex()];
   const form = el("form", {class: "rjsf", novalidate: true});
@@ -318,7 +333,10 @@ document.querySelector(".resume-upload-wrapper input").addEventListener("change"
   document.getElementById("resume-name").textContent = e.target.files[0].name;
   render();
 });
-render();
+if (window.TERMS && !location.search.includes("page=")) {
+  history.replaceState({}, "", location.href + "&page=terms");
+  terms();
+} else render();
 </script>
 </body>
 </html>
