@@ -96,6 +96,12 @@ This downloads the Camoufox browser build atsfill is pinned to: 1.3 GB, about 2.
 
 Every push to `main` that passes CI is also published as a dev release; `uvx --prerelease allow atsfill` runs the newest.
 
+To teach your agent the CLI, add its skill, which runs the newest dev release:
+
+```sh
+npx skills add shbernal/atsfill
+```
+
 ## Quickstart
 
 1. List the form's fields:
