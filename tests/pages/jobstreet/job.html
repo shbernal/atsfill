@@ -59,7 +59,10 @@ function documents() {
     <div id="resumes">${state.resume ? `<input type="radio" name="document-select-r" id="r1" value="r1" checked>
       <label for="r1">${state.resume}</label>` : ""}
     <input type="radio" name="document-select-r" id="r0" value="dont-include"><label for="r0">Don't include a resumé</label></div>
-    <h3>Cover letter</h3>
+    <h3>Cover letter</h3><input id="coverLetter-fileFile" type="file" accept=".doc,.docx,application/pdf" hidden>
+    <button type="button" data-testid="coverLetter-method-upload">Upload</button>
+    ${state.letter ? `<input type="radio" name="coverLetter-method" id="c2" value="upload" checked
+      data-testid="coverLetter-method-upload"><label for="c2"><strong>${state.letter}</strong></label>` : ""}
     <input type="radio" name="coverLetter-method" id="c1" value="change" data-testid="coverLetter-method-change">
     <label for="c1">Write a cover letter</label><textarea data-testid="coverLetterTextInput"></textarea>
     <input type="radio" name="coverLetter-method" id="c0" value="none" data-testid="coverLetter-method-none">
@@ -80,6 +83,9 @@ function documents() {
   });
   app.querySelector("#resume-fileFile").addEventListener("change", e => {
     state.resume = e.target.files[0].name; save(); documents();
+  });
+  app.querySelector("#coverLetter-fileFile").addEventListener("change", e => {
+    state.letter = e.target.files[0].name; save(); documents();
   });
   app.querySelector("[data-testid=continue-button]").addEventListener("click", () => {
     const picked = app.querySelector("input[name^=document-select]:checked");
