@@ -14,6 +14,7 @@ from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import (
     Blocked,
     KeepsProfile,
+    NotTaken,
     ProfileIncomplete,
     Refused,
     SignUpDetails,
@@ -42,6 +43,7 @@ PROFILE = {
     "first_name": "Jane", "last_name": "Doe", "email": "jane@example.com",
     "linkedin": "https://www.linkedin.com/in/jane-doe", "phone_country": "US/Canada (+1)",
     "phone_number": "2125550123", "share": "no", "yc_affiliation": "none",
+    "hidden_companies": ["Globex"],
     "city_current": "New York, NY, USA", "us_authorized": "yes", "us_visa_sponsorship": "no",
     "remote": "yes", "relocate": "no", "role": "eng", "eng_type": ["Backend"], "in_school": "no",
     "job_type": ["fulltime"], "experience": "5", "manual": True,
@@ -334,6 +336,7 @@ def test_a_step_the_wizard_does_not_load_yet(page, site):
             "first_name": "Jane", "last_name": "Doe", "email": "jane@example.com",
             "linkedin": "https://www.linkedin.com/in/jane-doe", "phone_country": "US/Canada (+1)",
             "phone_number": "2125550123", "yc_affiliation": "No affiliation",
+            "hidden_companies": ["Globex"],
             "share": "I'm not looking for a job / not ready to meet founders yet. HIDE MY PROFILE.",
         }),
         ("location", {
@@ -362,9 +365,25 @@ def test_each_step_lists_its_saved_values(page, site, name, prefilled):
     assert {f.id: f.prefilled for f in fields if f.prefilled is not None} == prefilled
 
 
-def test_a_list_of_yc_companies_is_left_unfilled(page, site):
+def test_the_yc_companies_to_be_hidden_from_are_searched_and_picked_by_name(page, site):
+    adapter = step(page, "personal")
+    fields = {f.id: f for f in adapter.profile_read(page)}
+    hidden = fields["hidden_companies"]
+    assert (hidden.type, hidden.required, hidden.options) == (FieldType.MULTI_CHOICE, False, None)
+    adapter.profile_fill(page, {"hidden_companies": ["Acme", "Initech"]})
+    assert adapter.profile_read_back(page)["hidden_companies"] == ["Acme", "Initech"]
+    adapter.save(page)
+    assert site.saved[-1]["profile"]["data"]["hidden_companies"] == ["Acme", "Initech"]
+
+
+def test_a_company_the_search_does_not_name_exactly_is_not_taken(page, site):
+    adapter = step(page, "personal")
+    with pytest.raises(NotTaken, match="no suggestion for 'Acme Robo' in hidden_companies"):
+        adapter.profile_fill(page, {"hidden_companies": ["Acme Robo"]})
+
+
+def test_the_job_search_status_options(page, site):
     fields = {f.id: f for f in step(page, "personal").profile_read(page)}
-    assert fields["hidden_companies"].unfillable and not fields["hidden_companies"].required
     assert fields["share"].options == [
         "I'm actively looking for a job",
         "I'm open to new opportunities",
