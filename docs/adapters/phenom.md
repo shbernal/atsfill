@@ -9,6 +9,7 @@ Phenom's apply wizard on employers' careers sites, observed on live postings, la
 - The wizard is react-jsonschema-form (`form.rjsf`) with Phenom's own widgets, three to eight steps. Only the current step is in the page. Next (`button#next`) posts the step to `/applySubmit` (`ddoKey: "applySubmit"`, the step's answers under `formData`), which creates a Phenom candidate profile on the first step and checks the step server side; the last step's Submit sends the application to the backing system.
 - On a fresh session, one site's wizard first shows its terms (`page=terms`): a privacy notice whose one button, I Accept (the form's submit), leads to the form (`page=applyForm`). Accepting is not kept: each session shows the terms again. Filling accepts them, a declared side effect; a read takes the configuration from the terms page.
 - A cookie banner (Phenom's own `[ph-module=gdpr]`, TrustArc, OneTrust, cookieconsent's `.cc-window`) shows at any time over the form; the blocker's lists hide it. A loading overlay (`.overlaybg`) covers the form while a step loads.
+- A site's firewall (CloudFront) counts `/applySubmit` posts: past a burst it answers every one `403 Request blocked`, the wizard's own included, for up to an hour while its pages still load (2 sites). A read or fill met with that `403` is `blocked`, `rate_limited`.
 - A closed posting's job URL and wizard URL both answer `404` with Phenom's error page, its `phApp.pageName` `"404"` ([tests/pages/phenom/404.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/404.html)): `unsupported`, `posting_gone`.
 
 ## Reading the form
@@ -61,7 +62,7 @@ Reading takes a page load and 1 to 8 seconds of requests, and another 2 to 7 for
 ## Read-back and submit
 
 - The read-back is each step's controls, read before Next: values, a select's text, the checked radio's or boxes' labels, a box as `Yes`/`No`, dates as `YYYY-MM-DD` from the picker's placeholder, a national phone with its code.
-- On one site, a read's 245 country requests went through, and the requests after them within minutes, the wizard's own included, got `403 Request blocked` from its CloudFront for up to an hour: the site's firewall counts `/applySubmit` posts. A read with the countries kept sends none.
+- On one site, a read's 245 country requests were the burst that got `/applySubmit` refused (see above). A read with the countries kept sends none.
 - `/applySubmit` checks some answers against the employer's records: a referral by someone who is not an employee. It answers `status: failure`, `statusType: VALIDATION_ERROR` with a `statusMessage`, and the page stays on the step showing nothing. That answer is not taken.
 - On one site, the voluntary disclosures step shows only the veteran status: `gender`, a property, and `ethnicity`, added by a rule on the same `jobCountry` as the veteran status, do not show, though the configuration names them for the step. The read lists them, and their answers have no read-back.
 - On one site, for Japan the page hides the preferred last name, label and input, yet the step requires it once a preferred name is given: the step does not pass.
