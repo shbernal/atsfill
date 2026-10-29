@@ -27,11 +27,11 @@ from pathlib import Path
 from atsfill.adapters import adapters
 from atsfill.core import accounts, browser, paths, registry
 from atsfill.core.adapter import NeedsAccount, ReadsByRequest
-from scripts import survey
+from scripts import backlog, survey
 
 ROOT = Path(__file__).parents[1]
 REGISTRY = ROOT / "src/atsfill/registry.toml"
-GENERATED = [REGISTRY, ROOT / "docs/adapters/README.md", ROOT / "README.md"]
+GENERATED = [REGISTRY, ROOT / "docs/adapters/README.md", ROOT / "README.md", backlog.CARRIERS]
 EMPLOYERS = 5
 OPEN_TIMEOUT_MS = 30_000  # an employer's page, opened to find a form embedded in it
 # A skipped posting (ADR 0013): a fact about the posting or out of scope, not the adapter's job
