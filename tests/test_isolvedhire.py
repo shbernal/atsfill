@@ -138,6 +138,14 @@ def test_sign_up_declines_texts_and_agrees_to_the_privacy_policy(page, site):
     }  # fmt: skip
 
 
+def test_sign_up_picks_the_state_from_the_reloaded_list_of_another_country(page, site):
+    page.goto(f"{HOST}/account/login.php")
+    details = SignUpDetails(**{**DETAILS.__dict__, "state": "Alberta", "country": "CA"})
+    IsolvedHire().sign_up(page, "jane@example.com", PASSWORD, details)
+    sent = site.sent["sign_up"]
+    assert (sent["country_id"], sent["state_id"]) == (["38"], ["52"])
+
+
 def test_sign_up_with_a_state_the_country_lacks_is_refused(page, site):
     page.goto(f"{HOST}/account/login.php")
     details = SignUpDetails(**{**DETAILS.__dict__, "state": "DC"})  # a code, not the name

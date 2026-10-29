@@ -237,7 +237,12 @@ class IsolvedHire:
         )
         if country not in _texts(form.locator("#country_id option")):
             raise Refused(f"sign_up_details: no country {country} in the sign-up's list")
-        form.locator("#country_id").select_option(label=country)
+        countries = form.locator("#country_id")  # its states reload once it is picked, the old
+        # ones still there meanwhile: the preset country is left as it is
+        if countries.locator("option:checked").inner_text().strip() != country:
+            stale = form.locator("#state_id option").first.element_handle()
+            countries.select_option(label=country)
+            page.wait_for_function("o => !o.isConnected", arg=stale, timeout=LIST_TIMEOUT_MS)
         named = re.compile(rf"^\s*{re.escape(details.state or '')}\s*$", re.I)
         state = form.locator("#state_id option", has_text=named)
         try:
