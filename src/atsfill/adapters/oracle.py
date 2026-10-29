@@ -36,6 +36,7 @@ OTP_PAGE = ".apply-flow-pin-code-required"
 PIN = f"{OTP_PAGE} .pin-code-input__input"  # one per digit
 VERIFY = f"{OTP_PAGE} button[type=submit]"
 CAPTCHA = "iframe[src*='hcaptcha.com']"
+BANNER = ".cookie-consent-modal"  # some tenants' cookie banner, over the email step and the form
 MANUALLY = ".quick-apply-flow__manually--link:visible"  # past an offer to import a profile
 ATTACHED = ".attachment-upload-button__download, .misc-attachment-list__item-name"
 REMOVE = ".attachment-upload-button__filled .attachment-upload-button__bottom-button"
@@ -46,6 +47,7 @@ PAGE_TIMEOUT_MS = 15_000  # per click on a page number
 SUBMIT_TIMEOUT_MS = 90_000
 KEY_DELAY_MS = 20
 SETTLE_MS = 1_500
+BANNER_TIMEOUT_MS = 10_000
 UPLOAD_TIMEOUT_MS = 30_000
 CHECKBOX = ["Yes", "No"]
 KINDS = {
@@ -241,7 +243,7 @@ _READ_BACK = """(ids) => {
 class Oracle:
     name = "oracle"
     known_gaps = {"entries": Gap.RENDERING}
-    filters = ["##.cookie-consent-modal"]  # some tenants' banner, over the email step and the form
+    filters = [f"##{BANNER}"]
     side_effects = [
         SideEffect(
             "load",
@@ -350,6 +352,10 @@ class Oracle:
         except browser.Timeout:
             raise Unsupported("posting_gone: no email step on the apply page") from None
         _settle(page)
+        # the filter hides the banner once the blocker gets to it, a second or more late; one
+        # still shown is named by the click it covers
+        with suppress(browser.Timeout):
+            page.locator(BANNER).first.wait_for(state="hidden", timeout=BANNER_TIMEOUT_MS)
         terms = page.locator("legal-disclaimer .apply-flow-input-checkbox__label")
         return _text(terms.first.inner_text()) if terms.count() else None
 

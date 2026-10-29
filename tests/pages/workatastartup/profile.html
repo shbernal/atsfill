@@ -212,6 +212,6 @@ form.onsubmit = async e => {
   const tel = form.querySelector("[type=tel]");
   if (tel) values.phone_number = tel.value;
   const r = await fetch("/application/next", {method: "POST", body: JSON.stringify({from: active, profile: {data: values}})});
-  if (r.ok) location.href = "/application/next";
+  if (r.ok) setTimeout(async () => location.href = (await r.json()).redirect_to, 300);
 };
 </script>

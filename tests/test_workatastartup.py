@@ -93,7 +93,8 @@ class Site:
             self.saved.append(request.post_data_json)
             errors = {"errors": ["Phone number is an invalid number"], "error_type": "validation"}
             return route.fulfill(
-                status=self.save_status, json=errors if self.save_status == 422 else {}
+                status=self.save_status,
+                json=errors if self.save_status == 422 else {"redirect_to": "/application/next"},
             )
         data = (
             f"window.PROFILE = {json.dumps(self.profile)}; window.STEPS = {json.dumps(self.steps)};"
