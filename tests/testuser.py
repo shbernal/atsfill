@@ -20,6 +20,7 @@ WEBSITE = "https://example.com"
 SALARY = "50000"
 TEXT = "Placeholder answer for a dry run."
 CITY = "London"
+TOWN = "Washington"  # an address's city, which some systems check against its state and zip
 SKILL = "Python"
 SCHOOL = "Aa"  # the start of the first school an alphabetical list of them gives
 BIRTH_DATE = "1990-01-31"
@@ -38,7 +39,9 @@ DECLINE = re.compile(
 )
 # A question a "Yes" can end the application on, or open fields the form did not list.
 ANSWER_NO = re.compile(
-    r"employee of|employed by|worked (for|at)|relative|sponsor|preferred name", re.IGNORECASE
+    r"employee of|(current|active) employee|employed by|worked (for|at)|relative|sponsor"
+    r"|preferred name",
+    re.IGNORECASE,
 )
 # An option that opens a field the form did not list: who referred or contacted, which other.
 OPENS_FIELD = re.compile(r"referr|contacted by|\bother\b", re.IGNORECASE)
@@ -63,6 +66,7 @@ BY_LABEL = [
     (re.compile(r"facebook", re.IGNORECASE), "https://www.facebook.com/ada.placeholder"),
     (re.compile(r"twitter|\bX\b"), "adaplaceholder"),
     (re.compile(r"linkedin|github|website|portfolio|url|link", re.IGNORECASE), WEBSITE),
+    (re.compile(r"^city\b", re.IGNORECASE), TOWN),
     (re.compile(r"city|location|where", re.IGNORECASE), CITY),
 ]
 
@@ -127,10 +131,12 @@ def _option(field: Field) -> str:
         # where the Test user's phone and zip code are; `United States of America (+1)`
         mentioned = sorted((o for o in options if COUNTRY in o), key=len)
         return next((o for o in options if o in COUNTRY_NAMES), next(iter(mentioned), options[0]))
-    if re.search(r"state|province|region", field.label, re.IGNORECASE) and REGION in options:
-        return REGION
-    if ANSWER_NO.search(field.label) and "No" in options:
-        return "No"
+    region = next((o for o in options if o.casefold() == REGION.casefold()), None)
+    if re.search(r"state|province|region", field.label, re.IGNORECASE) and region:
+        return region  # `District Of Columbia` on ADP MyJobs
+    no = next((o for o in options if re.match(r"No\b", o)), None)
+    if ANSWER_NO.search(field.label) and no:
+        return no
     return next((o for o in options if not OPENS_FIELD.search(o)), options[0])
 
 

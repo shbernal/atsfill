@@ -64,6 +64,7 @@ It is built for agents with a shell: every command prints one JSON document and 
 [![jobstreet run history](https://shbernal.github.io/atsfill/run-history/jobstreet.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![gupy run history](https://shbernal.github.io/atsfill/run-history/gupy.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![ukg run history](https://shbernal.github.io/atsfill/run-history/ukg.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![adpmyjobs run history](https://shbernal.github.io/atsfill/run-history/adpmyjobs.svg)](https://shbernal.github.io/atsfill/run-history/)
 <!-- /run-history -->
 
 Each line is a hiring system atsfill has an adapter for, and its [run history](https://shbernal.github.io/atsfill/run-history/): the last 30 days of runs, green when a form filled or an application went through, red when it failed.

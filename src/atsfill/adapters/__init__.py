@@ -1,3 +1,4 @@
+from atsfill.adapters.adpmyjobs import ADPMyJobs
 from atsfill.adapters.ashby import Ashby
 from atsfill.adapters.bamboohr import BambooHR
 from atsfill.adapters.breezy import Breezy
@@ -72,6 +73,7 @@ def adapters() -> list[Adapter]:
         UKG(),
         IsolvedHire(),
         Jobstreet(),
+        ADPMyJobs(),
         SuccessFactors(),  # it claims a career site's job path on any host
         Phenom(),  # last: it claims a URL by its path alone
     ]
