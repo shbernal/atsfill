@@ -141,6 +141,10 @@ _READ_BACK = """(form, kinds) => {
 }"""
 
 
+def _on_form(url: str) -> bool:
+    return "/apply" in urlsplit(url).path
+
+
 class Workable:
     name = "workable"
     known_gaps = {"entries": Gap.RENDERING}
@@ -174,9 +178,12 @@ class Workable:
         except OSError, ValueError, KeyError, TypeError:
             return None
 
+    def open_form(self, page: Page, url: str) -> None:
+        page.goto(url if _on_form(url) else f"{self.posting(url)}/apply/")
+
     def browser_read(self, page: Page) -> list[Field]:
-        if "/apply" not in urlsplit(page.url).path:
-            page.goto(f"{self.posting(page.url)}/apply/")
+        if not _on_form(page.url):
+            self.open_form(page, page.url)
         form = page.locator(FORM)
         try:
             form.wait_for(timeout=FORM_TIMEOUT_MS)

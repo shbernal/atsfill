@@ -4,7 +4,7 @@ import pytest
 
 from atsfill.core import attempts
 from atsfill.core.conditions import Form, faults
-from atsfill.core.matching import check, matches, problems
+from atsfill.core.matching import check, knockouts, matches, problems
 from atsfill.core.results import AllOf, AnyOf, Field, FieldType, Is, OptionSet, Status
 
 LEVELS = ["Native-level fluency", "Full professional fluency"]
@@ -31,6 +31,9 @@ def field(kind: FieldType, options: list[str] | None = None, required: bool = Tr
         (FieldType.TYPEAHEAD, None, "Paris", "Lyon, France", False),
         (FieldType.TYPEAHEAD, None, "Paris, France", "Paris, Île-de-France, France", True),
         (FieldType.TYPEAHEAD, None, "Paris, France", "Paris, Texas, United States", False),
+        (FieldType.TYPEAHEAD, None, "Paris, France", "Paris, Île-de-France, FRA", True),
+        (FieldType.TYPEAHEAD, None, "Paris, FRA", "Paris, Île-de-France, France", True),
+        (FieldType.TYPEAHEAD, None, "Paris, France", "Paris, Texas, USA", False),
         (FieldType.FILE, None, "/a/resume.pdf", "resume.pdf", True),
         (FieldType.FILE, None, "/a/resume.pdf", "cv.pdf", False),
         (FieldType.PHONE, None, "+33 6 12 34 56 78", "+33612345678", True),
@@ -255,3 +258,19 @@ def test_option_sets_name_listed_fields_and_not_their_own():
         "state: its condition names no field x",
         "own: its options follow its own answer",
     ]
+
+
+def test_a_knockout_answer_is_warned_never_refused():
+    fields = [
+        Field(
+            "f", "Still employed here?", FieldType.CHOICE, True, ["Yes", "No"], knockouts=["Yes"]
+        ),
+        Field("m", "Shifts", FieldType.MULTI_CHOICE, False, ["Day", "Night"], knockouts=["Night"]),
+    ]
+    answers = {"f": "Yes", "m": ["Day", "Night"]}
+    assert problems(fields, answers) == []
+    assert knockouts(fields, answers) == [
+        "f: 'Yes' ends the application (Still employed here?)",
+        "m: 'Night' ends the application (Shifts)",
+    ]
+    assert knockouts(fields, {"f": "No", "m": ["Day"]}) == []

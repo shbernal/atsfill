@@ -143,6 +143,20 @@ def test_a_choice_takes_the_option_that_shows_the_most_follow_ups(tmp_path):
     assert answers == {"w": "Yes", "i": testuser.TEXT}
 
 
+def test_a_choice_is_never_a_knockout_where_there_is_another(tmp_path):
+    fields = [
+        Field(
+            "w", "Still employed here?", FieldType.CHOICE, True, ["Yes", "No"], knockouts=["Yes"]
+        ),
+        Field(
+            "c", "Confirm to close", FieldType.CHOICE, True, ["Confirmed"], knockouts=["Confirmed"]
+        ),
+        Field("i", "Your ID", FieldType.TEXT, True, shown_when=Is("w", ["Yes"])),
+    ]
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
+    assert answers == {"w": "No", "c": "Confirmed"}
+
+
 def test_a_choice_never_shows_a_required_follow_up_without_an_answer(tmp_path):
     fields = [
         Field("w", "Have you worked here?", FieldType.CHOICE, True, ["Never", "Yes"]),

@@ -124,7 +124,9 @@ def clip(path: Path) -> Path:
 
 
 def _option(field: Field) -> str:
+    """The Test user's option, never a knockout where there is another."""
     options = field.options or []
+    options = [o for o in options if o not in (field.knockouts or [])] or options
     if SENSITIVE.search(field.label):
         return next((o for o in options if DECLINE.search(o)), options[0])
     if re.search(r"country", field.label, re.IGNORECASE):
@@ -222,10 +224,10 @@ def _showing_most(
     picture: Path | None,
     video: Path | None,
 ) -> Answer:
-    """The choice that shows the most follow-ups, so that the dry run reaches them, never one
-    that shows a required follow-up, or leaves a required dependent list, it has no answer
-    for: among equals the page's own pick, else the usual answer, and always the usual for a
-    sensitive question."""
+    """The choice that shows the most follow-ups, so that the dry run reaches them, never a
+    knockout nor one that shows a required follow-up, or leaves a required dependent list, it
+    has no answer for: among equals the page's own pick, else the usual answer, and always the
+    usual for a sensitive question."""
     usual = answer(field, cv, picture, video)
     assert usual is not None
     if SENSITIVE.search(field.label) or not field.options:
@@ -244,7 +246,8 @@ def _showing_most(
         ]
         return -len(unanswerable), len(shown)
 
-    picks = [o if field.type is FieldType.CHOICE else [o] for o in field.options]
+    kept = [o for o in field.options if o not in (field.knockouts or [])]
+    picks = [o if field.type is FieldType.CHOICE else [o] for o in kept]
     return max([usual, *picks], key=shows)
 
 

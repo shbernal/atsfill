@@ -127,6 +127,7 @@ class Teamtailor:
         self._follow_ups: set[str] = set()
         self._uploads: dict[str, str] = {}  # file field id: the answer's file name
         self._videos: dict[str, tuple[str, str]] = {}  # video field id: its video id, its URL
+        self._form: str | None = None  # the form `open_form` loaded
 
     def detect(self, url: str, page: Page | None) -> bool:
         """A `*.teamtailor.com` job, or a job page with Teamtailor's "powered by" link or its
@@ -143,13 +144,21 @@ class Teamtailor:
         assert match, url
         return f"https://{parts.hostname}/jobs/{match[1]}"
 
-    def browser_read(self, page: Page) -> list[Field]:
+    def open_form(self, page: Page, url: str) -> None:
         """Opens the form's own page, never the overlay nor "Apply with LinkedIn"."""
-        parts = urlsplit(page.url)
+        parts = urlsplit(url)
         job = JOB.search(parts.path)
-        assert job, page.url  # detected on a job URL
-        page.goto(f"{parts.scheme}://{parts.netloc}{parts.path[: job.end()]}/applications/new")
-        if urlsplit(page.url).hostname != parts.hostname:
+        assert job, url  # detected on a job URL
+        form = f"{parts.scheme}://{parts.netloc}{parts.path[: job.end()]}/applications/new"
+        page.goto(form)
+        self._form = form
+
+    def browser_read(self, page: Page) -> list[Field]:
+        if self._form is None:  # a page claimed once loaded: a custom domain
+            self.open_form(page, page.url)
+        assert self._form
+        opened, self._form = self._form, None
+        if urlsplit(page.url).hostname != urlsplit(opened).hostname:
             raise Unsupported(f"external_step: the job applies on another site ({page.url})")
         form = page.locator(FORM)
         try:

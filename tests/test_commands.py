@@ -9,7 +9,7 @@ from atsfill.core import attempts, commands, registry, telemetry
 from atsfill.core.adapter import Blocked, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Field, FieldType, Is, Status
-from tests.fake import FIELDS, Fake, FakeOpens, FakeProfile
+from tests.fake import FIELDS, Fake, FakeOpens, FakeOpensForm, FakeProfile
 from tests.test_accounts import storage_state
 
 
@@ -93,6 +93,25 @@ def test_a_page_that_never_loads_is_left_to_the_adapter_of_its_url(
     assert (result.status, result.fields) == (Status.READY, FIELDS)
 
 
+def test_an_adapter_that_opens_its_form_loads_it_in_place_of_the_posting(
+    config, server, data, monkeypatch
+):
+    adapter, opened, loads = FakeOpensForm(), commands.open_page, []
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+
+    @contextmanager
+    def counted(*args, **kwargs):
+        with opened(*args, **kwargs) as page:
+            page.on(
+                "request", lambda r: loads.extend([r.url] if r.resource_type == "document" else [])
+            )
+            yield page
+
+    monkeypatch.setattr(commands, "open_page", counted)
+    result = core.read(f"{server}/button.html?fake", data_dir=data)
+    assert (result.status, loads) == (Status.READY, [f"{server}/form.html"])
+
+
 def test_no_adapter_is_unsupported(fake, config, server, data):
     result = core.read(f"{server}/button.html", data_dir=data)
     assert result.status is Status.UNSUPPORTED
@@ -109,6 +128,13 @@ def test_fill_reads_every_answer_back(fake, config, url, answers, data):
     assert result.status is Status.READY, result.reason
     assert [c.field_id for c in result.checks if c.match] == list(answers)
     assert not (data / "users/default/attempts.jsonl").exists()
+
+
+def test_a_knockout_answer_fills_with_a_warning(fake, config, url, answers, data):
+    fake.fields = [replace(f, knockouts=["Fluent"]) if f.id == "level" else f for f in FIELDS]
+    result = core.fill(url, answers, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert result.warnings == ["level: 'Fluent' ends the application (Level)"]
 
 
 def test_invalid_answers_refuse_before_filling(fake, config, url, answers, data):

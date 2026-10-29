@@ -142,6 +142,10 @@ The value a page starts a field with, not from the account profile: the employer
 The user's map from field id to value for one form, or for one account profile's profile form.
 _Avoid_: responses, profile
 
+**Knockout**:
+An option whose choice ends the application, as the hiring system declares it: listed on its field as `knockouts`. The core never refuses one, since it can be the truthful answer; a fill that gives one warns.
+_Avoid_: disqualifier, screening-out answer
+
 **Fill**:
 An adapter writing the answers into a form, never submitting it. Also the `fill` command, which is a dry run.
 

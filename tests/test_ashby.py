@@ -88,6 +88,15 @@ def resume(tmp_path) -> str:
     return str(path)
 
 
+def test_open_form_loads_the_form_once(ashby, page):
+    adapter, _ = ashby
+    loads = []
+    page.on("request", lambda r: loads.extend([r.url] if r.resource_type == "document" else []))
+    adapter.open_form(page, URL)
+    assert adapter.browser_read(page)
+    assert loads == [f"{URL}/application"]
+
+
 def test_browser_read_lists_the_visible_fields_of_every_form(ashby, page):
     adapter, _ = ashby
     page.goto(URL)

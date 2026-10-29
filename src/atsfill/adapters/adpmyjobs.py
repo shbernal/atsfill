@@ -408,15 +408,15 @@ class ADPMyJobs:
                 every = len(chosen) == len(labels)
                 incoming.setdefault(target, []).append(Is(ids[qid], None if every else chosen))
             label = _text(raw.get("questionDescription") or qid)
+            knockouts = [labels[a["answerId"]] for a in answers if a.get("knockoutRule")] or None
             match raw["questionType"]:
                 case "Instructions":
                     continue
-                case "Single choice":
+                case "Single choice" | "Multiple choice" as kind:
                     self._codes[ids[qid]] = labels
-                    f = Field(ids[qid], label, FieldType.CHOICE, True, list(labels.values()))
-                case "Multiple choice":
-                    self._codes[ids[qid]] = labels
-                    f = Field(ids[qid], label, FieldType.MULTI_CHOICE, True, list(labels.values()))
+                    type_ = FieldType.CHOICE if kind == "Single choice" else FieldType.MULTI_CHOICE
+                    options = list(labels.values())
+                    f = Field(ids[qid], label, type_, True, options, knockouts=knockouts)
                 case "Free form":
                     f = Field(ids[qid], label, FieldType.TEXT, True)
                 case "Calendar":

@@ -13,6 +13,7 @@ PAGE = Path(__file__).parent / "pages/lever/apply.html"
 POSTING = "https://jobs.lever.co/acme/0a1b2c3d-0000-4000-8000-123456789abc"
 CARD = "cards[11111111-1111-1111-1111-111111111111]"
 SURVEY = "surveysResponses[22222222-2222-2222-2222-222222222222][responses][field0]"
+OTHER_URL = "urls[Your resume's language: English]"  # a link the employer names, quote and all
 
 
 def serve(route) -> None:
@@ -72,6 +73,7 @@ def test_browser_read_opens_the_application(page):
         "pronouns",
         "opportunityLocationId",
         "urls[LinkedIn]",
+        OTHER_URL,
         *(f"{CARD}[field{n}]" for n in range(6)),
         SURVEY,
         "eeo[gender]",
@@ -112,12 +114,13 @@ def test_every_answer_reads_back(page, resume):
         "name": "Ada Placeholder",
         "email": "ada@example.com",
         "phone": "+12025550143",
-        "location": "London",
+        "location": "London, United Kingdom",  # the pick names the country by its code
         "org": "Acme",  # after the resume, whose parse fills it
         "resume": resume,
         "pronouns": ["They/them"],
         "opportunityLocationId": "Shelbyville",
         "urls[LinkedIn]": "https://example.com",
+        OTHER_URL: "https://example.org",
         f"{CARD}[field0]": "50000",
         f"{CARD}[field1]": "Placeholder answer.",
         f"{CARD}[field2]": "No",
@@ -139,6 +142,15 @@ def test_every_answer_reads_back(page, resume):
     assert len(checks) == len(answers)
     assert page.locator("[name=eeo\\[disabilitySignatureDate\\]]").input_value() == "10/20/2026"
     assert "London, Greater London" in page.locator("#selected-location").input_value()
+
+
+def test_a_location_with_no_pick_reads_back_empty(page, monkeypatch):
+    monkeypatch.setattr("atsfill.adapters.lever.SUGGEST_TIMEOUT_MS", 1_000)
+    adapter, _ = opened(page)
+    answers: dict[str, Answer] = {"location": "Nowhere"}
+    adapter.fill(page, answers)
+    assert page.locator("#location-input").input_value() == "Nowhere"
+    assert "location" not in adapter.read_back(page)
 
 
 def test_an_unknown_rendering_is_listed_unhandled():

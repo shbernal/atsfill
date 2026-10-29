@@ -64,8 +64,10 @@ CODES = {
 PRESCREEN = [
     {"questionId": "q_1", "questionType": "Single choice", "orderId": 1,
      "questionDescription": "<DIV>Are you a current employee?</DIV>",
-     "possibleAnswers": [{"answerId": "11", "answerLabel": "Yes", "branchingQuestionId": "q_2"},
-                         {"answerId": "12", "answerLabel": "No", "branchingQuestionId": "q_3"}]},
+     "possibleAnswers": [{"answerId": "11", "answerLabel": "Yes", "knockoutRule": False,
+                          "branchingQuestionId": "q_2"},
+                         {"answerId": "12", "answerLabel": "No", "knockoutRule": False,
+                          "branchingQuestionId": "q_3"}]},
     {"questionId": "q_2", "questionType": "Single choice", "orderId": 2,
      "questionDescription": "Confirm to close this application",
      "possibleAnswers": [{"answerId": "21", "answerLabel": "Confirmed", "knockoutRule": True,
@@ -259,6 +261,8 @@ def test_the_read_agrees_to_the_statement_then_lists_every_section(opened, ats):
     assert by_id["contact.zip"].label == "ZIP Code"
     assert by_id["contact.smsOptIn"].prefilled == "No"
     assert by_id["prescreen1.q_2"].shown_when == Is("prescreen1.q_1", ["Yes"])
+    assert by_id["prescreen1.q_2"].knockouts == ["Confirmed"]
+    assert by_id["prescreen1.q_1"].knockouts is None
     assert by_id["prescreen1.q_3"].shown_when == Is("prescreen1.q_1", ["No"])
     assert by_id["prescreen1.q_4"].shown_when == Is("prescreen1.q_3")
     assert by_id["prescreen1.q_5"].type is FieldType.DATE

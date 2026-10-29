@@ -1,3 +1,4 @@
+from atsfill.adapters.adp import ADP
 from atsfill.adapters.adpmyjobs import ADPMyJobs
 from atsfill.adapters.ashby import Ashby
 from atsfill.adapters.bamboohr import BambooHR
@@ -29,6 +30,7 @@ from atsfill.adapters.successfactors import SuccessFactors
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.ukg import UKG
 from atsfill.adapters.welcomekit import WelcomeKit
+from atsfill.adapters.werecruit import WeRecruit
 from atsfill.adapters.workable import Workable
 from atsfill.adapters.workatastartup import WorkAtAStartup
 from atsfill.adapters.workday import Workday
@@ -48,6 +50,7 @@ def adapters() -> list[Adapter]:
         Join(),
         JobAffinity(),
         WelcomeKit(),
+        WeRecruit(),
         SmartRecruiters(),
         Oracle(),
         Manatal(),
@@ -74,6 +77,7 @@ def adapters() -> list[Adapter]:
         IsolvedHire(),
         Jobstreet(),
         ADPMyJobs(),
+        ADP(),
         SuccessFactors(),  # it claims a career site's job path on any host
         Phenom(),  # last: it claims a URL by its path alone
     ]

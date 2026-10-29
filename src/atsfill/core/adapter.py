@@ -281,6 +281,16 @@ class SendsToOpen(Adapter, Protocol):
 
 
 @runtime_checkable
+class OpensForm(Adapter, Protocol):
+    """An adapter whose form is another page than the posting: the core has it load the form
+    in place of the posting, when it claims the posting by its URL (ADR 0003)."""
+
+    def open_form(self, page: Page, url: str) -> None:
+        """Loads the form of the posting at `url`, so that `browser_read` finds it open."""
+        ...
+
+
+@runtime_checkable
 class ReadsByRequest(Adapter, Protocol):
     """An adapter with a request read: a form's fields listed without a browser (ADR 0011)."""
 

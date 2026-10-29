@@ -34,6 +34,8 @@ APPLY = "[data-automation=job-detail-apply]"
 CONTINUE = "[data-testid=continue-button]"
 SUBMIT = "[data-testid=review-submit-application]"
 SAVE_DETAILS = "[data-automation=personal-details-save-button]"
+RESUME_FILE = "input[type=file][id^=resume]"
+LETTER_FILE = "input[type=file][id^=coverLetter]"
 CHALLENGE = "Just a moment..."  # Cloudflare's interstitial: it passes on its own, or on a reload
 CHALLENGE_TRIES = 2
 SIGN_IN_TIMEOUT_MS = 90_000  # SEEK's sign-in takes up to ~50 s to show its form
@@ -53,6 +55,7 @@ SUGGEST_TIMEOUT_S = 8
 POLL_MS = 250
 KEY_DELAY_MS = 40
 DETAILS = ("firstName", "lastName", "currentLocation", "phone")
+DOCUMENTS = ("resume", "coverLetter", "coverLetterFile")
 VISIBILITY = ["Public", "Standard", "Limited", "Hidden"]
 
 _STEP_ONE = """() => {
@@ -62,7 +65,7 @@ _STEP_ONE = """() => {
     .find(e => e.checked);
   const label = e => e && document.querySelector(`label[for="${e.id}"]`)?.innerText.trim();
   const resume = picked('document-select');
-  const letter = document.querySelector('[data-testid=coverLetter-method-change]');
+  const method = picked('coverLetter-method');
   const phone = value('#phoneNumber');
   return {
     firstName: value('#firstName'), lastName: value('#lastName'),
@@ -70,7 +73,8 @@ _STEP_ONE = """() => {
     phone: phone && code?.value
       ? `${code.options[code.selectedIndex].text.match(/\\+\\d+/)?.[0] ?? ''}${phone}` : null,
     resume: resume && resume.value !== 'dont-include' ? label(resume) : null,
-    coverLetter: letter?.checked ? value('[data-testid=coverLetterTextInput]') : null,
+    coverLetter: method?.value === 'change' ? value('[data-testid=coverLetterTextInput]') : null,
+    coverLetterFile: method?.value === 'upload' ? label(method) : null,
   };
 }"""
 
@@ -198,7 +202,7 @@ class Jobstreet:
         self._read |= _personal_details(page, self._fields, answers)
         _documents_fill(page, answers)
         documents = page.evaluate(_STEP_ONE)
-        self._read |= {k: documents[k] for k in ("resume", "coverLetter") if documents[k]}
+        self._read |= {k: documents[k] for k in DOCUMENTS if documents[k]}
         _continue(page)
         if page.url.split("?")[0].endswith("/role-requirements"):
             for field_id, answer in answers.items():
@@ -316,14 +320,12 @@ def _operations(response: Response) -> dict[str, Any]:
 
 def _documents(page: Page, viewer: dict[str, Any]) -> list[Field]:
     """The first step: the profile's personal details, then the resume and the cover letter,
-    optional where the page offers to leave them out."""
+    optional where the page offers to leave them out. The cover letter is written or uploaded,
+    two alternatives."""
     details = viewer["personalDetails"]
     code = (details.get("countryCallingCode") or {}).get("countryCallingCode", "")
     location = (viewer.get("currentLocation2") or {}).get("description")
-    resume = page.locator("input[type=file][id^=resume]")
-    accept: list[str] | None = None
-    if resume.count():
-        accept = [str(a) for a in (resume.get_attribute("accept") or "").split(",")]
+    letter = not page.locator("[data-testid=coverLetter-method-none]").count()
     return [
         Field("firstName", "First name", FieldType.TEXT, True,
               prefilled=details.get("firstName") or None),
@@ -333,10 +335,19 @@ def _documents(page: Page, viewer: dict[str, Any]) -> list[Field]:
         Field("phone", "Phone number", FieldType.PHONE, False,
               prefilled=f"{code}{details['phoneNumber']}" if details.get("phoneNumber") else None),
         Field("resume", "Resumé", FieldType.FILE,
-              not page.locator("input[type=radio][value=dont-include]").count(), accept=accept),
-        Field("coverLetter", "Cover letter", FieldType.TEXT,
-              not page.locator("[data-testid=coverLetter-method-none]").count()),
+              not page.locator("input[type=radio][value=dont-include]").count(),
+              accept=_accept(page, RESUME_FILE)),
+        Field("coverLetter", "Cover letter", FieldType.TEXT, letter, one_of="coverLetter"),
+        Field("coverLetterFile", "Cover letter", FieldType.FILE, letter,
+              accept=_accept(page, LETTER_FILE), one_of="coverLetter"),
     ]  # fmt: skip
+
+
+def _accept(page: Page, selector: str) -> list[str] | None:
+    upload = page.locator(selector)
+    if not upload.count():
+        return None
+    return [str(a) for a in (upload.get_attribute("accept") or "").split(",")]
 
 
 def _question(raw: dict[str, Any]) -> Field | None:
@@ -404,18 +415,25 @@ def _phone(page: Page, answer: str) -> None:
 
 def _documents_fill(page: Page, answers: dict[str, Answer]) -> None:
     """Uploads the resume, which the page then picks, or leaves it out; the same for the cover
-    letter, written in its box."""
+    letter, uploaded or written in its box."""
     if (resume := answers.get("resume")) is not None:
-        page.locator("input[type=file][id^=resume]").set_input_files(str(resume))
-        name = str(resume).rsplit("/", 1)[-1]
-        page.locator("label", has_text=name).first.wait_for(timeout=SAVE_TIMEOUT_MS)
+        _upload(page, RESUME_FILE, str(resume))
     elif (none := page.locator("input[type=radio][value=dont-include]")).count():
         none.check(force=True)
-    if (letter := answers.get("coverLetter")) is not None:
-        page.locator("[data-testid=coverLetter-method-change]").check(force=True)
+    if (letter := answers.get("coverLetterFile")) is not None:
+        _upload(page, LETTER_FILE, str(letter))
+    elif (letter := answers.get("coverLetter")) is not None:
+        page.locator("input[type=radio][data-testid=coverLetter-method-change]").check(force=True)
         page.locator("[data-testid=coverLetterTextInput]").fill(str(letter))
     elif (none := page.locator("[data-testid=coverLetter-method-none]")).count():
         none.check(force=True)
+
+
+def _upload(page: Page, selector: str, path: str) -> None:
+    """Sets the file, then waits for the radio the page adds and picks, labelled with its name."""
+    page.locator(selector).set_input_files(path)
+    name = path.rsplit("/", 1)[-1]
+    page.locator("label", has_text=name).first.wait_for(timeout=SAVE_TIMEOUT_MS)
 
 
 def _answer(page: Page, field: Field, answer: Answer) -> None:

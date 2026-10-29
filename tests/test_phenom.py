@@ -10,7 +10,7 @@ import pytest
 from atsfill.adapters import phenom
 from atsfill.adapters.phenom import Phenom, _Config
 from atsfill.core import browser, matching
-from atsfill.core.adapter import NotTaken, Unsupported
+from atsfill.core.adapter import Blocked, NotTaken, Unsupported
 from atsfill.core.results import AllOf, AnyOf, FieldType, Is, OptionSet
 
 PAGES = Path(__file__).parent / "pages/phenom"
@@ -104,6 +104,7 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
         "educationData[0].fromTo.endDate",
         "jsqData.Q1.a",
         "jsqData.Q1.a_dot_a",
+        "yearsOfExperience",
         "comments",
         "custAgreement",
     ]  # no heading, hidden value, French-only box or entry shown only once Add is clicked
@@ -147,6 +148,27 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
     assert follow_up.shown_when == Is("jsqData.Q1.a", ["Yes"])  # `not` `not` the option's key
     assert follow_up.required  # whenever shown
     assert fields["comments"].type is FieldType.TEXT and not fields["comments"].required
+    assert fields["yearsOfExperience"].label == "Years of experience (a number)"
+
+
+def test_a_sites_country_fields_are_kept_a_day_between_reads(opened, page, monkeypatch):
+    _, fields = opened
+    asked: list[dict] = []
+    calls = _Config.calls
+
+    def counted(self, payload, extras):
+        asked.extend(extras)
+        return calls(self, payload, extras)
+
+    monkeypatch.setattr(_Config, "calls", counted)
+    countries = lambda: [e for e in asked if "countryCode" in e]  # noqa: E731
+    page.goto(JOB)
+    assert [f.id for f in Phenom().browser_read(page)] == [f.id for f in fields]
+    assert countries() == []
+    monkeypatch.setattr(phenom, "COUNTRIES_KEPT_S", 0)
+    page.goto(JOB)
+    assert [f.id for f in Phenom().browser_read(page)] == [f.id for f in fields]
+    assert countries()
 
 
 def test_request_read_lists_the_same_fields(opened, monkeypatch):
@@ -182,6 +204,7 @@ def answers(resume: str) -> dict:
         "educationData[0].fromTo.endDate": "2004",
         "jsqData.Q1.a": "Yes",
         "jsqData.Q1.a_dot_a": "2020",
+        "yearsOfExperience": "3",
         "comments": "Placeholder",
         "custAgreement": "Yes",
     }
@@ -198,6 +221,18 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
     assert [c for c in checks if not c.match] == []
     shown = adapter.shown_fields(page)
     assert "jsqData.Q1.a_dot_a" in shown and not set(shown) - {f.id for f in fields}
+
+
+def test_terms_the_wizard_opens_on_are_accepted_to_reach_the_form(opened, page, resume):
+    adapter, fields = opened
+    body = "<script>window.TERMS = true</script>" + (PAGES / "apply.html").read_text()
+    page.route(APPLY, lambda route: route.fulfill(content_type="text/html", body=body))
+    try:
+        adapter.fill(page, answers(resume))
+    finally:
+        page.unroute(APPLY)
+    checks = matching.check(fields, answers(resume), adapter.read_back(page))
+    assert [c for c in checks if not c.match] == []
 
 
 def test_the_next_answer_does_not_drop_the_country_the_page_takes_later(opened, page, resume):
@@ -351,6 +386,19 @@ def test_a_closed_posting_is_gone(page):
         page.unroute(at_gone)
 
 
+def test_a_site_refusing_its_loaders_is_blocked(page):
+    def refused(route):
+        route.fulfill(status=403, content_type="text/html", body="<H1>403 ERROR</H1>")
+
+    page.route("**/applySubmit", refused)
+    try:
+        page.goto(JOB)
+        with pytest.raises(Blocked, match="rate_limited: .*403"):
+            Phenom().browser_read(page)
+    finally:
+        page.unroute("**/applySubmit")
+
+
 def test_a_first_step_other_than_the_form_is_a_known_gap(page, monkeypatch):
     monkeypatch.setattr(phenom, "FORM_TIMEOUT_MS", 500)
     body = "<script>history.replaceState({}, '', location.href + '&stepname=login')</script>"
@@ -372,6 +420,8 @@ def test_rules_on_answers_become_conditions():
             "box": {"title": "Relocate?", "type": "boolean"},
             "phone": {"title": "Phone", "type": "string"},
             "locale": {"type": "string"},
+            "jobCountry": {"type": "string"},
+            "jobLocation": {"type": "string"},
         },
         "allOf": [
             {"if": {"anyOf": [{"properties": {"visa": {"const": "v1"}}},
@@ -383,18 +433,34 @@ def test_rules_on_answers_become_conditions():
              "then": {"properties": {"cover": {"title": "Cover note", "type": "string"}}}},
             {"if": {"properties": {"locale": {"const": "fr_fr"}}},
              "then": {"properties": {"fr": {"title": "French", "type": "string"}}}},
+            {"if": {"properties": {"jobCountry": {"const": "United States of America"}}},
+             "then": {"properties": {"veteran": {"title": "Veteran?", "type": "string"}}}},
+            {"if": {"properties": {"jobLocation": {"pattern": "Antrim"}}},
+             "then": {"properties": {"religion": {"title": "Religion?", "type": "string"}}}},
         ],
     }  # fmt: skip
     ui = {"visa": {"ui:widget": "select"}, "box": {"ui:widget": "checkbox"},
-          "locale": {"htmlType": "hidden"}}  # fmt: skip
+          "locale": {"htmlType": "hidden"}, "jobCountry": {"htmlType": "hidden"},
+          "jobLocation": {"htmlType": "hidden"}}  # fmt: skip
     config = {"schema": schema, "uiSchema": ui}
-    reader = _Config({"locale": "en_us"}, config, {}, lambda bodies: [None] * len(bodies))
+    job = {
+        "response": {
+            "response": {
+                "jobCountry": "United States of America",
+                "jobLocation": "Wilmington, Delaware",
+            }
+        }
+    }
+    ph = {"locale": "en_us", "ddo": job}
+    reader = _Config(ph, config, {}, lambda bodies: [None] * len(bodies))
     raws = reader.object(schema, ui, "", None, False, None)
     for raw in raws:
         for key in ("when", "required_when"):
             raw[key] = reader.labeled(raw.get(key), resume=True)
     by_id = {r["id"]: r for r in raws}
     assert "fr" not in by_id  # on the page's own data
+    assert by_id["veteran"]["when"] is None  # the job's, a hidden field takes from its data
+    assert "religion" not in by_id  # a location the job's does not match
     assert by_id["which"]["when"] == AnyOf([Is("visa", ["Yes"]), Is("box", ["Yes"])])
     assert by_id["which"]["required"]
     assert by_id["phone"]["required_when"] == Is("visa", ["No"])
