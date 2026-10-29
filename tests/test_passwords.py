@@ -207,6 +207,38 @@ def test_create_signs_in_with_a_password_already_stored(creates, config, data, c
     assert core.accounts.email(data / "users/default", "fakeaccount", None) == EMAIL
 
 
+def test_create_signs_up_again_after_a_sign_up_blocked_before_the_account_existed(
+    creates, config, data, capsys
+):
+    creates.stops = Blocked("email_otp")
+    code, report = login(data, capsys, "--create", "--email", EMAIL)
+    assert (code, report["status"], report["password"]) == (1, "blocked", "stored")
+    first = passwords.stored(data / "users/default", "fakeaccount", None)
+    creates.stops = None
+    code, report = login(data, capsys, "--create", "--email", EMAIL)
+    assert (code, report["status"], report["password"]) == (0, "signed_in", "kept")
+    assert creates.created == first
+    assert passwords.stored(data / "users/default", "fakeaccount", None) == first
+
+
+def test_a_sign_up_again_that_finds_the_email_in_use_keeps_the_password(
+    creates, config, data, capsys
+):
+    creates.stops = Blocked("email_otp")
+    login(data, capsys, "--create", "--email", EMAIL)
+    first = passwords.stored(data / "users/default", "fakeaccount", None)
+
+    def in_use(page, email, password, details):
+        raise Refused("email_in_use")
+
+    creates.stops, creates.sign_up = None, in_use
+    code, report = login(data, capsys, "--create", "--email", EMAIL)
+    assert (code, report["status"], report["password"]) == (1, "refused", "kept")
+    assert report["reason"] == "email_in_use"
+    assert creates.sign_ins == 1
+    assert passwords.stored(data / "users/default", "fakeaccount", None) == first
+
+
 def test_create_with_a_password_stored_finishes_the_sign_up_with_the_details(
     creates, config, data, capsys, tmp_path
 ):
