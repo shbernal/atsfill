@@ -130,6 +130,13 @@ def test_fill_reads_every_answer_back(fake, config, url, answers, data):
     assert not (data / "users/default/attempts.jsonl").exists()
 
 
+def test_a_knockout_answer_fills_with_a_warning(fake, config, url, answers, data):
+    fake.fields = [replace(f, knockouts=["Fluent"]) if f.id == "level" else f for f in FIELDS]
+    result = core.fill(url, answers, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert result.warnings == ["level: 'Fluent' ends the application (Level)"]
+
+
 def test_invalid_answers_refuse_before_filling(fake, config, url, answers, data):
     result = core.fill(url, answers | {"level": "Basic"}, data_dir=data)
     assert result.status is Status.REFUSED
