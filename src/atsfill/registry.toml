@@ -209,7 +209,7 @@ account = "to_read"  # a candidate profile per employer without a password, made
 hosting = ["hosted"]
 hosts = ["workforcenow.adp.com"]
 adapter = "adp"
-scope = { is = "in_scope", date = 2026-10-29 }
+scope = { is = "supported", date = 2026-10-29, commit = "76371bd" }
 
 [eures]
 kind = "aggregator"

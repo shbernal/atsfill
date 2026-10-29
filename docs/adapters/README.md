@@ -38,7 +38,7 @@ The registry covers 90.3% of postings.
 | wttj | board | 0.1% | to_send | hosted |  | [supported](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [supported](workday.md) |
 | successfactors | ats | 3.5% | to_read | hosted |  | [supported](successfactors.md) |
-| adp | ats | 1.1% | to_read | hosted |  | [in scope](adp.md) |
+| adp | ats | 1.1% | to_read | hosted |  | [supported](adp.md) |
 | adpmyjobs | ats | 0.8% | to_read | hosted |  | [supported](adpmyjobs.md) |
 | isolvedhire | ats | 0.5% | to_read | hosted |  | [supported](isolvedhire.md) |
 | jobstreet | board | 0.5% | to_read | hosted |  | [supported](jobstreet.md) |
