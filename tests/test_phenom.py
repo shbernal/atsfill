@@ -149,6 +149,26 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
     assert fields["comments"].type is FieldType.TEXT and not fields["comments"].required
 
 
+def test_a_sites_country_fields_are_kept_a_day_between_reads(opened, page, monkeypatch):
+    _, fields = opened
+    asked: list[dict] = []
+    calls = _Config.calls
+
+    def counted(self, payload, extras):
+        asked.extend(extras)
+        return calls(self, payload, extras)
+
+    monkeypatch.setattr(_Config, "calls", counted)
+    countries = lambda: [e for e in asked if "countryCode" in e]  # noqa: E731
+    page.goto(JOB)
+    assert [f.id for f in Phenom().browser_read(page)] == [f.id for f in fields]
+    assert countries() == []
+    monkeypatch.setattr(phenom, "COUNTRIES_KEPT_S", 0)
+    page.goto(JOB)
+    assert [f.id for f in Phenom().browser_read(page)] == [f.id for f in fields]
+    assert countries()
+
+
 def test_request_read_lists_the_same_fields(opened, monkeypatch):
     def open_(opener, request, timeout):
         if (body := served(request.full_url, request.data)) is None:

@@ -7,7 +7,7 @@ from atsfill.core import paths
 
 @pytest.fixture
 def home(tmp_path, monkeypatch) -> Path:
-    for var in ("ATSFILL_DATA_DIR", "XDG_STATE_HOME", "XDG_CONFIG_HOME"):
+    for var in ("ATSFILL_DATA_DIR", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME"):
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setattr(paths, "LINUX", True)
@@ -34,6 +34,15 @@ def test_data_dir_flag_over_env(home, monkeypatch):
 def test_data_dir_outside_linux(home, monkeypatch):
     monkeypatch.setattr(paths, "LINUX", False)
     assert paths.data_dir() == home / ".atsfill"
+
+
+def test_cache_dir(home, monkeypatch):
+    assert paths.cache_dir() == home / ".cache/atsfill"
+    monkeypatch.setenv("XDG_CACHE_HOME", str(home / "cache"))
+    assert paths.cache_dir() == home / "cache/atsfill"
+    monkeypatch.delenv("XDG_CACHE_HOME")
+    monkeypatch.setattr(paths, "LINUX", False)
+    assert paths.cache_dir() == home / ".atsfill/cache"
 
 
 def test_config_file(home, monkeypatch):

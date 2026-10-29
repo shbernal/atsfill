@@ -89,6 +89,11 @@ def offline() -> Generator[None]:
 
 
 @pytest.fixture(autouse=True)
+def cache(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+
+
+@pytest.fixture(autouse=True)
 def secret_store() -> Generator[MemoryKeyring]:
     store, previous = MemoryKeyring(), keyring.get_keyring()
     keyring.set_keyring(store)
