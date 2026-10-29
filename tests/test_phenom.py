@@ -387,7 +387,8 @@ def test_rules_on_answers_become_conditions():
     }  # fmt: skip
     ui = {"visa": {"ui:widget": "select"}, "box": {"ui:widget": "checkbox"},
           "locale": {"htmlType": "hidden"}}  # fmt: skip
-    reader = _Config({"locale": "en_us"}, {"schema": schema, "uiSchema": ui}, {}, lambda bodies: [None] * len(bodies))
+    config = {"schema": schema, "uiSchema": ui}
+    reader = _Config({"locale": "en_us"}, config, {}, lambda bodies: [None] * len(bodies))
     raws = reader.object(schema, ui, "", None, False, None)
     for raw in raws:
         for key in ("when", "required_when"):
