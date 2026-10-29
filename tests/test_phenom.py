@@ -200,6 +200,18 @@ def test_every_answer_reads_back_across_steps(opened, page, resume):
     assert "jsqData.Q1.a_dot_a" in shown and not set(shown) - {f.id for f in fields}
 
 
+def test_terms_the_wizard_opens_on_are_accepted_to_reach_the_form(opened, page, resume):
+    adapter, fields = opened
+    body = "<script>window.TERMS = true</script>" + (PAGES / "apply.html").read_text()
+    page.route(APPLY, lambda route: route.fulfill(content_type="text/html", body=body))
+    try:
+        adapter.fill(page, answers(resume))
+    finally:
+        page.unroute(APPLY)
+    checks = matching.check(fields, answers(resume), adapter.read_back(page))
+    assert [c for c in checks if not c.match] == []
+
+
 def test_the_next_answer_does_not_drop_the_country_the_page_takes_later(opened, page, resume):
     adapter, _ = opened
     given = answers(resume)
