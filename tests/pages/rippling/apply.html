@@ -254,15 +254,20 @@ for (const button of document.querySelectorAll("[data-testid='Add comment']")) {
     button.replaceWith(div);
   };
 }
-// A file is uploaded, then shown as a chip; the résumé is parsed and, a moment after the
-// response, fills the first name and shows its notice.
+// A file is uploaded, then shown as a chip, a stem over 15 characters shortened, and named
+// whole in a status line; the résumé is parsed and, a moment after the response, fills the
+// first name and shows its notice.
 for (const input of document.querySelectorAll("input[type=file]")) {
   input.onchange = async () => {
     const name = input.files[0].name;
+    const [, stem, ext] = name.match(/^(.*?)(\.[^.]*)?$/);
     await fetch("/api/v1/utility/file_upload_url");
     input.parentElement.querySelector(".chips").innerHTML =
-      `<div data-testid="chip"><div role="button"><div id="chip-1-content"><div></div></div></div></div>`;
-    input.parentElement.querySelector("[id$=-content] div").textContent = name;
+      `<div data-testid="chip"><div role="button"><div id="chip-1-content"><div></div></div></div></div><div data-testid="screen-reader-only" role="status" aria-live="polite"></div>`;
+    input.parentElement.querySelector("[id$=-content] div").textContent =
+      stem.length > 15 ? `${stem.slice(0, 15)}...${(ext || "").slice(1)}` : name;
+    input.parentElement.querySelector("[role=status]").textContent =
+      `File ${name} uploaded successfully`;
     if (input.dataset.testid !== "input-resume") return;
     await fetch(`/api/v1/board/${board}/jobs/${job.split("/")[3]}/parse_resume`, {method: "POST", body: "{}"});
     await new Promise(resolve => setTimeout(resolve, 300));  // the page's own work on the parse

@@ -137,9 +137,13 @@ _SHOWN = """(root, [id, nth, testids]) => {
   if (el.getAttribute("role") === "group")
     return {kind: "checkbox", value: [...el.querySelectorAll("[role=checkbox]")]
       .filter(e => e.getAttribute("aria-checked") === "true").map(text)};
-  if (el.querySelector("input[type=file]"))
-    return {kind: "file", value: [...el.querySelectorAll("[data-testid=chip] [id$=-content]")]
-      .map(text)[0] ?? null};
+  if (el.querySelector("input[type=file]")) {
+    // the chip shortens a long name; the upload's status line keeps it whole
+    const status = [...el.querySelectorAll("[role=status]")]
+      .map(e => text(e).match(/^File (.+) uploaded successfully$/)).find(m => m);
+    const chip = el.querySelector("[data-testid=chip] [id$=-content]");
+    return {kind: "file", value: status ? status[1] : chip ? text(chip) : null};
+  }
   if (el.querySelector("[data-input=month]")) {
     const part = p => el.querySelector(`[data-input=${p}]`).value;
     const [y, m, d] = [part("year"), part("month"), part("day")];
