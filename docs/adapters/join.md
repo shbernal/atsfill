@@ -47,22 +47,22 @@ The screening questions come from `JobScreeningQuestions` (`candidate-api/graphq
 | `cv` | `file` | PDF upload, then "Confirm your CV" with Remove file | 1 walked |
 | `personalInformation` | `text`, `choice`, `typeahead`, `phone`, `file` | first and last name (required), country of residence (a select, preset from the visitor's location), city (async select), phone with a country code, profile picture (PNG or JPEG) | 1 walked |
 | `professionalLinks` | `text` | LinkedIn URL, Add link for more | 1 walked |
-| `coverLetter` | `file` | PDF upload | 1 walked |
+| `coverLetter` | `file` | PDF upload | 2 walked |
 | `SINGLE_CHOICE` | `choice` | `div[role=radio]` cards lettered A, B, …: plain, `AVAILABILITY`, `WORK_AUTHORIZATION` | 2, 7, 5 |
 | `INTEGER` | `number` | `input[type=number]`: plain, `SALARY_EXPECTATION` | 3, 7 |
 | `BOOLEAN` | `choice` | Yes and No cards, as a single choice | 4 |
 | `DATE` | `date` | an inline calendar, days `td[data-part=table-cell][data-value=YYYY-MM-DD]`, month and year selects | 4 |
 | `TEXT` | `text` | text input | 1 |
 
-The question counts are postings, from 11 employers whose posting asks screening questions, read by request. Which steps a posting asks was not found in the page's data: the wizard's steps are the source.
+The question counts are postings, from 11 employers whose posting asks screening questions, read by request. Which questions and profile steps a posting asks was not found in the page's data: the wizard's steps are the source.
 
-- atsfill lists the CV (required) and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
+- The wizard's page, unlike the posting's, carries the job's documents in its `__NEXT_DATA__` (`initialState.job.documentsConfig`): each a `type`, `CV` or `COVER_LETTER`, and a `constraint`, `REQUIRED` or `OPTIONAL`. Of 45 sample jobs, 24 ask the CV alone, 17 an optional cover letter too, 3 a required one, and 1 makes both optional. A job without `COVER_LETTER` has no `coverLetter` step. A required cover letter's step keeps Continue disabled, or enabled and going nowhere, until a file is stored.
+- atsfill lists the documents the wizard's page names, each required or optional as it says, and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
 - The fill walks the wizard from `cv` to `review`, answering each step, and stops there; a step it does not know stops it as `unhandled_rendering`. Continue is the footer's last button (its label is in the job's language); one left disabled means a required answer is missing.
 - A question of a class has a step named for it (`workAuthorization`, `salaryExpectation`); the others are `question-<position>`. A job asking only plain questions positions them from 1; one that also asks classed questions keeps positions 1 to 3 for the classes (work authorization, availability, salary) and positions its plain ones from 1001, so its steps are `question-1001`, `question-1002`, …, rendered as any other. A work authorization's cards hold the option and a description; a salary is `#salaryExpectationAmount`.
 - `personalInformation` (photo, name, country, city, phone) shows when the job requires what the account profile lacks, a phone on 13 of 45 sample postings. Continue is then disabled, or enabled and going nowhere. atsfill leaves the step as it is: the form command ends `blocked: profile_incomplete: the job asks for a phone`, naming `atsfill profile join`. With a phone in the profile, the same jobs pass the step.
 - A file is stored on upload, before Continue: the step then shows the file in place of its input.
 - A choice's cards are its options in order, each a letter, the option and, for a work authorization, a description; a boolean's read in the job's language (`Ja`, `Nein`) and are answered `Yes`, `No` by position.
-- `coverLetter` is asked by some jobs only, optional where seen: it is left without one, and not listed.
 - The calendar is paged with its previous and next buttons to the answer's month.
 - The read-back is each question as its step was left (the checked card, the picked day, the input), and the CV by name from the review page: the review shows a classed question under a label of its own and its answer reworded (`€50,000`, an availability in the account's language).
 

@@ -15,7 +15,10 @@
 <body>
 <div id="app"></div>
 <script>
-const BASE = "/companies/acme/101";
+const BASE = location.pathname.match(/^\/companies\/acme\/\d+/)[0];
+// the wizard's page holds the job's documents: job 102 requires a cover letter, 101 does not
+const DOCUMENTS = [{type: "CV", constraint: "REQUIRED"},
+  {type: "COVER_LETTER", constraint: BASE.endsWith("/102") ? "REQUIRED" : "OPTIONAL"}];
 const STEPS = ["cv", "coverLetter", "review"];
 let QUESTIONS = [];  // the job's, from its own query: a step each, `question-<position>`
 const asked = step => QUESTIONS.find(q => `question-${q.position}` === step);
@@ -89,6 +92,8 @@ function render() {
       `<button type="button" data-testid="ApplyButton">Apply now</button>`;
     return;
   }
+  document.getElementById("__NEXT_DATA__").textContent = JSON.stringify(
+    {props: {pageProps: {initialState: {job: {id: 101, documentsConfig: DOCUMENTS}}}}});
   if (step === "authentication") {  // the wizard learns the account, then leaves
     Promise.all([
       fetch("/api/me").then(r => r.json()),
@@ -110,7 +115,8 @@ function render() {
       `<div data-phone-input="true"><input id="candidate.phoneNumber" type="tel" value=""></div>` +
       footer(true);
   } else if (step === "cv" || step === "coverLetter") {
-    app.innerHTML = upload(step) + footer(step === "coverLetter" || !!state.files.cv);
+    const optional = step === "coverLetter" && DOCUMENTS[1].constraint === "OPTIONAL";
+    app.innerHTML = upload(step) + footer(optional || !!state.files[step]);
   } else if (step.startsWith("question-")) {
     app.innerHTML = question(asked(step));
   } else if (step === "review") {
