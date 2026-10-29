@@ -5,7 +5,7 @@ Observed on live postings on 2026-10-26, headless Camoufox, the account profile 
 ## Where the form is
 
 - A posting is `join.com/companies/<company>/<job id>-<slug>`; the job id alone keys it. The page is server-rendered with the job in `__NEXT_DATA__` (`pageData.job`: `id`, `companyId`, `status`).
-- Apply now (`[data-testid=ApplyButton]`, two in the page, one visible) opens a wizard on `/companies/<company>/<job id>/apply/<step>`, one step per page, each with Back and Continue: `authentication`, `cv`, `personalInformation`, `professionalLinks`, `coverLetter`, `question-<n>` per screening question, `review`. Continue stays disabled until the step's required answer is given.
+- Apply now (`[data-testid=ApplyButton]`, two in the page, one visible) opens a wizard on `/companies/<company>/<job id>/apply/<step>`, one step per page, each with Back and Continue: `authentication`, `cv`, `personalInformation`, `professionalLinks`, `coverLetter`, `question-<position>` per screening question, `review`. Continue stays disabled until the step's required answer is given.
 - `review` lists every answer, each with Edit, and ends with Confirm & apply (`button[type=submit]`), the send. Nothing reaches the employer before it; the CV goes to storage on upload (`GenerateJobApplicationAttachmentUploadInfo`, then a signed Google Cloud Storage URL).
 - The page loads an invisible reCAPTCHA; headless Camoufox passed every step.
 - Plain HTTP clients are served too: `curl` read the posting and the screening questions, Python's `urllib` was answered 403, and after about a dozen postings `curl` stopped getting the page's data.
@@ -40,7 +40,7 @@ What the wizard takes from the account is its profile, kept at `join.com/talent/
 
 ## Reading and filling
 
-The screening questions come from `JobScreeningQuestions` (`candidate-api/graphql`, `companyId` and `jobId` from the posting page), callable without a session: each question's `id`, `question`, `type`, `options`, `isRequired` and `questionClass`. On `question-<n>` the answer's input is named `screeningQuestions.answer-<id>`.
+The screening questions come from `JobScreeningQuestions` (`candidate-api/graphql`, `companyId` and `jobId` from the posting page), callable without a session: each question's `id`, `question`, `type`, `options`, `isRequired`, `position` and `questionClass`. On `question-<position>` the answer's input is named `screeningQuestions.answer-<id>`.
 
 | Step | Field type | Rendering | Postings |
 |---|---|---|---|
@@ -58,7 +58,7 @@ The question counts are postings, from 11 employers whose posting asks screening
 
 - atsfill lists the CV (required) and the questions; the account's name, links and contact details are the account profile's, not the form's. A question of another type is listed `unhandled_rendering`.
 - The fill walks the wizard from `cv` to `review`, answering each step, and stops there; a step it does not know stops it as `unhandled_rendering`. Continue is the footer's last button (its label is in the job's language); one left disabled means a required answer is missing.
-- A question of a class has a step named for it (`workAuthorization`, `salaryExpectation`); the others are `question-<n>`, numbered among themselves. A work authorization's cards hold the option and a description; a salary is `#salaryExpectationAmount`.
+- A question of a class has a step named for it (`workAuthorization`, `salaryExpectation`); the others are `question-<position>`. A job asking only plain questions positions them from 1; one that also asks classed questions keeps positions 1 to 3 for the classes (work authorization, availability, salary) and positions its plain ones from 1001, so its steps are `question-1001`, `question-1002`, …, rendered as any other. A work authorization's cards hold the option and a description; a salary is `#salaryExpectationAmount`.
 - `personalInformation` (photo, name, country, city, phone) shows when the job requires what the account profile lacks, a phone on 13 of 45 sample postings. Continue is then disabled, or enabled and going nowhere. atsfill leaves the step as it is: the form command ends `blocked: profile_incomplete: the job asks for a phone`, naming `atsfill profile join`. With a phone in the profile, the same jobs pass the step.
 - A file is stored on upload, before Continue: the step then shows the file in place of its input.
 - A choice's cards are its options in order, each a letter, the option and, for a work authorization, a description; a boolean's read in the job's language (`Ja`, `Nein`) and are answered `Yes`, `No` by position.

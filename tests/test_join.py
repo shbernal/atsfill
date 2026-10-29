@@ -125,6 +125,21 @@ def test_every_answer_reads_back_from_the_review_page(opened, page, files):
     assert adapter.submit(page) == "POST /candidate-api/graphql?operationName=ApplyToJob 200"
 
 
+def test_a_question_step_is_numbered_by_its_position(page, files, monkeypatch):
+    """A job that also asks classed questions positions its plain ones from 1001."""
+    positioned = [{**q, "position": 1001 + i} for i, q in enumerate(QUESTIONS)]
+    monkeypatch.setattr(f"{__name__}.QUESTIONS", positioned)
+    adapter = Join()
+    page.goto(JOB)
+    fields = adapter.browser_read(page)
+    answers = {"cv": files[0], "question.1": "Fluent", "question.2": "No",
+               "question.3": "2026-01-20", "question.4": "50000"}  # fmt: skip
+    adapter.fill(page, answers)
+    assert page.url.endswith("/apply/review")
+    checks = matching.check(fields, answers, adapter.read_back(page))
+    assert [c.field_id for c in checks if not c.match] == []
+
+
 def test_a_required_step_left_unanswered_is_not_taken(opened, page):
     adapter, _ = opened
     with pytest.raises(join.NotTaken, match="cv step keeps Continue disabled"):

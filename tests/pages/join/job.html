@@ -16,13 +16,9 @@
 <div id="app"></div>
 <script>
 const BASE = "/companies/acme/101";
-const STEPS = ["cv", "coverLetter", "question-1", "question-2", "question-3", "question-4", "review"];
-const QUESTIONS = [
-  {id: 1, question: "Your level of English?", options: ["None", "Fluent"], type: "SINGLE_CHOICE"},
-  {id: 2, question: "Do you hold a work permit?", options: null, type: "BOOLEAN"},
-  {id: 3, question: "When can you start?", options: null, type: "DATE"},
-  {id: 4, question: "Your salary expectation?", options: null, type: "INTEGER"},
-];
+const STEPS = ["cv", "coverLetter", "review"];
+let QUESTIONS = [];  // the job's, from its own query: a step each, `question-<position>`
+const asked = step => QUESTIONS.find(q => `question-${q.position}` === step);
 const state = {files: {}, answers: {}, month: new Date(2026, 0, 1)};
 const app = document.getElementById("app");
 
@@ -94,7 +90,13 @@ function render() {
     return;
   }
   if (step === "authentication") {  // the wizard learns the account, then leaves
-    fetch("/api/me").then(r => r.json()).then(me => {
+    Promise.all([
+      fetch("/api/me").then(r => r.json()),
+      fetch("/candidate-api/graphql?operationName=JobScreeningQuestions", {method: "POST", body: "{}"})
+        .then(r => r.json()),
+    ]).then(([me, job]) => {
+      QUESTIONS = job.data.jobScreeningQuestions.questions;
+      STEPS.splice(2, 0, ...QUESTIONS.map(q => `question-${q.position}`));
       // the job requires a phone: an account profile without one is asked it after the CV
       if (!me.phoneNumber) STEPS.splice(1, 0, "personalInformation");
       setTimeout(() => go("cv"), 300);
@@ -110,7 +112,7 @@ function render() {
   } else if (step === "cv" || step === "coverLetter") {
     app.innerHTML = upload(step) + footer(step === "coverLetter" || !!state.files.cv);
   } else if (step.startsWith("question-")) {
-    app.innerHTML = question(QUESTIONS[Number(step.split("-")[1]) - 1]);
+    app.innerHTML = question(asked(step));
   } else if (step === "review") {
     app.innerHTML = review();
   }
@@ -135,7 +137,7 @@ app.addEventListener("click", async e => {
   const step = location.pathname.split("/apply/")[1];
   const target = e.target.closest("button, [role=radio], [data-day]");
   if (!target) return;
-  const q = step?.startsWith("question-") ? QUESTIONS[Number(step.split("-")[1]) - 1] : null;
+  const q = asked(step);
   if (target.dataset.testid === "ApplyButton") {
     go("authentication");
   } else if (target.getAttribute("role") === "radio") {
