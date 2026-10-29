@@ -43,7 +43,7 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
 ## Filling
 
-- The cookie banner is a non-modal `<dialog data-controller="common--cookies--alert">` over the form. The blocker's lists hide it on every domain, custom ones included.
+- The cookie banner is a non-modal `<dialog data-controller="common--cookies--alert">` over the form. The blocker's lists hide it on every domain, custom ones included. A career site can make it a takeover (`data-common--cookies--alert-takeover-modal-value="true"`), opened with `showModal()`: hidden, it still leaves the rest of the page inert, so keys typed into the address go nowhere and clicks find the page overlaid. Its "decline optional cookies" button (`#disableAll`) closes it, clicked before the fill.
 - Qualifying questions are answered first. While one is unanswered, or answered with what the employer does not accept, the rest of the form sits under `[data-careersite--form-target=formContentWrapper].cursor-not-allowed` and takes no clicks; atsfill then stops with `not_qualified`.
 - A follow-up question shows once its earlier question has the answer it waits for, and is filled once shown. Once filled, the adapter lists the questions the page shows (`checkVisibility()`), for the core to compare with its conditions.
 - Click the consent box's label, or the box itself when the employer left the label empty (an inline `<p><br></p>`, no box to click).

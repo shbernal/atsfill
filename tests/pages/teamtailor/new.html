@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <!-- A Teamtailor application page as the adapter meets it: the cookie banner is a dialog over
-     the form, hidden by the blocker's lists, a qualifying question locks the rest of the form until it is
+     the form, hidden by the blocker's lists, and a modal where its takeover value is "true", a qualifying question locks the rest of the form until it is
      answered "Yes", files upload to storage and the form keeps their addresses, a clip for a
      video question becomes a video and the form keeps its id, the address is
      kept only once a suggestion is picked, required labels carry an asterisk, a choice can be a
@@ -146,7 +146,8 @@
 <footer><a href="https://www.teamtailor.com/?utm_campaign=poweredby">Outil de recrutement de Teamtailor</a></footer>
 <script>
   const cookies = document.querySelector("dialog");
-  cookies.show();
+  const takeover = cookies.getAttribute("data-common--cookies--alert-takeover-modal-value");
+  takeover === "true" ? cookies.showModal() : cookies.show();
   cookies.querySelectorAll("button").forEach(b => b.onclick = () => cookies.close());
   const upload = (id, name) => document.getElementById(id).addEventListener("change", e => {
     const file = e.target.files[0].name.normalize("NFKD").replace(/[^\x00-\x7f]/g, "")

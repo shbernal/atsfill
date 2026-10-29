@@ -11,10 +11,11 @@ import pytest
 from atsfill.adapters.teamtailor import Teamtailor, _stored_name
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
-from atsfill.core.results import FieldType, Is
+from atsfill.core.results import Answer, FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/teamtailor/new.html"
 JOB = "https://careers.example.com/fr/jobs/1234567-solution-engineer"
+TAKEOVER = 7654321  # a job whose career site opens its cookie banner as a modal
 
 
 VIDEO_ID, SGID = 4401, "c2dpZA--4401"
@@ -25,7 +26,13 @@ def serve(route) -> None:
     """The career site, and Teamtailor's videos: one created from the posted clip, read back
     by its sgid under the name its storage address ends in."""
     request, path = route.request, urlsplit(route.request.url).path
-    if path.endswith("/applications/new"):
+    if f"/jobs/{TAKEOVER}" in path and path.endswith("/applications/new"):
+        banner = 'data-controller="common--cookies--alert"'
+        page = PAGE.read_text().replace(
+            banner, f'{banner} data-common--cookies--alert-takeover-modal-value="true"'
+        )
+        route.fulfill(content_type="text/html", body=page)
+    elif path.endswith("/applications/new"):
         route.fulfill(path=PAGE)
     elif path == "/videos" and request.method == "POST":
         videos[SGID] = request.post_data_json["video"]["file"].rsplit("/", 1)[-1]
@@ -182,6 +189,17 @@ def test_every_answer_reads_back_past_the_cookie_banner(opened, page, resume, tm
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
     assert set(adapter.shown_fields(page)) <= {f.id for f in fields}  # an upload's address too
+
+
+def test_a_cookie_banner_open_as_a_modal_is_declined_before_the_address(page):
+    adapter = Teamtailor()
+    page.goto(f"https://careers.example.com/fr/jobs/{TAKEOVER}-role")
+    fields = adapter.browser_read(page)
+    answers: dict[str, Answer] = {"question:100": "Oui", "candidate[location][query]": "London"}
+    adapter.fill(page, answers)
+    checks = matching.check(fields, answers, adapter.read_back(page))
+    assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
+    assert not page.locator("dialog[open]").count()
 
 
 def test_a_disqualifying_answer_leaves_the_form_locked(opened, page):
