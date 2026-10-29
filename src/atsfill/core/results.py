@@ -75,6 +75,7 @@ class Field:
     one_of: str | None = None  # an alternative: one of the fields with this key answers (ADR 0005)
     option_sets: list[OptionSet] | None = None  # a dependent list's; `options` where none holds
     min_length: int | None = None  # a text the system refuses shorter
+    knockouts: list[str] | None = None  # the options whose choice ends the application (ADR 0005)
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,7 @@ class Result:
     unloaded: list[str] = field(default_factory=list)  # steps a profile read could not load yet
     notice: str | None = None  # telemetry's, the first time it is on (ADR 0016)
     report: str | None = None  # how to send a failed run's report, when it was not sent
+    warnings: list[str] = field(default_factory=list)  # the knockout answers a fill gave
 
 
 @dataclass

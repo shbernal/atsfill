@@ -62,6 +62,10 @@ _READ_BACK = """(form, kinds) => {
 }"""
 
 
+def _on_form(url: str) -> bool:
+    return urlsplit(url).path.rstrip("/").endswith("/c/new")
+
+
 class Recruitee:
     name = "recruitee"
     known_gaps: dict[str, Gap] = {}
@@ -84,9 +88,12 @@ class Recruitee:
         match = JOB.match(parts.path)
         return f"https://{parts.hostname}/o/{match[1]}" if match else url
 
+    def open_form(self, page: Page, url: str) -> None:
+        page.goto(url if _on_form(url) else f"{self.posting(url)}/c/new")
+
     def browser_read(self, page: Page) -> list[Field]:
-        if not urlsplit(page.url).path.rstrip("/").endswith("/c/new"):
-            page.goto(f"{self.posting(page.url)}/c/new")
+        if not _on_form(page.url):
+            self.open_form(page, page.url)
         form = page.locator(FORM)
         try:
             form.wait_for(state="attached", timeout=FORM_TIMEOUT_MS)

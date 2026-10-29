@@ -1,6 +1,6 @@
 # Jobstreet
 
-SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`, `id`) and Hong Kong and Thailand (`hk.jobsdb.com`, `th.jobsdb.com`), observed on live postings on 2026-10-26 and 2026-10-28, headless Camoufox. The fixture pages are [tests/pages/jobstreet/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/job.html), a posting and its Quick apply wizard, and [tests/pages/jobstreet/login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/login.html), SEEK's sign-in, served by `tests/test_jobstreet.py`.
+SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`, `id`) and Hong Kong and Thailand (`hk.jobsdb.com`, `th.jobsdb.com`), observed on live postings on 2026-10-26, 2026-10-28 and 2026-10-29, headless Camoufox. The fixture pages are [tests/pages/jobstreet/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/job.html), a posting and its Quick apply wizard, and [tests/pages/jobstreet/login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/login.html), SEEK's sign-in, served by `tests/test_jobstreet.py`.
 
 ## Where the form is
 
@@ -28,13 +28,15 @@ The page loads `GetPersonalDetails` (the profile's name, phone with its calling 
 | `/apply` | `currentLocation` | `typeahead` | `#currentLocation2`, suggestions while typing (`Makati City Metro Manila`); required | 5 walked |
 | `/apply` | `phone` | `phone` | a calling code select (`#countryCallingCode`, `Philippines (+63)`) and `#phoneNumber`; "recommended" | 5 walked |
 | `/apply` | `resume` | `file` | Upload (`#resume-fileFile`), then a radio named for the file; or "Don't include a resumé" | 5 walked |
-| `/apply` | `coverLetter` | `text` | "Write a cover letter" with its box, or "Don't include a cover letter" (an upload too, not filled) | 5 walked |
+| `/apply` | `coverLetter` | `text` | "Write a cover letter" with its box, or "Don't include a cover letter"; `one_of` `coverLetter` | 5 walked |
+| `/apply` | `coverLetterFile` | `file` | Upload (`[data-testid=coverLetter-method-upload]`, a button over `#coverLetter-fileFile`), then a radio of the same test id named for the file; `one_of` `coverLetter` | 1 walked |
 | `/apply/role-requirements` | `question.<id>` | `choice` | `SingleChoiceQuestion`: a native select named `questionnaire.<id>`, or radios (`Ya`, `Tidak`) whose labels take the click | selects on 9 postings, radios on 1 |
 | `/apply/role-requirements` | `question.<id>` | `multi_choice` | `MultipleChoiceQuestion` | not walked |
 | `/apply/review` | `profileVisibility` | `choice` | Public, Standard, Limited, Hidden radios, while the profile has none | 2 walked |
 
 - The personal details open for editing with the profile's values, and the step does not continue until they are saved: Save writes them to the profile (`UpdatePersonalDetails`), changed or not. The read-back is what Save was given, or the profile's values when the details opened saved.
-- An uploaded resume is stored in the profile at once (`ApplyProcessUploadedResume`) and made its default (`SetDefaultResume`).
+- An uploaded resume is stored in the profile at once (`ApplyProcessUploadedResume`) and made its default (`SetDefaultResume`). An uploaded cover letter is not: the next Quick apply offers only the box and "Don't include".
+- The cover letter is written or uploaded, two alternatives sharing the key `coverLetter` (ADR 0005): the answers pick one, and neither leaves it out where the page allows.
 - Every question was required; the page marks none.
 - The profile step shows the SEEK profile (photo, career history, education, licences, skills), sent with the application. A profile without a career history stops Continue ("Career History - Please update your career history"), the known gap `profile_incomplete`; "I am new to the workforce" is the page's other way past it.
 - The review step offers profile visibility, not marked required: atsfill asks it, a setting the user picks, as long as the profile has none. "Show strong interest" stays off.

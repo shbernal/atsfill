@@ -78,7 +78,9 @@ class Ashby:
 
     def __init__(self) -> None:
         self._forms: list[dict[str, Any]] = []  # the application form, then each survey
-        self._pending: set[Any] = set()  # GraphQL requests in flight, since `browser_read`
+        self._pending: set[Any] = set()  # GraphQL requests in flight, since `open_form`
+        self._listening = False
+        self._loaded: Response | None = None  # the ApiJobPosting response `open_form` caught
         self._last_change = 0.0
         self._hosted: str | None = None  # the jobs.ashbyhq.com posting a custom domain embeds
 
@@ -125,14 +127,24 @@ class Ashby:
         except OSError, ValueError, KeyError, TypeError, Unsupported:
             return None
 
-    def browser_read(self, page: Page) -> list[Field]:
-        page.on("request", self._on_request)
-        page.on("requestfinished", self._on_finished)
-        page.on("requestfailed", self._on_finished)
-        page.on("response", self._on_response)
+    def open_form(self, page: Page, url: str) -> None:
+        """Loads `/application`, listening first for the page's own ApiJobPosting response."""
+        if not self._listening:
+            page.on("request", self._on_request)
+            page.on("requestfinished", self._on_finished)
+            page.on("requestfailed", self._on_finished)
+            page.on("response", self._on_response)
+            self._listening = True
         with page.expect_response(lambda r: _op(r) == "ApiJobPosting") as posting:
-            page.goto(self.posting(page.url) + "/application")
-        job = posting.value.json()["data"]["jobPosting"]
+            page.goto(self.posting(url) + "/application")
+        self._loaded = posting.value
+
+    def browser_read(self, page: Page) -> list[Field]:
+        if self._loaded is None:  # a page claimed once loaded: an embed
+            self.open_form(page, page.url)
+        assert self._loaded
+        loaded, self._loaded = self._loaded, None
+        job = loaded.json()["data"]["jobPosting"]
         if job is None:
             raise Unsupported("posting_gone")
         self._forms = [job["applicationForm"], *job["surveyForms"]]

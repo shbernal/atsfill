@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acme Career Center</title>
+<!-- ADP Workforce Now's career center as observed (docs/adapters/adp.md), one rendering of each
+     kind, not one employer. The page routes itself: `recruitment.html` the career center, its
+     Sign In and the talent community step; `postLogin.html` the signed-in posting, whose Apply
+     opens the wizard, drawn from the meta tests/test_adp.py serves. Unlike ADP's, the widgets
+     live in the light DOM, but the state's list, whose select sits in its shadow root. -->
+<style>
+  .hidden { display: none; }
+  sdf-select-item, [role=option] { display: block; }
+  sdf-radio-button, sdf-button, [part=frame], wfn-dropdown-list, wfn-radio-button {
+    display: inline-block; min-width: 1em; min-height: 1em; border: 1px solid;
+  }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const EVENTS = "/mascsr/applicant/careercenter-auth/events/staffing";
+const params = new URLSearchParams(location.search);
+const app = document.getElementById("app");
+const OTP = "123456";
+const KNOWN = "ada@example.com";
+
+async function api(url, init = {}) {
+  const response = await fetch(url, {...init, credentials: "include"});
+  return response.json();
+}
+
+function signedIn(query) {
+  location.href = `/mascsr/applicant/mdf/recruitment/postLogin.html?${query}&OTP_login=true`;
+}
+
+// The career center: Join Our Talent Community, Sign In; a privacy notice before either.
+function careerCenter() {
+  const consent = then => {
+    app.innerHTML = `<p>Certain jurisdictions require notice</p>
+      <sdf-button role="button">Consent &amp; Continue</sdf-button>`;
+    app.querySelector("sdf-button").onclick = then;
+  };
+  if (params.get("selectedMenuKey") === "SignIn") return consent(signIn);
+  app.innerHTML = `<sdf-button id="recruitment_header_joinTalentCommunity" role="button">Join Our
+    Talent Community</sdf-button><h2>Current Openings</h2>`;
+  app.querySelector("sdf-button").onclick = () => consent(() => join(""));
+}
+
+function signIn() {
+  app.innerHTML = `<h1>Sign In</h1><input id="guestEmail"><button>Continue</button>`;
+  app.querySelector("button").onclick = () => {
+    const email = app.querySelector("#guestEmail").value;
+    email === KNOWN ? code() : join(email);
+  };
+}
+
+function join(email) {
+  app.innerHTML = `<h1>Tell us about yourself.</h1>
+    <input id="guestFirstName"><input id="guestLastName"><input id="guestEmail" value="${email}">
+    <select name="phoneCountry"><option>US</option></select><input id="login_view_phone" type="tel">
+    <button>Continue</button>`;
+  app.querySelector("button").onclick = () => {
+    if (!app.querySelector("#login_view_phone").value.startsWith("+1")) return;
+    sessionStorage.setItem("profile", app.querySelector("#guestFirstName").value);
+    code();
+  };
+}
+
+function code() {
+  app.innerHTML = `<div class="otpDialogContent"><h2>Get your verification code</h2>
+    <input type="radio" name="via" id="phoneIdentifierId" checked>
+    <input type="radio" name="via" id="emailIdentifierId">
+    <button id="recruitment_login_guestLogin">Send</button></div>`;
+  app.querySelector("button").onclick = () => {
+    if (!app.querySelector("#emailIdentifierId").checked) return;
+    app.innerHTML = `<input id="oneTimePassWord"><button id="recruitment_login_verifyOTP">Verify</button>`;
+    app.querySelector("button").onclick = () => {
+      if (app.querySelector("#oneTimePassWord").value !== OTP) return;
+      document.cookie = "SMSESSION=ok; path=/";
+      signedIn(`cid=${params.get("cid")}&ccId=${params.get("ccId")}&lang=en_US`);
+    };
+  };
+}
+
+// The signed-in posting: Apply, or Complete Your Application on a draft, opens the wizard.
+async function posting() {
+  if (!document.cookie.includes("SMSESSION")) {
+    location.href = "/workforcenow/login.html";
+    return;
+  }
+  if (params.get("jobId") === "404") return app.innerHTML = "<p>This job is no longer available</p>";
+  const draft = sessionStorage.getItem("draft") === params.get("jobId");
+  app.innerHTML = `<h1>Engineer</h1>
+    <sdf-button id="recruitment_jobDescription_${draft ? "complete" : "candidateApply"}"
+      role="button">${draft ? "Complete Your Application" : "Apply"}</sdf-button>`;
+  app.querySelector("sdf-button").onclick = async () => {
+    await api(`${EVENTS}/v1/job-application.submit?cid=${params.get("cid")}`, {method: "POST", body: "{}"});
+    sessionStorage.setItem("draft", params.get("jobId"));
+    wizard();
+  };
+}
+
+// The wizard: its steps in a bar, Next moving step by step on the client.
+let steps = [], number = 0, meta = null;
+
+async function wizard() {
+  meta = await api(`${EVENTS}/v1/job-application.submit/meta?cid=${params.get("cid")}&ccId=${
+    params.get("ccId")}&lang=en_US`, {headers: {requisitionoid: params.get("jobId")}});
+  const on = Object.fromEntries(meta.data.control.customIndicators.map(i => [i.nameCode.codeValue, i.indicatorValue]));
+  steps = ["Personal Information", "Resume", "Questions", ...(on.VSID ? ["Voluntary Self-ID"] : []),
+    "Review Your Application", "Self-Attest & Submit"];
+  number = Number(sessionStorage.getItem("step") ?? 0);  // a reopened draft shows the step it was on
+  draw();
+}
+
+function codes(path) {
+  const all = Object.assign({}, ...meta.meta["/data/transforms"]);
+  return all[path]?.codeList?.listItems ?? [];
+}
+
+function draw() {
+  sessionStorage.setItem("step", number);
+  const bar = `<ol>${steps.map(s => `<li>${s}</li>`).join("")}</ol>`;
+  const body = {
+    "Personal Information": personal, "Resume": resume, "Questions": questions,
+    "Voluntary Self-ID": selfId, "Review Your Application": () => "<p>Review</p>",
+    "Self-Attest & Submit": attest,
+  }[steps[number]]();
+  const last = number === steps.length - 1;
+  app.innerHTML = `<h1>Applying for Engineer</h1>${bar}<p id="error"></p>${body}
+    ${number ? `<button id="ja_sv_cw_prev_footer_btn">Previous</button>` : ""}
+    ${last ? `<button id="submitApplication">Submit</button>`
+           : `<button id="ja_sv_cw_next_footer_btn">Next</button>`}`;
+  wire();
+}
+
+function input(id, label, value = "", required = false) {
+  return `<label for="${id}">${label}${required ? "<span>*</span>" : ""}</label>
+    <input id="${id}" type="text" value="${value}" aria-required="${required}">`;
+}
+
+function phone(id, value) {
+  return `<select name="phoneCountry"><option>US</option></select>
+    <input type="tel" id="${id}" name="phone" value="${value}">`;
+}
+
+// A react-select: a combobox whose menu lists options as typed, the pick shown beside it.
+function react(id, label, items, multi = false) {
+  return `<label for="${id}">${label}</label><div class="react" data-multi="${multi}"
+    data-items='${JSON.stringify(items).replaceAll("'", "&#39;")}'>
+    <div class="MDFSelectBox__value-container"><div class="MDFSelectBox__input-container">
+    <input id="${id}" role="combobox" type="text"></div></div><div class="menu"></div></div>`;
+}
+
+function sdfSelect(id, items, placeholder = "Choose an option") {
+  return `<sdf-select-simple id="${id}" placeholder="${placeholder}"
+    data-items='${JSON.stringify(items).replaceAll("'", "&#39;")}'>
+    <div part="frame" role="button"></div><input id="select-filter-input" class="hidden">
+    <div class="list hidden"></div><span id="selected-label"></span></sdf-select-simple>`;
+}
+
+function radios(label, items, ids = {}) {
+  return `<sdf-radio-group label="${label}" value="">${items.map(([value, text]) =>
+    `<sdf-radio-button label="${text}" value="${value}" ${ids[value] ? `id="${ids[value]}"` : ""}
+      role="radio" aria-checked="false">${text}</sdf-radio-button>`).join("")}</sdf-radio-group>`;
+}
+
+// A pair of wfn-radio-buttons, each holding the group's value
+function pair([id1, v1], [id2, v2], value = "") {
+  return [[id1, v1], [id2, v2]].map(([id, v]) =>
+    `<wfn-radio-button id="${id}" value="${v}" radio-group-value="${value}">${v}</wfn-radio-button>`).join("");
+}
+
+function personal() {
+  const name = sessionStorage.getItem("profile") || "Ada";
+  return input("personalInfomationFirstName", "First Name", name, true) +
+    input("personalInfomationMiddleName", "Middle Name") +
+    input("personalInfomationLastName", "Last Name", "Placeholder", true) +
+    input("personalInfomationEmail", "Email", KNOWN, true) +
+    `<label>Mobile Number<span>*</span></label>${phone("personalInfomationMobileNumberError", "+1 202 555 0143")}
+    <label>Home Phone Number</label>${phone("personalInfomationMobileNumberErrorMessage", "+1")}` +
+    react("PersonalAddress_country", "Country<span>*</span>", ["United States", "Canada"]) +
+    input("PersonalAddress_address_line1", "Address Line 1", "", true) +
+    input("PersonalAddress_city", "City", "", true) +
+    `<div id="state">${input("PersonalAddress_state", "State / Territory", "", true)}</div>` +
+    input("PersonalAddress_postalCode", "Postal Code", "", true) + `<div id="county"></div>`;
+}
+
+function resume() {
+  return `<h2>Resume</h2><p>Upload resume</p><input type="file" name="file" accept=".pdf,.doc,.docx">
+    <p id="uploaded"></p>`;
+}
+
+function questions() {
+  const asked = meta.data.control.questionnaire?.questions ?? [];
+  const all = Object.assign({}, ...meta.meta["/data/transforms"]);
+  const box = (q, n) => {
+    const labels = q.answerOptions.map(o => o.answerValue);
+    return {
+      "Yes/No Buttons": radios(q.questionText, [["Yes", "Yes"], ["No", "No"]],
+        {Yes: `questionYes_${n}`, No: `questionNo_${n}`}),
+      "Comment": `<textarea id="question_${n}"></textarea>`,
+      "Text Field": `<input id="question_${n}" type="text">`,
+      "Number Field": `<input id="question_${n}" type="text" class="number">`,
+      "Date Field": `<input id="question_${n}" type="text" placeholder="MM/DD/YYYY">`,
+      "Drop List": sdfSelect(`question_${n}`, labels),
+      "Multi-Select Menu": react(`question_${n}`, "", labels, true),
+      "Money Field": `<input id="question_${n}" type="text" class="number">` +
+        react(`question_currency_type_${n}`, "", labels.map(l => l.replace(/\((\w+)\)$/, "( $1 )"))),
+    }[q.answerTypeCode];
+  };
+  const pay = all["/jobApplication/requestedPayRate"];
+  const currencies = codes("/jobApplication/requestedPayRate/annualRateAmount/currencyCode")
+    .map(i => `${i.longName} ( ${i.codeValue} )`);
+  return `<h3>Please answer the following questions:</h3>` +
+    asked.map((q, n) => `<label for="question_${n}">${q.questionText}${
+      q.requiredIndicator ? "<span>*</span>" : ""}</label>${box(q, n)}`).join("") +
+    (pay.hidden ? "" : `<div id="desiredSalaryBlock"><span>What is your desired salary?</span>
+      <div id="salaryOptions">${radios("What is your desired salary?",
+        [["Annually", "Annually"], ["Hourly", "Hourly"]])}</div>
+      ${pay.optional  // one employer's: no currency list, the dollar fixed before the amount
+        ? `<div><span>$</span><input id="desiredSalaryId" class="number" type="text"></div>`
+        : `<input id="desiredSalaryId" class="number" type="text">${sdfSelect("add_info_select_box",
+          currencies, "Select currency type")}`}</div>`) +
+    (all["/jobApplication/applicantReferralIndicator"]?.hidden === false ? `<div>
+      <span id="employeeRefferalIndicator">Did any of our employees inform you about this position?</span>
+      <div id="refferalOptions">${pair(["yes", "Yes"], ["no", "No"], "No")}</div>
+      <div id="refferalEmplDetailBlock"></div></div>` : "") +
+    `<div id="commentBlock"><textarea id="commentTextArea"></textarea></div>`;
+}
+
+function selfId() {
+  const on = Object.fromEntries(meta.data.control.customIndicators.map(i => [i.nameCode.codeValue, i.indicatorValue]));
+  const person = "/jobApplication/applicant/person";
+  const pairs = path => codes(`${person}/${path}`).map(i => [i.codeValue, i.longName]);
+  return `<sdf-button id="vsidWhy" role="button">Why are we asking?</sdf-button>` +
+    react("vsidGender", "Gender", codes(`${person}/genderCode`).map(i => i.longName)) +
+    `<h4 id="vsidEthRace">Ethnicity &amp; Race</h4>` +
+    react("vsidEthinicity", "Ethnicity", codes(`${person}/ethnicityCode`).map(i => i.longName)) +
+    react("vsidRace", "Race", codes(`${person}/raceCode`).map(i => i.longName)) +
+    (on.VSID_VeteranEnabledIndicator ? radios("Protected Veteran Status",
+      pairs("militaryStatusCode").filter(([c]) => c !== "X").map(([c, l]) => [c, `${l}.`]),
+      {Y: "veteranStatusIdYes"}) : "") +
+    (on.VSID_DisabilityEnabledIndicator ? radios("Disability Status",
+      pairs("disabilityTypeCodes"), {Y: "disabilityStatusIdYes"}) : "");
+}
+
+function attest() {
+  return `<p>${meta.data.control.attestations[0].messageTxt}</p><span id="self_att_agree_chk">
+    <input id="checkbox_1" type="checkbox" name="self_att_agree_chk" class="hidden">
+    <label for="checkbox_1">Yes, I agree to sign electronically.</label></span>`;
+}
+
+function wire() {
+  // Yes on the referral shows who: an employee's name or a position ID, and a box
+  app.addEventListener("click", e => {
+    const radio = e.target.closest("wfn-radio-button");
+    if (!radio) return;
+    radio.parentElement.querySelectorAll("wfn-radio-button")
+      .forEach(r => r.setAttribute("radio-group-value", radio.getAttribute("value")));
+    if (radio.id === "yes" && !app.querySelector("#employeeName")) {
+      app.querySelector("#refferalEmplDetailBlock").innerHTML =
+        "<label>Please provide Employee Name or Position ID.</label>";
+      app.querySelector("#refferalEmplDetailBlock").insertAdjacentHTML("afterend",
+        `<div id="refferalOptions">${pair(["employeeName", "Employee Name"], ["positionId", "Position ID"])}</div>
+         <div><input id="add_info_text_box" type="text" aria-required="true"></div>`);
+    }
+  });
+  app.querySelectorAll("sdf-radio-button").forEach(r => r.onclick = () => {
+    r.parentElement.querySelectorAll("sdf-radio-button").forEach(o => o.setAttribute("aria-checked", "false"));
+    r.setAttribute("aria-checked", "true");
+  });
+  app.querySelectorAll(".react").forEach(wireReact);
+  app.querySelectorAll("sdf-select-simple").forEach(wireSelect);
+  // The country's pick turns the state into a list, its select in its shadow root, and shows the county.
+  const country = app.querySelector("#PersonalAddress_country");
+  if (country) country.closest(".react").addEventListener("picked", () => {
+    const state = document.createElement("wfn-dropdown-list");
+    state.id = "PersonalAddress_state";
+    const inner = state.attachShadow({mode: "open"});
+    inner.innerHTML = `<sdf-select-simple><span id="selected-label"></span></sdf-select-simple>`;
+    state.onclick = () => {
+      const menu = document.createElement("div");
+      menu.innerHTML = ["AL - Alabama", "DC - District of Columbia"]
+        .map(s => `<div role="option">${s}</div>`).join("");
+      document.body.append(menu);
+      menu.onclick = e => { inner.querySelector("#selected-label").textContent = e.target.textContent; menu.remove(); };
+    };
+    app.querySelector("#state").replaceChildren(state);
+    app.querySelector("#county").innerHTML = input("PersonalAddress_county", "County");
+  });
+  const file = app.querySelector("input[type=file]");
+  if (file) file.onchange = async () => {
+    await api(`/mascsr/applicant/work-fulfillment/document.upload`, {method: "POST", body: "{}"});
+    app.querySelector("#uploaded").textContent = file.files[0].name;
+  };
+  app.querySelectorAll(".number").forEach(n => n.onblur = () => {
+    const value = Number(n.value.replaceAll(",", ""));
+    if (n.value && !Number.isNaN(value)) n.value = value.toLocaleString("en-US", {minimumFractionDigits: 2});
+  });
+  app.querySelector("#ja_sv_cw_prev_footer_btn")?.addEventListener("click", () => { number -= 1; draw(); });
+  app.querySelector("#ja_sv_cw_next_footer_btn")?.addEventListener("click", () => {
+    const missing = [...app.querySelectorAll("[aria-required=true]")].filter(i => !i.value);
+    if (steps[number] === "Resume" && !app.querySelector("#uploaded").textContent) missing.push(null);
+    if (missing.length) {
+      app.querySelector("#error").textContent = "Correct the information in highlighted fields.";
+      app.querySelector("#error").setAttribute("role", "alert");
+      return;
+    }
+    number += 1;
+    draw();
+  });
+  app.querySelector("#submitApplication")?.addEventListener("click", () => {
+    if (!app.querySelector("input[name=self_att_agree_chk]").checked) return;
+    sessionStorage.removeItem("step");
+    app.innerHTML = "<h1>Thank you for applying</h1>";
+  });
+}
+
+function wireReact(box) {
+  const items = JSON.parse(box.dataset.items), multi = box.dataset.multi === "true";
+  const input = box.querySelector("input"), menu = box.querySelector(".menu");
+  const values = box.querySelector(".MDFSelectBox__value-container");
+  const show = () => menu.innerHTML = items.filter(i => i.toLowerCase().includes(input.value.toLowerCase()))
+    .map((i, n) => `<div id="react-select-${input.id}-option-${n}">${i}</div>`).join("");
+  input.onclick = show;
+  input.oninput = show;
+  input.onkeydown = e => { if (e.key === "Escape") menu.innerHTML = ""; };
+  menu.onclick = e => {
+    const picked = e.target.textContent;
+    if (!multi) values.querySelector(".MDFSelectBox__single-value")?.remove();
+    const shown = document.createElement("div");
+    shown.className = multi ? "MDFSelectBox__multi-value" : "MDFSelectBox__single-value";
+    shown.innerHTML = multi ? `<div class="MDFSelectBox__multi-value__label">${picked}</div>` : picked;
+    values.insertBefore(shown, values.querySelector(".MDFSelectBox__input-container"));
+    input.value = "";
+    menu.innerHTML = "";
+    box.dispatchEvent(new Event("picked"));
+  };
+}
+
+function wireSelect(select) {
+  if (!select.dataset.items) return;
+  const items = JSON.parse(select.dataset.items);
+  const list = select.querySelector(".list"), filter = select.querySelector("input");
+  const show = text => list.innerHTML = items.filter(i => i.includes(text)).slice(0, 3)
+    .map(i => `<sdf-select-item role="option" aria-label="${i}">${i}</sdf-select-item>`).join("");
+  select.querySelector("[part=frame]").onclick = () => {
+    list.classList.remove("hidden"); filter.classList.remove("hidden"); show("");
+  };
+  filter.oninput = () => show(filter.value);
+  list.onclick = e => {
+    select.querySelector("#selected-label").textContent = e.target.getAttribute("aria-label");
+    list.classList.add("hidden"); filter.classList.add("hidden");
+  };
+}
+
+if (location.pathname.endsWith("/postLogin.html")) posting();
+else careerCenter();
+</script>
+</body>
+</html>

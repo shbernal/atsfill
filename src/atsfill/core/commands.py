@@ -29,6 +29,7 @@ from atsfill.core.adapter import (
     ListsShownFields,
     NeedsAccount,
     NotTaken,
+    OpensForm,
     ProfileIncomplete,
     ReadsByRequest,
     Refused,
@@ -173,7 +174,7 @@ def _opened(
             session = None
     with open_page(data, session, seconds) as page:
         try:
-            page.goto(url)
+            _load(page, adapter, url)
         except browser.Timeout:
             if adapter is None:
                 raise
@@ -205,6 +206,14 @@ def _opened(
             if session:  # a system that rotates the session's tokens as the page uses them
                 with suppress(Exception):
                     browser.save_session(page, session)
+
+
+def _load(page: Page, adapter: object, url: str) -> None:
+    """Loads the posting, or its form where the adapter that claims it opens it (ADR 0003)."""
+    if isinstance(adapter, OpensForm):
+        adapter.open_form(page, url)
+    else:
+        page.goto(url)
 
 
 _again: ContextVar[Callable[[], Result | None] | None] = ContextVar("again", default=None)
@@ -281,7 +290,7 @@ def _sign_in_again(
             return _login_required(url, adapter, user)
         session = accounts.session_file(mine, adapter.name, scope)
         accounts.sign_in(page, adapter, scope, *credentials, session)
-        page.goto(url)
+        _load(page, adapter, url)
         return None
     email = credentials[0] if credentials else ""
     scoped = url if adapter.per_employer else None
@@ -415,6 +424,7 @@ def _fill(
         if problems := matching.problems(result.fields, answers):
             result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
             return result
+        result.warnings = matching.knockouts(result.fields, answers)
         adapter.fill(page, answers)
         _shown_as_listed(page, adapter, result, answers)
         if result.status is not Status.READY:

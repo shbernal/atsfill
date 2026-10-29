@@ -39,6 +39,7 @@ The registry covers 90.4% of postings.
 | wttj | board | 0.1% | to_send | hosted |  | [supported](wttj.md) |
 | workday | ats | 17.9% | to_read | hosted |  | [supported](workday.md) |
 | successfactors | ats | 3.5% | to_read | hosted |  | [supported](successfactors.md) |
+| adp | ats | 1.1% | to_read | hosted |  | [supported](adp.md) |
 | adpmyjobs | ats | 0.8% | to_read | hosted |  | [supported](adpmyjobs.md) |
 | isolvedhire | ats | 0.5% | to_read | hosted |  | [supported](isolvedhire.md) |
 | jobstreet | board | 0.5% | to_read | hosted |  | [supported](jobstreet.md) |
@@ -49,7 +50,6 @@ The registry covers 90.4% of postings.
 | icims | ats | 1.9% | to_read | hosted | hCaptcha at form | in scope |
 | mycareersfuture | board | 1.6% | to_read | hosted |  | in scope: unsupported_flow: national_id_login: applying needs a Singpass sign-in, whose account takes a Singapore NRIC or FIN number; no account can be made for the Test user (7 of 7 employers) |
 | taleo | ats | 1.2% | to_read | hosted |  | in scope: unsupported_rendering: location_levels: a place's state and city list their options only once the level above is picked, so a fresh profile's are not listed (3 of 4 zones walked) |
-| adp | ats | 1.1% | to_read | hosted |  | in scope: unsupported_flow: sign_up_phone: the talent community step before the form requires a mobile number, even when its OTP goes to the email (14 of 15 employers) |
 | ukgready | ats | 0.9% | to_read | hosted |  | in scope: unsupported_flow: profile_wizard: signed in, the form is the applicant portal's profile wizard, items of a dozen types edited in cards, entry lists, a security question and an electronic signature; not built within the round (1 tenant walked) |
 | hrmdirect | ats | 0.6% | to_read | hosted |  | in scope: unsupported_flow: screening_first: the form's first page comes before the sign-up step (4 of 14 orgs); a reCAPTCHA box on the sign-up step (1 of 17); 3 orgs signed in, under the 5 dry runs the gate needs |
 

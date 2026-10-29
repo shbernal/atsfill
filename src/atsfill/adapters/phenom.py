@@ -8,6 +8,7 @@ fields, dependent lists): a request read or a browser read interprets them witho
 step. Filling walks the wizard on a fresh session, each step's answers read back before Next.
 """
 
+import hashlib
 import http.cookiejar
 import json
 import re
@@ -23,7 +24,7 @@ from pathlib import PurePath
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from atsfill.core import browser, matching
+from atsfill.core import browser, matching, paths
 from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Locator, Overlaid, Page, Timeout
 from atsfill.core.results import (
@@ -44,6 +45,7 @@ SEQ = re.compile(r"^/[a-z]{2,8}/[a-z]{2}/job/([A-Za-z0-9]+)")
 CDN = "https://cdn-prod-static.phenompeople.com/CareerConnectResources"
 FORM = "form.rjsf"
 NEXT = "button#next"
+TERMS = "terms"  # a notice some sites' wizard opens on, its one button accepting it
 SUBMIT = "button#submit, button.btn-submit, button[type=submit].btn-navigate:not(#next)"
 RESUME = ".resume-upload-wrapper input[type=file]"
 RESUME_ID = "resume"
@@ -66,10 +68,12 @@ PICK_TRIES = 3
 MAX_STEPS = 12
 OPTIONS_TIMEOUT_S = 8
 LOADERS_AT_ONCE = 8  # a loader request a country: 245 on one site
+COUNTRIES_KEPT_S = 24 * 3600  # a site's country fields, kept between reads
 YES_NO = ["Yes", "No"]
 NO_YES = ["No", "Yes"]
 MONTH = " (MM/YYYY)"
 YEAR = " (year)"
+NUMBER = " (a number)"  # an input that takes only digits
 PICKER = ".react-datepicker"
 MONTHS: list[str] = [
     "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"
@@ -267,6 +271,11 @@ class Phenom:
         SideEffect(
             "fill",
             "hiring_system",
+            "an employer notice the wizard opens on (`page=terms`) is accepted to reach the form",
+        ),
+        SideEffect(
+            "fill",
+            "hiring_system",
             "each step is submitted to Phenom on Next, which keeps an account profile from the"
             " first step",
         ),
@@ -355,8 +364,9 @@ class Phenom:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         page.context.clear_cookies()
         self._open(page, fresh=True)
+        self._accept_terms(page)
         self._kept, self._shown = {}, {}
-        if RESUME_ID in answers and page.locator(RESUME).count():
+        if RESUME_ID in answers and _shows_upload(page):
             _upload(page, _one(answers[RESUME_ID]))
             self._kept[RESUME_ID] = PurePath(_one(answers[RESUME_ID])).name
         for number in range(1, MAX_STEPS + 1):
@@ -414,16 +424,30 @@ class Phenom:
         if fresh or not page.url.startswith(self._apply):
             page.goto(self._apply, wait_until="domcontentloaded")
         _check_open(page)
+        self._wait_for_step(page)
+
+    def _wait_for_step(self, page: Page) -> None:
         try:
             page.locator(f"{FORM} {NEXT}, {FORM} button[type=submit]").first.wait_for(
                 state="attached", timeout=FORM_TIMEOUT_MS
             )
         except Timeout:
-            query = parse_qs(urlsplit(page.url).query)
-            if step := (query.get("stepname") or query.get("page") or [None])[0]:
+            if step := _step_name(page.url):
                 gap = known_gap(self, "first_step", f"the wizard opens on {step!r}")
                 raise Unsupported(gap) from None
             raise RuntimeError("no application step on the page") from None
+
+    def _accept_terms(self, page: Page) -> None:
+        """Accepts the terms some sites' wizard opens on, a step with no field before the form."""
+        if _step_name(page.url) != TERMS:
+            return
+        _click(page, page.locator(FORM).locator(SUBMIT).first)
+        try:
+            page.wait_for_url(lambda url: _step_name(url) != TERMS, timeout=STEP_TIMEOUT_MS)
+        except Timeout:
+            gap = known_gap(self, "first_step", "the wizard stays on its terms once accepted")
+            raise Unsupported(gap) from None
+        self._wait_for_step(page)
 
     def _step(self, page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
         """The answered fields the current step shows, in the configuration's order."""
@@ -641,7 +665,8 @@ class _Config:
         if html == "daterangepicker" or widget == "daterangepicker":
             return self.date_range(p, u, path, nav, when)
         if p.get("type") == "array" and get(p, "items.properties") and html not in WIDGETS:
-            if not (int(p.get("minItems") or 0) or int(u.get("minItemsRequired") or 0)):
+            shown = p.get("minItems"), p.get("defaultEntries"), u.get("minItemsRequired")
+            if not any(int(n or 0) for n in shown):
                 return []  # entries only once Add is clicked
             return self.object(p["items"], u.get("items") or {}, f"{path}[0].", nav, False, when)
         if p.get("type") == "object" or html in ("object", "phoneNumber_v2"):
@@ -658,6 +683,7 @@ class _Config:
             # a signature's date: today's, the only one the page takes
             "prefilled": date.today().isoformat() if p.get("defaultTodayDate") is True else None,
             "max_length": p.get("maxLength") if isinstance(p.get("maxLength"), int) else None,
+            "number": kind == "text" and _number(p, html, widget),
         }
         self.labels[path] = raw["label"]
         if kind in ("select", "typeahead", "radio", "checkboxes"):
@@ -984,7 +1010,7 @@ class _Config:
         values, texts = self.listed.get(path) or ([], [])
         held, _ = self.prefilled(path)
         codes = sorted(values, key=lambda c: c != held)
-        parts = self.calls(payload, [{"countryCode": c} for c in codes])
+        parts = self.country_parts(payload, codes)
         by_id: dict[str, dict[Any, dict[str, Any]]] = {}
         for code, part in zip(codes, parts, strict=True):
             part = get(part, "applyGetReferences.data")
@@ -995,6 +1021,24 @@ class _Config:
                 by_id.setdefault(raw["id"], {})[code] = raw
         shown = dict(zip(values, texts, strict=False))
         return [_by_country(path, rows, codes, shown) for rows in by_id.values()]
+
+    def country_parts(self, payload: str, codes: list[Any]) -> list[Any]:
+        """Each country's loader answer, kept a day for the site: a read posts one a country,
+        and two reads in a row get `/applySubmit` refused (403) on one site."""
+        key = hashlib.sha1(f"{self.ph.get('locale')} {payload}".encode()).hexdigest()[:12]
+        path = paths.cache_dir() / "phenom" / f"{self.ph.get('refNum')}-{key}.json"
+        kept: dict[str, Any] = {}
+        with suppress(OSError, ValueError):
+            if time.time() - path.stat().st_mtime < COUNTRIES_KEPT_S:
+                kept = json.loads(path.read_text())
+        missing = [c for c in codes if str(c) not in kept]
+        if missing:
+            parts = self.calls(payload, [{"countryCode": c} for c in missing])
+            kept |= {str(c): p for c, p in zip(missing, parts, strict=True) if p is not None}
+            with suppress(OSError):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(kept))
+        return [kept.get(str(c)) for c in codes]
 
     def date_range(
         self, p: dict, u: dict, path: str, nav: Any, when: Condition | None
@@ -1043,7 +1087,10 @@ class _Config:
             held = get(
                 {"phApp": self.ph}, get(self.config, f"uiSchema.{name}.preFillWindowObj") or ""
             )
-            held = held if held is not None else {"locale": self.ph.get("locale")}.get(name)
+            if held is None:  # the job's data by its name (`jobCountry`), or the page's locale
+                held = ({"locale": self.ph.get("locale")} | self.ddo).get(name)
+            if "pattern" in test:  # a job location naming a county
+                return isinstance(held, str) and re.search(test["pattern"], held) is not None
             return True if values is None else held in values
         return Is(f"{path}{name}", values)
 
@@ -1208,6 +1255,11 @@ def _kind(p: dict, html: Any, widget: Any, path: str) -> str:
     return "text"
 
 
+def _number(p: dict, html: Any, widget: Any) -> bool:
+    """Whether the input takes only digits (`input[type=number]`)."""
+    return p.get("type") in ("integer", "number") or bool({html, widget} & {"number", "updown"})
+
+
 def _picker(form: str) -> str:
     """The calendar a format picks from: `date` (a day), `month` (`MM/yyyy`), `year`."""
     tokens = {t[0] for t in re.findall(r"y+|m+|d+", form.lower())}
@@ -1235,6 +1287,12 @@ def _seq(url: str) -> str | None:
     if match := SEQ.match(parts.path):
         return match[1]
     return parse_qs(parts.query).get("jobSeqNo", [None])[0]
+
+
+def _step_name(url: str) -> str | None:
+    """The wizard's step as its URL names it (`stepname=`, `page=`), if it does."""
+    query = parse_qs(urlsplit(url).query)
+    return (query.get("stepname") or query.get("page") or [None])[0]
 
 
 def _apply_url(page: Page) -> str:
@@ -1265,6 +1323,7 @@ def _field(raw: dict[str, Any]) -> Field:
     if kind == "checkbox":  # an optional box starts clear
         options = YES_NO if raw["required"] else NO_YES
     label = raw["label"] + {"month": MONTH, "year": YEAR}.get(kind, "")
+    label += NUMBER if raw.get("number") else ""
     sets = raw.get("option_sets")
     field_type = (
         FieldType.TYPEAHEAD if kind == "typeahead" and not options and not sets else TYPES[kind]
@@ -1420,6 +1479,15 @@ def _iso_date(shown: str, form: str) -> str:
 
 def _one(answer: Answer) -> str:
     return answer if isinstance(answer, str) else answer[0]
+
+
+def _shows_upload(page: Page) -> bool:
+    """Whether the resume upload shows: on one site a moment after the form, past its terms."""
+    try:
+        page.locator(RESUME).first.wait_for(state="attached", timeout=FIELD_TIMEOUT_MS)
+    except Timeout:
+        return False
+    return True
 
 
 def _upload(page: Page, path: str) -> None:

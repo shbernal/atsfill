@@ -1,3 +1,4 @@
+from atsfill.adapters.adp import ADP
 from atsfill.adapters.adpmyjobs import ADPMyJobs
 from atsfill.adapters.ashby import Ashby
 from atsfill.adapters.bamboohr import BambooHR
@@ -76,6 +77,7 @@ def adapters() -> list[Adapter]:
         IsolvedHire(),
         Jobstreet(),
         ADPMyJobs(),
+        ADP(),
         SuccessFactors(),  # it claims a career site's job path on any host
         Phenom(),  # last: it claims a URL by its path alone
     ]

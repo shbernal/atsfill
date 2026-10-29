@@ -159,3 +159,15 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
         and (problem := _answer_problem(by_id[i], a, form))
     ]
     return out
+
+
+def knockouts(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
+    """The answers that end the application: never refused, as one can be the truthful one."""
+    by_id = {f.id: f for f in fields}
+    return [
+        f"{i}: {', '.join(map(repr, chosen))} ends the application ({f.label})"
+        for i, a in answers.items()
+        if (f := by_id.get(i))
+        and f.knockouts
+        and (chosen := [v for v in ([a] if isinstance(a, str) else a) if v in f.knockouts])
+    ]

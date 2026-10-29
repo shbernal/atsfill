@@ -93,12 +93,17 @@ def test_browser_read_lists_the_details_documents_questions_and_visibility(opene
         ("phone", FieldType.PHONE, False, None),
         ("resume", FieldType.FILE, False, None),
         ("coverLetter", FieldType.TEXT, False, None),
+        ("coverLetterFile", FieldType.FILE, False, None),
         ("question.PH_Q_1", FieldType.CHOICE, True, None),
         ("question.PH_Q_2", FieldType.MULTI_CHOICE, True, None),
         ("question.PH_Q_3", FieldType.CHOICE, True, None),
         ("profileVisibility", FieldType.CHOICE, True, None),
     ]
-    assert fields[7].options == ["Excel", "SAP"]
+    assert fields[8].options == ["Excel", "SAP"]
+    assert {f.id: f.one_of for f in fields if f.one_of} == {
+        "coverLetter": "coverLetter",
+        "coverLetterFile": "coverLetter",
+    }
 
 
 def test_an_apply_that_links_out_is_an_external_step(page):
@@ -164,6 +169,18 @@ def test_fill_walks_the_steps_and_reads_back_each(opened, page, resume):
         "profileVisibility": "Hidden",
     }
     assert adapter.submit(page) == "Submit application moved to /job/101/apply/success"
+
+
+def test_fill_uploads_the_cover_letter_its_alternative(opened, page, resume, tmp_path):
+    adapter, _ = opened
+    letter = tmp_path / "Letter Ada.pdf"
+    letter.write_bytes(b"%PDF-1.4")
+    adapter.fill(page, {"resume": resume, "coverLetterFile": str(letter),
+                        "question.PH_Q_1": "₱30K", "question.PH_Q_2": ["SAP"],
+                        "question.PH_Q_3": "No"})  # fmt: skip
+    read = adapter.read_back(page)
+    assert read["coverLetterFile"] == "Letter Ada.pdf"
+    assert "coverLetter" not in read
 
 
 def test_an_unanswered_question_keeps_the_step(opened, page):
