@@ -76,6 +76,13 @@ PRESCREEN = [
      "questionDescription": "Are you 18 or older?",
      "possibleAnswers": [{"answerId": "41", "answerLabel": "Yes"},
                          {"answerId": "42", "answerLabel": "No"}]},
+    {"questionId": "q_5", "questionType": "Calendar", "orderId": 5,
+     "questionDescription": "Date you are available for work:", "possibleAnswers": []},
+    {"questionId": "q_6", "questionType": "Multiple choice", "orderId": 6,
+     "questionDescription": "Availability (select one or more):",
+     "possibleAnswers": [{"answerId": "61", "answerLabel": "Full-Time"},
+                         {"answerId": "62", "answerLabel": "Part-Time"},
+                         {"answerId": "63", "answerLabel": "Weekends"}]},
 ]  # fmt: skip
 DOCUMENTS = [{"questionID": "resume", "answerDataTypeCode": "UPLOAD", "requiredIndicator": True,
               "questionText": "Resume"}]  # fmt: skip
@@ -209,7 +216,8 @@ def test_the_read_agrees_to_the_statement_then_lists_every_section(opened, ats):
         "contact.emailAddress", "contact.phoneType", "contact.extension", "contact.phone",
         "contact.country", "contact.state", "contact.zip", "contact.smsOptIn",
         "prescreen1.q_1", "prescreen1.q_2", "prescreen1.q_3", "prescreen1.q_4",
-        "documents.resume", "appbuilder_eform.relatives", "appbuilder_eform.names",
+        "prescreen1.q_5", "prescreen1.q_6", "documents.resume", "appbuilder_eform.relatives",
+        "appbuilder_eform.names",
         "appbuilder_eform.sign",
     ]  # fmt: skip
     assert by_id["contact.emailAddress"].prefilled == "ada@example.com"
@@ -225,6 +233,9 @@ def test_the_read_agrees_to_the_statement_then_lists_every_section(opened, ats):
     assert by_id["prescreen1.q_2"].shown_when == Is("prescreen1.q_1", ["Yes"])
     assert by_id["prescreen1.q_3"].shown_when == Is("prescreen1.q_1", ["No"])
     assert by_id["prescreen1.q_4"].shown_when == Is("prescreen1.q_3")
+    assert by_id["prescreen1.q_5"].type is FieldType.DATE
+    assert by_id["prescreen1.q_6"].type is FieldType.MULTI_CHOICE
+    assert by_id["prescreen1.q_6"].shown_when == Is("prescreen1.q_5")
     assert by_id["documents.resume"].type is FieldType.FILE
     assert by_id["appbuilder_eform.names"].required_when == Is(
         "appbuilder_eform.relatives", ["Yes"]
@@ -242,6 +253,8 @@ def test_fill_walks_every_section_and_page_up_to_the_review(opened, page, ats, r
         "prescreen1.q_1": "No",
         "prescreen1.q_3": "50000",
         "prescreen1.q_4": "Yes",
+        "prescreen1.q_5": "2026-12-01",
+        "prescreen1.q_6": ["Full-Time", "Weekends"],
         "documents.resume": resume,
         "appbuilder_eform.relatives": "No",
         "appbuilder_eform.sign": "Ada Placeholder",
@@ -261,6 +274,8 @@ def test_fill_walks_every_section_and_page_up_to_the_review(opened, page, ats, r
         "prescreen1.q_1": "No",
         "prescreen1.q_3": "50000",
         "prescreen1.q_4": "Yes",
+        "prescreen1.q_5": "2026-12-01",
+        "prescreen1.q_6": ["Full-Time", "Weekends"],
         "documents.resume": "CV Ada.pdf",
         "appbuilder_eform.relatives": "No",
         "appbuilder_eform.sign": "Ada Placeholder",

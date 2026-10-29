@@ -267,9 +267,12 @@ function prescreen(questions) {
     row.className = "section-row";
     row.dataset.q = q.questionId;
     const answers = q.possibleAnswers;
-    row.innerHTML = q.questionType === "Free form"
-      ? `<sdf-textarea aria-labelledby="${q.questionId}-error"><textarea></textarea></sdf-textarea>`
-      : `<sdf-radio-group id="${q.questionId}">${answers.map(a => radio(a.answerId, a.answerLabel)).join("")}</sdf-radio-group>`;
+    const labelled = `aria-labelledby="${q.questionId}-error"`;
+    row.innerHTML = {
+      "Free form": `<sdf-textarea ${labelled}><textarea></textarea></sdf-textarea>`,
+      "Calendar": `<sdf-date-picker ${labelled}><input placeholder="MM/DD/YYYY"></sdf-date-picker>`,
+      "Multiple choice": answers.map(a => `<sdf-checkbox ${labelled} role="checkbox" aria-label="${a.answerLabel}" aria-checked="false" value="${a.answerId}"></sdf-checkbox>`).join(""),
+    }[q.questionType] ?? `<sdf-radio-group id="${q.questionId}">${answers.map(a => radio(a.answerId, a.answerLabel)).join("")}</sdf-radio-group>`;
     form.append(row);
     const after = answer => {
       const target = answer?.branchingQuestionId || (answer?.endOfQuestionIndicator ? null
@@ -278,7 +281,11 @@ function prescreen(questions) {
     };
     row.querySelectorAll("sdf-radio-button").forEach(r => { choose(r); r.addEventListener("click",
       () => after(answers.find(a => a.answerId === r.getAttribute("value")))); });
-    row.querySelector("textarea")?.addEventListener("input", () => after(null));
+    row.querySelectorAll("sdf-checkbox").forEach(b => b.addEventListener("click", () => {
+      b.setAttribute("aria-checked", String(b.getAttribute("aria-checked") !== "true"));
+      after(null);
+    }));
+    row.querySelector("textarea, input")?.addEventListener("input", () => after(null));
   };
   show(questions[0]);
   app.querySelector("sdf-button").onclick = async () => {

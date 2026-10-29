@@ -12,6 +12,7 @@ import re
 import time
 from contextlib import suppress
 from dataclasses import dataclass, field, replace
+from datetime import datetime
 from html import unescape
 from typing import Any
 from urllib.parse import parse_qs, quote, urlsplit
@@ -40,7 +41,6 @@ SIGN_IN_STEP_TIMEOUT_MS = 30_000
 SIGNED_IN_TIMEOUT_MS = 60_000
 POSTING_TIMEOUT_MS = 45_000
 SECTION_TIMEOUT_MS = 45_000
-LOAD_TRIES = 3
 SUBMIT_TIMEOUT_MS = 90_000
 SETTLE_MS = 1_500  # an answer shows its follow-ups, a Next saves and routes
 OPTION_TIMEOUT_MS = 10_000
@@ -48,6 +48,7 @@ UPLOAD_TIMEOUT_MS = 60_000
 KEY_DELAY_MS = 40
 SKIPPED = {"INSTRUCTIONS", "HEADER"}
 YES_NO = ["Yes", "No"]
+DATE = "%m/%d/%Y"  # a date picker's typed form
 
 _FETCH = """async ([url, role, site]) => {
   const headers = {myjobstoken: sessionStorage.getItem('myJobsToken') ?? ''};
@@ -124,6 +125,9 @@ class ADPMyJobs:
         if found is None:
             raise RuntimeError(f"{page.url} is not an ADP MyJobs posting")
         site, req = found
+        # Left before it settles, the first page's loader wedges the tab: no workflow shows in it
+        with suppress(Timeout):
+            page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
         settings = _career_site(page, site)
         self._site_id = str(settings["externalId"])
         if not (settings.get("enabledFeatures") or {}).get("candidateApplicationWorkflow"):
@@ -244,20 +248,7 @@ class ADPMyJobs:
         page.wait_for_url(
             lambda u: "workflowComponent=" in u, timeout=SECTION_TIMEOUT_MS, wait_until="commit"
         )
-        workflow = page.url
-        for attempt in range(LOAD_TRIES):  # it can spin: loaded again from the posting, it shows
-            try:
-                page.get_by_role("button", name="Next").wait_for(timeout=SECTION_TIMEOUT_MS)
-                return
-            except Timeout:
-                if attempt == LOAD_TRIES - 1:
-                    raise
-                site = urlsplit(workflow).path.split("/")[1]
-                req = parse_qs(urlsplit(workflow).query)["reqId"][0]
-                page.goto(f"https://{HOST}/{site}/cx/job-details?reqId={req}")
-                with suppress(Timeout):
-                    page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
-                page.goto(workflow)
+        page.get_by_role("button", name="Next").wait_for(timeout=SECTION_TIMEOUT_MS)
 
     def _workflow(self, page: Page) -> list[Section]:
         assignment = self._assignment(page)
@@ -325,6 +316,8 @@ class ADPMyJobs:
                 self._codes[field_id] = {"true": "Yes", "false": "No"}
             case "UPLOAD":
                 type_ = FieldType.FILE
+            case "DATE":
+                type_ = FieldType.DATE
             case "ESIGNATURE":
                 type_, label = FieldType.TEXT, "Electronic signature: your full legal name"
             case (
@@ -403,8 +396,13 @@ class ADPMyJobs:
                 case "Single choice":
                     self._codes[ids[qid]] = labels
                     f = Field(ids[qid], label, FieldType.CHOICE, True, list(labels.values()))
+                case "Multiple choice":
+                    self._codes[ids[qid]] = labels
+                    f = Field(ids[qid], label, FieldType.MULTI_CHOICE, True, list(labels.values()))
                 case "Free form":
                     f = Field(ids[qid], label, FieldType.TEXT, True)
+                case "Calendar":
+                    f = Field(ids[qid], label, FieldType.DATE, True)
                 case other:
                     reason = f"unhandled_rendering: {label!r} is a {other} question"
                     f = Field(ids[qid], label, FieldType.TEXT, True, unfillable=reason)
@@ -423,7 +421,7 @@ class ADPMyJobs:
                 continue  # not shown: its condition is unmet
             if _value(box, f, self._codes.get(f.id, {})) == answers[f.id]:
                 continue  # a list's default, the profile's value
-            _set(page, box, f, str(answers[f.id]), self._codes.get(f.id, {}))
+            _set(page, box, f, answers[f.id], self._codes.get(f.id, {}))
             page.wait_for_timeout(SETTLE_MS if f.type is FieldType.CHOICE else 0)
 
     def _read(self, page: Page, section: Section) -> dict[str, Answer]:
@@ -644,12 +642,27 @@ def _box(page: Page, section: Section, f: Field) -> Locator:
     question = f.id.removeprefix(f"{section.component}.")
     if section.component.startswith("prescreen"):
         labelled = f'[aria-labelledby="{question}-error"]:not(sdf-radio-button)'
-        return page.locator(f"#{question}, {labelled}").first
+        boxes = page.locator(f"#{question}, {labelled}")
+        return boxes if f.type is FieldType.MULTI_CHOICE else boxes.first  # a box per option
     return page.locator(f'adp-form-group[data-name="{question}"]').first
 
 
-def _set(page: Page, box: Locator, f: Field, answer: str, codes: dict[str, str]) -> None:
+def _set(page: Page, box: Locator, f: Field, answer: Answer, codes: dict[str, str]) -> None:
     by_label = {v: k for k, v in codes.items()}
+    if isinstance(answer, list):  # a prescreen's options, a checkbox each
+        chosen = {by_label.get(a, a) for a in answer}
+        for option in box.all():
+            if (option.get_attribute("aria-checked") == "true") != (
+                option.get_attribute("value") in chosen
+            ):
+                option.click()
+        return
+    if f.type is FieldType.DATE:
+        target = box.locator("input").first
+        target.fill("")
+        target.press_sequentially(datetime.fromisoformat(answer).strftime(DATE), delay=KEY_DELAY_MS)
+        target.press("Tab")
+        return
     if f.type is FieldType.FILE:
         _upload(page, box, f, answer)
         return
@@ -729,6 +742,13 @@ def _upload(page: Page, box: Locator, f: Field, answer: str) -> None:
 
 
 def _value(box: Locator, f: Field, codes: dict[str, str]) -> Answer | None:
+    if f.type is FieldType.MULTI_CHOICE:
+        checked = [o.get_attribute("value") or "" for o in box.all()
+                   if o.get_attribute("aria-checked") == "true"]  # fmt: skip
+        return [codes.get(c, c) for c in checked] or None
+    if f.type is FieldType.DATE:
+        typed = box.locator("input").first.input_value()
+        return datetime.strptime(typed, DATE).date().isoformat() if typed else None
     if f.type is FieldType.FILE:  # the upload's text, its buttons icons alone: the file's name
         lines = box.locator("dynamic-form-sdf-upload").inner_text().splitlines()
         return next((t.strip() for t in lines if t.strip()), None)
