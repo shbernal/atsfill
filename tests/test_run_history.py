@@ -57,3 +57,10 @@ def test_a_system_with_no_runs_has_an_empty_run_history():
     page = run_history.page(["ashby", "lever"], [])
     assert "[lever](adapters/lever.md)" in page
     assert "<circle" not in run_history.svg("lever", [])
+
+
+def test_the_legend_draws_each_verdict_filled_for_users_and_hollow_for_dev():
+    legend = run_history.legend()
+    assert legend.count("<circle") == 4
+    for color in (run_history.GREEN, run_history.RED):
+        assert f'fill="{color}"' in legend and f'fill="none" stroke="{color}"' in legend
