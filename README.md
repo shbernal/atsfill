@@ -60,11 +60,11 @@ It is built for agents with a shell: every command prints one JSON document and 
 [![wttj run history](https://shbernal.github.io/atsfill/run-history/wttj.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![workday run history](https://shbernal.github.io/atsfill/run-history/workday.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![successfactors run history](https://shbernal.github.io/atsfill/run-history/successfactors.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![adpmyjobs run history](https://shbernal.github.io/atsfill/run-history/adpmyjobs.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![isolvedhire run history](https://shbernal.github.io/atsfill/run-history/isolvedhire.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![jobstreet run history](https://shbernal.github.io/atsfill/run-history/jobstreet.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![gupy run history](https://shbernal.github.io/atsfill/run-history/gupy.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![ukg run history](https://shbernal.github.io/atsfill/run-history/ukg.svg)](https://shbernal.github.io/atsfill/run-history/)
-[![adpmyjobs run history](https://shbernal.github.io/atsfill/run-history/adpmyjobs.svg)](https://shbernal.github.io/atsfill/run-history/)
 <!-- /run-history -->
 
 Each line is a hiring system atsfill has an adapter for, and its [run history](https://shbernal.github.io/atsfill/run-history/): the last 30 days of runs, one mark per posting and version, newest first.
