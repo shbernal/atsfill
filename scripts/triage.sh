@@ -12,7 +12,7 @@ TRIAGE_LABELS='["agent:working","agent:done","agent:skip","agent:stuck","cannot-
 
 [ -d "$WORKTREE" ] || git -C "$REPO" worktree add -q --detach "$WORKTREE" origin/main
 cd "$WORKTREE"
-git fetch -q origin main --tags
+git fetch -q --force origin main --tags
 git reset -q --hard
 git clean -qfd
 git checkout -q --detach origin/main
@@ -48,4 +48,4 @@ claude -p "Triage failure issue #$issue. $(cat scripts/triage.md)" \
   "Bash(uv run *)" "Bash(git *)" "Bash(gh issue *)" "Bash(gh pr create *)" \
   "Bash(gh pr list *)" "Bash(gh pr view *)" "Bash(gh pr checks *)" "Bash(gh run *)" \
   "Bash(buzon *)" "Bash(freehire *)" "Bash(ls *)" "Bash(cat *)" "Bash(grep *)" \
-  --disallowedTools "Bash(*atsfill send*)" "Bash(*gh pr merge*)" "Bash(git push origin main*)"
+  --disallowedTools "Bash(*atsfill send*)" "Bash(*gh pr merge*)"
