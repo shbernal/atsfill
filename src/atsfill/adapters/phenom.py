@@ -15,6 +15,7 @@ import time
 import urllib.request
 import uuid
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, suppress
 from datetime import date
 from html import unescape
@@ -64,6 +65,7 @@ FILL_ROUNDS = 6  # an answer shows a follow-up, which can show another
 PICK_TRIES = 3
 MAX_STEPS = 12
 OPTIONS_TIMEOUT_S = 8
+LOADERS_AT_ONCE = 8  # a loader request a country: 245 on one site
 YES_NO = ["Yes", "No"]
 NO_YES = ["No", "Yes"]
 MONTH = " (MM/YYYY)"
@@ -107,7 +109,7 @@ ANSWER = re.compile(r"%%formData\.(\w+)%%")
 SEARCHING = re.compile(r"Searching", re.IGNORECASE)  # a typeahead's menu before its results
 ACCEPTED = re.compile(r"\b(DOCX?|PDF|TXT|HTML?|RTF)\b", re.IGNORECASE)
 
-type Post = Callable[[dict[str, Any]], Any]
+type Post = Callable[[list[dict[str, Any]]], list[Any]]  # None for a failed request
 
 # Each field the current step shows: its control's kind, id, label and requirement. A field is
 # a `.form-group.field` with no field inside it; a checkbox group is named by its boxes' id.
@@ -226,12 +228,28 @@ _SHOWS = """text => [...document.querySelectorAll('body *')].some(el =>
 
 # A request from the page, as its own scripts make them: the CDN's configuration, or a post to
 # `/applySubmit` with the session's token.
-_FETCH = """async ([url, body, token]) => {
-  const init = body ? {method: 'POST', body: JSON.stringify(body),
-    headers: {'Content-Type': 'application/json', 'x-csrf-token': token}} : {};
-  const response = await fetch(url, init);
+_FETCH = """async url => {
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`${response.status} from ${url}`);
   return response.json();
+}"""
+
+# Posts each body to `/applySubmit`, `most` at a time; null for one that fails.
+_POSTS = """async ([bodies, token, most]) => {
+  const out = bodies.map(() => null);
+  let next = 0;
+  const post = async () => {
+    for (let i = next++; i < bodies.length; i = next++) {
+      try {
+        const response = await fetch('/applySubmit', {method: 'POST',
+          body: JSON.stringify(bodies[i]),
+          headers: {'Content-Type': 'application/json', 'x-csrf-token': token}});
+        if (response.ok) out[i] = await response.json();
+      } catch {}
+    }
+  };
+  await Promise.all(Array.from({length: most}, post));
+  return out;
 }"""
 
 
@@ -292,6 +310,16 @@ class Phenom:
             with opener.open(request, timeout=HTTP_TIMEOUT_S) as response:
                 return response.read()
 
+        def post(body: dict[str, Any]) -> Any:
+            try:
+                return json.loads(load(f"{origin}/applySubmit", body, token))
+            except OSError, ValueError:
+                return None
+
+        def posts(bodies: list[dict[str, Any]]) -> list[Any]:
+            with ThreadPoolExecutor(LOADERS_AT_ONCE) as pool:
+                return list(pool.map(post, bodies))
+
         try:
             if prefix[2] == "job":
                 job = _phapp_of(load(url).decode())
@@ -299,11 +327,7 @@ class Phenom:
                     return None
             ph = _phapp_of(load(f"{origin}{prefix[1]}/apply?jobSeqNo={seq}").decode())
             token = get(ph, "sessionParams.csrfToken") or ""
-            fields, _ = _read(
-                ph,
-                lambda url: json.loads(load(url)),
-                lambda body: json.loads(load(f"{origin}/applySubmit", body, token)),
-            )
+            fields, _ = _read(ph, lambda url: json.loads(load(url)), posts)
             return fields
         except OSError, ValueError, KeyError, TypeError, RuntimeError, Unsupported:
             return None
@@ -320,8 +344,8 @@ class Phenom:
         try:
             fields, raws = _read(
                 ph,
-                lambda url: page.evaluate(_FETCH, [url, None, token]),
-                lambda body: page.evaluate(_FETCH, ["/applySubmit", body, token]),
+                lambda url: page.evaluate(_FETCH, url),
+                lambda bodies: page.evaluate(_POSTS, [bodies, token, LOADERS_AT_ONCE]),
             )
         except (BrowserError, ValueError, KeyError) as e:
             raise RuntimeError(f"no configuration for the wizard ({e})") from None
@@ -653,7 +677,7 @@ class _Config:
         out = [raw]
         if html == "country":
             raw["loads"] = "getCountrySpecificFields" in (get(u, "apiConfig.payload") or "")
-            out += self.country_fields(p, u, path, nav)
+            out += self.country_fields(u, path, nav)
         return out
 
     def options(
@@ -870,18 +894,24 @@ class _Config:
         return out
 
     def call(self, payload: str, **extra: Any) -> Any:
-        """Posts a loader's payload to `/applySubmit`, the page's values put in; None when it
-        names an answer, or the request fails."""
+        return self.calls(payload, [extra])[0]
+
+    def calls(self, payload: str, extras: list[dict[str, Any]]) -> list[Any]:
+        """Posts a loader's payload to `/applySubmit` with each of `extras`, the page's values
+        put in; None where it names an answer, or the request fails."""
         if ANSWER.search(payload):
-            return None
+            return [None] * len(extras)
         filled = PAGE_VALUE.sub(lambda m: _json_text(get({"phApp": self.ph}, m[1])), payload)
+        bodies = []
         try:
-            body = json.loads(filled)
-            body.setdefault("formData", {}).update(extra)
-            body["formData"].setdefault("applyAtsSource", self.ddo.get("applyATS"))
-            return self.post(body)
+            for extra in extras:
+                body = json.loads(filled)
+                body.setdefault("formData", {}).update(extra)
+                body["formData"].setdefault("applyAtsSource", self.ddo.get("applyATS"))
+                bodies.append(body)
+            return self.post(bodies)
         except Exception:
-            return None
+            return [None] * len(extras)
 
     def loaded(self, u: dict, nav: Any) -> list[dict[str, Any]]:
         """A part of the form its loader serves: a questionnaire of the job's, where the job
@@ -945,19 +975,26 @@ class _Config:
         }
         return raw
 
-    def country_fields(self, p: dict, u: dict, path: str, nav: Any) -> list[dict[str, Any]]:
-        """The fields the country's answer before any adds under `cntryFields` (names,
-        address)."""
+    def country_fields(self, u: dict, path: str, nav: Any) -> list[dict[str, Any]]:
+        """The fields each country adds under `cntryFields` (names, address), a request a
+        country, in the order of the country's answer before any."""
         payload = (u.get("apiConfig") or {}).get("payload") or ""
-        code, _ = self.prefilled(path)
-        if "getCountrySpecificFields" not in payload or code is None:
+        if "getCountrySpecificFields" not in payload:
             return []
-        part = get(self.call(payload, countryCode=code), "applyGetReferences.data")
-        if not isinstance(get(part, "schema"), dict):
-            return []
-        return self.object(
-            part["schema"], part.get("uiSchema") or {}, "cntryFields.", nav, False, None
-        )
+        values, texts = self.listed.get(path) or ([], [])
+        held, _ = self.prefilled(path)
+        codes = sorted(values, key=lambda c: c != held)
+        parts = self.calls(payload, [{"countryCode": c} for c in codes])
+        by_id: dict[str, dict[Any, dict[str, Any]]] = {}
+        for code, part in zip(codes, parts, strict=True):
+            part = get(part, "applyGetReferences.data")
+            if not isinstance(get(part, "schema"), dict):
+                continue
+            ui = part.get("uiSchema") or {}
+            for raw in self.object(part["schema"], ui, "cntryFields.", nav, False, None):
+                by_id.setdefault(raw["id"], {})[code] = raw
+        shown = dict(zip(values, texts, strict=False))
+        return [_by_country(path, rows, codes, shown) for rows in by_id.values()]
 
     def date_range(
         self, p: dict, u: dict, path: str, nav: Any, when: Condition | None
@@ -1035,6 +1072,52 @@ class _Config:
                 parts = condition.any_of if isinstance(condition, AnyOf) else condition.all_of
                 joined = _join([self.labeled(c, resume) for c in parts], kind)
                 return None if joined is True else joined
+
+
+def _by_country(
+    path: str, rows: dict[Any, dict[str, Any]], codes: list, shown: dict[Any, str]
+) -> dict[str, Any]:
+    """One field from its raw form under each country that lists it: shown, required and
+    listing its options under the countries whose fields say so."""
+    raw = dict(next(iter(rows.values())))
+    raw["when"] = _under(path, {c: r["when"] or True for c, r in rows.items()}, codes)
+    required = _under(
+        path,
+        {c: True if r["required"] else r.get("required_when") or False for c, r in rows.items()},
+        list(rows),
+    )
+    raw["required"] = required is True
+    raw["required_when"] = None if isinstance(required, bool) else required
+    lists = {c: r["options"] for c, r in rows.items() if r["options"]}
+    if lists:
+        raw["kind"] = next(rows[c]["kind"] for c in lists)
+    if lists and (len(lists) < len(rows) or len({tuple(o) for o in lists.values()}) > 1):
+        groups: dict[tuple[str, ...], list[str]] = {}
+        for code, options in lists.items():
+            groups.setdefault(tuple(options), []).append(shown.get(code, str(code)))
+        raw["options"], raw["parent"] = None, path
+        raw["option_sets"] = [OptionSet(Is(path, names), list(o)) for o, names in groups.items()]
+    return raw
+
+
+def _under(path: str, by_value: dict[Any, bool | Condition], values: list) -> bool | Condition:
+    """What holds under each of a list's `values`, as one condition on its answer, False under
+    a value `by_value` leaves out. A part that holds under most values names the others."""
+    groups: dict[str, tuple[bool | Condition, list]] = {}
+    for value, holds in by_value.items():
+        if holds is not False:
+            groups.setdefault(repr(holds), (holds, []))[1].append(value)
+    if len(groups) == 1 and len(next(iter(groups.values()))[1]) == len(values):
+        return next(iter(groups.values()))[0]
+    parts: list[Condition] = []
+    for holds, under in groups.values():
+        on = (
+            Is(path, under)
+            if 2 * len(under) <= len(values)
+            else Is(path, [v for v in values if v not in under], negated=True)
+        )
+        parts.append(AllOf([on, holds]) if not isinstance(holds, bool) else on)
+    return _join(parts, any)
 
 
 def _join(

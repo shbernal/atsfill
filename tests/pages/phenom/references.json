@@ -1,10 +1,20 @@
 {
   "applySubmit": {"applySubmit": {"STATUS": "success", "response": {"status": "success"}}},
-  "getCountrySpecificFields": {"applyGetReferences": {"status": "success", "data": {
-    "countryCode": "USA",
-    "schema": {"type": "object", "required": ["city"], "properties": {"city": {"title": "City", "type": "string"}}},
-    "uiSchema": {"ui:order": ["city", "*"]}
-  }}},
+  "getCountrySpecificFields": {
+    "USA": {"applyGetReferences": {"status": "success", "data": {
+      "countryCode": "USA",
+      "schema": {"type": "object", "required": ["city"], "properties": {"city": {"title": "City", "type": "string"}}},
+      "uiSchema": {"ui:order": ["city", "*"]}
+    }}},
+    "CAN": {"applyGetReferences": {"status": "success", "data": {
+      "countryCode": "CAN",
+      "schema": {"type": "object", "required": ["city", "region"], "properties": {
+        "city": {"title": "City", "type": "string"},
+        "region": {"title": "Province", "type": "string", "enum": ["CAN-AB", "CAN-ON"], "enumNames": ["Alberta", "Ontario"]}
+      }},
+      "uiSchema": {"ui:order": ["city", "region", "*"]}
+    }}}
+  },
   "getCustomerDependentData": {"applyGetReferences": {"status": "success", "data": {
     "objectType": "states",
     "values": [{"key": "US-TX", "label": "Texas"}, {"key": "US-UT", "label": "Utah"}]
