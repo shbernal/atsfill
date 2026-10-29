@@ -73,6 +73,7 @@ YES_NO = ["Yes", "No"]
 NO_YES = ["No", "Yes"]
 MONTH = " (MM/YYYY)"
 YEAR = " (year)"
+NUMBER = " (a number)"  # an input that takes only digits
 PICKER = ".react-datepicker"
 MONTHS: list[str] = [
     "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"
@@ -365,7 +366,7 @@ class Phenom:
         self._open(page, fresh=True)
         self._accept_terms(page)
         self._kept, self._shown = {}, {}
-        if RESUME_ID in answers and page.locator(RESUME).count():
+        if RESUME_ID in answers and _shows_upload(page):
             _upload(page, _one(answers[RESUME_ID]))
             self._kept[RESUME_ID] = PurePath(_one(answers[RESUME_ID])).name
         for number in range(1, MAX_STEPS + 1):
@@ -664,7 +665,8 @@ class _Config:
         if html == "daterangepicker" or widget == "daterangepicker":
             return self.date_range(p, u, path, nav, when)
         if p.get("type") == "array" and get(p, "items.properties") and html not in WIDGETS:
-            if not (int(p.get("minItems") or 0) or int(u.get("minItemsRequired") or 0)):
+            shown = p.get("minItems"), p.get("defaultEntries"), u.get("minItemsRequired")
+            if not any(int(n or 0) for n in shown):
                 return []  # entries only once Add is clicked
             return self.object(p["items"], u.get("items") or {}, f"{path}[0].", nav, False, when)
         if p.get("type") == "object" or html in ("object", "phoneNumber_v2"):
@@ -681,6 +683,7 @@ class _Config:
             # a signature's date: today's, the only one the page takes
             "prefilled": date.today().isoformat() if p.get("defaultTodayDate") is True else None,
             "max_length": p.get("maxLength") if isinstance(p.get("maxLength"), int) else None,
+            "number": kind == "text" and _number(p, html, widget),
         }
         self.labels[path] = raw["label"]
         if kind in ("select", "typeahead", "radio", "checkboxes"):
@@ -1084,7 +1087,10 @@ class _Config:
             held = get(
                 {"phApp": self.ph}, get(self.config, f"uiSchema.{name}.preFillWindowObj") or ""
             )
-            held = held if held is not None else {"locale": self.ph.get("locale")}.get(name)
+            if held is None:  # the job's data by its name (`jobCountry`), or the page's locale
+                held = ({"locale": self.ph.get("locale")} | self.ddo).get(name)
+            if "pattern" in test:  # a job location naming a county
+                return isinstance(held, str) and re.search(test["pattern"], held) is not None
             return True if values is None else held in values
         return Is(f"{path}{name}", values)
 
@@ -1249,6 +1255,11 @@ def _kind(p: dict, html: Any, widget: Any, path: str) -> str:
     return "text"
 
 
+def _number(p: dict, html: Any, widget: Any) -> bool:
+    """Whether the input takes only digits (`input[type=number]`)."""
+    return p.get("type") in ("integer", "number") or bool({html, widget} & {"number", "updown"})
+
+
 def _picker(form: str) -> str:
     """The calendar a format picks from: `date` (a day), `month` (`MM/yyyy`), `year`."""
     tokens = {t[0] for t in re.findall(r"y+|m+|d+", form.lower())}
@@ -1312,6 +1323,7 @@ def _field(raw: dict[str, Any]) -> Field:
     if kind == "checkbox":  # an optional box starts clear
         options = YES_NO if raw["required"] else NO_YES
     label = raw["label"] + {"month": MONTH, "year": YEAR}.get(kind, "")
+    label += NUMBER if raw.get("number") else ""
     sets = raw.get("option_sets")
     field_type = (
         FieldType.TYPEAHEAD if kind == "typeahead" and not options and not sets else TYPES[kind]
@@ -1467,6 +1479,15 @@ def _iso_date(shown: str, form: str) -> str:
 
 def _one(answer: Answer) -> str:
     return answer if isinstance(answer, str) else answer[0]
+
+
+def _shows_upload(page: Page) -> bool:
+    """Whether the resume upload shows: on one site a moment after the form, past its terms."""
+    try:
+        page.locator(RESUME).first.wait_for(state="attached", timeout=FIELD_TIMEOUT_MS)
+    except Timeout:
+        return False
+    return True
 
 
 def _upload(page: Page, path: str) -> None:
