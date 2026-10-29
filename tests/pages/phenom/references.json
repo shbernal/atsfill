@@ -1,4 +1,5 @@
 {
+  "applySubmit": {"applySubmit": {"STATUS": "success", "response": {"status": "success"}}},
   "getCountrySpecificFields": {"applyGetReferences": {"status": "success", "data": {
     "countryCode": "USA",
     "schema": {"type": "object", "required": ["city"], "properties": {"city": {"title": "City", "type": "string"}}},

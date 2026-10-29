@@ -1,6 +1,6 @@
 # Phenom
 
-Phenom's apply wizard on employers' careers sites, observed on live postings, last on 2026-10-22. The fixture pages are [tests/pages/phenom/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/job.html) and [apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/apply.html), configured by [form_schema.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/form_schema.json), [Messages_en_us.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/Messages_en_us.json) and the loaders' answers in [references.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/references.json), served as `careers.acme.example` and Phenom's CDN in `tests/test_phenom.py`: a four-step wizard with one example of each rendering below.
+Phenom's apply wizard on employers' careers sites, observed on live postings, last on 2026-10-29. The fixture pages are [tests/pages/phenom/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/job.html) and [apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/apply.html), configured by [form_schema.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/form_schema.json), [Messages_en_us.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/Messages_en_us.json) and the loaders' answers in [references.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/phenom/references.json), served as `careers.acme.example` and Phenom's CDN in `tests/test_phenom.py`: a four-step wizard with one example of each rendering below.
 
 ## Where the form is
 
@@ -54,10 +54,12 @@ Reading takes a page load and 1 to 8 seconds of requests.
 - Filling clears the site's storage and cookies and opens the wizard anew. The resume is uploaded first and the page's requests left to settle: its parse fills and clears fields when it comes back.
 - Each step's answered fields, those the page shows in the configuration's order (a country before its states), are filled as the page renders them; then the step is scanned again, for a field an answer showed (follow-ups three deep), and filled until its read-back holds after two seconds, six rounds at most. A field never shown has no read-back. The wizard keeps only its current step, so the fields shown once filled are those each step showed before Next. A control disabled until another answer waits a round; a text box that became a list (a region, once the state is set) is filled as one.
 - A list is set even to the value it holds, cleared first, so a list depending on it loads; a dependent list without the answer is set once more after its parent is set again.
+- The page sends a country's request for its fields 0.3 s after the change. Two answers to other fields within that time drop it: the list still shows the country, but the step lacks it and Next answers `Please select the country`. Filling waits after a country until the page's requests have settled.
 
 ## Read-back and submit
 
 - The read-back is each step's controls, read before Next: values, a select's text, the checked radio's or boxes' labels, a box as `Yes`/`No`, dates as `YYYY-MM-DD` from the picker's placeholder, a national phone with its code.
+- `/applySubmit` checks some answers against the employer's records: a referral by someone who is not an employee. It answers `status: failure`, `statusType: VALIDATION_ERROR` with a `statusMessage`, and the page stays on the step showing nothing. That answer is not taken.
 - On one site, an employer search with `allowNew` reads back its pick, yet the step still finds it empty (`is a required property`) and does not pass.
 - Submit is the last step's submit button; the evidence is `/applySubmit`'s answer to the post with `isLastStep: true`. No send has been made through this adapter, so the end of a send is unobserved.
 
