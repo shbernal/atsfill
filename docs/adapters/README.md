@@ -31,7 +31,7 @@ The registry covers 90.4% of postings.
 | pinpoint | ats | 0.4% | none | hosted |  | [supported](pinpoint.md) |
 | hiringthing | ats | 0.3% | none | hosted |  | [supported](hiringthing.md) |
 | recruiterflow | ats | 0.1% | none | hosted |  | [supported](recruiterflow.md) |
-| werecruit | ats | 0.1% | none | hosted |  | [in scope](werecruit.md) |
+| werecruit | ats | 0.1% | none | hosted |  | [supported](werecruit.md) |
 | jobaffinity | ats |  | none | hosted |  | [supported](jobaffinity.md) |
 | welcomekit | ats |  | none | hosted |  | [supported](welcomekit.md) |
 | join | ats | 0.3% | to_send | hosted |  | [supported](join.md) |
