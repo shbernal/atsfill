@@ -140,22 +140,40 @@ async function draw() {
       `&sectionID=${shown.sectionID}&rmapp=forms`);
     shown = pages[number] = one.questionSections[0];
   }
-  app.innerHTML = `<h2>${section.sectionTitle}</h2>` +
-    shown.questions.map(group).join("") + (number ? button("Previous") : "") + button("Next");
+  const repeat = Object.fromEntries((shown.sectionLabels ?? []).map(l => [l.code, l.value]));
+  const index = q => Number(q.questionLabels?.find(l => l.code === "repeatIndex")?.value ?? 0);
+  const label = repeat.sectionRepeatLabel;
+  app.innerHTML = `<h2>${section.sectionTitle}</h2><sdf-alert></sdf-alert>` +
+    shown.questions.filter(q => !index(q)).map(group).join("") +
+    (label ? `<div class="entries"></div>${button(`Add ${label.toLowerCase()}`)}` : "") +
+    (number ? button("Previous") : "") + button("Next");
   app.querySelectorAll("adp-form-group").forEach(wire);
-  controls();
+  // A page of entries: Add adds one, folded under its title until that is clicked.
+  if (label) app.querySelector(".entries + sdf-button").onclick = () => {
+    const entries = app.querySelector(".entries"), n = entries.children.length + 1;
+    const one = document.createElement("div");
+    one.innerHTML = `<p>${label} ${n}</p><div class="hidden">${
+      shown.questions.filter(q => index(q) === n).map(group).join("")}</div>`;
+    entries.append(one);
+    one.querySelectorAll("adp-form-group").forEach(wire);
+    one.querySelector("p").onclick = () => one.querySelector("div").classList.toggle("hidden");
+  };
+  controls(label ? Number(repeat.sectionRepeatMin) : 0, label);
 }
 
 function group(q) {
   const kind = {TEXT: "sdf-input", EMAIL: "sdf-input", PHONENUMBER: "sdf-phone-number",
     SELECTION: "sdf-single-select", STATES: "sdf-single-select", COUNTRIES: "sdf-single-select",
     LOOKUP: "sdf-single-select", RADIO: "radio-group", BOOLEAN: "sdf-yes-no",
-    CHECKBOX: "checkbox", UPLOAD: "sdf-upload", ESIGNATURE: "e-signature",
+    CHECKBOX: "checkbox", UPLOAD: "sdf-upload", ESIGNATURE: "e-signature", DATE: "sdf-date",
+    LONGTEXT: "sdf-textarea",
     INSTRUCTIONS: "instructions", HEADER: "header", DATETIME: "sdf-date-time"}[q.answerDataTypeCode];
   const label = q.questionLabels?.find(l => l.code.endsWith("_USA_label"))?.value ?? q.questionText ?? "";
   const value = q.answerDefaultValue ?? "";
   const inner = {
     "sdf-input": `<sdf-input><input value="${value}"></sdf-input>`,
+    "sdf-date": `<sdf-date-picker><input placeholder="MM/DD/YYYY"></sdf-date-picker>`,
+    "sdf-textarea": `<sdf-textarea><textarea></textarea></sdf-textarea>`,
     "sdf-phone-number": `<sdf-phone-number-input><input value="${value}"></sdf-phone-number-input>`,
     "sdf-single-select": `<sdf-select-simple filterable="">
       <div part="frame" role="button">${value}</div><input id="select-filter-input" class="hidden">
@@ -233,10 +251,10 @@ function answerOf(g) {
   if (g.querySelector("sdf-checkbox")) return g.querySelector("sdf-checkbox").getAttribute("aria-checked") === "true";
   if (g.querySelector("sdf-select-simple")) return g.querySelector("#selected-label").textContent;
   if (g.querySelector(".file-uploader")) return g.querySelector(".file-uploader").textContent;
-  return g.querySelector("input")?.value ?? "";
+  return g.querySelector("input, textarea")?.value ?? "";
 }
 
-function controls() {
+function controls(needed = 0, label = "") {
   const [back, next] = [...app.querySelectorAll("sdf-button")].filter(b => !b.closest("adp-form-group"))
     .reduce((out, b) => (out[b.textContent === "Next" ? 1 : 0] = b, out), []);
   if (back) back.onclick = () => { number -= 1; draw(); };
@@ -246,6 +264,8 @@ function controls() {
     missing.forEach(g => g.querySelector("rm-sr-field-error").textContent =
       `${g.querySelector("label").textContent} is required`);
     if (missing.length) return;
+    if (app.querySelectorAll(".entries > div").length < needed)
+      return app.querySelector("sdf-alert").textContent = `You must enter at least ${needed} ${label} entries.`;
     if (number < pages.length - 1) {
       number += 1;
       return draw();
