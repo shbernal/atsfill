@@ -80,6 +80,7 @@ class ADPMyJobs:
         self._sections: list[Section] = []
         self._codes: dict[str, dict[str, str]] = {}  # by field id: an option's label by code
         self._values: dict[str, Answer] = {}
+        self._fixed: set[str] = set()  # disabled questions, their value shown as text
 
     def detect(self, url: str, page: Page | None) -> bool:
         return _posting(url) is not None
@@ -302,6 +303,8 @@ class ADPMyJobs:
         if isinstance(default, bool):
             default = "true" if default else "false"
         prefilled = self._codes.get(field_id, {}).get(default, default) if default else None
+        if raw.get("disabledIndicator"):
+            self._fixed.add(field_id)
         return Field(field_id, label, type_, required, options, prefilled=prefilled)
 
     def _options(
@@ -368,7 +371,7 @@ class ADPMyJobs:
         shows once the one before is answered."""
         _on_section(page, section)
         for f in section.fields:
-            if f.id not in answers or f.unfillable:
+            if f.id not in answers or f.unfillable or f.id in self._fixed:
                 continue
             box = _box(page, section, f)
             if not box.count():
@@ -382,7 +385,9 @@ class ADPMyJobs:
         values: dict[str, Answer] = {}
         for f in section.fields:
             box = _box(page, section, f)
-            if not f.unfillable and box.count():
+            if f.id in self._fixed and box.count() and f.prefilled is not None:
+                values[f.id] = f.prefilled  # shown as text, as the profile has it
+            elif not f.unfillable and box.count():
                 value = _value(box, f, self._codes.get(f.id, {}))
                 if value:
                     values[f.id] = value

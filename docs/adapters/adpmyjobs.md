@@ -34,7 +34,7 @@ Each question is an `adp-form-group[data-name=<questionID>]` whose class names i
 
 | Type | Field | Rendering | Seen on |
 |---|---|---|---|
-| `TEXT`, `EMAIL` | `text` | `sdf-input`'s input; disabled with the profile's value (email, name) | every employer |
+| `TEXT`, `EMAIL` | `text` | `sdf-input`'s input; disabled, the profile's value as text (email, name), not filled and read back as listed | every employer |
 | `PHONENUMBER` | `phone` | `sdf-phone-number-input`: a country select and an input showing `+1 202 555 0143`; E.164 typed picks the country | every employer |
 | `SELECTION`, `COUNTRIES`, `STATES`, `LOOKUP` | `choice` | `sdf-select-simple`: its frame opens a floating pane of `sdf-select-item`s, a long list its first items and a filter box (`#select-filter-input`); the pick shows in `#selected-label` | every employer |
 | `RADIO` | `choice` | `sdf-radio-button[value=<code>]`, the label in its shadow root | EEO questions |

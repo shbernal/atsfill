@@ -168,9 +168,10 @@ function group(q) {
     "e-signature": `<dynamic-form-e-signature>${radio("ACCEPT", "Accept")}${radio("DECLINE", "Decline")}
       <sdf-input><input></sdf-input></dynamic-form-e-signature>`,
   }[kind] ?? "";
+  const shown = q.disabledIndicator ? `<p>${value}</p>` : inner;  // a value the page keeps
   return `<adp-form-group data-name="${q.questionID}" class="van-type-${kind}" data-link="${
     q.links?.[0]?.href ?? ""}" data-required="${q.requiredIndicator}">
-    <label>${label}</label>${inner}<rm-sr-field-error></rm-sr-field-error></adp-form-group>`;
+    <label>${label}</label>${shown}<rm-sr-field-error></rm-sr-field-error></adp-form-group>`;
 }
 
 function radio(value, text) {
