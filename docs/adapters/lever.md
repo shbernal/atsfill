@@ -37,7 +37,8 @@ Every field is a named control, and the name is the field's id: `name`, `urls[Li
 ## Filling
 
 - Attaching the resume uploads it and Lever parses it ("Analyzing resume…", then "Success!" or "Couldn't auto-read resume."), filling fields it reads. The resume goes first and is waited for, so the answers overwrite the parse.
-- The location is typed and Lever's first suggestion clicked; a typed value that is not a pick is not the field's value.
+- The location is typed and Lever's first suggestion clicked; a typed value that is not a pick is not the field's value, so the location reads back from `selectedLocation`'s `name`, empty without a pick.
+- A suggestion ends with the country's ISO 3166 alpha-3 code, in the place's own language before it: `Madrid, Comunidad de Madrid, ESP` (2026-10-29), so `Madrid, Spain` matches it by the country's code.
 - Radios and checkboxes are checked by their option text; selects pick by option text.
 - The disability signature date is typed as `MM/DD/YYYY` and read back as `YYYY-MM-DD`.
 

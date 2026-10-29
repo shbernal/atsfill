@@ -114,7 +114,7 @@ def test_every_answer_reads_back(page, resume):
         "name": "Ada Placeholder",
         "email": "ada@example.com",
         "phone": "+12025550143",
-        "location": "London",
+        "location": "London, United Kingdom",  # the pick names the country by its code
         "org": "Acme",  # after the resume, whose parse fills it
         "resume": resume,
         "pronouns": ["They/them"],
@@ -142,6 +142,15 @@ def test_every_answer_reads_back(page, resume):
     assert len(checks) == len(answers)
     assert page.locator("[name=eeo\\[disabilitySignatureDate\\]]").input_value() == "10/20/2026"
     assert "London, Greater London" in page.locator("#selected-location").input_value()
+
+
+def test_a_location_with_no_pick_reads_back_empty(page, monkeypatch):
+    monkeypatch.setattr("atsfill.adapters.lever.SUGGEST_TIMEOUT_MS", 1_000)
+    adapter, _ = opened(page)
+    answers: dict[str, Answer] = {"location": "Nowhere"}
+    adapter.fill(page, answers)
+    assert page.locator("#location-input").input_value() == "Nowhere"
+    assert "location" not in adapter.read_back(page)
 
 
 def test_an_unknown_rendering_is_listed_unhandled():
