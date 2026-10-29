@@ -94,6 +94,7 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
         "emailAgreement",
         "smsOptIn",
         "authorized",
+        "usSponsorship",
         "contactBy",
         "startDate",
         "experienceData[0].title",
@@ -106,7 +107,8 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
         "jsqData.Q1.a_dot_a",
         "comments",
         "custAgreement",
-    ]  # no heading, hidden value, French-only box or entry shown only once Add is clicked
+    ]  # no heading, hidden value, French-only box, another job country's question or entry
+    # shown only once Add is clicked
     resume = fields["resume"]
     assert resume.required  # a summary is asked without one, which is not read
     assert resume.accept == [".doc", ".docx", ".pdf", ".txt"]
@@ -135,6 +137,7 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
     assert fields["smsOptIn"].options == ["No", "Yes"] and not fields["smsOptIn"].required
     assert fields["smsOptIn"].label == "Text me about my application"
     assert fields["authorized"].options == ["Yes", "No"] and fields["authorized"].required
+    assert fields["usSponsorship"].shown_when is None and fields["usSponsorship"].required
     assert fields["contactBy"].type is FieldType.MULTI_CHOICE
     assert fields["startDate"].type is FieldType.DATE
     assert fields["experienceData[0].fromTo.startDate"].label == "From (MM/YYYY)"
@@ -194,6 +197,7 @@ def answers(resume: str) -> dict:
         "emailAgreement": "Yes",
         "smsOptIn": "No",
         "authorized": "Yes",
+        "usSponsorship": "No",
         "contactBy": ["SMS"],
         "startDate": "2027-02-14",
         "experienceData[0].title": "Analyst",
