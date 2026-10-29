@@ -343,7 +343,7 @@ class Phenom:
                     if not self._raws[raw["id"]].get("loads"):
                         _fill(page, raw, answers[raw["id"]])
                         continue
-                    # the page sends its request a moment later; another answer before drops it
+                    # the page sends its request a moment later; two answers before drop it
                     with _requests(page) as pending:
                         _fill(page, raw, answers[raw["id"]])
                         _quiet(pending, LOADS_QUIET_S, STEP_TIMEOUT_MS / 1000)

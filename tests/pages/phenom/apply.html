@@ -77,9 +77,9 @@ const STEPS = [
   ]},
 ];
 const values = {};
-let countryChange, shownCountry;
+let countryChange, shownCountry, answersSince = 0;
 document.getElementById("root").addEventListener("input", e => {
-  if (e.target.id !== "country") clearTimeout(countryChange);
+  if (e.target.id !== "country" && ++answersSince === 2) clearTimeout(countryChange);
 }, true);
 
 function stepIndex() {
@@ -212,9 +212,10 @@ function field(f) {
     if (f.required) select.required = true;
     select.value = (f.id === "country" ? shownCountry : values[f.id]) || "";
     select.addEventListener("change", () => {
-      if (f.id === "country") {  // taken a moment later with its fields, unless an answer comes
-        shownCountry = select.value;  // first: then it is still shown, yet the step lacks it
+      if (f.id === "country") {  // taken a moment later with its fields, unless two answers
+        shownCountry = select.value;  // come first: then it is still shown, yet the step lacks it
         clearTimeout(countryChange);
+        answersSince = 0;
         countryChange = setTimeout(() => {
           values.country = select.value;
           values.state = "";
