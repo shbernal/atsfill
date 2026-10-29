@@ -390,6 +390,8 @@ class Control:
                 return form.locator("input[type=tel]")
             case "country" | "combo":
                 return form.locator(f'input[aria-label="{self.where}"]')
+            case "companies":
+                return form.locator('input[aria-label="Company name"]')
             case "multi" | "skills":
                 return form.get_by_label(self.where, exact=False)
             case "month":  # the selects' names carry the entry's id: <id>_start_date_month
@@ -429,15 +431,7 @@ STEPS: dict[str, list[Control]] = {
         Control("phone_number", "Phone Number", "phone", FieldType.PHONE, False),
         Control("share", "What is your job search status?", "radio", C, True),
         Control("yc_affiliation", "Have you worked at a YC company?", "radio", C, True),
-        Control(
-            "hidden_companies",
-            "YC companies to be hidden from",
-            "combo",
-            T,
-            False,
-            "Company name",
-            unfillable="unhandled_rendering: a list of YC companies to be hidden from",
-        ),
+        Control("hidden_companies", "YC companies to be hidden from", "companies", M, False),
     ],
     "location": [
         Control("city_current", "What city do you live in?", "place", TA, True),
@@ -625,6 +619,8 @@ def _value(form: Locator, c: Control) -> Answer | None:
             return target.evaluate(_SINGLE_VALUE) or None
         case "multi":
             return target.evaluate(_CHIPS)
+        case "companies":
+            return target.evaluate(_COMPANIES)
         case "skills":
             return form.evaluate(_SKILLS)
     return target.input_value()
@@ -640,6 +636,8 @@ _CHIPS = """e => {
   const box = e.closest("[id$=__select]") ?? e.parentElement.parentElement.parentElement;
   return [...box.querySelectorAll("[aria-label^='Remove ']")].map(c => c.ariaLabel.slice(7));
 }"""
+_COMPANIES = """e => [...e.parentElement.previousElementSibling.querySelectorAll(
+  "span[role=button] + span")].map(s => s.textContent.trim())"""
 _SKILLS = """form => {
   const groups = {};
   for (const r of form.querySelectorAll("input[type=radio][name^=top_skills_]")) {
@@ -684,6 +682,8 @@ def _profile_fill(page: Page, form: Locator, c: Control, answer: Answer) -> None
                 form.locator(f'[aria-label="Remove {chip}"]').click()
             for item in [a for a in answer if a not in have]:
                 _pick(page, c, target, item, strict=True, exact=True)
+        case "companies", list():
+            _companies(page, target, c, answer)
         case "skills", list():
             _skills(page, form, target, c, answer)
         case kind, _:
@@ -713,6 +713,17 @@ def _pick(
     if strict:
         raise NotTaken(f"no suggestion for {answer!r} in {c.id}")
     box.press("Escape")
+
+
+def _companies(page: Page, box: Locator, c: Control, answer: list[str]) -> None:
+    """Removes the companies the answer leaves out, then searches each other one and picks the
+    result named exactly as it: a nearest name would hide the profile from another company."""
+    chips = box.locator("xpath=../preceding-sibling::div[1]//div[span[@role='button']]")
+    while extra := [i for i, h in enumerate(box.evaluate(_COMPANIES)) if h not in answer]:
+        chips.nth(extra[0]).locator("span[role=button]").click()
+    have = box.evaluate(_COMPANIES)
+    for company in [a for a in answer if a not in have]:
+        _pick(page, c, box, company, strict=True, exact=True)
 
 
 def _skills(page: Page, form: Locator, box: Locator, c: Control, answer: list[str]) -> None:

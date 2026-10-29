@@ -4,7 +4,7 @@
 <!-- The profile wizard at /application/<step>, one step per page as the live wizard renders it:
 labelled inputs, radio fieldsets, checkbox groups, a react-select country and multi-select
 (Backspace in its empty box removes the last pick), a places combobox, downshift comboboxes
-that take free text, month and year selects named after the entry, a skill list with a rating
+that take free text, a downshift search of YC companies picked as chips, month and year selects named after the entry, a skill list with a rating
 per skill, and a rating grid. The route injects PROFILE (the saved data) and STEPS (each step's
 status); Save & next posts {from, profile: {data}} to /application/next. -->
 <div id="app"></div>
@@ -50,6 +50,7 @@ const CITIES = ["New York, NY, USA", "Newark, NJ, USA", "Austin, TX, USA", "Aust
 const ROLES = ["AI engineer", "Backend", "Frontend", "Full stack"];
 const SKILLS = {107: "Python", 99: "PostgreSQL", 5: "Amazon Web Services (AWS)", 50: "Go"};
 const EMPLOYERS = ["Acme Corporation", "Acme Labs"];
+const COMPANIES = ["Acme", "Acme Robotics", "Initech", "Globex"];
 
 const render = {
   personal: () => `
@@ -65,7 +66,7 @@ const render = {
       ["I'm actively looking for a job", "I'm open to new opportunities", "I'm not looking for a job / not ready to meet founders yet. HIDE MY PROFILE."])}
     ${radios("yc_affiliation", "Have you worked at a YC company?", ["none", "employee"], ["No affiliation", "Current or former employee at YC company"])}
     <label for="_r_7_">Are there YC companies you want to be hidden from?${req}</label>
-    <div><input role="combobox" aria-label="Company name" id="downshift-0-input" value=""></div>`,
+    <div><div class="companies"></div><div><input role="combobox" aria-label="Company name" id="downshift-0-input" value=""></div></div>`,
   location: () => `
     <label for="_r_0_">What city do you live in?${req}</label>
     <div id="PlacesAutocomplete__root"><input role="combobox" id="_r_0_" type="text" name="city_current" value="${esc(data.city_current)}"></div>
@@ -152,6 +153,22 @@ for (const box of form.querySelectorAll("input[id^=downshift-]")) {
     e => { box.value = e; }, "downshift");
 }
 
+const companies = form.querySelector("[aria-label='Company name']");
+if (companies) {  // a search of every name holding the typed text, each pick a chip
+  data.hidden_companies ??= [];
+  const chips = () => {
+    form.querySelector(".companies").innerHTML = data.hidden_companies.map(c =>
+      `<div><div><span role="button" tabindex="0">×</span><span>${c}</span></div></div>`).join("");
+    form.querySelectorAll(".companies [role=button]").forEach((x, i) => x.onclick = () => {
+      data.hidden_companies.splice(i, 1); chips();
+    });
+  };
+  chips();
+  companies.oninput = () => menu(companies, companies.value ? COMPANIES.filter(c =>
+    c.toLowerCase().includes(companies.value.toLowerCase()) && !data.hidden_companies.includes(c)) : [],
+    c => { data.hidden_companies.push(c); companies.value = ""; chips(); }, "downshift");
+}
+
 const roles = form.querySelector("#_r_1__select input");
 if (roles) {
   data.eng_type ??= [];
@@ -209,6 +226,7 @@ form.onsubmit = async e => {
   if (form.querySelector("[name=job_type]")) values.job_type = checks;
   values.eng_type = data.eng_type;
   values.phone_country = data.phone_country;
+  if (companies) values.hidden_companies = data.hidden_companies;
   const tel = form.querySelector("[type=tel]");
   if (tel) values.phone_number = tel.value;
   const r = await fetch("/application/next", {method: "POST", body: JSON.stringify({from: active, profile: {data: values}})});
