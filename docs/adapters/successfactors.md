@@ -1,6 +1,6 @@
 # SAP SuccessFactors
 
-SAP SuccessFactors Recruiting's career sites and candidate pages, observed on live postings, last on 2026-10-27. The fixture pages are in [tests/pages/successfactors/](https://github.com/shbernal/atsfill/tree/main/tests/pages/successfactors/): the posting, the sign-in and sign-up pages, and an application page with one example of each rendering below, served as an Acme career site and its data center host in `tests/test_successfactors.py`.
+SAP SuccessFactors Recruiting's career sites and candidate pages, observed on live postings, last on 2026-10-27. The fixture pages are in [tests/pages/successfactors/](https://github.com/shbernal/atsfill/tree/main/tests/pages/successfactors/): the posting, the sign-in, sign-up and Quick Apply pages, and an application page with one example of each rendering below, served as an Acme career site and its data center host in `tests/test_successfactors.py`.
 
 ## Where the form is
 
@@ -18,7 +18,7 @@ Applying needs an account, one per employer: the account scope is the career sit
 - **Password rules**: 8 to 18 characters, upper and lower case, a number or punctuation, no space. atsfill's generated passwords are 16 characters for this reason.
 - **After the sign-up**: on 4 of 7 employers the browser lands on the application, signed in; on 1 a verification email ("Activate your … Profile") comes first, `blocked: email_link`, and the link's page activates the account; on 1 the account is made and the page goes back to sign-in, where atsfill signs in; on 1 it goes back to the career site (`/career`), signed in. No captcha was seen.
 - **Passcode.** Some sign-ups (5 of 19 employers) email a passcode first ("One-Time Password for Candidate Account Verification", valid 10 minutes): Create Account turns the page into Verify Email Address, `#passcode` inside `#otpContainer`, whose first button is Continue. The account exists only once it is taken. atsfill types the OTP from the OTP command and goes on as after any sign-up (3 employers, 2026-10-27); a passcode the page does not take is `blocked: otp_rejected`, none in time `blocked: otp_not_received`.
-- **Quick Apply page.** The account fields sit on the application itself, with one submit (`#fbqa_apply`) creating the account and sending the application together. "Please sign in" (`openSignInModal()`) opens a sign-in dialog; on the 5 employers seen it offered no Create an account: the `quick_apply_sign_up` known gap.
+- **Quick Apply page.** The account fields sit on the application itself, with one submit (`#fbqa_apply`) creating the account and sending the application together. "Please sign in" (`openSignInModal()`) opens a sign-in dialog; on the 5 employers seen it offered no Create an account: the `quick_apply_sign_up` known gap, for a sign-up and a sign-in alike (the dialog is not handled).
 - Some sign-ups (6 of 18) require a phone number, `#fbclc_phoneNumber`, after a calling code `select` (`#fbclc_ituCode`, `CA`: `Canada (+1)`): atsfill picks the code the `--details` phone starts with, of `country` where several countries share it, and types the national number after it; without a phone, `refused: sign_up_details: no phone` before anything is sent.
 - Some sign-ups (2 of 6 with a phone) require Make my Profile visible to, a radio group `fbclc_searPref`: anyone recruiting at the employer (`1`), its recruiters in the user's country (`0`, on 1 of 2), or only those managing the jobs applied to (`2`). atsfill picks `2`, the least given.
 - **Signed-in check**: `/career?company=<company id>&career_ns=job_listing_summary&navBarLevel=MY_PROFILE` on each data center host the session's `careerSiteCompanyId` cookie names, whose `body` has the class `careerUserLoggedIn` for an account. Signed out, the page shows the sign-in form but still holds a log-out link and its label.
@@ -63,5 +63,5 @@ The Test user's accounts are one per employer, created by the round (ADR 0013): 
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `quick_apply_sign_up` | a Quick Apply page, whose sign-in dialog offers no sign-up: the account and the application are sent in one submit | `unsupported_flow` | 5 of 16 |
+| `quick_apply_sign_up` | a Quick Apply page, whose sign-in dialog offers no sign-up: the account and the application are sent in one submit; neither a sign-up nor a sign-in is made there | `unsupported_flow` | 5 of 16 |
 | `guided_application` | a step-by-step application, not one page of sections | `unsupported_flow` | 1 of 8 |

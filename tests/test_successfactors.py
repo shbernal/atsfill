@@ -17,7 +17,7 @@ POSTING = "https://careers.acme.com/job/Detroit-Portfolio-Manager-MI-48201/12345
 DC = "https://career5.successfactors.eu"
 PROFILE = f"{DC}/career?company=acme&career_ns=job_listing_summary&navBarLevel=MY_PROFILE"
 # The candidate pages' session, and whether the job posted lands on the candidate home
-SESSION = {"signed_in": False, "home": False, "guided": False}
+SESSION = {"signed_in": False, "home": False, "guided": False, "quick_apply": False}
 
 
 def serve(route) -> None:
@@ -35,8 +35,9 @@ def serve(route) -> None:
     elif "/career?company=acme" in url:
         route.fulfill(content_type="text/html", body="<p>Career site</p>")
     elif "/careers?company=acme" in url:
+        signed_out = "quickapply.html" if SESSION["quick_apply"] else "signin.html"
         route.fulfill(
-            path=PAGES / ("apply.html" if SESSION["signed_in"] else "signin.html"),
+            path=PAGES / ("apply.html" if SESSION["signed_in"] else signed_out),
             headers={"Set-Cookie": "careerSiteCompanyId=acme; Path=/", "Content-Type": "text/html"},
         )
     else:
@@ -52,7 +53,7 @@ GUIDED = (
 
 @pytest.fixture
 def page(tmp_path):
-    SESSION.update(signed_in=False, home=False, guided=False)
+    SESSION.update(signed_in=False, home=False, guided=False, quick_apply=False)
     with browser.open_page(tmp_path / "data", seconds=300) as page:
         page.context.route("https://careers.acme.com/**", serve)
         page.context.route(f"{DC}/**", serve)
@@ -185,6 +186,19 @@ def test_wrong_password(page, monkeypatch):
     page.goto(POSTING)
     with pytest.raises(Refused, match="wrong_password: Invalid username or password"):
         SuccessFactors().sign_in(page, "ada@example.com", "wrong")
+
+
+@pytest.mark.parametrize("step", ["sign_in", "sign_up"])
+def test_a_quick_apply_page_is_a_known_gap(page, monkeypatch, step):
+    monkeypatch.setattr("atsfill.adapters.successfactors.LIST_TIMEOUT_MS", 1_000)
+    SESSION["quick_apply"] = True
+    page.goto(POSTING)
+    adapter = SuccessFactors()
+    with pytest.raises(Unsupported, match="^unsupported_flow: quick_apply_sign_up"):
+        if step == "sign_in":
+            adapter.sign_in(page, "ada@example.com", "Aa1!aaaaaaaaaaaa")
+        else:
+            adapter.sign_up(page, "ada@example.com", "Aa1!aaaaaaaaaaaa", ADA)
 
 
 def test_browser_read(page):

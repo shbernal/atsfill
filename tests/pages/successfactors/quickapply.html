@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Career Opportunities: Quick Apply</title></head>
+<body class="careerSite">
+  <h2>Quick Apply</h2>
+  <p>Already have an account? <a href="javascript:void(0);" onclick="openSignInModal(); return false;">Please sign in</a></p>
+  <div class="RCMFormField">
+    <label class="rcmFormFieldLabel" for="fbqa_email">Email<span class="requiredField">*</span></label>
+    <input type="text" id="fbqa_email" name="fbqa_email">
+  </div>
+  <div class="RCMFormField">
+    <label class="rcmFormFieldLabel" for="fbqa_pwd">Choose Password<span class="requiredField">*</span></label>
+    <input type="password" id="fbqa_pwd" name="fbqa_pwd">
+  </div>
+  <button id="fbqa_apply">Apply</button>
+  <div id="signInModal" role="dialog" style="display: none">
+    <label for="fbqa_signInEmail">Email Address:*</label>
+    <input type="text" id="fbqa_signInEmail">
+    <label for="fbqa_signInPwd">Password:*</label>
+    <input type="password" id="fbqa_signInPwd">
+    <button>Sign In</button>
+  </div>
+  <script>
+    function openSignInModal() {
+      document.getElementById('signInModal').style.display = 'block';
+    }
+  </script>
+</body></html>
