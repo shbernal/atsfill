@@ -59,7 +59,7 @@ QUESTIONS = """query JobScreeningQuestions($input: JobScreeningQuestionsInput!) 
 }"""
 YES_NO = ["Yes", "No"]  # a boolean's cards, in this order, in the job's language
 FILES = {"cv": "cv"}  # a file field, by its step
-# A question of a class has a step of its own; the others are `question-<n>`, in order.
+# A question of a class has a step of its own; the others are `question-<position>`.
 CLASS_STEPS = {
     "workAuthorization": "WORK_AUTHORIZATION",
     "salaryExpectation": "SALARY_EXPECTATION",
@@ -252,10 +252,11 @@ class Join:
         if kind := CLASS_STEPS.get(step):
             return next((q for q in self._questions if q.get("questionClass") == kind), None)
         if match := re.fullmatch(r"question-(\d+)", step):
-            plain = [q for q in self._questions if not q.get("questionClass")]
-            if int(match[1]) > len(plain):
-                raise Unsupported(f"unhandled_rendering: a question step {step} not listed")
-            return plain[int(match[1]) - 1]
+            position = int(match[1])
+            plain = (q for q in self._questions if not q.get("questionClass"))
+            if question := next((q for q in plain if q.get("position") == position), None):
+                return question
+            raise Unsupported(f"unhandled_rendering: a question step {step} not listed")
         return None
 
     def read_back(self, page: Page) -> dict[str, Answer]:
