@@ -153,6 +153,14 @@ def test_every_answer_reads_back(page, resume):
     assert read_back["first_name"] == "Ada"  # typed over what the résumé's parse filled
 
 
+def test_a_long_file_name_reads_back_whole(page, tmp_path):
+    adapter, _ = opened(page)
+    cv = str(testuser.resume(tmp_path / "Ada Placeholder Resume 2026.pdf"))
+    adapter.fill(page, {"resume": cv})
+    assert page.locator("[data-testid=chip]").inner_text() == "Ada Placeholder...pdf"
+    assert adapter.read_back(page)["resume"] == "Ada Placeholder Resume 2026.pdf"
+
+
 def test_the_test_user_dry_run_reads_back(page, tmp_path):
     adapter, fields = opened(page)
     answers = testuser.answers(fields, testuser.resume(tmp_path / "cv.pdf"))

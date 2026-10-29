@@ -1,6 +1,6 @@
 # Rippling
 
-Rippling Recruiting's job boards, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/rippling/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/rippling/apply.html), served as `ats.rippling.com` in `tests/test_rippling.py`: one example of each rendering below, Rippling's components reduced to their markup and a few lines that act as they do.
+Rippling Recruiting's job boards, observed on live postings, last on 2026-10-29. The fixture page is [tests/pages/rippling/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/rippling/apply.html), served as `ats.rippling.com` in `tests/test_rippling.py`: one example of each rendering below, Rippling's components reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 
@@ -19,7 +19,7 @@ Each rendering, and in how many of 79 employers' forms it shows (2026-10-22):
 | Rendering | Field type | Forms |
 |---|---|---|
 | text input: name, email, current company, links, `SHORT_ANSWER` questions (`maxChars`) | `text` | 79 |
-| file (`input[type=file]` in a `label`): résumé and cover letter (`.doc`, `.docx`, `.pdf`), `DOCUMENT_UPLOAD` questions (any type); once uploaded the name shows as a chip | `file` | 79, 4 |
+| file (`input[type=file]` in a `label`): résumé and cover letter (`.doc`, `.docx`, `.pdf`), `DOCUMENT_UPLOAD` questions (any type); once uploaded the name shows as a chip, a stem over 15 characters cut to `<first 15>...<extension>`, and whole in a screen-reader status line, "File <name> uploaded successfully" | `file` | 79, 4 |
 | phone: a dial-code search box (`+1 US` by default, options `+44 GB - United Kingdom`) beside the number; the code picked by the number's, the longest that is listed, the shown one kept when it fits | `phone` | 79 |
 | location: a place typeahead (Google Places) that keeps the suggestion picked | `typeahead` | 79 |
 | pronouns: a search box of six choices ("Enter my pronouns", which opens a text box, left out) | `choice` | 72 |
@@ -46,5 +46,5 @@ Not observed: the voluntary disability form (`showCc305Form`), listed as `unhand
 
 ## Read-back and submit
 
-- The read-back is each present element: an input's value, a dropdown's text (none while its placeholder shows), the checked radio's text or `aria-label`, the checked boxes, a date's parts as ISO, a file's chip, a phone as `<dial code> <number>`.
+- The read-back is each present element: an input's value, a dropdown's text (none while its placeholder shows), the checked radio's text or `aria-label`, the checked boxes, a date's parts as ISO, a file's name from its status line (its chip without one), a phone as `<dial code> <number>`.
 - Submit is the Apply button (`[data-testid=Apply]`); the evidence is the answer to the first POST on `ats.rippling.com/api/…/apply`. The page carries a Cloudflare Turnstile site key. No send has been made through this adapter, so the endpoint, whether Turnstile challenges the send, and the page after a send are unobserved.
