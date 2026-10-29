@@ -19,8 +19,8 @@ Sessions get in through a login window only a person can complete:
 
 - `atsfill login <adapter>` opens a visible window on the system's login page and saves the session once signed in. The password goes to the system's own page, never through atsfill.
 - `atsfill logout <adapter>` deletes it.
-- `atsfill status` also checks every stored session and exits 1 if one is signed out.
+- `atsfill status` also checks every stored session and exits 1 if one is signed out. A session whose system's answer cannot tell (a bot protection's challenge) is `unknown`, which does not count.
 
-Whether a session is signed in is the adapter's call: one request to the system carrying the session's cookies. `login` polls it in the window's context, `status` runs it over plain HTTP without a browser, and a form command runs it after loading the page.
+Whether a session is signed in is the adapter's call: one request to the system carrying the session's cookies, signed in, signed out, or neither when the answer cannot tell. `login` polls it in the window's context, `status` runs it over plain HTTP without a browser, and a form command runs it after loading the page.
 
 Sessions are never imported from the user's everyday browser.

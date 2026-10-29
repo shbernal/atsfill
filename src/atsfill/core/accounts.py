@@ -111,11 +111,13 @@ def redacted(error: Exception, password: str) -> Exception:
 
 
 def state(adapter: NeedsAccount, session: Path, scope: str | None) -> str:
-    """`signed_in` or `signed_out` from the system itself, `missing` with no session stored."""
+    """`signed_in` or `signed_out` from the system itself, `unknown` when its answer cannot
+    tell, `missing` with no session stored."""
     if not session.exists():
         return "missing"
     with browser.session_request(session) as request:
-        return "signed_in" if adapter.signed_in(request, scope) else "signed_out"
+        signed_in = adapter.signed_in(request, scope)
+    return {True: "signed_in", False: "signed_out", None: "unknown"}[signed_in]
 
 
 def wait_for_person(

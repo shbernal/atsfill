@@ -120,7 +120,7 @@ class SessionReport:
     user: str
     adapter: str
     scope: str | None  # the account scope, None for an account that covers the whole system
-    session: str  # signed_in | signed_out | missing
+    session: str  # signed_in | signed_out | unknown | missing
     path: Path
     status: str | None = None  # a login's outcome: signed_in | refused | blocked | unsupported
     reason: str | None = None  # why a login stored nothing, `code` or `code: detail`
