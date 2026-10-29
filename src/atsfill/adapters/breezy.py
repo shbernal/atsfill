@@ -211,6 +211,10 @@ _FILE_SHOWN = """e => {
 }"""
 
 
+def _on_form(url: str) -> bool:
+    return urlsplit(url).path.rstrip("/").endswith("/apply")
+
+
 class Breezy:
     name = "breezy"
     known_gaps: dict[str, Gap] = {}
@@ -236,9 +240,12 @@ class Breezy:
         match = JOB.match(parts.path)
         return f"https://{parts.hostname}/p/{match[1]}" if match else url
 
+    def open_form(self, page: Page, url: str) -> None:
+        page.goto(url if _on_form(url) else f"{self.posting(url)}/apply")
+
     def browser_read(self, page: Page) -> list[Field]:
-        if not urlsplit(page.url).path.rstrip("/").endswith("/apply"):
-            page.goto(f"{self.posting(page.url)}/apply")
+        if not _on_form(page.url):
+            self.open_form(page, page.url)
         form = page.locator(FORM)
         try:
             form.locator("[name=cName]").wait_for(state="attached", timeout=FORM_TIMEOUT_MS)
