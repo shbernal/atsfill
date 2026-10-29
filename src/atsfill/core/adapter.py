@@ -267,6 +267,19 @@ class KeepsProfile(Adapter, NeedsAccount, Protocol):
 
 
 @runtime_checkable
+class SendsToOpen(Adapter, Protocol):
+    """An adapter whose system sends the application to show its form: what the form asks
+    follows the send. The core opens it under a send's rules, for every form command (ADR 0006).
+    """
+
+    def open(self, page: Page) -> str | None:
+        """Opens the form from the loaded posting: sends the application where the account has
+        none for it, returning the evidence of that send; continues the one it has, returning
+        None. Raises `SignedOut`, `Unsupported` or `Blocked` only before sending."""
+        ...
+
+
+@runtime_checkable
 class ReadsByRequest(Adapter, Protocol):
     """An adapter with a request read: a form's fields listed without a browser (ADR 0011)."""
 

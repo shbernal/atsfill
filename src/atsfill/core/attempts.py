@@ -7,6 +7,7 @@ from pathlib import Path
 from atsfill.core.results import Status
 
 PENDING = "clicked"  # appended before the click; a later line records the outcome
+OPENED = "opened"  # sent by opening the form (`SendsToOpen`); its own submit is still to come
 
 
 def last(user_dir: Path, posting: str) -> str | None:
