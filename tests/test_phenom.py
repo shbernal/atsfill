@@ -104,6 +104,7 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
         "educationData[0].fromTo.endDate",
         "jsqData.Q1.a",
         "jsqData.Q1.a_dot_a",
+        "yearsOfExperience",
         "comments",
         "custAgreement",
     ]  # no heading, hidden value, French-only box or entry shown only once Add is clicked
@@ -147,6 +148,7 @@ def test_browser_read_lists_every_step_from_the_configuration(opened):
     assert follow_up.shown_when == Is("jsqData.Q1.a", ["Yes"])  # `not` `not` the option's key
     assert follow_up.required  # whenever shown
     assert fields["comments"].type is FieldType.TEXT and not fields["comments"].required
+    assert fields["yearsOfExperience"].label == "Years of experience (a number)"
 
 
 def test_a_sites_country_fields_are_kept_a_day_between_reads(opened, page, monkeypatch):
@@ -202,6 +204,7 @@ def answers(resume: str) -> dict:
         "educationData[0].fromTo.endDate": "2004",
         "jsqData.Q1.a": "Yes",
         "jsqData.Q1.a_dot_a": "2020",
+        "yearsOfExperience": "3",
         "comments": "Placeholder",
         "custAgreement": "Yes",
     }
@@ -404,6 +407,8 @@ def test_rules_on_answers_become_conditions():
             "box": {"title": "Relocate?", "type": "boolean"},
             "phone": {"title": "Phone", "type": "string"},
             "locale": {"type": "string"},
+            "jobCountry": {"type": "string"},
+            "jobLocation": {"type": "string"},
         },
         "allOf": [
             {"if": {"anyOf": [{"properties": {"visa": {"const": "v1"}}},
@@ -415,18 +420,34 @@ def test_rules_on_answers_become_conditions():
              "then": {"properties": {"cover": {"title": "Cover note", "type": "string"}}}},
             {"if": {"properties": {"locale": {"const": "fr_fr"}}},
              "then": {"properties": {"fr": {"title": "French", "type": "string"}}}},
+            {"if": {"properties": {"jobCountry": {"const": "United States of America"}}},
+             "then": {"properties": {"veteran": {"title": "Veteran?", "type": "string"}}}},
+            {"if": {"properties": {"jobLocation": {"pattern": "Antrim"}}},
+             "then": {"properties": {"religion": {"title": "Religion?", "type": "string"}}}},
         ],
     }  # fmt: skip
     ui = {"visa": {"ui:widget": "select"}, "box": {"ui:widget": "checkbox"},
-          "locale": {"htmlType": "hidden"}}  # fmt: skip
+          "locale": {"htmlType": "hidden"}, "jobCountry": {"htmlType": "hidden"},
+          "jobLocation": {"htmlType": "hidden"}}  # fmt: skip
     config = {"schema": schema, "uiSchema": ui}
-    reader = _Config({"locale": "en_us"}, config, {}, lambda bodies: [None] * len(bodies))
+    job = {
+        "response": {
+            "response": {
+                "jobCountry": "United States of America",
+                "jobLocation": "Wilmington, Delaware",
+            }
+        }
+    }
+    ph = {"locale": "en_us", "ddo": job}
+    reader = _Config(ph, config, {}, lambda bodies: [None] * len(bodies))
     raws = reader.object(schema, ui, "", None, False, None)
     for raw in raws:
         for key in ("when", "required_when"):
             raw[key] = reader.labeled(raw.get(key), resume=True)
     by_id = {r["id"]: r for r in raws}
     assert "fr" not in by_id  # on the page's own data
+    assert by_id["veteran"]["when"] is None  # the job's, a hidden field takes from its data
+    assert "religion" not in by_id  # a location the job's does not match
     assert by_id["which"]["when"] == AnyOf([Is("visa", ["Yes"]), Is("box", ["Yes"])])
     assert by_id["which"]["required"]
     assert by_id["phone"]["required_when"] == Is("visa", ["No"])

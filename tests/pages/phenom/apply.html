@@ -74,6 +74,7 @@ const STEPS = [
     {id: "jsqData.Q1.a_dot_a", kind: "textarea", label: "When did you leave?", required: true, shownWhen: ["jsqData.Q1.a", "A-1"]},
   ]},
   {name: "agreement", last: true, fields: [
+    {id: "yearsOfExperience", kind: "number", label: "Years of experience", required: false},
     {id: "comments", kind: "textarea", label: "Anything else?", required: false},
     {id: "custAgreement", kind: "checkbox", label: "I have read and understand this section", required: true},
   ]},
@@ -195,9 +196,9 @@ function typeahead(f, group) {
 
 function field(f) {
   const group = el(f.kind === "radio" ? "fieldset" : "div", {class: "form-group field"});
-  if (f.kind === "text" || f.kind === "textarea") {
+  if (f.kind === "text" || f.kind === "number" || f.kind === "textarea") {
     const input = el(f.kind === "textarea" ? "textarea" : "input", {id: f.id, class: "form-control", value: values[f.id] || ""});
-    if (f.kind === "text") input.type = "text";
+    if (f.kind !== "textarea") input.type = f.kind;
     if (f.autocomplete) input.setAttribute("autocomplete", f.autocomplete);
     if (f.required) input.required = true;
     input.addEventListener("input", () => { values[f.id] = input.value; });
@@ -283,17 +284,18 @@ function shown(f) {
 }
 
 // A site's wizard opens on its terms (`page=terms`) where `window.TERMS` is set: one button
-// accepting them, no resume, then the form (`page=applyForm`).
+// accepting them, no resume, then the form (`page=applyForm`) and a moment later its resume.
 function terms() {
   const accept = el("button", {type: "submit", class: "btn primary-button btn-submit"}, "I Accept");
   const form = el("form", {class: "rjsf"}, el("h3", {}, "Terms and Conditions"), accept);
+  const resume = document.querySelector(".resume-section");
   form.addEventListener("submit", e => {
     e.preventDefault();
     history.pushState({}, "", `${location.pathname}?jobSeqNo=ACMEUS1001EXTERNALENUS&page=applyForm`);
-    document.querySelector(".resume-section").hidden = false;
     setTimeout(render, 200);
+    setTimeout(() => document.getElementById("root").before(resume), 1200);
   });
-  document.querySelector(".resume-section").hidden = true;
+  resume.remove();
   document.getElementById("root").replaceChildren(form);
 }
 
