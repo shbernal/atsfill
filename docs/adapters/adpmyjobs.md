@@ -1,6 +1,6 @@
 # ADP MyJobs
 
-ADP's candidate experience (`myjobs.adp.com`), a different product from ADP Workforce Now's career center ([adp.md](adp.md)), observed on live postings on 2026-10-26 and 2026-10-29, headless Camoufox, with the Test user at four employers. The fixture page is [tests/pages/adpmyjobs/app.html](../../tests/pages/adpmyjobs/app.html), the sign-in, a posting and a workflow of each kind of section, its API served by `tests/test_adpmyjobs.py`.
+ADP's candidate experience (`myjobs.adp.com`), a different product from ADP Workforce Now's career center ([adp.md](adp.md)), observed on live postings on 2026-10-26 and 2026-10-29, headless Camoufox, with the Test user at four employers. The fixture page is [tests/pages/adpmyjobs/app.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/adpmyjobs/app.html), the sign-in, a posting and a workflow of each kind of section, its API served by `tests/test_adpmyjobs.py`.
 
 **Apply sends the application.** The form shows only after it: every form command, `read` and `fill` included, sends the application on a posting the account has not applied to, and needs `adpmyjobs` in `submit-allowed` (ADR 0006).
 
