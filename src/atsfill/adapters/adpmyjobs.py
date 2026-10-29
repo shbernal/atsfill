@@ -26,7 +26,6 @@ POSTING = re.compile(r"^/(?P<site>[^/]+)/cx/(?:job/(?P<job>\d+)|job-details)")
 API = "https://my.adp.com/myadp_prefix/mycareer/api"
 QUESTIONNAIRES = f"{API}/rm/staffing/v3/work-fulfillment/recruiting-questionnaires"
 APPLICATIONS = f"https://{HOST}/cx/staffing/v2/job-applications"
-CREATED = "/job-application/assignment-creation"
 SIGN_IN_TIMEOUT_MS = 60_000  # the sign-in page takes ~20 s to render its form
 SIGN_IN_STEP_TIMEOUT_MS = 30_000
 SIGNED_IN_TIMEOUT_MS = 60_000
@@ -127,11 +126,9 @@ class ADPMyJobs:
             page.wait_for_timeout(SETTLE_MS)
         with suppress(Timeout):  # left with its requests in flight, the workflow can spin
             page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
-        applications = self._get(page, APPLICATIONS).get("jobApplications") or []
-        if application := next((a for a in applications if a.get("reqID") == req), None):
-            status = application.get("applicationStatusCode") or {}
-            if status.get("label") != "CONTINUE":
-                raise Unsupported(f"already_sent: the account applied ({status.get('codeValue')})")
+        if application := self._application(page, req):
+            if (application.get("applicationStatusCode") or {}).get("label") != "CONTINUE":
+                raise Unsupported(f"already_sent: the account applied ({_status(application)})")
             assignment = application["assignmentID"]
             workflow = self._get(
                 page, f"{QUESTIONNAIRES}/WORKFLOW?assignmentID={assignment}&rmapp=forms"
@@ -158,11 +155,18 @@ class ADPMyJobs:
             apply.first.wait_for(timeout=max(0, deadline - time.monotonic()) * 1000)
         except Timeout:
             raise Unsupported("posting_gone: the posting shows no Apply") from None
-        with page.expect_response(lambda r: CREATED in r.url, timeout=POSTING_TIMEOUT_MS) as made:
-            apply.first.click()
-        response = made.value
+        apply.first.click()
+        deadline = time.monotonic() + POSTING_TIMEOUT_MS / 1000
+        while not (made := self._application(page, req)):
+            if time.monotonic() > deadline:
+                raise RuntimeError("Apply listed no application")
+            page.wait_for_timeout(SETTLE_MS)
         self._wait_for_section(page)
-        return f"POST {urlsplit(response.url).path} {response.status}"
+        return f"Apply made application {made['assignmentID']}, listed {_status(made)}"
+
+    def _application(self, page: Page, req: str) -> dict[str, Any] | None:
+        applications = self._get(page, APPLICATIONS).get("jobApplications") or []
+        return next((a for a in applications if a.get("reqID") == req), None)
 
     def browser_read(self, page: Page) -> list[Field]:
         """Every section the workflow lists, from its questionnaire; a first section that is
@@ -493,6 +497,10 @@ def _country(questions: list[dict[str, Any]]) -> str | None:
         (q.get("answerDefaultValue") for q in questions if "state" in (q.get("dependents") or [])),
         None,
     )
+
+
+def _status(application: dict[str, Any]) -> str:
+    return (application.get("applicationStatusCode") or {}).get("codeValue") or "with no status"
 
 
 def _labels(section: dict[str, Any]) -> dict[str, str]:

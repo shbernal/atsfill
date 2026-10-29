@@ -120,7 +120,8 @@ class Ats:
             return {"jobApplications": self.applications}
         if path.endswith("/assignment-creation"):
             self.applications.append({"reqID": "5001", "assignmentID": "77",
-                                      "applicationStatusCode": {"label": "CONTINUE"}})  # fmt: skip
+                                      "applicationStatusCode": {"label": "CONTINUE",
+                                      "codeValue": "APPLICATION_SUBMITTED"}})  # fmt: skip
             return {"assignmentId": "77"}
         if path.endswith("/answers"):
             self.saved.add(query["formType"][0].split(".")[0])
@@ -177,7 +178,7 @@ def opened(page, ats) -> tuple[ADPMyJobs, list]:
     adapter = ADPMyJobs()
     page.goto(JOB)
     evidence = adapter.open(page)
-    assert evidence and "assignment-creation" in evidence
+    assert evidence == "Apply made application 77, listed APPLICATION_SUBMITTED"
     return adapter, adapter.browser_read(page)
 
 
