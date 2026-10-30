@@ -59,6 +59,7 @@ It is built for agents with a shell: every command prints one JSON document and 
 [![join run history](https://shbernal.github.io/atsfill/run-history/join.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![workatastartup run history](https://shbernal.github.io/atsfill/run-history/workatastartup.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![wttj run history](https://shbernal.github.io/atsfill/run-history/wttj.svg)](https://shbernal.github.io/atsfill/run-history/)
+[![wellfound run history](https://shbernal.github.io/atsfill/run-history/wellfound.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![workday run history](https://shbernal.github.io/atsfill/run-history/workday.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![successfactors run history](https://shbernal.github.io/atsfill/run-history/successfactors.svg)](https://shbernal.github.io/atsfill/run-history/)
 [![adp run history](https://shbernal.github.io/atsfill/run-history/adp.svg)](https://shbernal.github.io/atsfill/run-history/)

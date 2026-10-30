@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Software Engineer at Acme • Remote | Wellfound</title>
+<!-- A wellfound.com posting, signed in. Apply posts the JobApplicationModal read to /graphql and
+renders the dialog from its answer as the page does: each question by kind under its title, the
+radios and checkboxes moved out of view behind their labels, or, without questions, the note.
+Send posts CreateJobApplication. -->
+<style>
+  .radio input { position: absolute; left: -9999px; }
+  .ReactModal__Content { position: fixed; inset: 40px; overflow: auto; background: white; }
+</style>
+<h1>Software Engineer</h1>
+<p>Acme builds tools.</p>
+<button type="button">Apply</button>
+<button type="button">Apply</button>
+<script>
+async function gql(operationName, variables) {
+  const r = await fetch("/graphql", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({operationName, variables}),
+  });
+  return [r, await r.json()];
+}
+
+function el(tag, attrs = {}, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  e.append(...children);
+  return e;
+}
+
+function question(job, q) {
+  const name = `customQuestionAnswers[${q.id}]`;
+  const title = el("div", {}, q.question);
+  if (q.required) title.append(el("span", {}, "*"));
+  const block = el("label", {for: "form-input--undefined"}, title);
+  if (q.kind === "SHORT") block.append(el("input", {type: "text", name: `${name}[answer]`}));
+  if (q.kind === "NUMBER") block.append(el("input", {type: "number", name: `${name}[answer]`}));
+  if (q.kind === "DATE") block.append(el("input", {type: "date", name: `${name}[answer]`}));
+  if (q.kind === "LONG") block.append(el("textarea", {name: `${name}[answer]`, rows: 4}));
+  if (q.kind === "SINGLE" || q.kind === "MULTIPLE") {
+    const group = el("div", {"data-test": `RadioGroup-${name}[jobListingQuestionOptionId]`});
+    for (const o of q.options) {
+      const id = `form-input--modal-form-${job.id}--${name}[jobListingQuestionOptionId]--${o.id}`;
+      const type = q.kind === "SINGLE" ? "radio" : "checkbox";
+      const input = el("input", {id, type, name: `${name}[jobListingQuestionOptionId]`, value: o.id});
+      group.append(el("div", {class: "radio"}, input, el("label", {for: id}, o.option)));
+    }
+    block.append(group);
+  }
+  return el("div", {}, block);
+}
+
+async function open(button) {
+  const [, answer] = await gql("JobApplicationModal", {jobListingId: "1001"});
+  if (answer.redirect) return (location.href = answer.redirect);  // the profile's edit page
+  if (answer.visitor) {  // signed out: the dialog that signs up and applies at once
+    const visitor = el("form", {}, el("input", {type: "password", name: "passwordConfirmation"}));
+    return document.body.append(el("div", {class: "ReactModal__Content", role: "dialog"}, visitor));
+  }
+  const job = answer.data.jobListing;
+  const form = el("form");
+  if (job.questions.length) for (const q of job.questions) form.append(question(job, q));
+  else if (job.candidateNoteRequired || !job.autoPosted) {
+    form.append(el("h4", {}, "Cover Letter"));
+    form.append(el("textarea", {name: "userNote", placeholder: `Write a note to ${job.startup.name}.`, rows: 4}));
+  }
+  const send = el("button", {type: "submit", "data-test": "JobApplicationModal--SubmitButton"}, "Send application");
+  if (job.currentUserQualificationReport.errors.length) send.disabled = true;
+  form.append(el("button", {type: "button"}, "Cancel"), send);
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const [, sent] = await gql("CreateJobApplication", {input: {jobListingId: job.id, values: new FormData(form).toString()}});
+    if (sent.data) send.textContent = "Sent";
+  });
+  document.body.append(el("div", {class: "ReactModal__Content", role: "dialog"}, form));
+}
+
+for (const b of document.querySelectorAll("button")) b.addEventListener("click", () => open(b));
+</script>
