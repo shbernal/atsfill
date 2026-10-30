@@ -51,6 +51,9 @@ def _absolute_url(value: str) -> bool:
 def matches(
     field: Field, answer: Answer, read_back: Answer | None, form: Form | None = None
 ) -> bool:
+    if field.type is FieldType.MULTI_CHOICE and answer == []:
+        # a cleared list: a read-back may leave out a field that holds nothing
+        return read_back in (None, "", [])
     if read_back is None:
         return False
     match field.type:
@@ -98,6 +101,8 @@ def _answer_problem(field: Field, answer: object, form: Form) -> str | None:
     if field.type is FieldType.MULTI_CHOICE:
         if not (isinstance(answer, list) and all(isinstance(v, str) for v in answer)):
             return "a multi_choice answer is a list of strings"
+        if not answer:
+            return "required, so an empty list does not answer it" if form.asked(field) else None
         values = answer
     elif not isinstance(answer, str):
         return f"a {field.type} answer is a string"
@@ -167,6 +172,13 @@ def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
         and (problem := _answer_problem(by_id[i], a, form))
     ]
     return out
+
+
+def to_fill(fields: list[Field], answers: dict[str, Answer]) -> dict[str, Answer]:
+    """The answers an adapter fills, after `problems` passed them: an empty list clears what a
+    field holds, so one that holds nothing has nothing to fill."""
+    by_id = {f.id: f for f in fields}
+    return {i: a for i, a in answers.items() if a != [] or by_id[i].prefilled or by_id[i].default}
 
 
 def knockouts(fields: list[Field], answers: dict[str, Answer]) -> list[str]:

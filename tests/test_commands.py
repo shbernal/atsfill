@@ -130,6 +130,18 @@ def test_fill_reads_every_answer_back(fake, config, url, answers, data):
     assert not (data / "users/default/attempts.jsonl").exists()
 
 
+def test_an_empty_list_reads_back_ready_without_reaching_the_adapter(
+    fake, config, url, answers, data, monkeypatch
+):
+    filled = []
+    fill = fake.fill
+    monkeypatch.setattr(fake, "fill", lambda page, a: (filled.append(a), fill(page, a))[1])
+    result = core.fill(url, answers | {"langs": []}, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert "langs" not in filled[0]
+    assert next(c for c in result.checks if c.field_id == "langs").match
+
+
 def test_a_knockout_answer_fills_with_a_warning(fake, config, url, answers, data):
     fake.fields = [replace(f, knockouts=["Fluent"]) if f.id == "level" else f for f in FIELDS]
     result = core.fill(url, answers, data_dir=data)
