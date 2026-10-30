@@ -15,6 +15,8 @@ PAGES = Path(__file__).parent / "pages/ashby"
 URL = "https://jobs.ashbyhq.com/acme/0b6c9f4e-1d1a-4c5e-9d43-7f0f3c1e2a10"
 SURVEY_RENDER = "survey-render"  # the id survey saves come back under, not the posting's
 UPLOAD = "https://jobs.ashbyhq.com/upload"  # Ashby hands out an S3 address
+# The field Ashby adds to the application render once `right` is answered.
+FOLLOW_UP = {"isRequired": False, "field": {"path": "permit", "title": "Permit", "type": "String"}}
 
 
 class Ashby_API:
@@ -25,6 +27,8 @@ class Ashby_API:
 
     def render(self, form: dict) -> dict:
         render = copy.deepcopy(form)
+        if form is self.job["applicationForm"] and "right" in self.values:
+            render["sections"][0]["fieldEntries"].append(copy.deepcopy(FOLLOW_UP))
         for section in render["sections"]:
             for entry in section["fieldEntries"]:
                 value = self.values.get(entry["field"]["path"])
@@ -133,7 +137,7 @@ def test_a_known_gap_and_an_unknown_type_are_listed_unfillable(ashby, page):
     }
 
 
-def test_every_answer_reads_back_from_ashby(ashby, page, resume):
+def test_every_answer_reads_back_from_ashby_after_a_follow_up_field(ashby, page, resume):
     adapter, _ = ashby
     page.goto(URL)
     fields = adapter.browser_read(page)
