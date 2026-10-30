@@ -88,7 +88,7 @@ _READ = """form => {
 }"""
 
 # What each field shows: a choice its checked option's text, a select its option's text, a file
-# its attached name.
+# its attached name, the location its pick.
 _READ_BACK = """(form, kinds) => {
   const optionText = input => (input.closest("label")?.querySelector(
     ".application-answer-alternative")?.textContent || input.value).replace(/\\s+/g, " ").trim();
@@ -110,7 +110,10 @@ _READ_BACK = """(form, kinds) => {
     } else if (kind === "checkboxes") {
       out[name] = all.filter(e => e.type === "checkbox" && e.checked).map(optionText);
     } else if (kind === "consent") out[name] = el.checked ? "Yes" : "No";
-    else out[name] = el.value;
+    else if (kind === "location") {
+      const picked = form.querySelector("[name=selectedLocation]")?.value;
+      out[name] = picked ? JSON.parse(picked).name : null;
+    } else out[name] = el.value;
   }
   return out;
 }"""
@@ -159,7 +162,7 @@ class Lever:
         # the resume is parsed into the form, so it goes first and is waited for
         for name, answer in sorted(answers.items(), key=lambda a: a[0] != "resume"):
             values = [answer] if isinstance(answer, str) else answer
-            controls = page.locator(f"{FORM} [name='{name}']:not([type=hidden])")
+            controls = page.locator(f"{FORM} [name={_quoted(name)}]:not([type=hidden])")
             match self._kinds[name]:
                 case "file":
                     _attach(controls.first, values[0], resume=name == "resume")
@@ -222,6 +225,11 @@ def _field(raw: dict[str, Any]) -> Field:
     return Field(
         raw["id"], raw["label"], KINDS[kind], raw["required"], options, raw.get("maxLength")
     )
+
+
+def _quoted(name: str) -> str:
+    """A control name as a CSS string: an employer names its links, quotes and all."""
+    return '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def _option(controls: Locator, value: str) -> Locator | None:

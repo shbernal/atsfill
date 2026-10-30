@@ -10,11 +10,12 @@ import pytest
 
 from atsfill.adapters.teamtailor import Teamtailor, _stored_name
 from atsfill.core import browser, matching
-from atsfill.core.adapter import Unsupported
+from atsfill.core.adapter import Held, Unsupported
 from atsfill.core.results import FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/teamtailor/new.html"
 JOB = "https://careers.example.com/fr/jobs/1234567-solution-engineer"
+EMAIL_LINK = "/applications/email_verification_needed"
 
 
 VIDEO_ID, SGID = 4401, "c2dpZA--4401"
@@ -27,6 +28,8 @@ def serve(route) -> None:
     request, path = route.request, urlsplit(route.request.url).path
     if path.endswith("/applications/new"):
         route.fulfill(path=PAGE)
+    elif path.endswith(EMAIL_LINK):
+        route.fulfill(path=PAGE.with_name("email_verification_needed.html"))
     elif path == "/videos" and request.method == "POST":
         videos[SGID] = request.post_data_json["video"]["file"].rsplit("/", 1)[-1]
         route.fulfill(json={"id": VIDEO_ID, "sgid": SGID})
@@ -200,6 +203,19 @@ def test_submit_returns_the_thanks_page(opened, page):
     opened[0].fill(page, {"question:100": "Oui"})
     application = "1b8f2c3e-0000-4000-8000-00000000a456"
     assert opened[0].submit(page) == f"{JOB}/applications/{application}/thanks"
+
+
+def test_submit_stops_on_the_emailed_verification_link(opened, page):
+    def verify(route):  # the employer holds the application until the emailed link is clicked
+        route.fulfill(status=302, headers={"location": JOB + EMAIL_LINK})
+
+    opened[0].fill(page, {"question:100": "Oui"})
+    page.route("**/thanks", verify)
+    try:
+        with pytest.raises(Held):
+            opened[0].submit(page)
+    finally:
+        page.unroute("**/thanks", verify)
 
 
 @pytest.mark.parametrize(

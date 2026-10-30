@@ -6,7 +6,7 @@ import pytest
 from atsfill import core
 from atsfill.cli import parser, run
 from atsfill.core import attempts, commands, registry, telemetry
-from atsfill.core.adapter import Blocked, NotTaken, Unsupported, known_gap, out_of_scope
+from atsfill.core.adapter import Blocked, Held, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Field, FieldType, Is, Status
 from tests.fake import FIELDS, Fake, FakeOpens, FakeOpensForm, FakeProfile
@@ -285,6 +285,16 @@ def test_send_once_then_resend(fake, config, url, answers, data):
     assert again.status is Status.REFUSED
     assert again.reason == "already_sent: last attempt ended submitted; pass --resend"
     assert core.send(url, answers, resend=True, data_dir=data).status is Status.SUBMITTED
+
+
+def test_a_held_send_is_submitted_and_guards(fake, config, url, answers, data):
+    config('submit-allowed = ["fake"]')
+    fake.submit_raises = Held("click the emailed link")
+    result = core.send(url, answers, data_dir=data)
+    assert (result.status, result.reason) == (Status.SUBMITTED, "held: click the emailed link")
+    assert result.evidence
+    again = core.send(url, answers, data_dir=data)
+    assert again.reason == "already_sent: last attempt ended submitted; pass --resend"
 
 
 def test_a_refused_send_never_clicks(fake, config, url, answers, data):

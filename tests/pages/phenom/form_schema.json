@@ -54,7 +54,7 @@
         }
       },
       "educationData": {
-        "type": "array", "minItems": 1,
+        "type": "array", "defaultEntries": 1,
         "items": {
           "type": "object",
           "properties": {
@@ -73,6 +73,7 @@
       },
       "jsqData": {"title": "Job Specific Questions", "type": "object"},
       "additionalJsqData": {"title": "More Questions", "type": "object"},
+      "yearsOfExperience": {"title": "Years of experience", "type": "integer", "minimum": 0},
       "comments": {"title": "Anything else?", "type": "string"},
       "custAgreement": {"title": "I have read and understand this section", "type": "string", "checked": "Yes", "unchecked": "No"},
       "eeoPoster": {"title": "EEO is the Law", "type": "null"}
@@ -110,8 +111,9 @@
     "ui:order": [
       "profileHeading", "firstName", "country", "state", "phoneWidget", "sourceType",
       "applicantSource", "nationality", "emailAgreement", "smsOptIn", "summary", "frenchConsent",
-      "authorized", "usSponsorship", "ukBackground", "contactBy", "startDate", "experienceData", "educationData", "certificates",
-      "jsqData", "additionalJsqData", "comments", "custAgreement", "eeoPoster", "*"
+      "authorized", "usSponsorship", "ukBackground", "contactBy", "startDate", "experienceData",
+      "educationData", "certificates", "jsqData", "additionalJsqData", "yearsOfExperience", "comments",
+      "custAgreement", "eeoPoster", "*"
     ],
     "profileHeading": {"htmlType": "markdown", "ui:widget": "markdown", "nav": "{{apply.breadcumb.info}}"},
     "jobSeqNo": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}"},
@@ -185,6 +187,7 @@
       "datasourcepath": "applyGetReferences.data",
       "apiConfig": {"payload": "{\"ddoKey\": \"applyGetReferences\", \"formData\": {\"refNum\": \"%%phApp.refNum%%\", \"applyddokey\": \"getWorkdayJSQs\", \"questionnaireId\": \"%%phApp.ddo.response.response.jobData.secondaryQuestionnaireId%%\"}}"}
     },
+    "yearsOfExperience": {"ui:widget": "updown", "nav": "agreement"},
     "comments": {"htmlType": "textarea", "ui:widget": "textarea", "nav": "agreement"},
     "custAgreement": {"htmlType": "valuecheckbox", "ui:widget": "valuecheckbox", "nav": "agreement", "ui:required": true},
     "eeoPoster": {"htmlType": "label", "nav": "agreement"}
