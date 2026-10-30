@@ -27,6 +27,7 @@ FORM = "#job-application-form"
 QUESTION = ".question, [data-careersite--form-target=qualifyingAnswers]"
 LOCKED = "[data-careersite--form-target=formContentWrapper].cursor-not-allowed"
 LOCATION = "candidate[location][query]"
+COOKIES = "dialog[data-controller~='common--cookies--alert']"
 VIDEO = "[data-controller~='questions--tt-video-answer']"
 UPLOAD = "forms--inputs--upload"  # a drop zone's controller
 CAREER_SITE = "a[href*='//www.teamtailor.com'], script[src*='teamtailor-cdn.com/assets/careersite']"
@@ -39,6 +40,7 @@ UPLOAD_TIMEOUT_S = 60
 UPLOAD_TIMEOUT_MS = UPLOAD_TIMEOUT_S * 1000
 UPLOAD_POLL_MS = 500
 KEY_DELAY_MS = 30
+SUGGESTION_TIMEOUT_MS = 10_000
 QUESTION_TYPES = {
     "text": FieldType.TEXT,
     "number": FieldType.TEXT,
@@ -65,6 +67,10 @@ NOT_ASKED = re.compile(r"linkedin|referrer|social_image")
 STANDARD_KINDS = ("text", "email", "tel", "textarea", "checkbox", "choices", "file", "location")
 ANSWER_KIND = re.compile(r"\]\[(\w+)\](\[\])?$")
 
+# Declines the optional cookies on a banner open as a modal (a "takeover"): hidden by the
+# blocker, it still leaves the rest of the page inert, deaf to keys and clicks.
+_DECLINE_TAKEOVER = """banners => banners.filter(b => b.matches(":modal"))
+  .forEach(b => b.querySelector("[data-action$='#disableAll']")?.click())"""
 # Whether each custom or qualifying question shows, in the order `_read` lists them.
 _VISIBLE = "(form, QUESTION) => [...form.querySelectorAll(QUESTION)].map(q => q.checkVisibility())"
 # What the form will send: each field's value, a choice as its option's text, a file as the
@@ -203,6 +209,7 @@ class Teamtailor:
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
+        page.locator(COOKIES).evaluate_all(_DECLINE_TAKEOVER)
         self._videos = {}
         for field_id in [i for i in answers if i in self._qualifying]:
             self._fill(form, field_id, answers[field_id])
@@ -368,7 +375,10 @@ def _suggest(field: Field, host: Locator, answer: str) -> None:
     box.fill("")
     box.press_sequentially(answer, delay=KEY_DELAY_MS)
     options = host.locator("[role=option]")
-    options.first.wait_for()
+    try:
+        options.first.wait_for(timeout=SUGGESTION_TIMEOUT_MS)
+    except browser.Timeout:
+        raise NotTaken(f"no suggestion for {answer!r} in {field.id}") from None
     for i in range(options.count()):
         if matching.matches(field, answer, options.nth(i).get_attribute("data-description") or ""):
             browser.click(options.nth(i))
