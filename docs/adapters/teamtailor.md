@@ -1,6 +1,6 @@
 # Teamtailor
 
-Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/teamtailor/new.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
+Observed on live postings, last on 2026-10-29. The fixture page is [tests/pages/teamtailor/new.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/teamtailor/new.html), served as an employer's career site in `tests/test_teamtailor.py`.
 
 ## Where the form is
 
@@ -59,6 +59,7 @@ Each rendering, and on how many of 15 postings' forms (2026-10-19):
 
 - Nothing reaches the employer before submit, so the read-back is the form's `FormData`: each value, each checked option's label (or its dropdown item's text), for a file the name at the end of its stored address, for a video question the `file_file_name` Teamtailor gives back for the video id the form keeps, and the address only once a suggestion filled its `place_id`. Each additional file is stored under its own `candidate[uploads_attributes][<n>][file_remote_url]`, a text input the upload adds: an address, not a field.
 - Submit is `[type=submit]` in the form, under a window at least 900px tall: in a short one the button sits below the fold and the click sends nothing. The evidence is the redirect to `…/applications/<id>/thanks…`, the id a UUID, titled "Applied to <role>". An optional "Connect" step that follows is skipped.
+- Some employers hold the application until the applicant confirms their email: submit then redirects to `<job>/applications/email_verification_needed` ("Vérifiez votre adresse e-mail"), and the application completes only once the link emailed to the address in the form is clicked. The mailbox is outside atsfill (ADR 0015): the send ends `submitted` with `held: …`, and the double-send guard stops another.
 
 ## Known gaps
 

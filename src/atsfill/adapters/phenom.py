@@ -25,7 +25,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from atsfill.core import browser, matching, paths
-from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
+from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Locator, Overlaid, Page, Timeout
 from atsfill.core.results import (
     AllOf,
@@ -238,22 +238,24 @@ _FETCH = """async url => {
   return response.json();
 }"""
 
-# Posts each body to `/applySubmit`, `most` at a time; null for one that fails.
+# Posts each body to `/applySubmit`, `most` at a time; null for one that fails. With the
+# answers, whether one was refused (403), after which none is posted.
 _POSTS = """async ([bodies, token, most]) => {
   const out = bodies.map(() => null);
-  let next = 0;
+  let next = 0, refused = false;
   const post = async () => {
-    for (let i = next++; i < bodies.length; i = next++) {
+    for (let i = next++; i < bodies.length && !refused; i = next++) {
       try {
         const response = await fetch('/applySubmit', {method: 'POST',
           body: JSON.stringify(bodies[i]),
           headers: {'Content-Type': 'application/json', 'x-csrf-token': token}});
         if (response.ok) out[i] = await response.json();
+        refused ||= response.status === 403;
       } catch {}
     }
   };
   await Promise.all(Array.from({length: most}, post));
-  return out;
+  return [out, refused];
 }"""
 
 
@@ -350,14 +352,22 @@ class Phenom:
         except ValueError as e:
             raise RuntimeError(str(e)) from None
         token = get(ph, "sessionParams.csrfToken") or ""
+
+        refused = False
+
+        def posts(bodies: list[dict[str, Any]]) -> list[Any]:
+            nonlocal refused
+            out, now = page.evaluate(_POSTS, [bodies, token, LOADERS_AT_ONCE])
+            refused |= now
+            return out
+
         try:
-            fields, raws = _read(
-                ph,
-                lambda url: page.evaluate(_FETCH, url),
-                lambda bodies: page.evaluate(_POSTS, [bodies, token, LOADERS_AT_ONCE]),
-            )
+            fields, raws = _read(ph, lambda url: page.evaluate(_FETCH, url), posts)
         except (BrowserError, ValueError, KeyError) as e:
             raise RuntimeError(f"no configuration for the wizard ({e})") from None
+        finally:  # raised once the read ends, so the answers that came are kept
+            if refused:
+                raise Blocked("rate_limited: the careers site answers /applySubmit 403")
         self._raws = {raw["id"]: raw for raw in raws}
         return fields
 

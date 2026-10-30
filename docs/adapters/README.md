@@ -2,7 +2,7 @@
 
 Generated from [src/atsfill/registry.toml](https://github.com/shbernal/atsfill/blob/main/src/atsfill/registry.toml) by `uv run python -m scripts.backlog`. The registry is described in [ADR 0012](../adr/0012-systems-registry.md), the order in [ADR 0013](../adr/0013-survey-and-adapter-rounds.md): no account first, blocked and stopped by a known gap last, then by share of postings.
 
-The registry covers 90.3% of postings.
+The registry covers 90.4% of postings.
 
 | Source | Kind | Share | Account | Hosting | Block | Scope |
 |---|---|---|---|---|---|---|
@@ -31,6 +31,7 @@ The registry covers 90.3% of postings.
 | pinpoint | ats | 0.4% | none | hosted |  | [supported](pinpoint.md) |
 | hiringthing | ats | 0.3% | none | hosted |  | [supported](hiringthing.md) |
 | recruiterflow | ats | 0.1% | none | hosted |  | [supported](recruiterflow.md) |
+| werecruit | ats | 0.1% | none | hosted |  | [supported](werecruit.md) |
 | jobaffinity | ats |  | none | hosted |  | [supported](jobaffinity.md) |
 | welcomekit | ats |  | none | hosted |  | [supported](welcomekit.md) |
 | join | ats | 0.3% | to_send | hosted |  | [supported](join.md) |

@@ -16,7 +16,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser, html, matching
-from atsfill.core.adapter import Gap, NotTaken, Unsupported, known_gap
+from atsfill.core.adapter import Gap, Held, NotTaken, Unsupported, known_gap
 from atsfill.core.browser import HTTP_TIMEOUT_S, Locator, Page, Response
 from atsfill.core.html import Node
 from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
@@ -32,6 +32,8 @@ VIDEO = "[data-controller~='questions--tt-video-answer']"
 UPLOAD = "forms--inputs--upload"  # a drop zone's controller
 CAREER_SITE = "a[href*='//www.teamtailor.com'], script[src*='teamtailor-cdn.com/assets/careersite']"
 JOB = re.compile(r"/jobs/(\d+)[^/]*")
+EMAIL_LINK = "/applications/email_verification_needed"
+SENT = re.compile(rf"/applications/[^/]+/thanks|{EMAIL_LINK}")
 SUBMIT_TIMEOUT_MS = 90_000
 FOLLOW_UP_TIMEOUT_MS = 1_000
 UPLOAD_TIMEOUT_S = 60
@@ -242,7 +244,9 @@ class Teamtailor:
 
     def submit(self, page: Page) -> str | None:
         browser.click(page.locator(f"{FORM} [type=submit]"))
-        page.wait_for_url(re.compile(r"/applications/[^/]+/thanks"), timeout=SUBMIT_TIMEOUT_MS)
+        page.wait_for_url(SENT, timeout=SUBMIT_TIMEOUT_MS, wait_until="domcontentloaded")
+        if page.url.split("?")[0].endswith(EMAIL_LINK):
+            raise Held("click the link emailed to the applicant to complete it")
         return page.url
 
     def _fill(self, form: Locator, field_id: str, answer: Answer) -> None:

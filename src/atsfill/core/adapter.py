@@ -15,6 +15,13 @@ class Blocked(Exception):
     """
 
 
+class Held(Exception):
+    """Raised by `submit`: the system has the application but holds it until the applicant
+    acts, e.g. clicks an emailed link. The send counts as `submitted`, the message is the
+    reason's detail (ADR 0006).
+    """
+
+
 class SignedOut(Blocked):
     """The system's page asks to sign in although `signed_in` found the session holding: the
     system ended it its own way. The core signs in again and reads once more (ADR 0015).
@@ -94,7 +101,8 @@ class Adapter(Protocol):
     def submit(self, page: Page) -> str | None:
         """Clicks submit; returns the evidence (a URL or a network response), None without.
 
-        Raises `Blocked` when the system refuses the send.
+        Raises `Blocked` when the system refuses the send, `Held` when it has the application but
+        holds it until the applicant acts.
         """
         ...
 

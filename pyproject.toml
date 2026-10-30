@@ -1,6 +1,6 @@
 [project]
 name = "atsfill"
-version = "0.0.4"
+version = "0.0.5"
 description = "Read, dry-run and submit job application forms on hiring systems: Ashby, Greenhouse, Teamtailor, Welcome to the Jungle."
 readme = "README.md"
 license = "MIT"
