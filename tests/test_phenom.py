@@ -17,6 +17,7 @@ PAGES = Path(__file__).parent / "pages/phenom"
 JOB = "https://careers.acme.example/us/en/job/ACMEUS1001EXTERNALENUS/Data-Analyst"
 APPLY = "https://careers.acme.example/us/en/apply?jobSeqNo=ACMEUS1001EXTERNALENUS"
 CONFIG = f"{phenom.CDN}/ACMEUS/workday/external/careersite/singlepage"
+MULTI_PAGE = f"{phenom.CDN}/ACMEUS/schema/apply/MULTI_PAGE"
 REFERENCES = json.loads((PAGES / "references.json").read_text())
 
 
@@ -29,7 +30,7 @@ def served(url: str, body: bytes | str | None) -> bytes | None:
         if key == "getCountrySpecificFields":  # each country's own
             answer = answer[posted["formData"]["countryCode"]]
         return json.dumps(answer).encode()
-    if url.startswith(CONFIG):
+    if url.startswith(CONFIG) or url.startswith(MULTI_PAGE):
         name = url.rsplit("/", 1)[-1]
         return (PAGES / name).read_bytes() if (PAGES / name).exists() else None
     if url.startswith("https://careers.acme.example/"):
@@ -184,6 +185,33 @@ def test_request_read_lists_the_same_fields(opened, monkeypatch):
     assert Phenom().request_read(JOB) == opened[1]
 
 
+def test_a_multi_page_wizard_reads_the_configuration_its_renderer_loads(page):
+    """Its `singlepage` configuration is stale: it lists a field the wizard has dropped."""
+    html = (PAGES / "apply.html").read_text().replace("<body>", "<body>" + phenom.RENDERER)
+    config = json.loads((PAGES / "form_schema.json").read_text())
+    del config["schema"]["properties"]["comments"]
+    form = f"{phenom.CDN}/ACMEUS/schema/apply/multipage/applyForm.json"
+    bundle = f"{phenom.CDN}/ACMEUS/bundles/apply/Messages_en_us.json"
+    messages = (PAGES / "Messages_en_us.json").read_bytes()
+    serve = lambda body: (
+        lambda route: route.fulfill(  # noqa: E731
+            body=body, headers={"Access-Control-Allow-Origin": "*"}
+        )
+    )
+    page.route(APPLY, serve(html))
+    page.route(form, serve(json.dumps(config)))
+    page.route(bundle, serve(messages))
+    try:
+        page.goto(JOB)
+        fields = {f.id: f for f in Phenom().browser_read(page)}
+    finally:
+        page.unroute(APPLY)
+        page.unroute(form)
+        page.unroute(bundle)
+    assert "firstName" in fields and "comments" not in fields
+    assert fields["firstName"].label == "First Name"  # the page's own bundle
+
+
 def answers(resume: str) -> dict:
     return {
         "resume": resume,
@@ -259,6 +287,18 @@ def test_a_country_other_than_the_jobs_shows_its_own_fields(opened, page, resume
     checks = matching.check(fields, given, adapter.read_back(page))
     assert [c for c in checks if not c.match] == []
     assert "cntryFields.region" in adapter.shown_fields(page)
+
+
+def test_a_required_field_the_page_hides_is_a_known_gap(opened, page, resume):
+    adapter, _ = opened
+    style = "<style>#firstName { display: none !important }</style>"
+    body = (PAGES / "apply.html").read_text().replace("</head>", f"{style}</head>")
+    page.route(APPLY, lambda route: route.fulfill(content_type="text/html", body=body))
+    try:
+        with pytest.raises(Unsupported, match="hidden_required: step 1 requires firstName"):
+            adapter.fill(page, answers(resume))
+    finally:
+        page.unroute(APPLY)
 
 
 def test_a_step_the_wizard_turns_down_does_not_take_its_answers(opened, page, resume, monkeypatch):
