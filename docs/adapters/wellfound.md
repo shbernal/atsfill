@@ -1,6 +1,6 @@
 # Wellfound
 
-A startup job board (formerly AngelList Talent) that takes the application itself. Observed on live postings on 2026-10-30, headless Camoufox, signed in as the Test user: 15 postings opened, 13 dialogs read. The fixture pages are [tests/pages/wellfound/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/job.html), a posting whose Apply renders the dialog from its GraphQL read, [login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/login.html) and [signup.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/signup.html), served by `tests/test_wellfound.py`.
+A startup job board (formerly AngelList Talent) that takes the application itself. Observed on live postings on 2026-10-30, headless Camoufox, signed in as the Test user: 15 postings opened, 13 dialogs read. The fixture pages are [tests/pages/wellfound/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/job.html), a posting whose Apply renders the dialog from its GraphQL read, [login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/login.html), [signup.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/signup.html) and [profile.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/profile.html), served by `tests/test_wellfound.py`.
 
 ## Where the form is
 
@@ -22,13 +22,40 @@ One account per user for the whole system, a candidate account.
 
 ## Account profile
 
-A new account lands on an onboarding at `/jobs/onboarding/<step>`: Profile (`extended_profile`: location, role, years of experience, student, current job, links), Preferences (job search status, job type, salary, roles, locations, US work authorization, company sizes), Culture (only "Describe what you are looking for in your next job" required) and Resume/CV (skippable). Each step saves through its own GraphQL mutation (`SubmitExtendedProfile`, `SubmitPreferences`, `SubmitCultureQuestions`). Work experience, education and skills are edited on `/profile/edit` (`ProfileSaveExperience`, `ProfileSaveSkills`).
+A new account lands on an onboarding at `/jobs/onboarding/<step>`: Profile (`extended_profile`), Preferences, Culture and Resume/CV, each saved through its own GraphQL mutation (`SubmitExtendedProfile`, `SubmitPreferences`, `SubmitCultureQuestions`). atsfill does not walk it: every field that lets Apply open is also on the tabs of `/profile/edit`, which load for any account. With only those tabs saved, Apply opened the dialog while the onboarding stayed unfinished and `candidateOnboarding.requiredSteps` kept listing all four steps.
 
-- The job search status is "Ready to interview", "Open to offers" or "Closed to offers", the last hiding the profile from startups; an account closed to offers can still apply. The dialog notes "Your job status will change": a send is expected to change it.
-- With the onboarding unfinished, Apply goes to `/profile/edit?job_listing_id=<id>`: the known gap `profile_incomplete`.
-- Some employers require skills or work experience in the profile; the dialog then lists what is missing and disables Send: the known gap `profile_incomplete`.
+`atsfill profile wellfound` (ADR 0017) reads and saves two profile steps. The fixture page is [tests/pages/wellfound/profile.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/wellfound/profile.html).
 
-atsfill does not edit this profile yet: the Test user's was filled in the browser.
+- `about`: `/profile/edit`, the Profile tab.
+- `preferences`: `/profile/edit/preferences`, the Preferences tab.
+
+Most controls save as they change; the bio, the social links and a work experience save on their own form's Save, shown once a field changes. So a fill saves, field by field, and the core's read-back comes after: the page is reloaded and the values read from its Apollo state (`__NEXT_DATA__`, `props.pageProps.apolloState.data`, the `Candidate:<id>` object and what it refers to). `save` has nothing left to do. A mismatch stops the run with what was filled saved, and an answer that already matches the saved value is not touched.
+
+- Most mutations answer the `Candidate`, many with `missingRequiredFields` (`LOOKING_FOR`, `PRIMARY_ROLE`, `PRIMARY_LOCATION`, `REQUIRE_SPONSORSHIP`, `US_AUTHORIZED`, `CANDIDATE_STATE`).
+- `SaveCandidateState` answers 200 and keeps nothing while another required field is missing, and a state of `null` is shown as "Your job profile is visible to startups". The status is filled last, after the `about` step, and read back.
+- The job search status is "Ready to interview", "Open to offers" or "Closed to offers", the last hiding the profile from startups (`invisible`); an account closed to offers can still apply. Which one is the user's answer, never atsfill's. The dialog notes "Your job status will change": a send is expected to change it.
+- A profile save the page refuses itself (a link that is no URL) posts nothing and names no error: `refused: step_refused: <field>: the page saved nothing`. GraphQL `errors` are `refused: step_refused: <field>: <errors>`.
+- A complete profile can get a dialog over the page, "We want to feature you to recruiters!": Start my application enrols the account, "Skip for now — I'm not ready yet" posts `DismissFeatured` and it stays gone. It covers the controls, and it opens whatever `OptInModalAutoLauncher` answers. `profile` declines it where it shows, a declared side effect; it was seen on 1 of 4 Test accounts.
+- A company or a skill is searched and taken only under its exact name (a suggestion's other line is its site or followers), `answer_not_taken` otherwise. The search also lists near names, and showed no way to add an unknown company. It finds nothing for "React.js" and lists it for "React", so a whole name is searched first, then its first word.
+- Editing a saved work experience cannot change its company: `refused: step_refused: about: work_company`.
+
+| Field ids | Field type | Rendering | Mutation |
+|---|---|---|---|
+| `location` | `typeahead`, `City, Country` | downshift search; a saved one shows with a × that brings it back | `ProfileSavePrimaryLocation` |
+| `primary_role` | `choice` | react-select `primaryRole`, options under group headings | `ProfileSaveRoles` |
+| `years_experience` | `choice`, position in the list | react-select `yearsExperienceInPrimaryRole` | `ProfileSaveRoles` |
+| `skills` | `multi_choice`, no options | downshift search, a chip with a × per skill, each change saved | `ProfileSaveSkills` |
+| `bio` | `text`, 160 characters | `#form-input--bio`, the form's Save | `ProfileSaveBio` |
+| `website`, `linkedin`, `github`, `twitter` | `url` | `#form-input--<onlineBioUrl\|linkedinUrl\|githubUrl\|twitterUrl>`, one form's Save | `ProfileSaveSocialProfiles` |
+| `work_company`, `work_title`, `work_from`, `work_to` (`MM/YYYY`), `work_current`, `work_description` | `text`, `choice` Yes/No for `work_current` | the first entry: the form, open on an empty profile, or its Edit; `work_to` is not used while `work_current` is Yes | `ProfileSaveExperience` |
+| `job_type` | `choice` | react-select `primaryLookingFor`, the first of the system's job types | `ProfileSaveLookingFor` |
+| `us_authorized`, `require_sponsorship` | `choice` | radios `form-input--<name>--<true\|false>` | `ProfileSaveUsAuthorization`, `ProfileSaveVisaSponsorship` |
+| `remote` | `choice`, Yes/No | checkbox `form-input--distributedTeamOk--true` | `ProfileSaveInterestedLocations` |
+| `job_status` | `choice` | `[data-test=CandidateStateDropdown]`, the page's own being the last of two | `SaveCandidateState` |
+
+A react-select is searched by typing and taken with Enter: its input has no box to click once it holds a value. Left as they are: the name, the photo, other job types, the salary, the locations, education, achievements, the identity questions, and the Culture and Resume tabs.
+
+Apply on a profile that lacks these goes to `/profile/edit?job_listing_id=<id>`, and a job that requires skills or work experience the profile lacks lists them and disables Send: both end `blocked: profile_incomplete`, naming the `profile` command.
 
 ## Reading and filling
 
@@ -36,7 +63,7 @@ Apply posts the GraphQL read `JobApplicationModal` (`{jobListingId}`), whose `jo
 
 - `currentUserApplied`: the account applied, `already_sent`.
 - `offsiteListingUrl`: Apply opens another site, `external_step` (none seen).
-- `currentUserQualificationReport.errors` disable the dialog and Send: `MISSING_SKILLS` and `MISSING_WORK_EXPERIENCE` are the known gap `profile_incomplete`; the others (`LOCATION_MISMATCH`, `LOCATION_SPECIFICITY`, `NEEDS_TO_RELOCATE`, `NEEDS_WORK_AUTHORIZATION`) are the employer's rules, `not_qualified` (3 of 13). `warnings` (`INCORRECT_ROLE`, `NEEDS_MORE_EXPERIENCE`) only show "Improve your odds".
+- `currentUserQualificationReport.errors` disable the dialog and Send: `MISSING_SKILLS` and `MISSING_WORK_EXPERIENCE` are `blocked: profile_incomplete`; the others (`LOCATION_MISMATCH`, `LOCATION_SPECIFICITY`, `NEEDS_TO_RELOCATE`, `NEEDS_WORK_AUTHORIZATION`) are the employer's rules, `not_qualified` (3 of 13). `warnings` (`INCORRECT_ROLE`, `NEEDS_MORE_EXPERIENCE`) only show "Improve your odds".
 - `aiAssessmentRequired`: an AI interview follows the send, the known gap `ai_assessment` (none seen).
 - `applicationQuestionSets`: question sets rendered after the questions, the known gap `question_sets` (none seen).
 - `questions`, each with `id`, `kind`, `question`, `required` and `options` (`id`, `option`); `managedByAts` marks the questions of a posting Wellfound imports from another system (`source: ATS`, 2 of 13), which asked contact links and yes/no questions, most required.
@@ -60,7 +87,6 @@ Field ids: `question_<id>`, and `note` for the note. The dialog is the form hold
 
 | Gap | What | Code | Postings |
 |---|---|---|---|
-| `profile_incomplete` | the onboarding is unfinished, or the job requires skills or work experience the profile lacks; atsfill does not edit the profile | `unsupported_flow` | the Test user's account before its profile was filled |
 | `ai_assessment` | the job asks for an AI interview after the send | `unsupported_flow` | 0 of 13 |
 | `question_sets` | the dialog shows question sets after the questions | `unsupported_rendering` | 0 of 13 |
 

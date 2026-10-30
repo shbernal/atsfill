@@ -1,0 +1,219 @@
+<!doctype html>
+<!-- /profile/edit and /profile/edit/preferences, trimmed from the live tabs: the controls' ids and
+     placeholders are the live ones, and each saves through the GraphQL mutation the live one
+     posts. The Candidate the tests hold comes in the __NEXT_DATA__ below, as the Apollo state. -->
+<html>
+<head><title>Edit your Wellfound profile</title></head>
+<body>
+<script id="__NEXT_DATA__" type="application/json">/*STATE*/</script>
+<main id="about" hidden>
+  <form><div role="combobox" id="location"></div></form>
+  <form>
+    <input id="react-select-form-input--primaryRole-input">
+    <input id="react-select-form-input--yearsExperienceInPrimaryRole-input">
+  </form>
+  <form><textarea id="form-input--bio" maxlength="160"></textarea><button type="submit">Save</button></form>
+  <form>
+    <input id="form-input--onlineBioUrl"><input id="form-input--linkedinUrl">
+    <input id="form-input--githubUrl"><input id="form-input--twitterUrl">
+    <button type="submit">Save</button>
+  </form>
+  <div id="work"></div>
+  <form id="skills"><div id="chips"></div><input placeholder="e.g. Python, React"></form>
+</main>
+<main id="preferences" hidden>
+  <div data-test="CandidateStateDropdown"><button type="button">Please select...</button><div id="states" hidden></div></div>
+  <div><input id="react-select-form-input--primaryLookingFor-input"></div>
+  <input type="radio" name="usAuthorized" id="form-input--usAuthorized--true"><label for="form-input--usAuthorized--true">Yes</label>
+  <input type="radio" name="usAuthorized" id="form-input--usAuthorized--false"><label for="form-input--usAuthorized--false">No</label>
+  <input type="radio" name="requireSponsorship" id="form-input--requireSponsorship--true"><label for="form-input--requireSponsorship--true">Yes</label>
+  <input type="radio" name="requireSponsorship" id="form-input--requireSponsorship--false"><label for="form-input--requireSponsorship--false">No</label>
+  <input type="checkbox" id="form-input--distributedTeamOk--true"><label for="form-input--distributedTeamOk--true">Open to working remotely</label>
+</main>
+<div id="menu"></div>
+<script>
+const state = JSON.parse(document.getElementById("__NEXT_DATA__").textContent).props.pageProps.apolloState.data;
+const candidate = Object.entries(state).find(([k]) => k.startsWith("Candidate:"))[1];
+const found = (ref) => state[ref.__ref];
+const post = (operationName, input) => fetch("/graphql", {
+  method: "POST", headers: {"content-type": "application/json"},
+  body: JSON.stringify({operationName, variables: {input}}),
+});
+const ROLES = ["Software Engineer", "Backend Engineer"];
+const YEARS = ["< 1 Year", "1 Year", "2 Years", "3 Years", "4 Years", "5 Years"];
+const TYPES = {"Full-time Employee": "full_time", "Contractor": "contract"};
+const SEARCH = {
+  location: [["Paris, France", "1"], ["Lyon, France", "2"]],
+  skill: [["Python", "11"], ["Go", "12"], ["React.js", "13"]],
+  company: [["Acme", "21"], ["Initech", "22"]],
+};
+
+// a react-select: typing lists what matches, Enter takes the first
+function select(id, labels, choose) {
+  const box = document.getElementById(`react-select-form-input--${id}-input`);
+  const list = (text = "") => {
+    const menu = document.getElementById("menu");
+    menu.replaceChildren(...labels.filter((l) => l.includes(text)).map((label, i) => {
+      const option = document.createElement("div");
+      option.id = `react-select-form-input--${id}-option-${i}`;
+      option.innerHTML = "<span></span>";
+      option.firstChild.textContent = label;
+      return option;
+    }));
+  };
+  box.addEventListener("input", () => list(box.value));
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") list();
+    if (e.key === "Escape") document.getElementById("menu").replaceChildren();
+    const first = document.querySelector(`[id^="react-select-form-input--${id}-option-"]`);
+    if (e.key === "Enter" && first) {
+      e.preventDefault();
+      box.value = "";
+      document.getElementById("menu").replaceChildren();
+      choose(first.textContent);
+    }
+  });
+}
+
+// a downshift search: suggestions as you type, a second line under each
+function search(box, kind, take) {
+  box.addEventListener("input", () => {
+    const menu = document.getElementById("menu");
+    menu.replaceChildren(...SEARCH[kind].filter(([n]) => n.startsWith(box.value) && box.value !== "React.js").map(([name, id], i) => {
+      const item = document.createElement("div");
+      item.id = `downshift-1-item-${i}`;
+      item.innerText = `${name}\n120 followers`;
+      item.addEventListener("click", () => {
+        box.value = "";
+        menu.replaceChildren();
+        take(name, id);
+      });
+      return item;
+    }));
+  });
+}
+
+function about() {
+  const place = candidate.basedInLocation ? found(candidate.basedInLocation) : null;
+  const where = document.getElementById("location");
+  const box = () => {
+    where.innerHTML = '<input placeholder="e.g. San Francisco">';
+    search(where.firstChild, "location", (name, id) => {
+      where.innerHTML = `<div></div>`;
+      where.firstChild.textContent = name;
+      post("ProfileSavePrimaryLocation", {primaryLocation: id});
+    });
+  };
+  if (place) {
+    where.innerHTML = '<div><div></div><div role="button" tabindex="0">x</div></div>';
+    where.firstChild.firstChild.textContent = `${place.displayName}, ${place.parentLocationDisplayName}`;
+    where.querySelector("[role=button]").addEventListener("click", box);
+  } else box();
+  let role = candidate.primaryRoleId, years = candidate.yearsExperienceInPrimaryRole;
+  const roles = () => post("ProfileSaveRoles", {primaryRoleId: role, yearsExperienceInPrimaryRole: years});
+  select("primaryRole", ROLES, (l) => { role = String(ROLES.indexOf(l) + 1); roles(); });
+  select("yearsExperienceInPrimaryRole", YEARS, (l) => { years = YEARS.indexOf(l); roles(); });
+
+  const bio = document.getElementById("form-input--bio");
+  bio.value = candidate.bio || "";
+  bio.form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    post("ProfileSaveBio", {bio: bio.value});
+  });
+  const links = ["onlineBioUrl", "linkedinUrl", "githubUrl", "twitterUrl"];
+  const inputs = links.map((k) => document.getElementById(`form-input--${k}`));
+  inputs.forEach((input, i) => { input.value = candidate[links[i]] || ""; });
+  inputs[0].form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (inputs.some((i) => i.value && !i.value.startsWith("http"))) return;  // refused on the page
+    post("ProfileSaveSocialProfiles", Object.fromEntries(links.map((k, i) => [k, inputs[i].value || null])));
+  });
+
+  const skills = (candidate.skillTags || []).map((t) => [found(t).displayName, found(t).id]);
+  const saveSkills = () => post("ProfileSaveSkills", {skillTags: skills.map(([, id]) => id)});
+  const chips = () => {
+    document.getElementById("chips").replaceChildren(...skills.map(([name], i) => {
+      const chip = document.createElement("span");
+      chip.textContent = name;
+      const remove = document.createElement("span");
+      remove.setAttribute("role", "button");
+      remove.style.cssText = "display:inline-block;width:12px;height:12px";
+      remove.addEventListener("click", () => { skills.splice(i, 1); chips(); saveSkills(); });
+      chip.append(remove);
+      return chip;
+    }));
+  };
+  chips();
+  search(document.querySelector("#skills input"), "skill", (name, id) => {
+    skills.push([name, id]);
+    chips();
+    saveSkills();
+  });
+
+  const entries = candidate.startupRoleMetadata || [];
+  const entry = entries.length ? found(entries[0]) : null;
+  const work = document.getElementById("work");
+  const form = () => {
+    work.innerHTML = `<form>
+      ${entry ? "" : '<input placeholder="Type to search">'}
+      <input id="form-input--title"><input placeholder="Start date"><input placeholder="End date">
+      <input type="checkbox" id="form-input--current--true"><label for="form-input--current--true">I currently work here</label>
+      <textarea id="form-input--description"></textarea><button type="submit">Save</button></form>`;
+    const f = work.firstElementChild;
+    const [start, end] = [f.querySelector("[placeholder='Start date']"), f.querySelector("[placeholder='End date']")];
+    const [current, title, text] = [f.querySelector("#form-input--current--true"), f.querySelector("#form-input--title"), f.querySelector("textarea")];
+    const month = (m, y) => m ? `${String(m).padStart(2, "0")}/${y}` : "";
+    const parts = (v) => v ? v.split("/").map(Number) : [null, null];
+    let company = null;
+    if (entry) {
+      title.value = entry.title; text.value = entry.description || ""; current.checked = entry.current;
+      start.value = month(entry.startedAtMonth, entry.startedAtYear);
+      end.value = month(entry.endedAtMonth, entry.endedAtYear);
+    } else search(f.querySelector("[placeholder='Type to search']"), "company", (name, id) => { company = id; });
+    f.addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (!entry && !company) return;
+      const [startedAtMonth, startedAtYear] = parts(start.value);
+      const [endedAtMonth, endedAtYear] = parts(current.checked ? "" : end.value);
+      post("ProfileSaveExperience", {
+        id: entry && entry.id, startupId: company, title: title.value, description: text.value,
+        current: current.checked, startedAtMonth, startedAtYear, endedAtMonth, endedAtYear,
+      });
+    });
+  };
+  if (entry) {
+    work.innerHTML = "<a>Edit</a>";
+    work.firstChild.addEventListener("click", form);
+  } else form();
+}
+
+function preferences() {
+  const dropdown = document.querySelector("[data-test=CandidateStateDropdown]");
+  const states = document.getElementById("states");
+  const STATES = {interviewing: "Ready to interview", open: "Open to offers", closed: "Closed to offers"};
+  if (candidate.candidateState) dropdown.querySelector("button").textContent = STATES[candidate.candidateState];
+  states.innerHTML = Object.entries(STATES).map(([k, v]) => `<div data-state="${k}">${v}</div>`).join("");
+  dropdown.querySelector("button").addEventListener("click", () => { states.hidden = false; });
+  states.addEventListener("click", (e) => {
+    states.hidden = true;
+    post("SaveCandidateState", {candidateState: e.target.dataset.state});
+  });
+  select("primaryLookingFor", Object.keys(TYPES), (l) => post("ProfileSaveLookingFor", {primaryLookingFor: TYPES[l]}));
+  for (const [name, operation] of [["usAuthorized", "ProfileSaveUsAuthorization"], ["requireSponsorship", "ProfileSaveVisaSponsorship"]]) {
+    for (const value of [true, false]) {
+      const radio = document.getElementById(`form-input--${name}--${value}`);
+      radio.checked = candidate[name] === value;
+      radio.addEventListener("change", () => post(operation, {[name]: value}));
+    }
+  }
+  const remote = document.getElementById("form-input--distributedTeamOk--true");
+  remote.checked = !!candidate.distributedTeamOk;
+  remote.addEventListener("change", () => post("ProfileSaveInterestedLocations", {distributedTeamOk: remote.checked}));
+}
+
+const shown = location.pathname.endsWith("/preferences") ? "preferences" : "about";
+document.getElementById(shown).hidden = false;
+(shown === "about" ? about : preferences)();
+</script>
+</body>
+</html>

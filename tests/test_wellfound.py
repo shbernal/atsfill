@@ -1,5 +1,6 @@
 """The Wellfound adapter on tests/pages/wellfound: a posting whose Apply opens the dialog its
-GraphQL read describes, the sign-in and the job seeker sign-up."""
+GraphQL read describes, the sign-in, the job seeker sign-up and the account profile's two tabs,
+whose saves the routes hold as the system does."""
 
 import json
 from collections.abc import Generator
@@ -11,7 +12,16 @@ import pytest
 from atsfill.adapters import wellfound
 from atsfill.adapters.wellfound import Wellfound
 from atsfill.core import browser, matching, otp
-from atsfill.core.adapter import Blocked, NotTaken, Refused, SignedOut, SignUpDetails, Unsupported
+from atsfill.core.adapter import (
+    Blocked,
+    KeepsProfile,
+    NotTaken,
+    ProfileIncomplete,
+    Refused,
+    SignedOut,
+    SignUpDetails,
+    Unsupported,
+)
 from atsfill.core.results import Answer, FieldType
 
 PAGES = Path(__file__).parent / "pages/wellfound"
@@ -47,6 +57,36 @@ ANSWERS: dict[str, Answer] = {
 }
 
 
+ROLES = {"1": "Software Engineer", "2": "Backend Engineer"}
+TAGS = {
+    "1": ("Paris", "France"),
+    "2": ("Lyon", "France"),
+    "11": ("Python", None),
+    "12": ("Go", None),
+    "13": ("React.js", None),
+}
+COMPANIES = {"21": "Acme", "22": "Initech"}
+PROFILE_ANSWERS: dict[str, Answer] = {
+    "location": "Paris, France",
+    "primary_role": "Software Engineer",
+    "years_experience": "3 Years",
+    "skills": ["Python", "React.js"],
+    "bio": "Builds internal tools.",
+    "linkedin": "https://linkedin.com/in/jane-doe",
+    "work_company": "Acme",
+    "work_title": "Software Engineer",
+    "work_from": "01/2022",
+    "work_to": "06/2025",
+    "work_current": "No",
+    "work_description": "Built internal tools.",
+    "job_type": "Full-time Employee",
+    "us_authorized": "No",
+    "require_sponsorship": "Yes",
+    "remote": "Yes",
+    "job_status": "Closed to offers",
+}
+
+
 def job(**changes) -> dict:
     return {
         "id": "1001",
@@ -62,6 +102,14 @@ def job(**changes) -> dict:
     } | changes
 
 
+OFFER = """<div class="ReactModal__Content" style="position:fixed;inset:0;background:#fff">
+  We want to feature you to recruiters!
+  <button onclick="fetch('/graphql', {method: 'POST', headers: {'content-type': 'application/json'},
+    body: JSON.stringify({operationName: 'OfferStart'})})">Start my application</button>
+  <button onclick="this.parentNode.remove()">Skip for now — I'm not ready yet</button>
+</div><main"""
+
+
 class Site:
     """What the routes serve: the dialog's read, the send's answer, and what was sent."""
 
@@ -72,6 +120,11 @@ class Site:
         self.posting = (PAGES / "job.html").read_text()
         self.sent: list[dict] = []
         self.code_status = 200
+        self.candidate: dict = {}  # what the profile's mutations saved
+        self.operations: list[str] = []
+        self.answer_errors: list[dict] = []  # a mutation's answer
+        self.offer = False
+        self.enrolled = False
 
     def serve(self, route) -> None:
         request = route.request
@@ -103,14 +156,68 @@ class Site:
                 return route.fulfill(status=200 if ok else 422, json={"success": ok})
             case "/jobs/create-user":
                 return route.fulfill(json={"success": True})
+            case "/profile/edit" | "/profile/edit/preferences":
+                return route.fulfill(body=self.profile_page(), content_type="text/html")
             case _ if path.startswith("/jobs/1001"):
                 return route.fulfill(body=self.posting, content_type="text/html")
         route.fulfill(body="<!doctype html><title>Wellfound</title>", content_type="text/html")
+
+    def profile_page(self) -> str:
+        """The tabs' page around the Apollo state the server renders it from."""
+        saved = self.candidate
+        ref = lambda kind, key: {"__ref": f"{kind}:{key}"}  # noqa: E731
+        state = {"Candidate:7": saved | {
+            "__typename": "Candidate",
+            "primaryRole": [ROLES[saved["primaryRoleId"]]] if "primaryRoleId" in saved else [],
+            "basedInLocation": ref("NewTag", saved["place"]) if "place" in saved else None,
+            "skillTags": [ref("NewTag", t) for t in saved.get("skills", [])],
+            "startupRoleMetadata": [ref("StartupRoleMetadata", "5")] if "work" in saved else [],
+        }}  # fmt: skip
+        for tag, (name, parent) in TAGS.items():
+            state[f"NewTag:{tag}"] = {
+                "id": tag, "displayName": name, "parentLocationDisplayName": parent,
+            }  # fmt: skip
+        if "work" in saved:
+            work = saved["work"]
+            state["StartupRoleMetadata:5"] = work | {"id": "5", "startup": ref("Startup", "9")}
+            state["Startup:9"] = {"name": COMPANIES[work["startupId"]]}
+        data = {"props": {"pageProps": {"apolloState": {"data": state}}}}
+        page = (PAGES / "profile.html").read_text().replace("/*STATE*/", json.dumps(data))
+        if self.offer:
+            page = page.replace("<main", OFFER, 1)
+        return page
+
+    def _save_profile(self, operation: str, values: dict) -> None:
+        saved = self.candidate
+        match operation:
+            case "ProfileSavePrimaryLocation":
+                saved["place"] = values["primaryLocation"]
+            case "ProfileSaveSkills":
+                saved["skills"] = values["skillTags"]
+            case "ProfileSaveExperience":
+                entry = saved.get("work", {}) | {k: v for k, v in values.items() if v is not None}
+                saved["work"] = entry | {"endedAtMonth": values["endedAtMonth"]}
+                saved["work"] |= {"endedAtYear": values["endedAtYear"]}
+            case "SaveCandidateState":
+                # the system answers 200 and keeps none while a required field is missing
+                if "primaryRoleId" in saved and "usAuthorized" in saved:
+                    saved |= values
+            case _:
+                saved |= {k: v for k, v in values.items() if v is not None}
 
     def _graphql(self, route) -> None:
         sent = route.request.post_data_json
         if sent["operationName"] == "JobApplicationModal":
             return route.fulfill(json=self.modal)
+        if sent["operationName"] == "OfferStart":
+            self.enrolled = True
+            return route.fulfill(json={})
+        if sent["operationName"].startswith(("Profile", "SaveCandidate")):
+            self.operations.append(sent["operationName"])
+            if self.answer_errors:
+                return route.fulfill(json={"errors": self.answer_errors})
+            self._save_profile(sent["operationName"], sent["variables"]["input"])
+            return route.fulfill(json={"data": {}})
         self.sent.append(sent)
         headers = {"cf-mitigated": "challenge"} if self.challenged else {}
         route.fulfill(json=self.created, headers=headers)
@@ -226,7 +333,7 @@ def test_an_answer_without_the_job_applied_is_no_evidence(page, site):
         ({"offsiteListingUrl": "https://jobs.example.com/1"}, "external_step"),
         (
             {"currentUserQualificationReport": {"errors": ["MISSING_SKILLS"], "warnings": []}},
-            "unsupported_flow: profile_incomplete: the job needs the profile's skills",
+            "the job needs the profile's skills",
         ),
         (
             {"currentUserQualificationReport": {"errors": ["LOCATION_MISMATCH"], "warnings": []}},
@@ -238,13 +345,13 @@ def test_an_answer_without_the_job_applied_is_no_evidence(page, site):
 )
 def test_what_the_dialog_stops(page, site, changes, reason):
     site.modal = {"data": {"jobListing": job(**changes)}}
-    with pytest.raises(Unsupported, match=f"^{reason}"):
+    with pytest.raises((Unsupported, ProfileIncomplete), match=f"^{reason}"):
         opened(page)
 
 
-def test_an_unfinished_onboarding_sends_apply_to_the_profile(page, site):
+def test_an_unfinished_profile_is_the_profile_commands_to_fix(page, site):
     site.modal = {"redirect": "/profile/edit?job_listing_id=1001"}
-    with pytest.raises(Unsupported, match="^unsupported_flow: profile_incomplete"):
+    with pytest.raises(ProfileIncomplete, match="unfinished profile"):
         opened(page)
 
 
@@ -317,6 +424,112 @@ def test_too_many_otps_asked(signing_in, page, site):
         signing_in.sign_up(
             page, "new@example.com", "Right-Password-1", SignUpDetails(name="Jane Doe")
         )
+
+
+def run_profile(page, answers: dict[str, Answer]) -> list[str]:
+    """The core's walk of the steps, returning the ids that do not read back."""
+    adapter, wrong = Wellfound(), []
+    assert isinstance(adapter, KeepsProfile)
+    page.goto(adapter.profile_url(None))
+    for step in adapter.profile_steps(page):
+        assert adapter.open_step(page, step)
+        fields = adapter.profile_read(page)
+        mine = {f.id: answers[f.id] for f in fields if f.id in answers}
+        adapter.profile_fill(page, mine)
+        checks = matching.check(fields, mine, adapter.profile_read_back(page))
+        wrong += [c.field_id for c in checks if not c.match]
+        adapter.save(page)
+    return wrong
+
+
+def test_a_fresh_profile_is_saved_and_reads_back(page, site):
+    assert run_profile(page, PROFILE_ANSWERS) == []
+    assert site.candidate["candidateState"] == "closed"
+    assert site.operations[-1] == "SaveCandidateState"  # ignored while a required one is missing
+
+
+def test_a_profile_that_matches_saves_nothing(page, site):
+    run_profile(page, PROFILE_ANSWERS)
+    site.operations.clear()
+    assert run_profile(page, PROFILE_ANSWERS) == []
+    assert site.operations == []
+
+
+def test_changes_reach_saved_values(page, site):
+    run_profile(page, PROFILE_ANSWERS)
+    changed = PROFILE_ANSWERS | {
+        "location": "Lyon, France",
+        "primary_role": "Backend Engineer",
+        "skills": ["Python", "Go"],
+        "work_title": "Senior Engineer",
+        "work_from": "02/2021",
+        "work_current": "Yes",
+        "job_status": "Open to offers",
+    }
+    del changed["work_to"]
+    assert run_profile(page, changed) == []
+    assert site.candidate["work"]["current"] is True
+    assert site.candidate["work"]["endedAtYear"] is None
+    assert site.candidate["skills"] == ["11", "12"]
+
+
+def test_the_steps_list_the_saved_values(page, site):
+    run_profile(page, PROFILE_ANSWERS)
+    adapter = Wellfound()
+    adapter.open_step(page, "about")
+    fields = {f.id: f for f in adapter.profile_read(page)}
+    assert fields["primary_role"].options == list(ROLES.values())
+    assert fields["primary_role"].prefilled == "Software Engineer"
+    assert fields["work_to"].prefilled == "06/2025"
+    assert fields["skills"].prefilled == ["Python", "React.js"]
+    adapter.open_step(page, "preferences")
+    fields = {f.id: f for f in adapter.profile_read(page)}
+    assert fields["job_status"].prefilled == "Closed to offers"
+    assert fields["remote"].prefilled == "Yes"
+
+
+def test_a_remote_box_never_ticked_already_answers_no(page, site):
+    assert run_profile(page, {"remote": "No"}) == []
+    assert site.operations == []
+
+
+def test_a_status_the_system_ignored_does_not_read_back(page, site):
+    assert run_profile(page, {"job_status": "Closed to offers"}) == ["job_status"]
+
+
+def test_a_saved_entrys_company_cannot_change(page, site):
+    run_profile(page, PROFILE_ANSWERS)
+    with pytest.raises(Refused, match="^step_refused: about: work_company"):
+        run_profile(page, PROFILE_ANSWERS | {"work_company": "Initech"})
+
+
+def test_a_first_entry_needs_its_dates(page, site):
+    with pytest.raises(Refused, match="needs work_company, work_from, work_to"):
+        run_profile(page, {"work_title": "Software Engineer"})
+
+
+def test_a_name_the_search_does_not_list_is_not_taken(page, site, monkeypatch):
+    monkeypatch.setattr(wellfound, "SUGGEST_TIMEOUT_MS", 500)
+    with pytest.raises(NotTaken, match="'Cobol'"):
+        run_profile(page, {"skills": ["Cobol"]})
+
+
+def test_a_value_the_page_refuses_saves_nothing(page, site, monkeypatch):
+    monkeypatch.setattr(wellfound, "SAVE_TIMEOUT_MS", 500)
+    with pytest.raises(Refused, match="^step_refused: github: the page saved nothing"):
+        run_profile(page, {"github": "not a url"})
+
+
+def test_a_mutation_refused_stops_the_step(page, site):
+    site.answer_errors = [{"message": "Bio is too long"}]
+    with pytest.raises(Refused, match="^step_refused: bio: Bio is too long"):
+        run_profile(page, {"bio": "Too long."})
+
+
+def test_the_recruiter_offer_is_declined_never_started(page, site):
+    site.offer = True
+    assert run_profile(page, PROFILE_ANSWERS) == []
+    assert not site.enrolled
 
 
 def test_the_fixture_dialog_read_matches_a_live_shape():
