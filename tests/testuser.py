@@ -43,6 +43,8 @@ ANSWER_NO = re.compile(
     r"|preferred name",
     re.IGNORECASE,
 )
+# The Test user has one name: a page can require the fields a "Yes" adds and hide one of them.
+NO_OTHER_NAME = re.compile(r"preferred name", re.IGNORECASE)
 # An option that opens a field the form did not list: who referred or contacted, which other.
 OPENS_FIELD = re.compile(r"referr|contacted by|\bother\b", re.IGNORECASE)
 PAST_DATE = re.compile(r"(from|to|end)\b", re.IGNORECASE)
@@ -230,7 +232,7 @@ def _showing_most(
     usual for a sensitive question."""
     usual = answer(field, cv, picture, video)
     assert usual is not None
-    if SENSITIVE.search(field.label) or not field.options:
+    if SENSITIVE.search(field.label) or NO_OTHER_NAME.search(field.label) or not field.options:
         return usual
     if field.type is FieldType.CHOICE and field.default in field.options:
         usual = field.default  # the page's country decides the lists and fields read after it

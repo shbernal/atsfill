@@ -142,6 +142,7 @@
       "ui:placeholder": "Source",
       "data": [
         {"title": "Job Board", "value": "Job Board", "show": false, "child": [
+          {"key": "Choose one option", "value": "SOURCE-0", "show": true},
           {"key": "LinkedIn", "value": "SOURCE-1", "show": true},
           {"key": "Indeed", "value": "SOURCE-2", "show": true},
           {"key": "Retired board", "value": "SOURCE-9", "show": false}

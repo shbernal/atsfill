@@ -29,7 +29,7 @@ atsfill read <posting-url>
 One JSON file `{field_id: value}`, keyed by `id`, never by label:
 
 - `text`, `phone`, `choice`, `typeahead`: a string; a choice is one of its `options`, exactly.
-- `multi_choice`: a list of options.
+- `multi_choice`: a list of options; an empty list clears an optional field.
 - `date`: `YYYY-MM-DD`.
 - `url`: an absolute `http(s)` URL.
 - `file`: an absolute path.

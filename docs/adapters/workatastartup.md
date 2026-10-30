@@ -51,7 +51,7 @@ The profile is a wizard at `www.workatastartup.com/application/<step>`, read and
 | `work_from`, `work_to`, `education_from`, `education_to` | `text`, `MM/YYYY` | month and year selects named `<entry id>_start_date_month`; `work_to` shows while `work_current` is `No` |
 | `work_current` | `choice`, `Yes`/`No` | checkbox "I currently work here" |
 | `skills` | `multi_choice`, each `<skill>: Beginner\|Intermediate\|Advanced` | a react-select search, up to 10, a remove button and a rating radio group per skill |
-| `hidden_companies` | `multi_choice`, no options | "Are there YC companies you want to be hidden from?", marked `*` but saved empty: a downshift search of the YC directory by any part of the name ("Stripe" lists StrideQ, Simple Strips), a chip with a × button per pick. Each answer is searched and the result named exactly as it picked, `answer_not_taken` otherwise; a company the answer leaves out is removed. An empty answer, to clear the list, is not supported |
+| `hidden_companies` | `multi_choice`, no options | "Are there YC companies you want to be hidden from?", marked `*` but saved empty: a downshift search of the YC directory by any part of the name ("Stripe" lists StrideQ, Simple Strips), a chip with a × button per pick. Each answer is searched and the result named exactly as it picked, `answer_not_taken` otherwise; a company the answer leaves out is removed, so an empty answer clears the list |
 
 ## Reading and filling
 

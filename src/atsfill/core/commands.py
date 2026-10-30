@@ -426,7 +426,7 @@ def _fill(
             result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
             return result
         result.warnings = matching.knockouts(result.fields, answers)
-        adapter.fill(page, answers)
+        adapter.fill(page, matching.to_fill(result.fields, answers))
         _shown_as_listed(page, adapter, result, answers)
         if result.status is not Status.READY:
             return result

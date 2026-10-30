@@ -376,6 +376,19 @@ def test_the_yc_companies_to_be_hidden_from_are_searched_and_picked_by_name(page
     assert site.saved[-1]["profile"]["data"]["hidden_companies"] == ["Acme", "Initech"]
 
 
+def test_an_empty_answer_clears_the_yc_companies_to_be_hidden_from(page, site):
+    adapter = step(page, "personal")
+    fields = adapter.profile_read(page)
+    adapter.profile_fill(page, {"hidden_companies": ["Acme"]})
+    adapter.profile_fill(page, {"hidden_companies": []})
+    assert "hidden_companies" not in adapter.profile_read_back(page)
+    answers: dict[str, Answer] = {"hidden_companies": []}
+    assert matching.problems(fields, answers) == []
+    assert matching.check(fields, answers, adapter.profile_read_back(page))[0].match
+    adapter.save(page)
+    assert site.saved[-1]["profile"]["data"]["hidden_companies"] == []
+
+
 def test_a_company_the_search_does_not_name_exactly_is_not_taken(page, site):
     adapter = step(page, "personal")
     with pytest.raises(NotTaken, match="no suggestion for 'Acme Robo' in hidden_companies"):

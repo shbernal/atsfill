@@ -9,7 +9,7 @@ Fields are identified by a stable `id` from the form (the input's `name`, the sy
 - `text`, `phone`, `choice`, `typeahead`: a string, for a typeahead the text to type;
 - `url`: an absolute `http(s)` URL;
 - `date`: a string, `YYYY-MM-DD`, whatever the page displays;
-- `multi_choice`: a list of strings;
+- `multi_choice`: a list of strings, an empty list clearing the field; refused where the field is required;
 - `file`: an absolute path.
 
 A field missing from the map is left as the page has it, empty or prefilled by an account. A required field missing from the map refuses the command, unless the account prefilled it (`prefilled` in `read`, the profile's value). A value the page itself starts the field with, its `default`, answers nothing: the user gives the real answer.
@@ -36,7 +36,7 @@ The read-back is compared to the answers by field type:
 |---|---|
 | `text`, `url` | equal after trimming whitespace and Unicode normalization |
 | `date` | equal |
-| `choice`, `multi_choice` | each value equals one of the field's options |
+| `choice`, `multi_choice` | each value equals one of the field's options; an empty `multi_choice` answer, when the field reads back nothing |
 | `typeahead` | the picked suggestion starts with the answer's text, or holds its comma-separated parts in order ("Paris" or "Paris, France" for "Paris, Île-de-France, France") |
 | `file` | the base names are equal |
 | `phone` | the digits and the country are equal |
