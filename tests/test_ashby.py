@@ -15,6 +15,12 @@ PAGES = Path(__file__).parent / "pages/ashby"
 URL = "https://jobs.ashbyhq.com/acme/0b6c9f4e-1d1a-4c5e-9d43-7f0f3c1e2a10"
 SURVEY_RENDER = "survey-render"  # the id survey saves come back under, not the posting's
 UPLOAD = "https://jobs.ashbyhq.com/upload"  # Ashby hands out an S3 address
+# The field a "Yes" to `right` adds to the render, which the posting's form did not have.
+FOLLOW_UP = {
+    "isRequired": False,
+    "isHidden": None,
+    "field": {"path": "permit", "title": "Which permit do you hold?", "type": "String"},
+}
 
 
 class Ashby_API:
@@ -25,6 +31,8 @@ class Ashby_API:
 
     def render(self, form: dict) -> dict:
         render = copy.deepcopy(form)
+        if form is self.job["applicationForm"] and self.values.get("right") is True:
+            render["sections"][0]["fieldEntries"].append(copy.deepcopy(FOLLOW_UP))
         for section in render["sections"]:
             for entry in section["fieldEntries"]:
                 value = self.values.get(entry["field"]["path"])

@@ -286,11 +286,11 @@ class Ashby:
                 return labels.get(value, str(value))
 
     def _replace(self, render: dict[str, Any]) -> None:
-        """Puts a returned render in place of the form holding the same fields: a survey
-        answer returns the survey alone, under an id of its own."""
+        """Puts a returned render in place of the form sharing its fields: a survey answer
+        returns the survey alone, under an id of its own, and an answer can add a field."""
         paths = _paths(render)
         for i, form in enumerate(self._forms):
-            if _paths(form) == paths:
+            if _paths(form) & paths:
                 self._forms[i] = render
 
     def _on_request(self, request: Any) -> None:
