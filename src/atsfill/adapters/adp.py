@@ -167,9 +167,11 @@ class ADP:
         self._steps = [
             Step("Personal Information", PERSONAL[0][1], self._personal(page, transforms)),
             Step("Resume", "input[type=file]", [self._resume()]),
-            # A step that asks nothing has no box of its own: Next moves past it
-            Step("Questions", QUESTIONS if asked else "", asked),
         ]  # fmt: skip
+        # A wizard with nothing to ask has no Questions step; one that asks nothing the meta
+        # lists has no box of its own: Next moves past it
+        if asked or "Questions" in shown:
+            self._steps.append(Step("Questions", QUESTIONS if asked else "", asked))
         if "Voluntary Self-ID" in shown:
             fields = self._self_id(transforms, indicators)
             self._steps.append(Step("Voluntary Self-ID", "#vsidWhy, #vsidEthRace", fields))
