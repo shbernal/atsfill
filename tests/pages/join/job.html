@@ -20,6 +20,11 @@ const BASE = location.pathname.match(/^\/companies\/acme\/\d+/)[0];
 const DOCUMENTS = [{type: "CV", constraint: "REQUIRED"},
   {type: "COVER_LETTER", constraint: BASE.endsWith("/102") ? "REQUIRED" : "OPTIONAL"}];
 const STEPS = ["cv", "coverLetter", "review"];
+const ADVANCE_MS = 300;  // job 103: a clicked card moves the wizard on by itself, this much later
+const ADVANCES = BASE.endsWith("/103");
+const RENDER_MS = 300;  // job 104: a step shows after the URL changed, the step before stays
+const LATE = BASE.endsWith("/104");
+let rendering = false;  // meanwhile the step before's cards and Continue take no click
 let QUESTIONS = [];  // the job's, from its own query: a step each, `question-<position>`
 const asked = step => QUESTIONS.find(q => `question-${q.position}` === step);
 const state = {files: {}, answers: {}, month: new Date(2026, 0, 1)};
@@ -36,7 +41,9 @@ function footer(ready) {
 
 function go(step) {
   history.pushState({}, "", `${BASE}/apply/${step}`);
-  render();
+  if (!LATE) return render();
+  rendering = true;
+  setTimeout(() => { rendering = false; render(); }, RENDER_MS);
 }
 
 function upload(step) {
@@ -133,7 +140,7 @@ app.addEventListener("change", e => {
 });
 
 app.addEventListener("input", e => {
-  if (e.target.id?.startsWith("screeningQuestions.answer-")) {
+  if (e.target.id?.startsWith("screeningQuestions.answer-") && !rendering) {
     state.answers[Number(e.target.id.split("-").pop())] = e.target.value;
     document.querySelectorAll("footer button:not([hidden])")[1].disabled = !e.target.value;
   }
@@ -142,13 +149,17 @@ app.addEventListener("input", e => {
 app.addEventListener("click", async e => {
   const step = location.pathname.split("/apply/")[1];
   const target = e.target.closest("button, [role=radio], [data-day]");
-  if (!target) return;
+  if (!target || rendering) return;
   const q = asked(step);
   if (target.dataset.testid === "ApplyButton") {
     go("authentication");
   } else if (target.getAttribute("role") === "radio") {
     state.answers[q.id] = target.dataset.option;
     render();
+    if (ADVANCES) {
+      const next = STEPS[STEPS.indexOf(step) + 1];
+      setTimeout(() => { if (location.pathname.endsWith(`/${step}`)) go(next); }, ADVANCE_MS);
+    }
   } else if (target.dataset.day) {
     state.answers[q.id] = target.dataset.day;
     render();
