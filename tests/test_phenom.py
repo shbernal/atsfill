@@ -193,11 +193,10 @@ def test_a_multi_page_wizard_reads_the_configuration_its_renderer_loads(page):
     form = f"{phenom.CDN}/ACMEUS/schema/apply/multipage/applyForm.json"
     bundle = f"{phenom.CDN}/ACMEUS/bundles/apply/Messages_en_us.json"
     messages = (PAGES / "Messages_en_us.json").read_bytes()
-    serve = lambda body: (
-        lambda route: route.fulfill(  # noqa: E731
-            body=body, headers={"Access-Control-Allow-Origin": "*"}
-        )
-    )
+
+    def serve(body):
+        return lambda route: route.fulfill(body=body, headers={"Access-Control-Allow-Origin": "*"})
+
     page.route(APPLY, serve(html))
     page.route(form, serve(json.dumps(config)))
     page.route(bundle, serve(messages))
