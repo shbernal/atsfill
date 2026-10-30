@@ -142,6 +142,43 @@ def test_a_question_step_is_numbered_by_its_position(page, files, monkeypatch):
     assert [c.field_id for c in checks if not c.match] == []
 
 
+def test_an_answer_goes_to_its_own_step_not_the_one_still_shown(page, files, monkeypatch):
+    """The URL changes before the step renders, the outgoing step's input still on the page."""
+    texts = [{"id": 11 + i, "question": f"Question {i}?", "options": None, "type": "TEXT",
+              "isRequired": True, "position": 1001 + i} for i in range(3)]  # fmt: skip
+    monkeypatch.setattr(f"{__name__}.QUESTIONS", texts)
+    adapter = Join()
+    page.goto(JOB)
+    adapter.browser_read(page)
+    adapter.fill(page, {"cv": files[0], "question.11": "a", "question.12": "b", "question.13": "c"})
+    assert page.url.endswith("/apply/review")
+    assert page.evaluate(join._REVIEW)[-3:] == [
+        ["Question 0?", "a"], ["Question 1?", "b"], ["Question 2?", "c"]]  # fmt: skip
+
+
+def test_a_stored_file_is_replaced_by_the_answer(page, files):
+    """The account keeps the CV of an application it sent: the step shows it, with no input."""
+    adapter = Join()
+    page.goto("https://join.com/companies/acme/104-ai-engineer")
+    fields = adapter.browser_read(page)
+    answers = {"cv": files[0], "question.1": "Fluent", "question.2": "Yes",
+               "question.3": "2026-03-15", "question.4": "50000"}  # fmt: skip
+    adapter.fill(page, answers)
+    read_back = adapter.read_back(page)
+    assert read_back["cv"] == "CV Ada.pdf"
+    assert [c.field_id for c in matching.check(fields, answers, read_back) if not c.match] == []
+
+
+def test_a_questions_query_without_data_says_what_it_answered(page):
+    answer = {"data": None, "errors": [{"message": "Too many requests"}]}
+    questions = "**/candidate-api/graphql?operationName=JobScreeningQuestions"
+    page.context.route(questions, lambda route: route.fulfill(json=answer))
+    page.goto(JOB)
+    with pytest.raises(RuntimeError, match="Too many requests"):
+        Join().browser_read(page)
+    page.context.unroute(questions)
+
+
 def test_a_required_step_left_unanswered_is_not_taken(opened, page):
     adapter, _ = opened
     with pytest.raises(join.NotTaken, match="cv step keeps Continue disabled"):

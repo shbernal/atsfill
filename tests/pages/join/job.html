@@ -22,7 +22,8 @@ const DOCUMENTS = [{type: "CV", constraint: "REQUIRED"},
 const STEPS = ["cv", "coverLetter", "review"];
 let QUESTIONS = [];  // the job's, from its own query: a step each, `question-<position>`
 const asked = step => QUESTIONS.find(q => `question-${q.position}` === step);
-const state = {files: {}, answers: {}, month: new Date(2026, 0, 1)};
+// job 104: the account keeps the CV of an application it sent
+const state = {files: BASE.endsWith("/104") ? {cv: "old.pdf"} : {}, answers: {}, month: new Date(2026, 0, 1)};
 const app = document.getElementById("app");
 
 function button(label, attrs = "") {
@@ -36,12 +37,12 @@ function footer(ready) {
 
 function go(step) {
   history.pushState({}, "", `${BASE}/apply/${step}`);
-  render();
+  setTimeout(render, 100);  // the URL changes first, the step renders after
 }
 
 function upload(step) {
-  return `<h2>Upload</h2>` + (state.files[step]
-    ? `<p>Ada Placeholder</p>${button("Remove file")}`
+  return `<h2>Upload your ${step}</h2>` + (state.files[step]
+    ? `<p>Ada Placeholder</p><button type="button" data-remove><svg name="TrashIcon"></svg>Remove file</button>`
     : `<input type="file" accept=".pdf"><input type="file" accept=".pdf" hidden>`);
 }
 
@@ -67,6 +68,8 @@ function question(q) {
       `<div><p>${String.fromCharCode(97 + i)}</p></div><p>${o}</p></div>`).join("");
   } else if (q.type === "DATE") {
     body += calendar(q);
+  } else if (q.type === "TEXT") {
+    body += `<textarea id="screeningQuestions.answer-${q.id}" name="screeningQuestions.answer-${q.id}">${answer ?? ""}</textarea>`;
   } else {
     body += `<input type="number" id="screeningQuestions.answer-${q.id}" name="screeningQuestions.answer-${q.id}" value="${answer ?? ""}">`;
   }
@@ -146,6 +149,9 @@ app.addEventListener("click", async e => {
   const q = asked(step);
   if (target.dataset.testid === "ApplyButton") {
     go("authentication");
+  } else if (target.dataset.remove !== undefined) {
+    delete state.files[step];
+    render();
   } else if (target.getAttribute("role") === "radio") {
     state.answers[q.id] = target.dataset.option;
     render();

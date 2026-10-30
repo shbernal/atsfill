@@ -12,6 +12,7 @@ import json
 import re
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import replace
 from typing import Any
 from urllib.parse import urlsplit
@@ -38,6 +39,7 @@ UNVERIFIED = "/auth/candidates/unverified-email"
 PROFILE = f"https://{HOST}/talent/me?edit=profile"
 GENERAL = "general"  # the account profile's one profile step
 STEP_TIMEOUT_MS = 20_000
+VIEW_TIMEOUT_MS = 5_000  # the step renders after the URL changes
 PROFILE_TIMEOUT_MS = 20_000
 SAVE_TIMEOUT_MS = 20_000
 MENU_TIMEOUT_MS = 5_000
@@ -76,6 +78,7 @@ LACKS = {
     "candidate.phoneNumber": "a phone",
 }
 PDF = [".pdf", "application/pdf"]
+REMOVE_FILE = "button:has(svg[name=TrashIcon])"  # a stored file's Remove file, in any language
 
 # The profile form's controls, by its field ids.
 TEXTS = {
@@ -111,6 +114,11 @@ _SHOWN = """root => {
 _EMPTY = (
     """ids => ids.filter(id => { const e = document.getElementById(id); return e && !e.value; })"""
 )
+
+
+# Whether the outgoing step's heading is gone.
+_LEFT = """shown => ![...document.querySelectorAll("h2")].some(
+  h => h.checkVisibility() && h.textContent === shown)"""
 
 
 class Join:
@@ -200,7 +208,10 @@ class Join:
             "query": QUESTIONS,
         }
         answered = page.evaluate(_FETCH, [f"{GRAPHQL}?operationName=JobScreeningQuestions", body])
-        questions = answered["data"]["jobScreeningQuestions"]["questions"]
+        listed = (answered.get("data") or {}).get("jobScreeningQuestions")
+        if not listed:
+            raise RuntimeError(f"JobScreeningQuestions answered {answered.get('errors')}")
+        questions = listed["questions"]
         self._questions = sorted(questions, key=lambda q: q.get("position") or 0)
         browser.click(page.locator("[data-testid=ApplyButton]").locator("visible=true").first)
         page.wait_for_url("**/apply/**", timeout=STEP_TIMEOUT_MS)
@@ -368,7 +379,11 @@ class Join:
     def _file(self, page: Page, field_id: str, answer: Answer | None) -> None:
         if not isinstance(answer, str):
             return
-        page.locator("input[type=file]").first.set_input_files(answer)
+        upload, stored = page.locator("input[type=file]"), page.locator(REMOVE_FILE)
+        upload.or_(stored).first.wait_for(state="attached", timeout=STEP_TIMEOUT_MS)
+        if stored.count():  # a file an earlier run left on the account: the answer replaces it
+            stored.click()
+        upload.first.set_input_files(answer)
         # once stored, the step shows the file in place of its input
         page.wait_for_function(
             "() => !document.querySelector('input[type=file]')", timeout=UPLOAD_TIMEOUT_MS
@@ -426,12 +441,16 @@ def _next(page: Page, step: str) -> None:
         page.wait_for_timeout(POLL_MS)
     if button.is_disabled():
         raise NotTaken(f"the {step} step keeps Continue disabled: a required answer is missing")
-    on = page.url
+    on, heading = page.url, page.locator("h2:visible")
+    shown = heading.first.text_content() if heading.count() else None
     try:
         button.click(timeout=STEP_TIMEOUT_MS)
         page.wait_for_url(lambda url: url != on, timeout=STEP_TIMEOUT_MS)
     except Timeout:
         raise RuntimeError(f"Continue on the {step} step went nowhere") from None
+    # the URL changes before the step renders; two steps can share a heading, so it is no error
+    with suppress(Timeout):
+        page.wait_for_function(_LEFT, arg=shown, timeout=VIEW_TIMEOUT_MS)
 
 
 def _question(q: dict[str, Any]) -> Field:
