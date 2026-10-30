@@ -48,6 +48,10 @@ SUBMIT_TIMEOUT_MS = 60_000
 BUTTON_TIMEOUT_MS = 2_000
 OPENING_TIMEOUT_S = 20
 CONTINUE_TIMEOUT_S = 15
+ADVANCE_TIMEOUT_MS = 3_000  # how long a clicked card takes to move the wizard on by itself
+INPUT_TIMEOUT_MS = 3_000  # how long a step takes to show its own input
+CLICKS = 3  # a click on a step still rendering is lost, on a card or on Continue
+LEAVE_TIMEOUT_MS = 5_000  # how long Continue takes to leave a step, per click
 POLL_MS = 250
 MAX_STEPS = 60
 MAX_MONTHS = 36  # how far the calendar is paged for a date
@@ -106,6 +110,17 @@ _SHOWN = """root => {
   const p = [...root.querySelectorAll("p")].find(p => !p.closest("[role=option]"));
   return p ? p.textContent.trim() : "";
 }"""
+
+# Continue, clicked in one go with the check that the wizard is still on the step: the footer's
+# last button on `review` is Confirm & apply, the send, and a step can leave on its own.
+_CONTINUE = """(button, step) => {
+  const on = location.pathname.replace(/\\/$/, "").split("/").pop() === step;
+  if (!on || button.type === "submit") return false;
+  button.click();
+  return true;
+}"""
+
+_CHECKED = """cards => cards.map(card => card.getAttribute("aria-checked") === "true")"""
 
 # The ids of the inputs that are empty, of those given.
 _EMPTY = (
@@ -387,10 +402,10 @@ class Join:
                 if isinstance(answer, str):
                     if answer not in options or options.index(answer) >= len(texts):
                         raise NotTaken(f"no option {answer!r} in {field_id}: {texts}")
-                    card = cards.nth(options.index(answer))
-                    if card.get_attribute("aria-checked") != "true":
-                        card.click()
-                checked = [c.get_attribute("aria-checked") == "true" for c in cards.all()]
+                    if _take(page, cards, options.index(answer)):
+                        self._seen[field_id] = answer  # the wizard took it and moved on
+                        return
+                checked = cards.evaluate_all(_CHECKED)
                 if True in checked and checked.index(True) < len(options):
                     self._seen[field_id] = options[checked.index(True)]
             case "DATE":
@@ -402,7 +417,9 @@ class Join:
             case _ if isinstance(answer, str):
                 name = f"screeningQuestions.answer-{question['id']}"
                 target = page.locator(f'[name="{name}"], [id="{name}"], #salaryExpectationAmount')
-                if not target.count():
+                try:  # the step before's input stays a moment after the URL has changed
+                    target.first.wait_for(timeout=INPUT_TIMEOUT_MS)
+                except Timeout:
                     target = page.locator(
                         "textarea:visible, input:visible:not([type=file]):not([role=combobox])"
                     )
@@ -419,19 +436,41 @@ def _continue(page: Page) -> Locator:
     return page.locator("button:visible:has(> [data-button-label])").last
 
 
+def _take(page: Page, cards: Locator, index: int) -> bool:
+    """Clicks a card until it is checked, and says whether the wizard then moved on by itself."""
+    on = page.url
+    for _ in range(CLICKS):
+        if cards.evaluate_all(_CHECKED)[index]:
+            break
+        cards.nth(index).click()
+        try:
+            page.wait_for_url(lambda url: url != on, timeout=ADVANCE_TIMEOUT_MS)
+        except Timeout:
+            continue
+        return True
+    return False
+
+
 def _next(page: Page, step: str) -> None:
+    """Leaves the step with Continue, unless the wizard has already left it."""
     button = _continue(page)
     deadline = time.monotonic() + CONTINUE_TIMEOUT_S  # an upload enables it once stored
-    while button.is_disabled() and time.monotonic() < deadline:
+    while _step(page) == step and button.is_disabled() and time.monotonic() < deadline:
         page.wait_for_timeout(POLL_MS)
+    if _step(page) != step:
+        return
     if button.is_disabled():
         raise NotTaken(f"the {step} step keeps Continue disabled: a required answer is missing")
     on = page.url
-    try:
-        button.click(timeout=STEP_TIMEOUT_MS)
-        page.wait_for_url(lambda url: url != on, timeout=STEP_TIMEOUT_MS)
-    except Timeout:
-        raise RuntimeError(f"Continue on the {step} step went nowhere") from None
+    for _ in range(CLICKS):
+        try:
+            if not button.evaluate(_CONTINUE, step, timeout=STEP_TIMEOUT_MS):
+                return  # the wizard left the step meanwhile
+            page.wait_for_url(lambda url: url != on, timeout=LEAVE_TIMEOUT_MS)
+        except Timeout:
+            continue
+        return
+    raise RuntimeError(f"Continue on the {step} step went nowhere")
 
 
 def _question(q: dict[str, Any]) -> Field:

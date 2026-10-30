@@ -2,6 +2,7 @@
 the account profile's form."""
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -13,9 +14,10 @@ from atsfill.core.results import Answer, FieldType
 
 PAGES = Path(__file__).parent / "pages/join"
 JOB = "https://join.com/companies/acme/101-ai-engineer"
+ADVANCING = "https://join.com/companies/acme/103-ai-engineer"  # a clicked card moves on by itself
 TAKEN = "ada@example.com"  # the account that exists, its password `Right-Password-1`
 UNCONFIRMED = "new@example.com"
-QUESTIONS = [
+QUESTIONS: list[dict[str, Any]] = [
     {"id": 1, "question": "Your level of English?", "options": ["None", "Fluent"],
      "type": "SINGLE_CHOICE", "isRequired": True, "position": 1},
     {"id": 2, "question": "Do you hold a work permit?", "options": None, "type": "BOOLEAN",
@@ -140,6 +142,49 @@ def test_a_question_step_is_numbered_by_its_position(page, files, monkeypatch):
     assert page.url.endswith("/apply/review")
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [c.field_id for c in checks if not c.match] == []
+
+
+def test_a_card_that_moves_the_wizard_on_is_not_followed_by_continue(page, files):
+    adapter = Join()
+    page.goto(ADVANCING)
+    fields = adapter.browser_read(page)
+    answers = {"cv": files[0], "question.1": "Fluent", "question.2": "No",
+               "question.3": "2026-01-20", "question.4": "50000"}  # fmt: skip
+    adapter.fill(page, answers)
+    assert page.url.endswith("/apply/review")
+    checks = matching.check(fields, answers, adapter.read_back(page))
+    assert [c.field_id for c in checks if not c.match] == []
+
+
+def test_an_answer_given_while_a_step_renders_is_given_again(page, files, monkeypatch):
+    """The URL changes first: a card clicked then is lost, an input then is the last step's."""
+    twice = [{**q, "id": q["id"] + 10, "position": q["position"] + 10} for q in QUESTIONS]
+    asked = [QUESTIONS[0], twice[0], QUESTIONS[3], twice[3]]
+    asked = [{**q, "position": i + 1} for i, q in enumerate(asked)]
+    monkeypatch.setattr(f"{__name__}.QUESTIONS", asked)
+    adapter = Join()
+    page.goto("https://join.com/companies/acme/104-ai-engineer")
+    fields = adapter.browser_read(page)
+    answers = {"cv": files[0], "question.1": "Fluent", "question.11": "None",
+               "question.4": "50000", "question.14": "60000"}  # fmt: skip
+    adapter.fill(page, answers)
+    assert page.url.endswith("/apply/review")
+    checks = matching.check(fields, answers, adapter.read_back(page))
+    assert [c.field_id for c in checks if not c.match] == []
+
+
+def test_a_late_continue_never_presses_confirm(page, files, monkeypatch):
+    """A last card leaves the wizard on `review`, whose footer's last button is the send."""
+    monkeypatch.setattr(f"{__name__}.QUESTIONS", QUESTIONS[:2])
+    adapter = Join()
+    page.goto(ADVANCING)
+    adapter.browser_read(page)
+    adapter.fill(page, {"cv": files[0], "question.1": "Fluent", "question.2": "Yes"})
+    assert page.url.endswith("/apply/review")
+    join._next(page, "question-2")
+    assert page.get_by_text("Sent").count() == 0
+    assert page.locator("button[type=submit]").evaluate(join._CONTINUE, "review") is False
+    assert page.get_by_text("Sent").count() == 0
 
 
 def test_a_required_step_left_unanswered_is_not_taken(opened, page):
