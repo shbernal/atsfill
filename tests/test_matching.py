@@ -4,8 +4,8 @@ import pytest
 
 from atsfill.core import attempts
 from atsfill.core.conditions import Form, faults
-from atsfill.core.matching import check, knockouts, matches, problems
-from atsfill.core.results import AllOf, AnyOf, Field, FieldType, Is, OptionSet, Status
+from atsfill.core.matching import check, knockouts, matches, problems, to_fill
+from atsfill.core.results import AllOf, Answer, AnyOf, Field, FieldType, Is, OptionSet, Status
 
 LEVELS = ["Native-level fluency", "Full professional fluency"]
 
@@ -40,10 +40,49 @@ def field(kind: FieldType, options: list[str] | None = None, required: bool = Tr
         (FieldType.PHONE, None, "+33 6 12 34 56 78", "+44612345678", False),
         (FieldType.URL, None, "https://example.com ", "https://example.com", True),
         (FieldType.TEXT, None, "a", None, False),
+        (FieldType.MULTI_CHOICE, LEVELS, [], [], True),
+        (FieldType.MULTI_CHOICE, LEVELS, [], None, True),  # a read-back drops empty values
+        (FieldType.MULTI_CHOICE, LEVELS, [], "", True),
+        (FieldType.MULTI_CHOICE, LEVELS, [], LEVELS[:1], False),
+        (FieldType.MULTI_CHOICE, LEVELS, LEVELS[:1], None, False),
     ],
 )
 def test_read_back_matching(kind, options, answer, read_back, match):
     assert matches(field(kind, options), answer, read_back) is match
+
+
+def test_an_empty_list_clears_an_optional_multi_choice():
+    optional = field(FieldType.MULTI_CHOICE, LEVELS, required=False)
+    assert problems([optional], {"f": []}) == []
+    assert problems([replace(optional, options=None)], {"f": []}) == []
+
+
+@pytest.mark.parametrize(
+    "required",
+    [
+        field(FieldType.MULTI_CHOICE, LEVELS),
+        replace(field(FieldType.MULTI_CHOICE, LEVELS), prefilled=LEVELS[:1]),
+        replace(
+            field(FieldType.MULTI_CHOICE, LEVELS, required=False),
+            required_when=Is("c", ["Yes"]),
+        ),
+    ],
+)
+def test_an_empty_list_does_not_answer_a_required_multi_choice(required):
+    parent = Field("c", "C", FieldType.CHOICE, False, ["Yes", "No"])
+    assert problems([parent, required], {"c": "Yes", "f": []}) == [
+        "f: required, so an empty list does not answer it"
+    ]
+
+
+def test_an_empty_list_with_nothing_to_clear_is_not_filled():
+    empty = field(FieldType.MULTI_CHOICE, LEVELS, required=False)
+    held = replace(empty, id="held", prefilled=LEVELS[:1])
+    default = replace(empty, id="default", default=LEVELS[:1])
+    answers: dict[str, Answer] = {"f": [], "held": [], "default": [], "other": LEVELS}
+    other = replace(empty, id="other")
+    fields = [empty, held, default, other]
+    assert to_fill(fields, answers) == {"held": [], "default": [], "other": LEVELS}
 
 
 def test_problems_before_filling():
