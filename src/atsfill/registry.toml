@@ -47,6 +47,14 @@ hosting = ["hosted"]
 adapter = "wttj"
 scope = { is = "supported", date = 2026-10-24, commit = "90c58c3" }
 
+[wellfound]
+kind = "board"
+share = 0.0003
+account = "to_send"
+hosting = ["hosted"]
+adapter = "wellfound"
+scope = { is = "supported", date = 2026-10-30, commit = "c6349e6" }
+
 [workatastartup]
 kind = "board"
 share = 0.0008

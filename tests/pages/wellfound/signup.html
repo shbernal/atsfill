@@ -1,0 +1,49 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Sign up | Wellfound</title>
+<!-- wellfound.com/jobs/signup, the job seeker sign-up. Continue posts the details to
+/jobs/signup/email-verification-code, which emails a six-digit code; the code is verified as soon
+as six digits are typed, then Create account posts /jobs/create-user and goes to the
+onboarding. -->
+<form class="js-auth-signup" id="new_user" action="/jobs/create-user" method="post">
+  <div id="details">
+    <input type="text" name="user[name]" id="user_name" data-signup-field="name" autocomplete="name">
+    <input type="email" name="username" id="user_email" data-signup-field="email" autocomplete="email">
+    <input type="password" name="password" id="user_password" data-signup-field="password" data-min-length="8" data-max-length="128">
+    <p id="user_email_error"></p>
+    <input type="submit" name="commit" value="Continue">
+  </div>
+  <div id="verify" hidden>
+    <input id="email_verification_code" name="email_verification_code" inputmode="numeric" pattern="[0-9]{6}" type="text">
+    <p id="email_verification_status" role="status"></p>
+    <input type="submit" name="commit" value="Create account" disabled>
+  </div>
+</form>
+<script>
+const form = document.getElementById("new_user");
+const value = name => form.querySelector(`[data-signup-field=${name}]`).value;
+const post = (path, body) => fetch(path, {
+  method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
+});
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  if (document.getElementById("verify").hidden) {
+    const r = await post("/jobs/signup/email-verification-code", {email: value("email")});
+    if (!r.ok) {
+      const said = await r.json().catch(() => ({}));
+      document.getElementById("user_email_error").textContent = said.error ?? "";
+      return;
+    }
+    document.getElementById("verify").hidden = false;
+    return;
+  }
+  const r = await post("/jobs/create-user", {name: value("name"), email: value("email")});
+  if (r.ok) location.href = "/jobs/onboarding/extended_profile";
+});
+const code = document.getElementById("email_verification_code");
+code.addEventListener("input", async () => {
+  if (code.value.length !== 6) return;
+  const r = await post("/jobs/signup/email-verification-code/verify", {code: code.value});
+  form.querySelector("[value='Create account']").disabled = !r.ok;
+});
+</script>

@@ -1,0 +1,11 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Log In | Wellfound</title>
+<!-- wellfound.com/login: a form posted to /login, which redirects an account and shows the form
+again with "Email or password is incorrect" otherwise. -->
+<form id="new_user" action="/login" accept-charset="UTF-8" method="post">
+  <input type="hidden" name="login_only" value="true">
+  <label>Email <input autocapitalize="none" name="username" autocomplete="email" type="email" id="user_email"></label>
+  <label>Password <input name="password" autocomplete="current-password" type="password" id="user_password"></label>
+  <input type="submit" name="commit" value="Log in">
+</form>

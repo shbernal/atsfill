@@ -30,6 +30,7 @@ from atsfill.adapters.successfactors import SuccessFactors
 from atsfill.adapters.teamtailor import Teamtailor
 from atsfill.adapters.ukg import UKG
 from atsfill.adapters.welcomekit import WelcomeKit
+from atsfill.adapters.wellfound import Wellfound
 from atsfill.adapters.werecruit import WeRecruit
 from atsfill.adapters.workable import Workable
 from atsfill.adapters.workatastartup import WorkAtAStartup
@@ -47,6 +48,7 @@ def adapters() -> list[Adapter]:
         Greenhouse(),
         WelcomeToTheJungle(),
         WorkAtAStartup(),
+        Wellfound(),
         Join(),
         JobAffinity(),
         WelcomeKit(),
