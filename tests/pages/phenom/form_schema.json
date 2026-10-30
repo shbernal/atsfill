@@ -7,6 +7,7 @@
       "profileHeading": {"title": "{{apply.label.profile}}", "type": "string"},
       "jobSeqNo": {"type": "string"},
       "locale": {"type": "string"},
+      "jobCountry": {"title": "jobCountry", "type": "string"},
       "resumeName": {"type": "string"},
       "firstName": {"title": "{{apply.label.firstName}}", "type": "string"},
       "country": {
@@ -87,6 +88,22 @@
         "if": {"properties": {"locale": {"const": "fr_fr"}}, "required": ["locale"]},
         "then": {"properties": {"frenchConsent": {"title": "Consentement", "type": "boolean"}}},
         "__event_name": "show"
+      },
+      {
+        "if": {"anyOf": [
+          {"properties": {"jobCountry": {"matchesAnyOf": "United States"}}, "required": ["jobCountry"]},
+          {"properties": {"jobCountry": {"matchesAnyOf": "USA"}}, "required": ["jobCountry"]}
+        ]},
+        "then": {"properties": {"usSponsorship": {"title": "Will you require sponsorship?", "type": "boolean"}}, "required": ["usSponsorship"]},
+        "__event_name": "show"
+      },
+      {
+        "if": {"anyOf": [
+          {"properties": {"jobCountry": {"matchesAnyOf": "United Kingdom"}}, "required": ["jobCountry"]},
+          {"properties": {"jobCountry": {"matchesAnyOf": "GBR"}}, "required": ["jobCountry"]}
+        ]},
+        "then": {"properties": {"ukBackground": {"title": "Community Background", "type": "string"}}, "required": ["ukBackground"]},
+        "__event_name": "show"
       }
     ]
   },
@@ -94,12 +111,14 @@
     "ui:order": [
       "profileHeading", "firstName", "country", "state", "phoneWidget", "sourceType",
       "applicantSource", "nationality", "emailAgreement", "smsOptIn", "summary", "frenchConsent",
-      "authorized", "contactBy", "startDate", "experienceData", "educationData", "certificates",
-      "jsqData", "additionalJsqData", "yearsOfExperience", "comments", "custAgreement", "eeoPoster", "*"
+      "authorized", "usSponsorship", "ukBackground", "contactBy", "startDate", "experienceData",
+      "educationData", "certificates", "jsqData", "additionalJsqData", "yearsOfExperience", "comments",
+      "custAgreement", "eeoPoster", "*"
     ],
     "profileHeading": {"htmlType": "markdown", "ui:widget": "markdown", "nav": "{{apply.breadcumb.info}}"},
     "jobSeqNo": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}"},
     "locale": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}", "preFillWindowObj": "phApp.locale"},
+    "jobCountry": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}", "preFillWindowObj": "phApp.ddo.response.response.jobCountry"},
     "resumeName": {"htmlType": "hidden", "ui:widget": "hidden", "nav": "{{apply.breadcumb.info}}"},
     "firstName": {"htmlType": "text", "nav": "{{apply.breadcumb.info}}"},
     "country": {
@@ -138,6 +157,8 @@
     "summary": {"htmlType": "textarea", "ui:widget": "textarea", "nav": "{{apply.breadcumb.info}}"},
     "frenchConsent": {"htmlType": "checkbox", "nav": "{{apply.breadcumb.info}}"},
     "authorized": {"htmlType": "radio", "ui:widget": "radio", "nav": "workAndEducation", "ui:required": true},
+    "usSponsorship": {"htmlType": "radio", "ui:widget": "radio", "nav": "workAndEducation"},
+    "ukBackground": {"htmlType": "text", "nav": "workAndEducation"},
     "contactBy": {"htmlType": "multipleChoice", "ui:widget": "checkboxes", "nav": "workAndEducation"},
     "startDate": {"htmlType": "calendar", "ui:widget": "calendar", "nav": "workAndEducation"},
     "experienceData": {

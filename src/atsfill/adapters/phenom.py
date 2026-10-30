@@ -1088,6 +1088,9 @@ class _Config:
 
     def test(self, name: str, test: dict, path: str, props: dict) -> bool | Condition:
         values = [test["const"]] if "const" in test else test.get("enum")
+        if "matchesAnyOf" in test:  # Phenom's own keyword, one value a part of an `anyOf`
+            held = test["matchesAnyOf"]
+            values = held if isinstance(held, list) else [held]
         if name == "resumeName":  # `isNotEmpty`: a resume given
             return Is(RESUME_ID)
         if (
