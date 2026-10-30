@@ -22,7 +22,7 @@ The wizard is one page, its steps in a bar, Next (`#ja_sv_cw_next_footer_btn`) m
 
 `…/staffing/v1/job-application.submit/meta?cid=<employer>&ccId=<n>` describes it, the questionnaire only with the posting's `jobId` in a `requisitionoid` header: `data.control.questionnaire.questions` (each `questionID`, `questionText`, `answerTypeCode`, `requiredIndicator`, `answerOptions` of `answerID` and `answerValue`), `data.control.attestations` (the text to sign), `data.control.customIndicators` (`VSID`, `GENDER`, `RACE`, `VSID_VeteranEnabledIndicator`, `VSID_DisabilityEnabledIndicator`: which Self-ID questions show), and under `meta["/data/transforms"]` each profile path's `optional`, `hidden` and code list (states as `US-Illinois`, currencies, the self-ID's codes).
 
-Every employer of the 16 showed the same steps: Personal Information, Resume, Questions, Voluntary Self-ID (14), Review Your Application, Self-Attest & Submit.
+Every employer of the 16 showed the same steps: Personal Information, Resume, Questions, Voluntary Self-ID (14), Review Your Application, Self-Attest & Submit. A posting with no questionnaire, and the desired pay, the referral and the comment hidden, has no Questions step: Resume goes to the next one (1 employer).
 
 | Step | Field | Type | Rendering | Seen on |
 |---|---|---|---|---|
@@ -49,7 +49,7 @@ Every employer of the 16 showed the same steps: Personal Information, Resume, Qu
 | | veteran, disability | `choice` | `sdf-radio-group`s whose radios' values are the meta's codes (`Y`, `N`, `D`), their labels the meta's but for a period | where the indicators enable them |
 | Self-Attest & Submit | the attestation | `choice` (Yes, No) | the employer's text, then "Yes, I agree to sign electronically." (`input[name=self_att_agree_chk]`, hidden, its label clicked) | 16 |
 
-- The read opens the wizard and goes back to its first step: Personal Information from the page, each box required where its label carries an asterisk; the questionnaire, the desired pay, the comment, Voluntary Self-ID and the attestation from the meta. A question of another type is listed unfillable.
+- The read opens the wizard and goes back to its first step: Personal Information from the page, each box required where its label carries an asterisk; which steps follow from the step bar; the questionnaire, the desired pay, the comment, Voluntary Self-ID and the attestation from the meta. A question of another type is listed unfillable.
 - The fill answers each step and Next, up to the attestation, which it agrees to; the read-back is each step's values before its Next, an amount as typed.
 
 ## Known gaps

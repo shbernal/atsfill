@@ -272,6 +272,22 @@ def test_a_fixed_dollar_reads_back_as_the_currency(signed_in, monkeypatch, resum
     assert adapter.read_back(signed_in)["pay.currency"] == "United States Dollar ( USD )"
 
 
+def test_a_wizard_with_nothing_to_ask_goes_from_the_resume_to_the_review(
+    signed_in, monkeypatch, resume
+):
+    for path in ("requestedPayRate", "applicantReferralIndicator", "comment"):
+        monkeypatch.setitem(TRANSFORMS, f"/jobApplication/{path}", {"hidden": True})
+    monkeypatch.setitem(INDICATORS, "VSID", False)
+    adapter = ADP()
+    signed_in.goto(JOB.replace("5001_1", "5002_1"))  # no questionnaire
+    fields = adapter.browser_read(signed_in)
+    assert [f.id for f in fields][-2:] == ["resume", "attestation"]
+    answers = {k: v for k, v in complete(resume).items() if k.startswith("personal.")}
+    adapter.fill(signed_in, answers | {"resume": resume, "attestation": "Yes"})
+    assert signed_in.locator("#submitApplication").count()
+    assert adapter.read_back(signed_in)["attestation"] == "Yes"
+
+
 def test_a_step_the_page_refuses_names_its_error(opened, page):
     adapter, _ = opened
     with pytest.raises(NotTaken, match="Correct the information in highlighted fields"):

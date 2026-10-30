@@ -108,8 +108,13 @@ async function wizard() {
   meta = await api(`${EVENTS}/v1/job-application.submit/meta?cid=${params.get("cid")}&ccId=${
     params.get("ccId")}&lang=en_US`, {headers: {requisitionoid: params.get("jobId")}});
   const on = Object.fromEntries(meta.data.control.customIndicators.map(i => [i.nameCode.codeValue, i.indicatorValue]));
-  steps = ["Personal Information", "Resume", "Questions", ...(on.VSID ? ["Voluntary Self-ID"] : []),
-    "Review Your Application", "Self-Attest & Submit"];
+  // Questions only where there is something to ask: a questionnaire, the pay, the referral or the comment
+  const all = Object.assign({}, ...meta.meta["/data/transforms"]);
+  const asks = meta.data.control.questionnaire?.questions?.length || [
+    "/jobApplication/requestedPayRate", "/jobApplication/applicantReferralIndicator", "/jobApplication/comment",
+  ].some(path => all[path]?.hidden === false);
+  steps = ["Personal Information", "Resume", ...(asks ? ["Questions"] : []),
+    ...(on.VSID ? ["Voluntary Self-ID"] : []), "Review Your Application", "Self-Attest & Submit"];
   number = Number(sessionStorage.getItem("step") ?? 0);  // a reopened draft shows the step it was on
   draw();
 }
