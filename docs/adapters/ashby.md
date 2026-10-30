@@ -1,6 +1,6 @@
 # Ashby
 
-Observed on live postings, last on 2026-10-19. The fixture page is [tests/pages/ashby/](https://github.com/shbernal/atsfill/tree/main/tests/pages/ashby/), served by a stand-in for Ashby's API in `tests/test_ashby.py`.
+Observed on live postings, last on 2026-10-30. The fixture page is [tests/pages/ashby/](https://github.com/shbernal/atsfill/tree/main/tests/pages/ashby/), served by a stand-in for Ashby's API in `tests/test_ashby.py`.
 
 ## Where the form is
 
@@ -37,7 +37,9 @@ Survey forms come after the application form on the same page, on about half the
 - Each change posts `ApiSetFormValue` with the form render's id, the path and the value, and the response is the whole render as Ashby holds it. That response is the read-back.
 - A file goes in three requests: `ApiCreateFileUploadHandle` (name, type, size) returns a handle and a signed S3 form, the file is posted to S3, then `ApiSetFormValueToFile` sets the path to the handle and returns the render. On a real posting this last response comes after the saves of fields filled later.
 - Saves in flight together overwrite each other at Ashby: a later render can drop values an earlier one held, or come back under a new id holding one field. The adapter makes one change at a time and waits for its save.
-- A survey answer comes back as the survey's render alone, under an id that differs from the one `ApiJobPosting` gave it. The adapter puts each response in place of the form holding the same fields.
+- A survey answer comes back as the survey's render alone, under an id that differs from the one `ApiJobPosting` gave it.
+- An answer can show a follow-up question: the render that comes back, and every one after it, holds a field `ApiJobPosting` did not list (seen 2026-10-30: a residence status question after a country choice).
+- The adapter puts each response in place of the form it shares fields with.
 - Radio, checkbox and yes/no inputs are hidden: click the option's text.
 - A combobox select saves only a picked option. Typing lists every option containing the text, so the pick is by exact name.
 - The location combobox saves only a picked suggestion.
