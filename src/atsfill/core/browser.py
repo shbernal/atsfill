@@ -59,8 +59,10 @@ PROFILE_BUDGET = 300.0  # seconds for a `profile` run, which may save every prof
 LOCK_POLL_S = 0.1
 HTTP_TIMEOUT_S = 20  # per request to a hiring system's API
 BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compare across machines
-BLOCKER = ADDONS_DIR / "UBO-annoyances"  # Camoufox's uBlock Origin, its annoyance lists on
+BLOCKER = ADDONS_DIR / "UBO-frozen"  # Camoufox's uBlock Origin: annoyance lists on, updates off
 BLOCKER_LISTS = "annoyances"  # the group of uBlock Origin lists: cookie banners, pop-ups, widgets
+# On, its first update, 37s into a launch, leaves the blocker hiding nothing for the rest of it.
+BLOCKER_AUTO_UPDATE = "autoUpdate: true,"
 # The adapters' filters for the banners the lists miss: a list of the blocker's, on like them.
 FILTERS = "assets/atsfill/filters.txt"
 INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
@@ -107,7 +109,8 @@ def install() -> int:
 def _build_blocker() -> None:
     """Copies Camoufox's uBlock Origin to `BLOCKER` with only its annoyance lists on, read
     from disk: fetched by each launch, they would hold its first page for seconds, and each
-    list on is compiled by each launch before the blocker starts."""
+    list on is compiled by each launch before the blocker starts. Its updates stay off: a fresh
+    profile would drop them with the browser anyway."""
     ADDONS_DIR.mkdir(parents=True, exist_ok=True)
     with FileLock(ADDONS_DIR / f"{BLOCKER.name}.lock"):
         build = BLOCKER.with_name(f"{BLOCKER.name}.build")
@@ -132,6 +135,10 @@ def _build_blocker() -> None:
         (build / FILTERS).parent.mkdir()
         (build / FILTERS).touch()
         assets.write_text(json.dumps(entries))
+        settings = build / "js" / "background.js"
+        defaults = settings.read_text()
+        assert BLOCKER_AUTO_UPDATE in defaults  # gone from a new uBlock Origin: find its new form
+        settings.write_text(defaults.replace(BLOCKER_AUTO_UPDATE, "autoUpdate: false,"))
         shutil.rmtree(BLOCKER, ignore_errors=True)
         build.rename(BLOCKER)
 
