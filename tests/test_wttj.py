@@ -112,6 +112,16 @@ def test_every_answer_reads_back(opened, page, resume, monkeypatch):
     checks = matching.check(fields, answers, read_back)
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert read_back["phone"] == "+33 6 00 00 00 00"  # unanswered, left as the account has it
+    assert adapter.shown_fields(page) == [f.id for f in fields]  # not the upload's own box
+
+
+def test_a_field_an_answer_shows_is_listed_shown(opened, page):
+    adapter, fields = opened
+    page.locator(wttj.FORM).first.evaluate(
+        """form => form.insertAdjacentHTML(
+          "afterbegin", '<textarea name="questions.cd34"></textarea>')"""
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"questions.cd34"}
 
 
 def test_submit_returns_the_reference(opened, page):
