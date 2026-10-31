@@ -25,6 +25,8 @@
       {id: "name--preferredCheck", label: "I have a preferred name", kind: "box"},
       {id: "previousWorker--candidateIsPreviousWorker", label: "Have you worked for Acme before?*", kind: "radio",
        options: ["Yes", "No"]},
+      {id: "previousWorker--employeeId", label: "What was your employee ID?", kind: "text",
+       when: ["previousWorker--candidateIsPreviousWorker", "Yes"]},  // an optional follow-up
       {id: "source--source", label: "How Did You Hear About Us?*", kind: "prompt", single: true,
        tree: {"Job Board": ["LinkedIn", "Indeed", "Linked Jobs", "Job Fair (Acme)"],
               "Corporate Website": null, "Employee Referral": null}},
@@ -50,6 +52,8 @@
       {id: "resumeAttachments--attachments", label: "Upload a file (5MB max)*", kind: "file",
        value: ["old resume.pdf"]},
       {id: "skills--skills", label: "Type to Add Skills", kind: "prompt", tree: {"Python": null}},
+      // Optional, and in no section of the apply flow.
+      {id: "socialNetworkAccounts--linkedInAccount", label: "LinkedIn Profile", kind: "text"},
     ],
     "Application Questions": [
       {id: "primaryQuestionnaire--q1", label: "Are you authorized to work in the UK?*", kind: "list",
@@ -58,6 +62,8 @@
        options: ["English", "French"]},
       {id: "primaryQuestionnaire--q3", label: "Why Acme?*", kind: "textarea"},
       {id: "primaryQuestionnaire--q4", label: "When can you start?*", kind: "date"},
+      {id: "primaryQuestionnaire--q9", label: "Anything else?", kind: "text",
+       when: ["primaryQuestionnaire--q1", "No"]},  // in no questionnaire
     ],
     "Voluntary Disclosures": [
       {id: "personalInfoPerson--gender", label: "Gender*", kind: "list", portal: true,
@@ -66,6 +72,13 @@
     ],
     "Review": [],
   };
+  if (sessionStorage.getItem("self-identify")) {  // a page after the disclosures, on some postings
+    const review = PAGES.Review;
+    delete PAGES.Review;
+    PAGES["Self Identify"] = [{id: "selfIdentifiedDisabilityData--disabilityForm", label: "Language*",
+                               kind: "list", value: "English", options: ["English"]}];
+    PAGES.Review = review;
+  }
   const STEPS = Object.keys(PAGES);
   const draft = JSON.parse(sessionStorage.getItem("draft") || "{}");
   let step = 0;
@@ -121,6 +134,7 @@
         f.options.forEach((o, n) => {
           const input = el(`<input type="${f.kind === "radio" ? "radio" : "checkbox"}" name="${f.id}" id="${f.id}-${n}">`);
           input.checked = f.kind === "radio" ? value === o : value.includes(o);
+          if (f.kind === "radio") input.onchange = () => { Object.assign(live, values()); render(); };
           box.append(input, el(`<label for="${f.id}-${n}">${o}</label>`));
         });
       } else if (f.kind === "list") {
@@ -260,6 +274,7 @@
       return;
     }
     Object.assign(draft, page);
+    delete draft["termsAndConditions--acceptTermsAndAgreements"];  // no draft keeps the tick
     sessionStorage.setItem("draft", JSON.stringify(draft));
     step += 1;
     setTimeout(render, 300);  // the next page renders after the save answers
