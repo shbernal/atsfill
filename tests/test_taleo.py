@@ -6,14 +6,17 @@ import pytest
 
 from atsfill.adapters.taleo import Taleo, _masked
 from atsfill.core import browser
+from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import FieldType, Is
 
 PAGES = Path(__file__).parent / "pages/taleo"
 BASE = "https://acme.taleo.net/careersection/ex"
 POSTING = f"{BASE}/jobdetail.ftl?job=12345&lang=en"
+FRESH_DRAFT = f"{BASE}/jobdetail.ftl?job=777&lang=en"
 PAGE = "personal_information/"
 COUNTRY = f"{PAGE}cpi-cfrmsub-frm-dv_cs_candidate_personal_info_ResidenceLocation-0"
 STATE = f"{PAGE}cpi-cfrmsub-frm-dv_cs_candidate_personal_info_ResidenceLocation-1"
+FIRST_NAME = f"{PAGE}cpi-cfrmsub-frm-dv_cs_candidate_personal_info_FirstName"
 QUESTION = f"{PAGE}preq-q-0-qr"
 
 
@@ -29,10 +32,10 @@ def page(tmp_path_factory):
         yield page
 
 
-def opened(page) -> tuple[Taleo, dict]:
+def opened(page, url: str = POSTING) -> tuple[Taleo, dict]:
     adapter = Taleo()
-    assert adapter.account_scope(POSTING) == "acme"
-    page.goto(POSTING)
+    assert adapter.account_scope(url) == "acme"
+    page.goto(url)
     return adapter, {f.id: f for f in adapter.browser_read(page)}
 
 
@@ -101,6 +104,33 @@ def test_fill_saves_the_page_and_reads_it_back(page):
         **answers,
         f"{PAGE}cpi-cfrmsub-frm-dv_cs_candidate_personal_info_HomePhone": "+1 (202)555-0143",
     }
+
+
+def test_an_answer_that_shows_an_optional_field_stops_the_fill(page):
+    adapter, _ = opened(page)
+    with pytest.raises(
+        Unsupported, match="^unhandled_rendering: an answer showed Tell us why not, not listed$"
+    ):
+        adapter.fill(page, {QUESTION: "No"})
+    assert "jobapply.ftl" in page.url  # stopped before saving
+
+
+def test_a_page_the_read_did_not_reach_is_read_once_the_one_before_saves(page):
+    page.goto(FRESH_DRAFT)
+    page.evaluate("sessionStorage.clear()")
+    adapter, fields = opened(page, FRESH_DRAFT)
+    assert FIRST_NAME in fields and "attachments/portfolio" not in fields
+    with pytest.raises(NotTaken, match="^Personal Information was not saved: .*first name.$"):
+        adapter.fill(page, {})
+    with pytest.raises(
+        NotTaken, match="^Attachments shows fields the read did not list: Portfolio; read again$"
+    ):
+        adapter.fill(page, {FIRST_NAME: "Jane"})
+    adapter, fields = opened(page, FRESH_DRAFT)
+    assert "attachments/portfolio" in fields
+    adapter.fill(page, {FIRST_NAME: "Jane", "attachments/portfolio": "https://example.com"})
+    assert "review.ftl" in page.url
+    assert adapter.read_back(page)["attachments/portfolio"] == "https://example.com"
 
 
 def test_a_north_american_number_takes_the_mask():

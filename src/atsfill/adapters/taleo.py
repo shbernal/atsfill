@@ -220,7 +220,8 @@ class Taleo:
 
     def __init__(self) -> None:
         self._postings: dict[str, Posting] = {}  # by zone, the last posting's
-        self._kinds: dict[str, str] = {}  # each read field's rendering, by its id
+        self._listed: set[str] = set()  # the ids the read listed
+        self._walked: set[str] = set()  # the pages the read reached
         self._read_back: dict[str, Answer] = {}
 
     def detect(self, url: str, page: Page | None) -> bool:
@@ -289,23 +290,24 @@ class Taleo:
         fields listed. Reading saves pages, as a fill does."""
         self._open(page)
         fields: list[Field] = []
-        self._kinds = {}
+        self._walked = set()
         while not _on_review(page):
             step = _step(page)
+            self._walked.add(step)
             if step not in SKIPPED_STEPS:
                 for raw in _read(page):
-                    field = _field(step, raw)
-                    self._kinds[field.id] = raw["kind"]
-                    fields.append(field)
+                    fields.append(_field(step, raw))
                     if raw["id"].endswith(SOURCE_TYPE):
                         fields.append(_sources(page, step, raw))
             if not _save(page):
                 break
+        self._listed = {f.id for f in fields}
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         """Fills each page from the first and saves it, until Review and Submit. A page that
-        does not save stops the fill with its messages."""
+        shows a field the read did not list stops the fill unsaved; one that does not save, with
+        its messages."""
         self._open(page)
         self._read_back = {}
         while not _on_review(page):
@@ -318,14 +320,26 @@ class Taleo:
                     if field_id in answers and field_id not in filled:
                         _fill(page, raw, answers[field_id])
                         filled.add(field_id)
-            for raw in _read(page) if raws else []:
+            answered = _read(page) if raws else []
+            self._unread(step, answered)
+            for raw in answered:
                 value = _value(raw)
                 if value not in (None, "", []):
                     self._read_back[_field_id(step, raw)] = value
             if not _save(page):
-                unread = any(_field_id(step, r) not in self._kinds for r in raws)
-                errors = "; ".join(_errors(page))
-                raise NotTaken(f"{step} was not saved: {errors}" + ("; read again" * unread))
+                raise NotTaken(f"{step} was not saved: {'; '.join(_errors(page))}")
+
+    def _unread(self, step: str, raws: list[dict[str, Any]]) -> None:
+        """Stops on fields the read did not list, optional ones too, once the answers are in. A
+        page the read did not reach is read once the pages before it are saved. On one it read,
+        an answer opened the field: the page stops unsaved, so no read would list it."""
+        unread = [r["label"] for r in raws if _field_id(step, r) not in self._listed]
+        if not unread:
+            return
+        labels = ", ".join(unread)
+        if step in self._walked:
+            raise Unsupported(f"unhandled_rendering: an answer showed {labels}, not listed")
+        raise NotTaken(f"{step} shows fields the read did not list: {labels}; read again")
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         return dict(self._read_back)
