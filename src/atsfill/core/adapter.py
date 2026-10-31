@@ -325,3 +325,11 @@ class ListsShownFields(Adapter, Protocol):
     def shown_fields(self, page: Page) -> list[str]:
         """The ids of the fields the filled page shows, each as `browser_read` would name it."""
         ...
+
+
+@runtime_checkable
+class ListsEveryField(Adapter, Protocol):
+    """An adapter that is neither `ListsShownFields` nor `RevealsFields`: it says why no field
+    can appear after a read, or how it checks for one itself (ADR 0005)."""
+
+    lists_every_field: str

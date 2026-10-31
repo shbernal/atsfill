@@ -116,6 +116,7 @@ class _Control:
 
 class Recruiterflow:
     name = "recruiterflow"
+    lists_every_field = "the page's JSON holds every field whatever the answers"
     known_gaps: dict[str, Gap] = {}
     filters = ["recruiterflow.com##.rf-careers-cookie-banner-container"]  # over the questions
     side_effects = [

@@ -208,6 +208,7 @@ def posting(url: str) -> Posting | None:
 
 class Taleo:
     name = "taleo"
+    lists_every_field = "the fill stops on a field the read did not list, page by page"
     per_employer = True
     asks: set[str] = set()
     known_gaps = {LOCATION_GAP: Gap.RENDERING, DATE_PICKER_GAP: Gap.RENDERING}

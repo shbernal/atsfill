@@ -5,6 +5,7 @@ import pytest
 
 from atsfill.adapters import adapters
 from atsfill.core import registry
+from atsfill.core.adapter import ListsEveryField, ListsShownFields, RevealsFields
 from scripts import backlog
 
 ROOT = Path(__file__).parents[1]
@@ -12,6 +13,14 @@ ROOT = Path(__file__).parents[1]
 
 def test_every_adapter_is_in_the_registry():
     assert all(registry.for_adapter(a.name) for a in adapters())
+
+
+@pytest.mark.parametrize("adapter", adapters(), ids=lambda a: a.name)
+def test_every_adapter_states_how_it_finds_an_unlisted_field(adapter):
+    if isinstance(adapter, ListsEveryField):
+        assert adapter.lists_every_field
+    else:
+        assert isinstance(adapter, ListsShownFields | RevealsFields)
 
 
 def test_a_source_without_a_scope_is_in_scope():
