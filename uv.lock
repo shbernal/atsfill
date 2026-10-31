@@ -56,7 +56,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "camoufox", specifier = "==0.5.8" },
+    { name = "camoufox", specifier = "==0.5.9b6" },
     { name = "filelock", specifier = "==4.1.1" },
     { name = "keyring", specifier = "==25.7.0" },
     { name = "packaging", specifier = "==26.3" },
@@ -97,7 +97,7 @@ wheels = [
 
 [[package]]
 name = "camoufox"
-version = "0.5.8"
+version = "0.5.9b6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fpgen" },
@@ -116,9 +116,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "ua-parser" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/00/ee6fa8cae640207626787ab4789d580a0d6803d4babbf07d25f059b142e9/camoufox-0.5.8.tar.gz", hash = "sha256:40ad23a5e9564862df2550ae53a1df3016b663da5299694fffd8594eca89e2d2", size = 1448990, upload-time = "2026-10-06T20:56:02.09Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b3/ef/f5ebc094b126ac45e8ce9c44d754117bad5b6853f56557f7bc11fcfd8623/camoufox-0.5.9b6.tar.gz", hash = "sha256:875b38ae7cf6ea52bb82c640a7bd41de88093163a77a0915d5842a79c20ef5b4", size = 212921, upload-time = "2026-10-29T22:14:39.688Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/bc/dd/c241d63b0607278a68256ed629fa76d5e6a00748465b8419ad1be251b75b/camoufox-0.5.8-py3-none-any.whl", hash = "sha256:b3488fd68ed52e2657fbbb09d16c8cb99ba626ddec568c44d22451400f8466b6", size = 1464816, upload-time = "2026-10-06T20:56:00.464Z" },
+    { url = "https://files.pythonhosted.org/packages/21/2e/6081f532579cc3641b09518344c9b8eba31cc5ffe72191f687e853cd7451/camoufox-0.5.9b6-py3-none-any.whl", hash = "sha256:8d13ee705a5293e448f149d517187346f4df23415270dbfacc96cbc8c62b6e81", size = 222682, upload-time = "2026-10-29T22:14:37.785Z" },
 ]
 
 [[package]]
