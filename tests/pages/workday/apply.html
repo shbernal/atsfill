@@ -135,12 +135,12 @@
               button.textContent = o;
               list.remove();
               if (f.id === "country--country") { live[f.id] = o; render(); }
-              // A question's answer posts the questionnaire's definition; the page renders the
-              // reply over the answers given meanwhile.
+              // A question's answer posts the questionnaire's definition, some time later on a
+              // busy page; the page renders the reply over the answers given meanwhile.
               if (f.id.startsWith("primaryQuestionnaire--")) {
                 live[f.id] = o;
-                fetch("questionnaire/qn1/definition?type=primary", {method: "POST"})
-                  .then(r => r.json()).then(render);
+                setTimeout(() => fetch("questionnaire/qn1/definition?type=primary", {method: "POST"})
+                  .then(r => r.json()).then(render), 500);
               }
             };
             list.append(option);
