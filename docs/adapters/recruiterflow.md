@@ -1,6 +1,6 @@
 # Recruiterflow
 
-Recruiterflow's posting pages, observed on live postings, last on 2026-10-28. The fixture page is [tests/pages/recruiterflow/form.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/recruiterflow/form.html), served as `recruiterflow.com` in `tests/test_recruiterflow.py`: one example of each rendering below.
+Recruiterflow's posting pages, observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/recruiterflow/form.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/recruiterflow/form.html), served as `recruiterflow.com` in `tests/test_recruiterflow.py`: one example of each rendering below.
 
 ## Where the form is
 
@@ -38,6 +38,8 @@ Each rendering, and in how many of 43 employers' forms it shows (2026-10-28):
 | footer | the footer notes' checkbox (`mandatory-opt-in-checkbox`) | `choice` `Yes`/`No`, required | 10 |
 
 A question of another kind, rich text (3) among them, and a personal or profile item outside this table are `unhandled_rendering`; none was seen.
+
+The JSON lists every field whatever the answers, so the adapter does not check the page after a fill: it declares no condition, and 3 postings dry-run with their choices answered three ways showed nothing it leaves out (2026-10-31).
 
 ## Filling
 
