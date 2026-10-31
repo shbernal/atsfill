@@ -263,20 +263,36 @@ def test_a_fresh_draft_lists_the_pages_up_to_the_first_it_cannot_save(opened):
     assert "personalInfoPerson--gender" not in by_id  # behind pages that do not save yet
 
 
-def test_the_disclosures_are_read_once_the_pages_before_them_are_saved(opened, page, resume):
-    adapter, _ = opened
+def read_again(page) -> tuple[Workday, list]:
+    page.goto(JOB)
+    adapter = Workday()
+    return adapter, adapter.browser_read(page)
+
+
+def test_the_pages_a_read_did_not_reach_are_read_once_those_before_them_are_saved(
+    opened, page, resume
+):
+    adapter, fields = opened
+    linked_in = "socialNetworkAccounts--linkedInAccount"
+    assert linked_in not in {f.id for f in fields}
+    with pytest.raises(
+        NotTaken,
+        match="^My Experience shows fields the read did not: LinkedIn Profile; read again$",
+    ):
+        adapter.fill(page, ANSWERS | {"resumeAttachments--attachments": resume})
+    adapter, fields = read_again(page)
+    assert {f.id: f for f in fields}[linked_in].type is FieldType.TEXT
     with pytest.raises(
         NotTaken,
         match="^Voluntary Disclosures shows fields the read did not: Gender, I Agree; read again$",
     ):
         adapter.fill(page, ANSWERS | {"resumeAttachments--attachments": resume})
-    page.goto(JOB)
-    adapter = Workday()
-    fields = adapter.browser_read(page)
+    adapter, fields = read_again(page)
     by_id = {f.id: f for f in fields}
     assert by_id["personalInfoPerson--gender"].options == ["Female", "Male", "Not declared"]
     assert by_id["termsAndConditions--acceptTermsAndAgreements"].required
     answers = ANSWERS | {
+        linked_in: "https://example.com/ada",
         "resumeAttachments--attachments": resume,
         "personalInfoPerson--gender": "Not declared",
         "termsAndConditions--acceptTermsAndAgreements": "Yes",
@@ -306,6 +322,57 @@ def test_a_follow_up_an_answer_opens_on_my_information_is_named(opened, page):
         Unsupported, match="^unhandled_rendering: an answer showed What's their name., not listed"
     ):
         adapter.fill(page, {"source--source": "Employee Referral"})
+
+
+def test_an_optional_follow_up_on_my_information_stops_the_fill(opened, page):
+    adapter, _ = opened
+    with pytest.raises(
+        Unsupported,
+        match="^unhandled_rendering: an answer showed What was your employee ID., not listed$",
+    ):
+        adapter.fill(page, {"previousWorker--candidateIsPreviousWorker": "Yes"})
+
+
+def test_a_field_that_stays_unlisted_after_the_read_is_not_read_again(opened, page, resume):
+    adapter, _ = opened
+    answers = ANSWERS | {
+        "resumeAttachments--attachments": resume,
+        "primaryQuestionnaire--q1": "No",
+    }
+    with pytest.raises(NotTaken, match="^My Experience .* read again$"):
+        adapter.fill(page, answers)
+    adapter, _ = read_again(page)
+    with pytest.raises(NotTaken, match="^Application Questions .* read again$"):
+        adapter.fill(page, answers)  # the read stopped before this page
+    adapter, _ = read_again(page)
+    with pytest.raises(
+        Unsupported, match="^unhandled_rendering: an answer showed Anything else., not listed$"
+    ):
+        adapter.fill(page, answers)
+
+
+def test_a_page_behind_the_consent_no_draft_keeps_is_never_read(opened, page, resume):
+    adapter, _ = opened
+    page.evaluate("sessionStorage.setItem('self-identify', '1')")
+    answers = ANSWERS | {"resumeAttachments--attachments": resume}
+    with pytest.raises(NotTaken, match="^My Experience .* read again$"):
+        adapter.fill(page, answers)
+    adapter, _ = read_again(page)
+    with pytest.raises(NotTaken, match="^Voluntary Disclosures .* read again$"):
+        adapter.fill(page, answers)
+    adapter, _ = read_again(page)  # stops on the disclosures, their gender empty yet
+    answers |= {
+        "personalInfoPerson--gender": "Not declared",
+        "termsAndConditions--acceptTermsAndAgreements": "Yes",
+    }
+    with pytest.raises(NotTaken, match="^Self Identify .* read again$"):
+        adapter.fill(page, answers)
+    adapter, fields = read_again(page)  # the gender saved, the tick gone: it stops there again
+    assert not any(f.id.startswith("selfIdentified") for f in fields)
+    with pytest.raises(
+        Unsupported, match="^unhandled_rendering: Self Identify shows Language, which no read"
+    ):
+        adapter.fill(page, answers)
 
 
 def test_a_follow_up_of_a_follow_up_holds_on_its_parent_s_answers():

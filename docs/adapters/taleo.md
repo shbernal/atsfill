@@ -1,6 +1,6 @@
 # Taleo
 
-Oracle Taleo Enterprise career sections, observed on live postings, last on 2026-10-26. The fixture pages are [tests/pages/taleo/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/taleo/apply.html) and [review.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/taleo/review.html), served as an Acme zone in `tests/test_taleo.py`: one wizard page with one example of each rendering below, and Review and Submit.
+Oracle Taleo Enterprise career sections, observed on live postings, last on 2026-10-26. The fixture pages are [tests/pages/taleo/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/taleo/apply.html) and [review.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/taleo/review.html), served as an Acme zone in `tests/test_taleo.py`: one wizard page with one example of each rendering below, a fresh draft's second page, and Review and Submit.
 
 The adapter (`atsfill.adapters.taleo`) is not in `adapters()` yet: the registry has Taleo `in_scope`, stopped at its `location_levels` gap, and it is registered once its adapter gate passes.
 
@@ -49,7 +49,8 @@ Each rendering, from 4 zones walked:
 - `fill` opens the wizard on its first page and, page by page, fills the answered fields the page shows, then presses Save and Continue, until Review and Submit. A place's levels are filled top down, each waiting for the next level's options; picking the option already held is skipped, since it reloads the levels below. A question's explanation comes after its answer. The page is read again for a field an answer shows.
 - A select is picked by its option's text; a radio or a box clicked to the answer; a month and a year picked from `MM/YYYY`. A North American number is typed in the zone's mask, `(202)555-0143`; another as given, for the `+` mask.
 - A file is attached with Attach and waited for by its name.
-- A page that does not save stops the fill: `refused: answer_not_taken` with the page's messages, "read again" where the page held fields the read had not listed.
+- A page that does not save stops the fill: `refused: answer_not_taken` with the page's messages.
+- The adapter makes the check itself, page by page, once a page's answers are in: only the current page is in the DOM, so it does not list the fields shown to the core (`ListsShownFields`). A field the read did not list, optional or required, stops the fill before the page is saved, so none is left empty on a `ready`. On a page the read did not reach it is `refused: answer_not_taken` with `read again`, a normal second round: the next read walks the saved pages and lists it. On a page the read reached, an answer opened it: the page stays unsaved, no read would list it, so it ends `unhandled_rendering`.
 
 ## Read-back and submit
 

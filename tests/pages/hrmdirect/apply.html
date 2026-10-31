@@ -61,6 +61,8 @@
       <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="m-1" value="a"> <span>Indeed</span></label></div>
       <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="m-1" value="b"> <span>LinkedIn</span></label></div>
       <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="m-1" value="c"> <span>Other</span></label></div>
+      <div class="checkbox"><label><input type="checkbox" class="form-checkbox" data-field="m-1" value="d"> <span>Employee referral</span></label></div>
+      <div class="child-field-holder child-field-holder-3"></div>
     </div>
   </div></div>
   <div class="fieldItem"><div class="form-field qa-checkbox-field">
@@ -125,6 +127,13 @@
     setTimeout(() => { list.innerHTML = `<tr><td>${name}</td><td>10/26/2026</td></tr>`; }, 300);
     if (list.closest(".resume")) sessionStorage.setItem("resume", name);  // the draft keeps it
   }));
+  document.querySelector("input[value=d]").addEventListener("change", e => {
+    document.querySelector(".child-field-holder-3").innerHTML = e.target.checked ?
+      `<div class="fieldItem"><div class="form-field qa-text-field">
+         <label for="m-1-child" class="control-label field-title">Who referred you?</label>
+         <input id="m-1-child" type="text" class="form-control form-input">
+       </div></div>` : "";
+  });
   document.getElementById("d1").addEventListener("focus", () =>
     document.querySelector(".datepicker").classList.remove("hidden"));
 </script>

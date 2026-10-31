@@ -3,11 +3,12 @@
 <head><meta charset="utf-8"><title>Acme Careers - Job Submission</title></head>
 <body>
 <!-- One page of a Taleo job submission wizard, holding one example of each rendering the
-     adapter reads; Save and Continue moves to the review page. -->
+     adapter reads; Save and Continue moves to the review page. Job 777 is a fresh draft: its
+     first page does not save without a first name, and a second page follows it. -->
 <form id="et-ef" action="#" onsubmit="return false">
 <a id="et-ef-content-ftf-j_id_id81pc5-1-dtGotoPageLink" href="#">Attachments</a>
-<h1>Personal Information</h1>
-<table><tr><td>
+<h1 id="step">Personal Information</h1>
+<table id="first-page"><tr><td>
   <label for="et-ef-content-ftf-gp-j_id_id16pc9-page_0-cpi-cfrmsub-frm-dv_cs_candidate_personal_info_FirstName">Legal First Name<span class="hidden-audible">.&nbsp;Required</span></label>
   <input type="text" id="et-ef-content-ftf-gp-j_id_id16pc9-page_0-cpi-cfrmsub-frm-dv_cs_candidate_personal_info_FirstName">
 </td></tr><tr><td>
@@ -49,6 +50,10 @@
     <span class="fs-508-block"><label><input type="radio" name="et-ef-content-ftf-gp-j_id_id16pc9-page_0-preq-j_id_id7pc10-page__1-q-j_id_id2pc11-0-qr" id="q0-yes" onclick="explain(true)"> Yes</label></span>
     <span class="fs-508-block"><label><input type="radio" name="et-ef-content-ftf-gp-j_id_id16pc9-page_0-preq-j_id_id7pc10-page__1-q-j_id_id2pc11-0-qr" id="q0-no" onclick="explain(false)"> No</label></span>
   </fieldset>
+  <span id="reason" style="display: none">
+    <label for="et-ef-content-ftf-gp-j_id_id16pc9-page_0-preq-reason">Tell us why not</label>
+    <input type="text" id="et-ef-content-ftf-gp-j_id_id16pc9-page_0-preq-reason">
+  </span>
   <span id="explain" style="display: none">
     <label for="et-ef-content-ftf-gp-j_id_id16pc9-page_0-preq-j_id_id7pc10-page__1-q-j_id_id2pc11-0-questionExplanationText">If yes, give the dates</label>
     <textarea id="et-ef-content-ftf-gp-j_id_id16pc9-page_0-preq-j_id_id7pc10-page__1-q-j_id_id2pc11-0-questionExplanationText"></textarea>
@@ -59,8 +64,12 @@
     <label class="fs-508-block"><input type="checkbox" id="q1_com.taleo.functionalcomponent.prescreening.entity.question.PossibleAnswer__2"> None of the Above</label>
   </fieldset>
 </span></span></td></tr></table>
+<table id="second-page" style="display: none"><tr><td>
+  <label for="et-ef-content-ftf-gp-j_id_id16pc9-page_1-portfolio">Portfolio</label>
+  <input type="text" id="et-ef-content-ftf-gp-j_id_id16pc9-page_1-portfolio">
+</td></tr></table>
 <input type="checkbox" id="et-ef-content-ftf-gp-j_id_id16pc9:page_3:sendMeJobs:selectBooleanCheckbox_sendMeJobs">
-<input type="button" id="et-ef-content-ftf-saveContinueCmdBottom" value="Save and Continue" onclick="location.href = location.href.replace('jobapply.ftl', 'review.ftl')">
+<input type="button" id="et-ef-content-ftf-saveContinueCmdBottom" value="Save and Continue" onclick="save()">
 </form>
 <script>
 const STATES = {"1": ["Ontario"], "2": ["District of Columbia", "New York"]};
@@ -73,6 +82,23 @@ function levels(country) {
 }
 function explain(shown) {
   document.getElementById("explain").style.display = shown ? "" : "none";
+  document.getElementById("reason").style.display = shown ? "none" : "";
+}
+const firstName = document.querySelector("[id$=personal_info_FirstName]");
+firstName.value = sessionStorage.getItem("first-name") || "";
+function save() {
+  const onFirstPage = !!document.getElementById("first-page");
+  if (!location.search.includes("job=777") || !onFirstPage) {
+    location.href = location.href.replace("jobapply.ftl", "review.ftl");
+  } else if (firstName.value) {
+    sessionStorage.setItem("first-name", firstName.value);
+    document.getElementById("first-page").remove();
+    document.getElementById("second-page").style.display = "";
+    document.getElementById("step").textContent = "Attachments";
+  } else {
+    document.querySelector("form").insertAdjacentHTML("afterbegin",
+      '<h1>Errors occurred on this page</h1><p class="errorMessage">Enter a first name.</p>');
+  }
 }
 </script>
 </body>

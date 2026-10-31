@@ -213,6 +213,9 @@ class Workday:
     def __init__(self) -> None:
         self._sites: dict[str, Site] = {}  # by tenant, the last posting's
         self._fields: dict[str, Field] = {}
+        self._listed: set[str] = set()  # the ids the read listed, unfillable ones too
+        self._walked: set[str] = set()  # the pages the read reached
+        self._walled = False  # no read gets past the page this one stopped on
         self._values: dict[str, Answer] = {}
         self._apply = ""
 
@@ -263,9 +266,9 @@ class Workday:
 
     def browser_read(self, page: Page) -> list[Field]:
         """Walks the wizard as far as its pages save with what they hold, reading each page
-        it reaches: from the page, else My Experience from the apply flow's sections and the
-        questions from the questionnaires, which also stand for those pages when they are not
-        reached. A page after the first that does not save is read once it does."""
+        it reaches: from the page, My Experience from the apply flow's sections and then the
+        page, and the questions from the questionnaires, which also stand for those pages when
+        they are not reached. A page after the first that does not save is read once it does."""
         found = site(page.url)
         if found is None or not (job := JOB.match(found.rest)):
             raise RuntimeError(f"{page.url} is not a Workday posting")
@@ -289,15 +292,19 @@ class Workday:
         page.goto(self._apply)
         _wait_for_page(page)
         seen: dict[str, list[Field]] = {}
+        self._walked, self._walled = set(), False
         for _ in range(MAX_PAGES):
             step = _step(page)
             if step == REVIEW:  # repeats the answers, an upload without its input
                 break
-            if not (_questions_page(step) or step == EXPERIENCE):
-                seen[step] = _read(page, f"{calypso}/jobapplication/{found.tenant}{PHONE_CODES}")
+            self._walked.add(step)
+            if not _questions_page(step):
+                phone_codes = f"{calypso}/jobapplication/{found.tenant}{PHONE_CODES}"
+                seen[step] = _read(page, phone_codes, {f.id for f in from_api.get(step, [])})
             try:
                 _save_and_continue(page)
             except NotTaken:
+                self._walled = _only_a_tick_missing(_page_fields(page))
                 break
         steps = [p["descriptor"] for p in flow.get("data") or []]
         steps += [s for s in seen if s not in steps]
@@ -305,6 +312,7 @@ class Workday:
             f for s in steps for f in seen.get(s, []) + from_api.get(_questionnaire_step(s), [])
         ]
         self._fields = {f.id: f for f in fields if not f.unfillable}
+        self._listed = {f.id for f in fields}
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
@@ -342,19 +350,22 @@ class Workday:
         raise Unsupported(known_gap(self, "long_wizard", f"more than {MAX_PAGES} pages"))
 
     def _unread(self, page: Page) -> None:
-        """Stops on required fields the read did not list: on My Information, the address of a
-        country other than the form's, or a follow-up an answer opened (a referral's name); on a
-        later page, one the read could not reach."""
-        unread = [r for r in _page_fields(page) if r["required"] and r["id"] not in self._fields]
+        """Stops on fields the read did not list, optional ones too. A page the read did not
+        reach is read once the pages before it are saved, unless no read can get there. On one
+        it read, an answer opened the field (a country's address, a referral's name): the page
+        stops unsaved, so no read would list it."""
+        unread = _not_listed(_page_fields(page), self._listed)
         if not unread:
             return
         step, labels = _step(page), ", ".join(r["label"] for r in unread)
+        if step not in self._walked and self._walled:
+            raise Unsupported(f"unhandled_rendering: {step} shows {labels}, which no read reaches")
+        if step not in self._walked:
+            raise NotTaken(f"{step} shows fields the read did not: {labels}; read again")
         if step == MY_INFORMATION and any(r["id"].startswith(ADDRESS) for r in unread):
             detail = f"the country answered shows fields the read did not: {labels}"
             raise Unsupported(known_gap(self, "other_country", detail))
-        if step == MY_INFORMATION:
-            raise Unsupported(f"unhandled_rendering: an answer showed {labels}, not listed")
-        raise NotTaken(f"{step} shows fields the read did not: {labels}; read again")
+        raise Unsupported(f"unhandled_rendering: an answer showed {labels}, not listed")
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Each page's values, read before it was saved; one file as its name."""
@@ -472,10 +483,23 @@ def _questionnaire_step(step: str) -> str:
     return re.sub(r" 1 of \d+$", "", step)
 
 
-def _read(page: Page, phone_codes: str) -> list[Field]:
-    """The fields the page shows, a dropdown's or a short prompt's options read by opening it,
-    the country phone codes from `phone_codes`, the API's list."""
-    raws = _page_fields(page)
+def _not_listed(raws: list[dict[str, Any]], listed: set[str]) -> list[dict[str, Any]]:
+    """The fields not in `listed`, but for a later entry of a list: the draft's, numbered anew
+    by each load, and no answer's."""
+    return [r for r in raws if r["id"] not in listed and not ENTRY_ID.match(r["id"])]
+
+
+def _only_a_tick_missing(raws: list[dict[str, Any]]) -> bool:
+    """Whether a page holds all it requires but a box: the draft keeps a page's answers but not
+    its consent's tick, so no read saves that page, whatever the fills before it saved."""
+    empty = [r for r in raws if r["required"] and r["value"] in (None, "", [], "No")]
+    return bool(empty) and all(r["kind"] == "box" for r in empty)
+
+
+def _read(page: Page, phone_codes: str, listed: set[str]) -> list[Field]:
+    """The fields the page shows that are not in `listed`, a dropdown's or a short prompt's
+    options read by opening it, the country phone codes from `phone_codes`, the API's list."""
+    raws = _not_listed(_page_fields(page), listed)
     for raw in raws:
         box = page.locator(f'[data-fkit-id="{raw["dom"]}"]')
         if raw["kind"] == "list":

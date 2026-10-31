@@ -136,6 +136,26 @@ def test_the_test_user_answers_every_field(page, tmp_path):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
 
 
+def test_an_answer_that_shows_an_optional_field_stops_the_fill(page, tmp_path):
+    adapter, _ = opened(page)
+    cv = str(testuser.resume(tmp_path / "cv.pdf"))
+    with pytest.raises(NotTaken, match="^Page 2 shows fields the read did not list: .*read again$"):
+        adapter.fill(page, {"file.resume": cv})
+    adapter, fields = opened(page, fresh=False)
+    assert "m-1-child" not in {f.id for f in fields}
+    answers = testuser.answers(fields, Path(cv)) | {"m-1": ["Employee referral"]}
+    with pytest.raises(
+        Unsupported, match="^unhandled_rendering: an answer showed Who referred you., not listed$"
+    ):
+        adapter.fill(page, answers)
+
+
+def test_a_page_that_does_not_save_stops_the_fill(page):
+    adapter, _ = opened(page)
+    with pytest.raises(NotTaken, match="^Page 1 was not saved$"):
+        adapter.fill(page, {})
+
+
 def test_an_option_the_list_does_not_hold(page, tmp_path):
     adapter, _ = opened(page)
     cv = str(testuser.resume(tmp_path / "cv.pdf"))

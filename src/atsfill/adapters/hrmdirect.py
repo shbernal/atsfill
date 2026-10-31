@@ -109,6 +109,7 @@ class HRMDirect:
     def __init__(self) -> None:
         self._jobs: dict[str, str] = {}  # by org, the last posting's job
         self._fields: dict[str, Field] = {}
+        self._walked: set[str] = set()  # the pages the read reached
         self._kinds: dict[str, str] = {}
         self._values: dict[str, Answer] = {}
         self._apply = ""
@@ -225,8 +226,9 @@ class HRMDirect:
         """Walks the wizard from its first page as far as its pages save with what they hold,
         reading each page it reaches."""
         self._open(page)
-        self._fields = {}
+        self._fields, self._walked = {}, set()
         for _ in range(MAX_PAGES):
+            self._walked.add(_active(page))
             for f in self._page(page):
                 self._fields.setdefault(f.id, f)
             if not self._continue(page):
@@ -234,8 +236,9 @@ class HRMDirect:
         return list(self._fields.values())
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        """Fills each page from the first and saves it, up to the last; a page showing a
-        required field the read did not list is refused, the pages before it saved."""
+        """Fills each page from the first and saves it, up to the last; a page that shows a
+        field the read did not list, or does not save, stops the fill, the pages before it
+        saved."""
         self._open(page)
         self._values = {}
         for _ in range(MAX_PAGES):
@@ -250,12 +253,25 @@ class HRMDirect:
                     control = page.locator(PAGE_FORM).locator(f"[id='{f.id}']")
                     tag = control.evaluate("el => el.tagName") if control.count() else ""
                     _fill(page, f, "select" if tag == "SELECT" else "text", answer)
-            unread = [f.id for f in shown if f.required and f.id not in self._fields]
-            if unread:
-                raise NotTaken(f"the page shows fields the read did not list: {unread}; read again")
+            self._unread(page)
             self._values |= self._read(page)
-            if _last(page) or not self._continue(page):
+            if _last(page):
                 return
+            step = _active(page)
+            if not self._continue(page):
+                raise NotTaken(f"{step} was not saved")
+
+    def _unread(self, page: Page) -> None:
+        """Stops on fields the read did not list, optional ones too, once the answers are in. A
+        page the read did not reach is read once the pages before it are saved. On one it read,
+        an answer opened the field: the page stops unsaved, so no read would list it."""
+        unread = [f for f in self._page(page) if f.id not in self._fields]
+        if not unread:
+            return
+        step, labels = _active(page), ", ".join(f.label for f in unread)
+        if step in self._walked:
+            raise Unsupported(f"unhandled_rendering: an answer showed {labels}, not listed")
+        raise NotTaken(f"{step} shows fields the read did not list: {labels}; read again")
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         return self._values | self._read(page)
