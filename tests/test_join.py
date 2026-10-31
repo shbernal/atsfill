@@ -126,7 +126,19 @@ def test_every_answer_reads_back_from_the_review_page(opened, page, files):
     read_back = adapter.read_back(page)
     checks = matching.check(fields, answers, read_back)
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
+    assert adapter.shown_fields(page) == [f.id for f in fields]
     assert adapter.submit(page) == "POST /candidate-api/graphql?operationName=ApplyToJob 200"
+
+
+def test_a_document_step_the_read_did_not_list_is_listed_shown(page, files, monkeypatch):
+    monkeypatch.setattr(join, "DOCUMENTS", {"CV": join.DOCUMENTS["CV"]})
+    adapter = Join()
+    page.goto(JOB)
+    fields = adapter.browser_read(page)
+    answers = {"cv": files[0], "question.1": "Fluent", "question.2": "Yes",
+               "question.3": "2026-03-15", "question.4": "50000"}  # fmt: skip
+    adapter.fill(page, answers)
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"coverLetter"}
 
 
 def test_a_question_step_is_numbered_by_its_position(page, files, monkeypatch):

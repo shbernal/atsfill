@@ -151,6 +151,7 @@ class Join:
         self._fields: dict[str, Field] = {}
         self._questions: list[dict[str, Any]] = []
         self._seen: dict[str, Answer] = {}  # each question as its step was left
+        self._walked: dict[str, None] = {}  # the file and question fields of the steps walked
         self._files: list[str] = []  # the file fields answered, in the steps' order
 
     def detect(self, url: str, page: Page | None) -> bool:
@@ -253,15 +254,18 @@ class Join:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         """Walks the wizard from the step it is on to the review page, answering each step; a
         step without a listed field (the account's name, its links) is left as it is."""
+        self._walked = {}
         for _ in range(MAX_STEPS):
             step = _step(page)
             if step == "review":
                 page.locator("a > div > p + p").first.wait_for(timeout=STEP_TIMEOUT_MS)
                 return
             if step in FILES:
+                self._walked[FILES[step]] = None
                 self._file(page, FILES[step], answers.get(FILES[step]))
             elif question := self._step_question(step):
                 field_id = f"question.{question['id']}"
+                self._walked[field_id] = None
                 if field_id in self._fields:
                     self._question(page, question, answers.get(field_id))
             elif step in PROFILE_STEPS:
@@ -288,6 +292,10 @@ class Join:
                 return question
             raise Unsupported(f"unhandled_rendering: a question step {step} not listed")
         return None
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The fields of the steps the fill walked: the wizard keeps only the step it is on."""
+        return list(self._walked)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """The files as the review page lists them; each question as its step was left, since
