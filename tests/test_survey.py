@@ -143,6 +143,15 @@ def test_a_choice_takes_the_option_that_shows_the_most_follow_ups(tmp_path):
     assert answers == {"w": "Yes", "i": testuser.TEXT}
 
 
+def test_the_test_user_gives_no_preferred_name_whatever_it_shows(tmp_path):
+    fields = [
+        Field("p", "I have preferred name", FieldType.CHOICE, False, ["Yes", "No"]),
+        Field("f", "Preferred first name", FieldType.TEXT, True, shown_when=Is("p", ["Yes"])),
+    ]
+    answers = testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf"))
+    assert answers == {"p": "No"}
+
+
 def test_a_choice_is_never_a_knockout_where_there_is_another(tmp_path):
     fields = [
         Field(

@@ -43,6 +43,8 @@ JOB = re.compile(r"^(/[a-z]{2,8}/[a-z]{2})/(job|\w*apply)(?:/|$)")
 APPLY = re.compile(r"^/[a-z]{2,8}/[a-z]{2}/\w*apply$")  # `apply`, `hvhapply` for hourly roles
 SEQ = re.compile(r"^/[a-z]{2,8}/[a-z]{2}/job/([A-Za-z0-9]+)")
 CDN = "https://cdn-prod-static.phenompeople.com/CareerConnectResources"
+RENDERER = "MULTI_PAGE_renderer"  # the script of the page that has one, in its loader's data
+MULTI = "multipage"  # what `_phapp_of` adds to `phApp`
 FORM = "form.rjsf"
 NEXT = "button#next"
 TERMS = "terms"  # a notice some sites' wizard opens on, its one button accepting it
@@ -69,6 +71,7 @@ MAX_STEPS = 12
 OPTIONS_TIMEOUT_S = 8
 LOADERS_AT_ONCE = 8  # a loader request a country: 245 on one site
 COUNTRIES_KEPT_S = 24 * 3600  # a site's country fields, kept between reads
+RATE_LIMITED = "rate_limited: the careers site answers /applySubmit 403"
 YES_NO = ["Yes", "No"]
 NO_YES = ["No", "Yes"]
 MONTH = " (MM/YYYY)"
@@ -110,6 +113,7 @@ TEMPLATE = re.compile(r"\{\{\s*(.*?)\s*\}\}")
 TAG = re.compile(r"<[^>]+>")
 PAGE_VALUE = re.compile(r"%%(phApp\.[\w.]+)%%")
 ANSWER = re.compile(r"%%formData\.(\w+)%%")
+PLACEHOLDER = re.compile(r"(please )?(choose|select)( (one|an?)\b.*)?$", re.IGNORECASE)
 SEARCHING = re.compile(r"Searching", re.IGNORECASE)  # a typeahead's menu before its results
 ACCEPTED = re.compile(r"\b(DOCX?|PDF|TXT|HTML?|RTF)\b", re.IGNORECASE)
 
@@ -216,12 +220,14 @@ _APPLY_LINK = """seq => {
   return own ? own.href : null;
 }"""
 
-# The errors a step shows, each with its field's control id.
+# The errors a step shows, each with its field's control id and whether the page hides it.
 _ERRORS = """form => [...form.querySelectorAll('.error-detail li, .text-danger, .error-message')]
   .filter(e => e.innerText.trim())
   .map(e => {
     const control = e.closest('.form-group')?.querySelector('input, select, textarea');
-    return [control?.id || control?.name || '?', e.innerText.trim()];
+    const hidden = !!control && !/^(checkbox|radio)$/.test(control.type)
+      && !control.getClientRects().length;
+    return [control?.id || control?.name || '?', e.innerText.trim(), hidden];
   }).slice(0, 4)"""
 
 
@@ -264,6 +270,7 @@ class Phenom:
     known_gaps = {
         "first_step": Gap.FLOW,
         "long_wizard": Gap.FLOW,
+        "hidden_required": Gap.FLOW,
         "calendar_without_month": Gap.RENDERING,
     }
     side_effects = [
@@ -367,11 +374,28 @@ class Phenom:
             raise RuntimeError(f"no configuration for the wizard ({e})") from None
         finally:  # raised once the read ends, so the answers that came are kept
             if refused:
-                raise Blocked("rate_limited: the careers site answers /applySubmit 403")
+                raise Blocked(RATE_LIMITED)
         self._raws = {raw["id"]: raw for raw in raws}
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        """Fills the steps. The firewall can start refusing mid-fill, which the page does not
+        show: the step just never passes."""
+        refused = False
+
+        def on_response(response: Any) -> None:
+            nonlocal refused
+            refused |= response.status == 403 and "/applySubmit" in response.url
+
+        page.on("response", on_response)
+        try:
+            self._fill_steps(page, answers)
+        finally:
+            page.remove_listener("response", on_response)
+            if refused:
+                raise Blocked(RATE_LIMITED)
+
+    def _fill_steps(self, page: Page, answers: dict[str, Answer]) -> None:
         page.context.clear_cookies()
         self._open(page, fresh=True)
         self._accept_terms(page)
@@ -493,6 +517,7 @@ def _phapp_of(html: str) -> dict[str, Any]:
     ph = _literal(html, "var phApp = phApp || ")
     ph["ddo"] = _literal(html, "phApp.ddo = ")
     ph["sessionParams"] = _literal(html, "phApp.sessionParams = ")
+    ph[MULTI] = RENDERER in html
     return ph
 
 
@@ -515,13 +540,11 @@ def _read(
     ph: dict[str, Any], fetch: Callable[[str], Any], post: Post
 ) -> tuple[list[Field], list[dict[str, Any]]]:
     """The fields of every step, from the configuration the page names, and their raw form."""
-    ats = (get(ph, "ddo.response.response.applyATS") or "").lower()
-    base = f"{CDN}/{ph['refNum']}/{ats}/external/careersite/singlepage"
-    config = fetch(f"{base}/schema/form_schema.json")
+    config, bundles = _configuration(ph, fetch)
     texts: dict[str, str] = {}
     for bundle in ("default", ph.get("locale") or "en_us"):
         with suppress(Exception):  # a site has one bundle or both
-            texts |= fetch(f"{base}/bundles/Messages_{bundle}.json")
+            texts |= fetch(f"{bundles}/Messages_{bundle}.json")
     reader = _Config(ph, config, texts, post)
     raws = [raw for step in reader.steps() for raw in step]
     if not raws:
@@ -532,6 +555,27 @@ def _read(
             raw[key] = reader.labeled(raw.get(key), resume is not None)
     raws = [raw for raw in raws if raw["when"] is not False]  # never shown
     return ([resume] if resume else []) + [_field(raw) for raw in raws], raws
+
+
+def _configuration(ph: dict[str, Any], fetch: Callable[[str], Any]) -> tuple[dict[str, Any], str]:
+    """The configuration the page's renderer loads, and where its bundles are: a site on the
+    multi-page renderer keeps a stale `singlepage` one, and its form under the page's own name
+    where its `multipage` path has none."""
+    site = f"{CDN}/{ph['refNum']}"
+    ats = (get(ph, "ddo.response.response.applyATS") or "").lower()
+    base = f"{site}/{ats}/external/careersite/{'multipage' if ph.get(MULTI) else 'singlepage'}"
+    try:
+        return fetch(f"{base}/schema/form_schema.json"), f"{base}/bundles"
+    except Exception:
+        if not ph.get(MULTI):
+            raise
+    names = [
+        get(node, "data.page.schemaname")
+        for node in fetch(f"{site}/schema/apply/MULTI_PAGE_form_schema.json")
+        if node.get("type") == "page"
+    ]
+    form = next((name for name in names if name != TERMS), TERMS)
+    return fetch(f"{site}/schema/apply/multipage/{form}.json"), f"{site}/bundles/apply"
 
 
 class _Config:
@@ -703,7 +747,7 @@ class _Config:
                 "datasourcepath": get(u, "ui:options.datasourcepath"),
                 "displayTextField": get(u, "ui:options.dataFieldMapKey") or "label",
             }
-            raw["options"] = _unique(t for _, t in self.loaded_list(listing, api)) or None
+            raw["options"] = _choices(t for _, t in self.loaded_list(listing, api)) or None
         if kind == "select" and re.fullmatch(r"\w+", path):  # a default, the job's country
             raw["default"] = self.prefilled(path)[1] or None
         if kind in ("date", "month", "year"):
@@ -730,7 +774,7 @@ class _Config:
                 scope = path.rpartition(".")[0]
                 at = f"{scope}.{raw['parent']}" if scope else raw["parent"]
                 raw["option_sets"] = [
-                    OptionSet(Is(at, [self.text(parent.get("title"))]), _unique(
+                    OptionSet(Is(at, [self.text(parent.get("title"))]), _choices(
                         self.text(child.get("key"))
                         for child in parent.get("child") or []
                         if child.get("show") is not False
@@ -738,7 +782,7 @@ class _Config:
                     for parent in u.get("data") or []
                 ]  # fmt: skip
                 return None
-            return _unique(
+            return _choices(
                 self.text(child.get("key"))
                 for parent in u.get("data") or []
                 for child in parent.get("child") or []
@@ -750,7 +794,7 @@ class _Config:
                  if isinstance(v, dict) and v.get("htmlType") == "dependent_utm"),
                 None,
             )  # fmt: skip
-            return _unique(self.text(parent.get("title")) for parent in tree or [])
+            return _choices(self.text(parent.get("title")) for parent in tree or [])
         if kind == "radio" and not p.get("enum"):
             return YES_NO
         api = u.get("apiConfig") or get(u, "ui:options.apiConfig")
@@ -777,7 +821,7 @@ class _Config:
         self.listed.setdefault(path.rsplit(".", 1)[-1], listed)  # as a workflow names it
         if raw.get("option_sets"):  # a dependent list's, under its parents' answers before any
             return None
-        return _unique(t for _, t in pairs) or None
+        return _choices(t for _, t in pairs) or None
 
     def loaded_list(self, u: dict, api: dict) -> list[tuple[Any, str]]:
         """A list its own loader serves, by the uiSchema's names for the response's parts."""
@@ -851,7 +895,7 @@ class _Config:
             if isinstance(d, dict)
         ]
         if pairs:
-            options = _unique(t for _, t in pairs if t)
+            options = _choices(t for _, t in pairs if t)
             raw["option_sets"] = [OptionSet(when[0] if len(when) == 1 else AllOf(when), options)]
             raw["parent"] = at
         return pairs
@@ -887,7 +931,7 @@ class _Config:
                     shown = dict(zip(map(str, values), texts, strict=False))
                     if isinstance(data, dict) and shown:
                         raw["option_sets"] = [
-                            OptionSet(Is(at, [shown[key]]), _unique(t for _, t in rows if t))
+                            OptionSet(Is(at, [shown[key]]), _choices(t for _, t in rows if t))
                             for key, rows in pairs.items()
                             if key in shown
                         ]
@@ -1291,8 +1335,10 @@ def _json_text(value: Any) -> str:
     return json.dumps("" if value is None else str(value))[1:-1]
 
 
-def _unique(items: Iterable[str]) -> list[str]:
-    return list(dict.fromkeys(i for i in items if i))
+def _choices(items: Iterable[str]) -> list[str]:
+    """A list's options, once each, without an entry that only asks to pick one: an employer's
+    bundle can label a real value so, which no one means to answer."""
+    return list(dict.fromkeys(i for i in items if i and not PLACEHOLDER.match(i)))
 
 
 def _seq(url: str) -> str | None:
@@ -1388,7 +1434,10 @@ def _next(page: Page, number: int) -> None:
                     raise NotTaken(f"step {number}: {detail}")
                 raise RuntimeError(f"step {number} did not pass: {code}: {detail}")
             if errors := page.locator(FORM).evaluate(_ERRORS) if page.locator(FORM).count() else []:
-                shown = "; ".join(f"{dom}: {message}" for dom, message in errors)
+                if hidden := next((dom for dom, _, hides in errors if hides), None):
+                    detail = f"step {number} requires {hidden}, which the page hides"
+                    raise Unsupported(known_gap(Phenom(), "hidden_required", detail))
+                shown = "; ".join(f"{dom}: {message}" for dom, message, _ in errors)
                 raise RuntimeError(f"step {number} did not pass: {shown}")
         raise RuntimeError(f"step {number} did not pass in time")
     finally:

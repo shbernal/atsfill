@@ -20,10 +20,15 @@ const BASE = location.pathname.match(/^\/companies\/acme\/\d+/)[0];
 const DOCUMENTS = [{type: "CV", constraint: "REQUIRED"},
   {type: "COVER_LETTER", constraint: BASE.endsWith("/102") ? "REQUIRED" : "OPTIONAL"}];
 const STEPS = ["cv", "coverLetter", "review"];
+const ADVANCE_MS = 300;  // job 103: a clicked card moves the wizard on by itself, this much later
+const ADVANCES = BASE.endsWith("/103");
+const RENDER_MS = 300;  // job 104: a step shows after the URL changed, the step before stays
+const LATE = BASE.endsWith("/104");
+let rendering = false;  // meanwhile the step before's cards and Continue take no click
 let QUESTIONS = [];  // the job's, from its own query: a step each, `question-<position>`
 const asked = step => QUESTIONS.find(q => `question-${q.position}` === step);
-// job 104: the account keeps the CV of an application it sent
-const state = {files: BASE.endsWith("/104") ? {cv: "old.pdf"} : {}, answers: {}, month: new Date(2026, 0, 1)};
+// job 105: the account keeps the CV of an application it sent
+const state = {files: BASE.endsWith("/105") ? {cv: "old.pdf"} : {}, answers: {}, month: new Date(2026, 0, 1)};
 const app = document.getElementById("app");
 
 function button(label, attrs = "") {
@@ -37,12 +42,14 @@ function footer(ready) {
 
 function go(step) {
   history.pushState({}, "", `${BASE}/apply/${step}`);
-  setTimeout(render, 100);  // the URL changes first, the step renders after
+  if (!LATE) return render();
+  rendering = true;
+  setTimeout(() => { rendering = false; render(); }, RENDER_MS);
 }
 
 function upload(step) {
-  return `<h2>Upload your ${step}</h2>` + (state.files[step]
-    ? `<p>Ada Placeholder</p><button type="button" data-remove><svg name="TrashIcon"></svg>Remove file</button>`
+  return `<h2>Upload</h2>` + (state.files[step]
+    ? `<p>Ada Placeholder</p><button type="button" data-remove="${step}"><svg name="TrashIcon"></svg>Remove file</button>`
     : `<input type="file" accept=".pdf"><input type="file" accept=".pdf" hidden>`);
 }
 
@@ -68,8 +75,6 @@ function question(q) {
       `<div><p>${String.fromCharCode(97 + i)}</p></div><p>${o}</p></div>`).join("");
   } else if (q.type === "DATE") {
     body += calendar(q);
-  } else if (q.type === "TEXT") {
-    body += `<textarea id="screeningQuestions.answer-${q.id}" name="screeningQuestions.answer-${q.id}">${answer ?? ""}</textarea>`;
   } else {
     body += `<input type="number" id="screeningQuestions.answer-${q.id}" name="screeningQuestions.answer-${q.id}" value="${answer ?? ""}">`;
   }
@@ -136,7 +141,7 @@ app.addEventListener("change", e => {
 });
 
 app.addEventListener("input", e => {
-  if (e.target.id?.startsWith("screeningQuestions.answer-")) {
+  if (e.target.id?.startsWith("screeningQuestions.answer-") && !rendering) {
     state.answers[Number(e.target.id.split("-").pop())] = e.target.value;
     document.querySelectorAll("footer button:not([hidden])")[1].disabled = !e.target.value;
   }
@@ -145,16 +150,21 @@ app.addEventListener("input", e => {
 app.addEventListener("click", async e => {
   const step = location.pathname.split("/apply/")[1];
   const target = e.target.closest("button, [role=radio], [data-day]");
-  if (!target) return;
+  if (target?.dataset.remove) {  // takes a click while the next step renders
+    delete state.files[target.dataset.remove];
+    return rendering || render();
+  }
+  if (!target || rendering) return;
   const q = asked(step);
   if (target.dataset.testid === "ApplyButton") {
     go("authentication");
-  } else if (target.dataset.remove !== undefined) {
-    delete state.files[step];
-    render();
   } else if (target.getAttribute("role") === "radio") {
     state.answers[q.id] = target.dataset.option;
     render();
+    if (ADVANCES) {
+      const next = STEPS[STEPS.indexOf(step) + 1];
+      setTimeout(() => { if (location.pathname.endsWith(`/${step}`)) go(next); }, ADVANCE_MS);
+    }
   } else if (target.dataset.day) {
     state.answers[q.id] = target.dataset.day;
     render();

@@ -39,7 +39,6 @@ UNVERIFIED = "/auth/candidates/unverified-email"
 PROFILE = f"https://{HOST}/talent/me?edit=profile"
 GENERAL = "general"  # the account profile's one profile step
 STEP_TIMEOUT_MS = 20_000
-VIEW_TIMEOUT_MS = 5_000  # the step renders after the URL changes
 PROFILE_TIMEOUT_MS = 20_000
 SAVE_TIMEOUT_MS = 20_000
 MENU_TIMEOUT_MS = 5_000
@@ -50,6 +49,11 @@ SUBMIT_TIMEOUT_MS = 60_000
 BUTTON_TIMEOUT_MS = 2_000
 OPENING_TIMEOUT_S = 20
 CONTINUE_TIMEOUT_S = 15
+ADVANCE_TIMEOUT_MS = 3_000  # how long a clicked card takes to move the wizard on by itself
+INPUT_TIMEOUT_MS = 3_000  # how long a step takes to show its own input
+ANSWER_SHOWN = 200  # of an answer that is not the expected one, in the error
+CLICKS = 3  # a click on a step still rendering is lost, on a card or on Continue
+LEAVE_TIMEOUT_MS = 5_000  # how long Continue takes to leave a step, per click
 POLL_MS = 250
 MAX_STEPS = 60
 MAX_MONTHS = 36  # how far the calendar is paged for a date
@@ -110,15 +114,21 @@ _SHOWN = """root => {
   return p ? p.textContent.trim() : "";
 }"""
 
+# Continue, clicked in one go with the check that the wizard is still on the step: the footer's
+# last button on `review` is Confirm & apply, the send, and a step can leave on its own.
+_CONTINUE = """(button, step) => {
+  const on = location.pathname.replace(/\\/$/, "").split("/").pop() === step;
+  if (!on || button.type === "submit") return false;
+  button.click();
+  return true;
+}"""
+
+_CHECKED = """cards => cards.map(card => card.getAttribute("aria-checked") === "true")"""
+
 # The ids of the inputs that are empty, of those given.
 _EMPTY = (
     """ids => ids.filter(id => { const e = document.getElementById(id); return e && !e.value; })"""
 )
-
-
-# Whether the outgoing step's heading is gone.
-_LEFT = """shown => ![...document.querySelectorAll("h2")].some(
-  h => h.checkVisibility() && h.textContent === shown)"""
 
 
 class Join:
@@ -129,7 +139,11 @@ class Join:
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the candidate account"),
         SideEffect("profile", "hiring_system", "profile --answers saves the account profile"),
-        SideEffect("upload", "hiring_system", "a file is stored as soon as it is chosen"),
+        SideEffect(
+            "upload",
+            "hiring_system",
+            "a file is stored as soon as it is chosen, replacing the one the account keeps",
+        ),
         SideEffect("submit", "employer", "the application reaches the employer"),
     ]
 
@@ -208,9 +222,9 @@ class Join:
             "query": QUESTIONS,
         }
         answered = page.evaluate(_FETCH, [f"{GRAPHQL}?operationName=JobScreeningQuestions", body])
-        listed = (answered.get("data") or {}).get("jobScreeningQuestions")
+        listed = ((answered or {}).get("data") or {}).get("jobScreeningQuestions")
         if not listed:
-            raise RuntimeError(f"JobScreeningQuestions answered {answered.get('errors')}")
+            raise RuntimeError(f"JobScreeningQuestions answered {str(answered)[:ANSWER_SHOWN]}")
         questions = listed["questions"]
         self._questions = sorted(questions, key=lambda q: q.get("position") or 0)
         browser.click(page.locator("[data-testid=ApplyButton]").locator("visible=true").first)
@@ -380,9 +394,11 @@ class Join:
         if not isinstance(answer, str):
             return
         upload, stored = page.locator("input[type=file]"), page.locator(REMOVE_FILE)
+        with suppress(Timeout):  # the step before's Remove file stays a moment
+            upload.first.wait_for(state="attached", timeout=INPUT_TIMEOUT_MS)
         upload.or_(stored).first.wait_for(state="attached", timeout=STEP_TIMEOUT_MS)
-        if stored.count():  # a file an earlier run left on the account: the answer replaces it
-            stored.click()
+        if not upload.count():  # a file the account keeps: the answer replaces it
+            stored.click(timeout=STEP_TIMEOUT_MS)
         upload.first.set_input_files(answer)
         # once stored, the step shows the file in place of its input
         page.wait_for_function(
@@ -402,10 +418,10 @@ class Join:
                 if isinstance(answer, str):
                     if answer not in options or options.index(answer) >= len(texts):
                         raise NotTaken(f"no option {answer!r} in {field_id}: {texts}")
-                    card = cards.nth(options.index(answer))
-                    if card.get_attribute("aria-checked") != "true":
-                        card.click()
-                checked = [c.get_attribute("aria-checked") == "true" for c in cards.all()]
+                    if _take(page, cards, options.index(answer)):
+                        self._seen[field_id] = answer  # the wizard took it and moved on
+                        return
+                checked = cards.evaluate_all(_CHECKED)
                 if True in checked and checked.index(True) < len(options):
                     self._seen[field_id] = options[checked.index(True)]
             case "DATE":
@@ -417,7 +433,9 @@ class Join:
             case _ if isinstance(answer, str):
                 name = f"screeningQuestions.answer-{question['id']}"
                 target = page.locator(f'[name="{name}"], [id="{name}"], #salaryExpectationAmount')
-                if not target.count():
+                try:  # the step before's input stays a moment after the URL has changed
+                    target.first.wait_for(timeout=INPUT_TIMEOUT_MS)
+                except Timeout:
                     target = page.locator(
                         "textarea:visible, input:visible:not([type=file]):not([role=combobox])"
                     )
@@ -434,23 +452,41 @@ def _continue(page: Page) -> Locator:
     return page.locator("button:visible:has(> [data-button-label])").last
 
 
+def _take(page: Page, cards: Locator, index: int) -> bool:
+    """Clicks a card until it is checked, and says whether the wizard then moved on by itself."""
+    on = page.url
+    for _ in range(CLICKS):
+        if cards.evaluate_all(_CHECKED)[index]:
+            break
+        cards.nth(index).click()
+        try:
+            page.wait_for_url(lambda url: url != on, timeout=ADVANCE_TIMEOUT_MS)
+        except Timeout:
+            continue
+        return True
+    return False
+
+
 def _next(page: Page, step: str) -> None:
+    """Leaves the step with Continue, unless the wizard has already left it."""
     button = _continue(page)
     deadline = time.monotonic() + CONTINUE_TIMEOUT_S  # an upload enables it once stored
-    while button.is_disabled() and time.monotonic() < deadline:
+    while _step(page) == step and button.is_disabled() and time.monotonic() < deadline:
         page.wait_for_timeout(POLL_MS)
+    if _step(page) != step:
+        return
     if button.is_disabled():
         raise NotTaken(f"the {step} step keeps Continue disabled: a required answer is missing")
-    on, heading = page.url, page.locator("h2:visible")
-    shown = heading.first.text_content() if heading.count() else None
-    try:
-        button.click(timeout=STEP_TIMEOUT_MS)
-        page.wait_for_url(lambda url: url != on, timeout=STEP_TIMEOUT_MS)
-    except Timeout:
-        raise RuntimeError(f"Continue on the {step} step went nowhere") from None
-    # the URL changes before the step renders; two steps can share a heading, so it is no error
-    with suppress(Timeout):
-        page.wait_for_function(_LEFT, arg=shown, timeout=VIEW_TIMEOUT_MS)
+    on = page.url
+    for _ in range(CLICKS):
+        try:
+            if not button.evaluate(_CONTINUE, step, timeout=STEP_TIMEOUT_MS):
+                return  # the wizard left the step meanwhile
+            page.wait_for_url(lambda url: url != on, timeout=LEAVE_TIMEOUT_MS)
+        except Timeout:
+            continue
+        return
+    raise RuntimeError(f"Continue on the {step} step went nowhere")
 
 
 def _question(q: dict[str, Any]) -> Field:
