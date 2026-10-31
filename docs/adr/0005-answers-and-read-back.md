@@ -14,7 +14,9 @@ Fields are identified by a stable `id` from the form (the input's `name`, the sy
 
 A field missing from the map is left as the page has it, empty or prefilled by an account. A required field missing from the map refuses the command, unless the account prefilled it (`prefilled` in `read`, the profile's value). A value the page itself starts the field with, its `default`, answers nothing: the user gives the real answer.
 
-An answer the form's fields already rule out refuses the command before any typing (`invalid_answers`): an unknown field id, a value of the wrong shape, a choice not among the options, a text longer than the field's length limit, a `url` that is not an absolute URL, a file that is not there.
+An answer the form's fields already rule out refuses the command before any typing (`invalid_answers`): a value of the wrong shape, a choice not among the options, a text longer than the field's length limit, a `url` that is not an absolute URL, a file that is not there. A choice takes the option it differs from only by whitespace or Unicode form, and is filled as the page spells it: a page's options carry stray spaces.
+
+An answer to an id the form does not list refuses with its own reason, `unknown_field`. Ids come from `read`, so it can be the adapter's as well as the answers': a form that changed, or a field read missed.
 
 A field's `knockouts` are the options whose choice ends the application, where its hiring system declares them. A knockout answer is never refused, as it can be the truthful one: the fill goes on and lists it under `warnings`. An adapter lists knockouts only where its system says which option knocks out, never from a label or a question type.
 
@@ -29,6 +31,8 @@ The core decides from the answers alone, before typing: a required follow-up the
 An alternative is a field that takes the same thing as others in a different shape, a document as a file or as a text: each keeps its system's own id, and the group shares a key, `one_of`. The group is required when its members carry the system's `required` flag; a member never is on its own. A required group with no member answered nor prefilled refuses (`no answer for required <key>`), and so does more than one member answered, required or not (`invalid_answers`). The answers decide which side goes, never a preference in the config. A group of one member, or members disagreeing on `required`, ends the command `adapter_error`. A required field atsfill cannot fill stops the form; an alternative it cannot fill stops it only when none of its group can be filled.
 
 `read` lists every field, follow-ups included. An adapter whose form can show a field after an answer implements `ListsShownFields`: once filled, the ids of the fields the page shows. A field it did not list ends the fill `unhandled_rendering`, to be fixed in the adapter; a follow-up the page shows though its condition is unmet ends it `mismatch`: its condition was read wrong. An adapter whose source lists every field whatever the answers (an API) need not implement it, and says so in its doc.
+
+A system can keep a follow-up's condition to itself, so that no read can list the field and only a saved answer shows it. Its adapter implements `RevealsFields`, in place of `ListsShownFields`: once filled, every field the page shows. The core treats a new field as read had listed it, and repeats until the answers reveal nothing more: it fills the field's answer, kept back until then, or refuses (`invalid_answers`) on a required field without one, naming its id and options since `fill` prints no fields. An optional one left empty is a warning. So answers to such a system are checked in two rounds: `unknown_field` comes only after the fill, and `read` cannot show these follow-ups; the first fill does.
 
 The read-back is compared to the answers by field type:
 

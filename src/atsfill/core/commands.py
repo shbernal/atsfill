@@ -34,6 +34,7 @@ from atsfill.core.adapter import (
     ProfileIncomplete,
     ReadsByRequest,
     Refused,
+    RevealsFields,
     SendsToOpen,
     SignedOut,
     SignsIn,
@@ -353,6 +354,38 @@ def _shown_as_listed(
         result.reason = f"mismatch: {', '.join(wrong)} shows though its condition is unmet"
 
 
+def _no_field(result: Result, answers: dict[str, Answer]) -> bool:
+    """Refuses an answer to no listed field. Ids come from `read`, so it says as much about the
+    adapter as about the answers: a form that changed, or a field read missed."""
+    listed = matching.known(result.fields, answers)
+    if unknown := [i for i in answers if i not in listed]:
+        result.status, result.reason = Status.REFUSED, f"unknown_field: {', '.join(unknown)}"
+    return bool(unknown)
+
+
+def _revealed(
+    page: Page, adapter: RevealsFields, result: Result, answers: dict[str, Answer]
+) -> dict[str, Answer]:
+    """Fills what the saved answers reveal, until they reveal nothing more, and returns the
+    answers the form took. A revealed field no answer takes refuses, naming what it asks, since
+    `fill` prints no fields (ADR 0005)."""
+    mine = matching.as_listed(result.fields, matching.known(result.fields, answers))
+    while new := [f for f in adapter.revealed(page) if f.id not in {g.id for g in result.fields}]:
+        _listed(result, result.fields + new)
+        mine = matching.as_listed(result.fields, matching.known(result.fields, answers))
+        if _unfillable(result, mine):
+            return mine
+        if problems := matching.problems(result.fields, mine):
+            problems += [f"{f.id} takes {f.options}" for f in new if f.options and f.id not in mine]
+            result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
+            return mine
+        left = [f for f in new if f.id not in mine]
+        result.warnings += [f"an answer showed {f.id} ({f.label}), left empty" for f in left]
+        adapter.fill(page, matching.to_fill(new, {f.id: mine[f.id] for f in new if f.id in mine}))
+    _no_field(result, answers)
+    return mine
+
+
 def _no_adapter(url: str) -> Result:
     return Result(Status.UNSUPPORTED, url, reason="no_adapter: no adapter for this hiring system")
 
@@ -420,17 +453,23 @@ def _fill(
     result = _result(adapter, url, user)
     with _stops(result):
         _listed(result, _read_signed_in(page, adapter, mine, user, url))
-        if _unfillable(result, answers):
+        held_back = isinstance(adapter, RevealsFields)  # an answer may be to a field yet to show
+        given = matching.known(result.fields, answers) if held_back else answers
+        if _unfillable(result, given) or _no_field(result, given):
             return result
-        if problems := matching.problems(result.fields, answers):
+        given = matching.as_listed(result.fields, given)
+        if problems := matching.problems(result.fields, given):
             result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
             return result
-        result.warnings = matching.knockouts(result.fields, answers)
-        adapter.fill(page, matching.to_fill(result.fields, answers))
-        _shown_as_listed(page, adapter, result, answers)
+        result.warnings = matching.knockouts(result.fields, given)
+        adapter.fill(page, matching.to_fill(result.fields, given))
+        if isinstance(adapter, RevealsFields):
+            given = _revealed(page, adapter, result, answers)
+        else:
+            _shown_as_listed(page, adapter, result, given)
         if result.status is not Status.READY:
             return result
-        result.checks = matching.check(result.fields, answers, adapter.read_back(page))
+        result.checks = matching.check(result.fields, given, adapter.read_back(page))
         if mismatched := [c.field_id for c in result.checks if not c.match]:
             result.status, result.reason = Status.REFUSED, f"mismatch: {', '.join(mismatched)}"
     return result
@@ -650,7 +689,7 @@ def _save_profile(
         fields = adapter.profile_read(page)
         _listed(result, result.fields + fields)
         ids = {f.id for f in fields}
-        mine = {k: v for k, v in answers.items() if k in ids}
+        mine = matching.as_listed(fields, {k: v for k, v in answers.items() if k in ids})
         step_result = Result(Status.READY, result.url, fields=fields)
         if _unfillable(step_result, mine):
             result.status, result.reason = step_result.status, step_result.reason
@@ -669,10 +708,7 @@ def _save_profile(
             adapter.save(page)
             result.saved.append(step)
         result.checks += checks
-    listed = {f.id for f in result.fields}
-    if unknown := [k for k in answers if k not in listed]:
-        result.status = Status.REFUSED
-        result.reason = "invalid_answers: " + "; ".join(f"no field {k}" for k in unknown)
+    _no_field(result, answers)
 
 
 def _sessions(data: Path, users: list[str], candidates: list[Adapter]) -> list[SessionReport]:

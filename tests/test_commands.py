@@ -9,13 +9,20 @@ from atsfill.core import attempts, commands, registry, telemetry
 from atsfill.core.adapter import Blocked, Held, NotTaken, Unsupported, known_gap, out_of_scope
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Field, FieldType, Is, Status
-from tests.fake import FIELDS, Fake, FakeOpens, FakeOpensForm, FakeProfile
+from tests.fake import FIELDS, Fake, FakeOpens, FakeOpensForm, FakeProfile, FakeReveals
 from tests.test_accounts import storage_state
 
 
 @pytest.fixture
 def fake(monkeypatch) -> Fake:
     adapter = Fake()
+    monkeypatch.setattr(commands, "adapters", lambda: [adapter])
+    return adapter
+
+
+@pytest.fixture
+def revealing(monkeypatch) -> FakeReveals:
+    adapter = FakeReveals()
     monkeypatch.setattr(commands, "adapters", lambda: [adapter])
     return adapter
 
@@ -256,6 +263,76 @@ def test_a_field_a_fill_shows_that_read_did_not_list_stops_it(fake, config, url,
         Status.UNSUPPORTED,
         "unhandled_rendering: an answer showed salary, not listed",
     )
+
+
+def test_an_answer_to_no_field_refuses_before_typing(fake, config, url, answers, data):
+    fake.fill_raises = AssertionError("typed")
+    result = core.fill(url, answers | {"x": "?"}, data_dir=data)
+    assert (result.status, result.reason) == (Status.REFUSED, "unknown_field: x")
+
+
+def test_an_answer_takes_a_choice_as_the_page_spells_it(fake, config, url, answers, data):
+    fake.fields = [replace(FIELDS[1], options=["Native", "Fluent "]), *FIELDS[:1], *FIELDS[2:]]
+    typed = []
+    fake.fill = lambda page, given: typed.append(given["level"])
+    fake.read_back = lambda page: answers | {"level": "Fluent ", "cv": "resume.pdf"}
+    result = core.fill(url, answers | {"level": "Fluent"}, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert typed == ["Fluent "]
+
+
+VISA = Field("visa", "Visa status?", FieldType.CHOICE, True, ["Citizen", "None"])
+
+
+def test_a_revealed_field_without_an_answer_refuses_naming_what_it_asks(
+    revealing, config, url, answers, data
+):
+    revealing.reveals = {"level": [VISA]}
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.REFUSED,
+        "invalid_answers: no answer for required visa (Visa status?); "
+        "visa takes ['Citizen', 'None']",
+    )
+
+
+def test_a_revealed_field_takes_its_answer(revealing, config, url, answers, data):
+    revealing.reveals = {"level": [VISA]}
+    result = core.fill(url, answers | {"visa": "Citizen"}, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert revealing.filled[1:] == [{"visa": "Citizen"}]
+    assert "visa" in {c.field_id for c in result.checks}
+
+
+def test_a_field_revealed_by_a_revealed_field_takes_its_answer(
+    revealing, config, url, answers, data
+):
+    since = Field("since", "Since?", FieldType.TEXT, True)
+    revealing.reveals = {"level": [VISA], "visa": [since]}
+    result = core.fill(url, answers | {"visa": "Citizen", "since": "2020"}, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert revealing.filled[1:] == [{"visa": "Citizen"}, {"since": "2020"}]
+
+
+def test_an_optional_revealed_field_left_empty_is_a_warning(revealing, config, url, answers, data):
+    revealing.reveals = {"level": [replace(VISA, required=False)]}
+    result = core.fill(url, answers, data_dir=data)
+    assert result.status is Status.READY, result.reason
+    assert result.warnings == ["an answer showed visa (Visa status?), left empty"]
+
+
+def test_a_required_revealed_field_atsfill_cannot_fill_stops_it(
+    revealing, config, url, answers, data
+):
+    revealing.reveals = {"level": [replace(VISA, unfillable=UNFILLABLE[2])]}
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.reason) == (Status.UNSUPPORTED, UNFILLABLE[2])
+
+
+def test_an_answer_nothing_revealed_refuses_once_filled(revealing, config, url, answers, data):
+    result = core.fill(url, answers | {"x": "?"}, data_dir=data)
+    assert (result.status, result.reason) == (Status.REFUSED, "unknown_field: x")
+    assert len(revealing.filled) == 1
 
 
 def test_a_follow_up_shown_though_its_condition_is_unmet_refuses(fake, config, url, answers, data):
@@ -547,7 +624,7 @@ def test_a_step_the_page_refuses_stops_the_profile(keeper, data):
 
 def test_an_answer_no_step_lists_refuses(keeper, data):
     result = core.profile("fakeprofile", {**PROFILE, "phone": "1"}, data_dir=data)
-    assert (result.status, result.reason) == (Status.REFUSED, "invalid_answers: no field phone")
+    assert (result.status, result.reason) == (Status.REFUSED, "unknown_field: phone")
 
 
 def test_a_form_command_on_an_incomplete_profile_names_the_profile_command(

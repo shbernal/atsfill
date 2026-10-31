@@ -136,13 +136,42 @@ def _answer_problem(field: Field, answer: object, form: Form) -> str | None:
     return None
 
 
-def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
-    """What refuses a fill before typing: unknown ids, missing required answers, more than one
-    alternative answered, answers to follow-ups the answers keep hidden, bad values."""
+def known(fields: list[Field], answers: dict[str, Answer]) -> dict[str, Answer]:
+    """The answers to fields of the form."""
+    ids = {f.id for f in fields}
+    return {i: a for i, a in answers.items() if i in ids}
+
+
+def as_listed(fields: list[Field], answers: dict[str, Answer]) -> dict[str, Answer]:
+    """Each choice as its field spells the option, where only whitespace or Unicode form tells
+    them apart: a stray space in a page's option is not the answer's to copy (ADR 0005)."""
     by_id = {f.id: f for f in fields}
-    out = [f"no field {i}" for i in answers if i not in by_id]
-    form = Form(fields, {i: a for i, a in answers.items() if i in by_id})
-    out += [
+
+    def spelled(field: Field, value: str) -> str:
+        sets = [o for s in field.option_sets or [] for o in s.options]
+        options = [*(field.options or []), *sets]
+        if value in options:
+            return value
+        return next((o for o in options if _norm(o) == _norm(value)), value)
+
+    out = dict(answers)
+    for i, answer in answers.items():
+        field = by_id.get(i)
+        if not field or field.type not in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
+            continue
+        if isinstance(answer, str):
+            out[i] = spelled(field, answer)
+        elif isinstance(answer, list) and all(isinstance(v, str) for v in answer):
+            out[i] = [spelled(field, v) for v in answer]
+    return out
+
+
+def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
+    """What refuses answers to the form's fields before typing: missing required answers, more
+    than one alternative answered, answers to follow-ups the answers keep hidden, bad values."""
+    by_id = {f.id: f for f in fields}
+    form = Form(fields, known(fields, answers))
+    out = [
         f"no answer for required {f.id} ({f.label})"
         for f in fields
         if form.required(f) and f.prefilled is None and not f.unfillable and f.id not in answers

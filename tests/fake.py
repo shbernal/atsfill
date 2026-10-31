@@ -81,6 +81,27 @@ class Fake:
         return page.url if self.evidence else None
 
 
+class FakeReveals(Fake):
+    """A system whose follow-ups only a saved answer shows: `reveals` maps an answered field to
+    the fields it adds."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.reveals: dict[str, list[Field]] = {}
+        self.filled: list[dict[str, Answer]] = []
+
+    def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        self.filled.append(answers)
+        super().fill(page, answers)
+
+    def revealed(self, page: Page) -> list[Field]:
+        answered = [i for filled in self.filled for i in filled]
+        return self.fields + [f for i in answered for f in self.reveals.get(i, [])]
+
+    def read_back(self, page: Page) -> dict[str, Answer]:
+        return super().read_back(page) | {k: v for f in self.filled for k, v in f.items()}
+
+
 class FakeOpens(Fake):
     """The same form on a system that sends the application to show it: the first open sends,
     later ones continue that application; `open_raises` is what opening raises instead."""

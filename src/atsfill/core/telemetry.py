@@ -42,7 +42,8 @@ REPORT = (
     "run `atsfill report` to send this run's URL and page, scrubbed of your answers,"
     " to the maintainer: " + DOCS
 )
-# Reason codes that say nothing about the adapter: the user's input or a fact about the posting
+# Reason codes that say nothing about the adapter: the user's input or a fact about the posting.
+# `unknown_field` is not one: ids come from `read`, so it can be a field read missed.
 EXCLUDED = (
     "invalid_answers",
     "answer_not_taken",

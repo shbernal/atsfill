@@ -29,7 +29,7 @@ PostHog, checked 2026-10-27:
 
 - `pass`: `ready`, `submitted`.
 - `excluded`: the run says nothing about the adapter. Refusals from the user's input (an answer not among the options, a missing answer, the double-send guard, submit not enabled), `out_of_scope`, and every skipped posting of ADR 0013 (a closed posting, an apply step on another system, a page the employer built).
-- `fail`: everything else, `blocked` and known gaps included. The run history answers "does it work for a user today", not "is it the adapter's fault".
+- `fail`: everything else, `blocked` and known gaps included, and `unknown_field`, which can be a field the read missed. The run history answers "does it work for a user today", not "is it the adapter's fault".
 - `unsupported`: sent, never drawn.
 
 **`detailed`.** `basic`, plus the posting URL, plus a scrubbed snapshot of the failing step (input values stripped) in a separate `report` event under 900 KB, trimmed to the failing step's subtree when larger. `atsfill report` sends the last failed run at `detailed`, once, whatever the config says.

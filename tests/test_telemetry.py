@@ -35,6 +35,7 @@ def sent(config, monkeypatch) -> list[tuple[str, dict]]:
         (Status.READY, None, "pass"),
         (Status.SUBMITTED, None, "pass"),
         (Status.REFUSED, "invalid_answers: level is not an option", "excluded"),
+        (Status.REFUSED, "unknown_field: visa", "fail"),
         (Status.REFUSED, "answer_not_taken: city", "excluded"),
         (Status.REFUSED, "already_sent: last attempt ended submitted", "excluded"),
         (Status.REFUSED, "submit_not_enabled: add x", "excluded"),

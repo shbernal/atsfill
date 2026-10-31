@@ -83,6 +83,7 @@ class Ashby:
         self._loaded: Response | None = None  # the ApiJobPosting response `open_form` caught
         self._last_change = 0.0
         self._hosted: str | None = None  # the jobs.ashbyhq.com posting a custom domain embeds
+        self._answered: list[str] = []
 
     def detect(self, url: str, page: Page | None) -> bool:
         """`jobs.ashbyhq.com`, or a career page whose Ashby embed opens the `ashby_jid` job."""
@@ -148,6 +149,7 @@ class Ashby:
         if job is None:
             raise Unsupported("posting_gone")
         self._forms = [job["applicationForm"], *job["surveyForms"]]
+        self._answered = []
         page.wait_for_selector(".ashby-application-form-submit-button")
         return [self._field(e) for e in self._entries()]
 
@@ -185,7 +187,7 @@ class Ashby:
                     raise Unsupported(
                         f"unhandled_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
-        self._answered = list(answers)
+        self._answered += answers
 
     def _saved(self, page: Page, change: Callable[[], None]) -> None:
         """Makes the change, then waits for its save and any other request it set off. A
@@ -201,8 +203,8 @@ class Ashby:
         while self._pending and time.monotonic() < deadline:
             page.wait_for_timeout(SAVE_POLL_MS)
 
-    def read_back(self, page: Page) -> dict[str, Answer]:
-        """Ashby's last returned form, once every answer is held and no request is in flight."""
+    def _settle(self, page: Page) -> None:
+        """Until every answer is held and no request is in flight."""
         deadline = time.monotonic() + READ_BACK_TIMEOUT_S
         while time.monotonic() < deadline:
             values = self._values()
@@ -210,6 +212,16 @@ class Ashby:
             if quiet and all(values.get(i) is not None for i in self._answered):
                 break
             page.wait_for_timeout(READ_BACK_POLL_MS)
+
+    def revealed(self, page: Page) -> list[Field]:
+        """The fields of Ashby's last returned forms: only an answer's render holds a follow-up,
+        the posting's query carries no trace of it or of its condition."""
+        self._settle(page)
+        return [self._field(e) for e in self._entries()]
+
+    def read_back(self, page: Page) -> dict[str, Answer]:
+        """Ashby's last returned form, once settled."""
+        self._settle(page)
         return {k: v for k, v in self._values().items() if v is not None}
 
     def submit(self, page: Page) -> str | None:

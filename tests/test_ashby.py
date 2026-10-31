@@ -163,6 +163,18 @@ def test_every_answer_reads_back_from_ashby(ashby, page, resume):
     assert len(checks) == len(answers)
 
 
+def test_only_an_answer_reveals_a_follow_up_and_it_takes_its_answer(ashby, page):
+    adapter, _ = ashby
+    page.goto(URL)
+    fields = adapter.browser_read(page)
+    assert "permit" not in {f.id for f in fields}
+    adapter.fill(page, {"right": "Yes"})
+    new = [f for f in adapter.revealed(page) if f not in fields]
+    assert [(f.id, f.label) for f in new] == [("permit", "Which permit do you hold?")]
+    adapter.fill(page, {"permit": "Talent"})
+    assert adapter.read_back(page) == {"right": "Yes", "permit": "Talent"}
+
+
 def test_submit_returns_the_evidence(ashby, page):
     adapter, _ = ashby
     page.goto(URL)
