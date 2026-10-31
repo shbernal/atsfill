@@ -95,6 +95,9 @@ TYPES = {
     "file": FieldType.FILE,
 }
 
+CUSTOM_CONTROL = re.compile(r"customQuestionAnswers\.[a-z_]+?_(\d+)(_other)?")
+VETERAN_RADIOS = ("declineToAnswer", "notVeteran", "veteran")
+
 # The form's JSON answer and the state lists, fetched as the page fetches them.
 _FETCH = """async urls => {
   const out = [];
@@ -104,6 +107,12 @@ _FETCH = """async urls => {
   }
   return out;
 }"""
+
+# Each control of the form: what names it, and whether a person sees it.
+_CONTROLS = """form => [...form.querySelectorAll("input, select, textarea")].map(e => ({
+  name: e.name, id: e.id, date: (e.placeholder ?? "").includes("yyyy"),
+  visible: e.offsetParent !== null,
+}))"""
 
 # What each present control shows, by the field's kind.
 _READ_BACK = """(form, specs) => {
@@ -151,6 +160,7 @@ class BambooHR:
         # each field's (kind, control name, extra): a radio's option ids by text, the
         # veteran kinds' texts by id, a date's nothing
         self._specs: dict[str, tuple[str, str | None, Any]] = {}
+        self._on_read: set[str] = set()  # the controls' names as the form opened: its honeypot
 
     def detect(self, url: str, page: Page | None) -> bool:
         return _job(url) is not None
@@ -208,6 +218,7 @@ class BambooHR:
         self._specs = {
             f.id: spec for f, (_, spec) in zip(out, fields, strict=True) if not f.unfillable
         }
+        self._on_read = {control["name"] for control in form.evaluate(_CONTROLS)}
         return out
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
@@ -266,6 +277,17 @@ class BambooHR:
                             continue  # its question was not answered Other
                     control.fill(value)
 
+    def shown_fields(self, page: Page) -> list[str]:
+        """The fields the form holds a control for, once filled; a visible control that came
+        after the read and no field names, by its name."""
+        shown: dict[str, None] = {}
+        for control in page.locator(FORM).evaluate(_CONTROLS):
+            if field_id := _field_of(control):
+                shown[field_id] = None
+            elif control["visible"] and control["name"] not in self._on_read:
+                shown[control["name"]] = None
+        return [i for i in shown if i != "dateAvailable" or i in self._specs]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         specs = {
             i: (kind, name, extra if kind == "veteran" else None)
@@ -305,6 +327,18 @@ class BambooHR:
         if not response.ok:
             raise RuntimeError(f"apply answered {response.status}: {response.text()[:200]}")
         return f"{response.url} {response.status}"
+
+
+def _field_of(control: dict[str, Any]) -> str | None:
+    """The field a control belongs to: by its name, the date by its placeholder and the veteran
+    radios, whose name React makes up, by their ids."""
+    if control["date"]:
+        return "dateAvailable"
+    if control["id"] in VETERAN_RADIOS:
+        return "veteranStatusId"
+    if custom := CUSTOM_CONTROL.fullmatch(control["name"]):
+        return f"question_{custom[1]}{custom[2] or ''}"
+    return next((k for k, (_, name) in STANDARD.items() if name == control["name"]), None)
 
 
 def _job(url: str) -> tuple[str, str] | None:

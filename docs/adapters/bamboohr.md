@@ -1,6 +1,6 @@
 # BambooHR
 
-BambooHR's careers sites, observed on live postings, last on 2026-10-21. The fixture page is [tests/pages/bamboohr/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/bamboohr/job.html) with its detail JSON [detail.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/bamboohr/detail.json), served as `acme.bamboohr.com` in `tests/test_bamboohr.py`: one example of each rendering below.
+BambooHR's careers sites, observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/bamboohr/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/bamboohr/job.html) with its detail JSON [detail.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/bamboohr/detail.json), served as `acme.bamboohr.com` in `tests/test_bamboohr.py`: one example of each rendering below.
 
 ## Where the form is
 
@@ -37,6 +37,10 @@ The page shows a country before any answer, the employer's: the country field's 
 
 - The country first, then the rest in the JSON's order; the state is picked from the list the chosen country shows, or typed.
 - A Fabric select is filled by opening its menu and clicking the item; a radio or a checkbox through its label; a date typed in the placeholder's format; a file attached and waited for until its id is set.
+
+## What the form shows
+
+`shown_fields` names each of the form's controls as the read does: by its `name`, the date by its placeholder, the veteran radios, named by React, by their ids. A control that came after the read and is no field's, visible, is reported by its name; the honeypot, an input moved off screen under a generated name, is there from the start. The state and ZIP relabel by country (Province, Postal Code) over the same controls.
 
 ## Read-back and submit
 

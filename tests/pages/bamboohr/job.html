@@ -111,7 +111,7 @@ async function form() {
   const f = result.formFields;
   const form = el("form", {});
   // the honeypot the page carries
-  form.append(el("input", {name: "nickname_hp", tabindex: "-1", style: "display:none"}));
+  form.append(el("input", {name: "nickname_hp", tabindex: "-1", style: "position:absolute;left:-9999px"}));
   for (const key of ["firstName", "lastName", "email", "phone", "desiredPay", "websiteUrl",
                      "linkedinUrl", "referredBy", "educationInstitutionName"]) {
     if (f[key]) form.append(wrap(f[key].label, el("input", {type: "text", id: key, name: key}), key));
