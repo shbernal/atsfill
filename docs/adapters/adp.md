@@ -1,6 +1,6 @@
 # ADP
 
-ADP Workforce Now's career center, a different product from ADP MyJobs ([adpmyjobs.md](adpmyjobs.md)), observed on live postings on 2026-10-26 and 2026-10-29, headless Camoufox, with the Test user at 19 employers, the wizard walked to its last step on 16. The fixture page is [tests/pages/adp/app.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/adp/app.html), the sign-in, the talent community step and a wizard of each rendering, its API served by `tests/test_adp.py`.
+ADP Workforce Now's career center, a different product from ADP MyJobs ([adpmyjobs.md](adpmyjobs.md)), observed on live postings on 2026-10-26, 2026-10-29 and 2026-10-31, headless Camoufox, with the Test user at 19 employers, the wizard walked to its last step on 16. The fixture page is [tests/pages/adp/app.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/adp/app.html), the sign-in, the talent community step and a wizard of each rendering, its API served by `tests/test_adp.py`.
 
 ## Where the form is
 
@@ -34,6 +34,7 @@ Every employer of the 16 showed the same steps: Personal Information, Resume, Qu
 | | city, postal code, county | `text` | inputs; once the country is picked the postal code is "Zip Code" and County shows | 16 |
 | | state | `choice` | a textbox until the country is picked, then a `wfn-dropdown-list` (`DC - District of Columbia`), its options `role=option`, its select in its shadow root | 16 |
 | Resume | résumé | `file` | Upload File (or Enter Text) and a file input; Next is disabled until one is uploaded | 16 |
+| | the AI opt-out | `choice` (Yes, No), `shown_when` the résumé is answered, optional | once the upload is done: "I want to opt out from having my resume reviewed by artificial intelligence as part of the application process.", a box (`input[name=candidateProfileRelevanceOptionDivId]`) under the employer's notice on its Profile Relevancy score, in no meta. Listed on every form: which employers show it is not known | 2 |
 | Questions | `Yes/No Buttons` | `choice` | `sdf-radio-group`, radios `#questionYes_<n>`, `#questionNo_<n>` | 12 |
 | | `Drop List` | `choice` | `sdf-select-simple#question_<n>`, its items `sdf-select-item` in a floating pane | 10 |
 | | `Comment` | `text` | `textarea#question_<n>` | 8 |
@@ -48,9 +49,11 @@ Every employer of the 16 showed the same steps: Personal Information, Resume, Qu
 | Voluntary Self-ID | gender, ethnicity, race | `choice` | react-select comboboxes (`#vsidGender`, `#vsidEthinicity`, `#vsidRace`), race enabled once ethnicity is Not Hispanic or Latino; a decline box | 14 |
 | | veteran, disability | `choice` | `sdf-radio-group`s whose radios' values are the meta's codes (`Y`, `N`, `D`), their labels the meta's but for a period | where the indicators enable them |
 | Self-Attest & Submit | the attestation | `choice` (Yes, No) | the employer's text, then "Yes, I agree to sign electronically." (`input[name=self_att_agree_chk]`, hidden, its label clicked) | 16 |
+| | the signature | `text`, `shown_when` the attestation is Yes | `input#electronicSignature`, "Please type your full name.", required: shown once the box is ticked, with the time beside it, in no meta. Listed on every form: it showed on each of the 8 fills that reached the box, at 3 employers | 3 |
 
 - The read opens the wizard and goes back to its first step: Personal Information from the page, each box required where its label carries an asterisk; which steps follow from the step bar; the questionnaire, the desired pay, the comment, Voluntary Self-ID and the attestation from the meta. A question of another type is listed unfillable.
 - The fill answers each step and Next, up to the attestation, which it agrees to; the read-back is each step's values before its Next, an amount as typed.
+- `shown_fields` collects each step once answered, as the wizard holds one at a time: the fields with an enabled box (race stays disabled until the ethnicity allows it), then any control the step's answers added that no field has. What a step shows before its answers is not all fields (a preferred name's box, an SMS consent), so those are left alone.
 
 ## Known gaps
 

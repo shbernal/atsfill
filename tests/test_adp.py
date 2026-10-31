@@ -7,10 +7,11 @@ from urllib.parse import urlsplit
 
 import pytest
 
+from atsfill.adapters import adp
 from atsfill.adapters.adp import ADP
-from atsfill.core import browser, otp
+from atsfill.core import browser, conditions, otp
 from atsfill.core.adapter import NotTaken, Refused, SignedOut, SignUpDetails, Unsupported
-from atsfill.core.results import FieldType
+from atsfill.core.results import FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/adp/app.html"
 HOST = "https://workforcenow.adp.com"
@@ -176,11 +177,13 @@ def test_the_read_lists_each_step_from_the_page_and_the_meta(opened, ats):
         "personal.first_name", "personal.middle_name", "personal.last_name", "personal.email",
         "personal.mobile_phone", "personal.home_phone", "personal.country",
         "personal.address_line1", "personal.city", "personal.state", "personal.postal_code",
-        "personal.county", "resume", "question.q1", "question.q2", "question.q3", "question.q4",
+        "personal.county", "resume", "resume.ai_opt_out", "question.q1", "question.q2",
+        "question.q3", "question.q4",
         "question.q5", "question.q6", "question.q7", "question.q7.currency", "question.q8",
         "question.q9", "pay.rate", "pay.amount", "pay.currency", "referral", "referral.by",
         "referral.who", "comment", "self_id.gender",
         "self_id.ethnicity", "self_id.race", "self_id.veteran", "attestation",
+        "attestation.signature",
     ]  # fmt: skip
     assert by_id["personal.first_name"].prefilled == "Ada"
     assert by_id["personal.email"].prefilled == "ada@example.com"
@@ -209,6 +212,8 @@ def test_the_read_lists_each_step_from_the_page_and_the_meta(opened, ats):
     ]
     assert not by_id["self_id.gender"].required
     assert by_id["attestation"].label.startswith("Yes, I agree to sign electronically.")
+    assert by_id["attestation.signature"].shown_when == Is("attestation", ["Yes"])
+    assert by_id["attestation.signature"].required  # whenever shown
     assert "I certify my answers are true." in by_id["attestation"].label
 
 
@@ -240,7 +245,17 @@ def complete(resume: str) -> dict:
         "self_id.gender": "Prefer not to say",
         "self_id.veteran": "I decline to self-identify",
         "attestation": "Yes",
+        "attestation.signature": "Ada Placeholder",
     }
+
+
+def test_the_opt_out_a_resume_shows_is_answered(opened, page, resume):
+    adapter, fields = opened
+    answers = complete(resume) | {"resume.ai_opt_out": "Yes"}
+    adapter.fill(page, answers)
+    assert adapter.read_back(page)["resume.ai_opt_out"] == "Yes"
+    assert "resume.ai_opt_out" in adapter.shown_fields(page)
+    assert unmet(adapter, page, fields, answers) == []
 
 
 def test_fill_walks_every_step_up_to_the_attestation(opened, page, ats, resume):
@@ -250,6 +265,7 @@ def test_fill_walks_every_step_up_to_the_attestation(opened, page, ats, resume):
     assert page.locator("#submitApplication").count()
     assert ats.uploads == 1
     assert adapter.read_back(page) == answers | {
+        "resume.ai_opt_out": "No",
         "personal.first_name": "Ada",
         "personal.last_name": "Placeholder",
         "personal.email": "ada@example.com",
@@ -258,6 +274,57 @@ def test_fill_walks_every_step_up_to_the_attestation(opened, page, ats, resume):
     }
     assert adapter.submit(page).startswith("Submit closed the wizard")
     assert page.get_by_text("Thank you for applying").count()
+
+
+def unmet(adapter, page, fields, answers) -> list[str]:
+    """The fields the filled page shows though the answers keep them hidden."""
+    by_id, form = {f.id: f for f in fields}, conditions.Form(fields, answers)
+    return [i for i in adapter.shown_fields(page) if not form.shown(by_id[i])]
+
+
+def test_shown_fields_follow_the_answers_step_by_step(opened, page, resume):
+    adapter, fields = opened
+    answers = complete(resume)
+    adapter.fill(page, answers)
+    shown = adapter.shown_fields(page)
+    assert {"personal.county", "referral.by", "attestation.signature"} <= set(shown)
+    assert "self_id.race" not in shown and not set(shown) - {f.id for f in fields}
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_the_answers_keep_hidden_stays_hidden(opened, page, resume):
+    adapter, fields = opened
+    answers = complete(resume) | {"referral": "No"}
+    del answers["referral.by"], answers["referral.who"], answers["personal.county"]
+    answers["self_id.ethnicity"] = "Hispanic or Latino"
+    adapter.fill(page, answers)
+    shown = adapter.shown_fields(page)
+    assert "referral.by" not in shown and "self_id.race" not in shown
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_shown_with_its_condition_unmet_is_caught(opened, page, resume, monkeypatch):
+    adapter, fields = opened
+    answers = complete(resume) | {"referral": "No"}
+    del answers["referral.by"], answers["referral.who"]
+    plain = ADP._set
+
+    def yes_on_the_page(self, page, f, answer):
+        plain(self, page, f, "Yes" if f.id == "referral" else answer)
+
+    monkeypatch.setattr(ADP, "_set", yes_on_the_page)
+    with pytest.raises(NotTaken):  # the follow-ups it showed stay empty
+        adapter.fill(page, answers)
+    assert unmet(adapter, page, fields, answers) == ["referral.by", "referral.who"]
+
+
+def test_a_control_an_answer_added_is_shown_by_its_name(opened, page):
+    adapter, _ = opened
+    before = {key for key, _ in page.evaluate(adp._CONTROLS)}
+    page.evaluate("""document.body.insertAdjacentHTML("beforeend", '<input name="added">')""")
+    step = adapter._steps[0]
+    assert "added" in adapter._shown_on(page, step, before)
+    assert "added" not in adapter._shown_on(page, step, before | {"added"})
 
 
 def test_a_fixed_dollar_reads_back_as_the_currency(signed_in, monkeypatch, resume):
@@ -281,9 +348,12 @@ def test_a_wizard_with_nothing_to_ask_goes_from_the_resume_to_the_review(
     adapter = ADP()
     signed_in.goto(JOB.replace("5001_1", "5002_1"))  # no questionnaire
     fields = adapter.browser_read(signed_in)
-    assert [f.id for f in fields][-2:] == ["resume", "attestation"]
+    assert [f.id for f in fields][-4:] == [
+        "resume", "resume.ai_opt_out", "attestation", "attestation.signature",
+    ]  # fmt: skip
     answers = {k: v for k, v in complete(resume).items() if k.startswith("personal.")}
-    adapter.fill(signed_in, answers | {"resume": resume, "attestation": "Yes"})
+    signed = {"resume": resume, "attestation": "Yes", "attestation.signature": "Ada Placeholder"}
+    adapter.fill(signed_in, answers | signed)
     assert signed_in.locator("#submitApplication").count()
     assert adapter.read_back(signed_in)["attestation"] == "Yes"
 
