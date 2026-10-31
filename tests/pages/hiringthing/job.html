@@ -66,7 +66,9 @@
   <label for="job_assessment.question_1005.response.0.st_date" class="form-field-label datePicker-field-label" id="job_assessment.question_1005.response.0.st_date_label">Start</label>
   <input type="text" id="job_assessment.question_1005.response.0.st_date" name="job_assessment.question_1005.response.0.st_date" class="date" value="">
   <button type="button" aria-label="Add Another Position icon button add_circle_outline">Add Another Position</button>
-  <input id="app.where_from" name="app.where_from" type="hidden" value="">
+  <label for="app.where_from" id="app.where_from_label">How did you hear about us? (required)</label>
+  <div class="Select" id="source" data-options="Indeed|Friend/Colleague|Other"><div class="Select-control"><div class="Select-placeholder"></div><div class="Select-input"><input id="app.where_from" role="combobox" value=""></div></div></div>
+  <div id="source-detail"></div>
   <h3>Disclosure Statement</h3>
   <label><input type="checkbox" name="disclosure_agree" id="disclosure_agree" value="">I confirm that I have read, understand and agree to the above statement.</label>
   <label><input type="checkbox" name="subscribe" id="subscribe" value="">Subscribe! Please notify me of new opportunities as they are posted.</label>
@@ -126,6 +128,10 @@
           root.querySelector(".Select-control").prepend(value);
         }
         value.querySelector(".Select-value-label").textContent = o.textContent;
+        if (root.id === "source") document.getElementById("source-detail").innerHTML =
+          ["Friend/Colleague", "Other"].includes(o.textContent)
+            ? '<label for="app.where_from_other" id="app.where_from_other_label">Please Specify Source (required)</label>' +
+              '<input id="app.where_from_other" name="app.where_from_other" type="text" value="">' : "";
         root.querySelector(".Select-placeholder")?.remove();
         input.value = "";
         menu()?.remove();

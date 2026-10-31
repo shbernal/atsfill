@@ -29,6 +29,7 @@ Each rendering, and in how many of 384 postings' props it shows (2026-10-22, one
 | one box: SMS opt-in (`user.contact_preference`), the employer's disclosure (`disclosure_agree`), the privacy policy (`gdpr_disclosure_agree`), job alerts (`subscribe`) | `choice` `Yes`/`No`; the two agreements required | 307, 141, 42, 367 |
 | react-select (`input[role=combobox]`): country, preset; the referral source (`app.where_from`, the employer's list) | `choice`, the options read by opening the menu | 274; 373 |
 | react-select of the country's states (`user.state`) | `typeahead` | 274 |
+| text input `app.where_from_other`, "Please Specify Source", required: rendered only once the source is `Friend/Colleague` or `Other`, no other option of 3 forms' lists showing it | `text`, a follow-up of `app.where_from`, listed when its options hold one of these | 3 of 3 tried |
 | Dropzone area per document (`files.Resume`, `files.CoverLetter`, `files.Other`), its file input hidden on the body | `file` | 381, 363, 375 |
 | employment (`employmentq`) and education (`educationq`) history: one entry of text, phone, date and radio parts, "Add Another" for more | the first entry's parts | 53, 37 |
 
@@ -38,6 +39,7 @@ A `subheadq` question is a heading, not a field (37 postings). The referral sour
 
 - Text and phone inputs are filled; a date is typed as `MM/DD/YYYY`; a radio or a box is checked.
 - A react-select is typed into and its option clicked: the one equal to the answer, or for the state the first that starts with it. The state is filled last, since its options are the chosen country's.
+- Once filled, the form's controls are read again by the same rule as `read`: one an answer showed that `read` did not list stops the fill (`ListsShownFields`), and so does the source detail under a source not in its condition.
 - A file is attached through its area's file chooser and waited for until its name shows as complete.
 
 ## Read-back and submit
