@@ -168,6 +168,7 @@ def test_fill_walks_the_steps_and_reads_back_each(opened, page, resume):
         "question.PH_Q_3": "No",
         "profileVisibility": "Hidden",
     }
+    assert adapter.shown_fields(page) == ["question.PH_Q_1", "question.PH_Q_2", "question.PH_Q_3"]
     assert adapter.submit(page) == "Submit application moved to /job/101/apply/success"
 
 

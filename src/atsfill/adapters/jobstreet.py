@@ -92,6 +92,10 @@ _QUESTIONS = """() => {
 }"""
 
 
+# The questions the employer's step shows, by control name.
+_ASKED = """() => [...document.querySelectorAll('[name^="questionnaire."]')].map(e => e.name)"""
+
+
 class Jobstreet:
     name = "jobstreet"
     per_employer = True  # one SEEK account, signed in on each site apart: the scope is the site
@@ -105,6 +109,7 @@ class Jobstreet:
     ]
 
     def __init__(self) -> None:
+        self._asked: list[str] = []  # the employer's step's control names, once answered
         self._fields: dict[str, Field] = {}
         self._read: dict[str, Answer] = {}
 
@@ -198,6 +203,7 @@ class Jobstreet:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         """Walks the steps in order, each answered and left with Continue, which stays put with
         its errors while one is missing; the review step takes the profile's visibility."""
+        self._asked = []
         self._read = {k: f.prefilled for k in DETAILS if (f := self._fields[k]).prefilled}
         self._read |= _personal_details(page, self._fields, answers)
         _documents_fill(page, answers)
@@ -208,6 +214,7 @@ class Jobstreet:
             for field_id, answer in answers.items():
                 if field_id.startswith("question."):
                     _answer(page, self._fields[field_id], answer)
+            self._asked = page.evaluate(_ASKED)
             asked = page.evaluate(_QUESTIONS)
             self._read |= {
                 f"question.{name.removeprefix('questionnaire.')}": value
@@ -231,6 +238,13 @@ class Jobstreet:
             radio.check(force=True)
             if radio.is_checked():
                 self._read["profileVisibility"] = radio.get_attribute("value") or ""
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The questions the employer's step showed once answered: the wizard has left it. The
+        other steps' controls are the account's and the page's, read as `browser_read` lists
+        them."""
+        names = dict.fromkeys(self._asked)
+        return [f"question.{name.removeprefix('questionnaire.')}" for name in names]
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         return dict(self._read)
