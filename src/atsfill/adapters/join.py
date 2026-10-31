@@ -12,6 +12,7 @@ import json
 import re
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import replace
 from typing import Any
 from urllib.parse import urlsplit
@@ -50,6 +51,7 @@ OPENING_TIMEOUT_S = 20
 CONTINUE_TIMEOUT_S = 15
 ADVANCE_TIMEOUT_MS = 3_000  # how long a clicked card takes to move the wizard on by itself
 INPUT_TIMEOUT_MS = 3_000  # how long a step takes to show its own input
+ANSWER_SHOWN = 200  # of an answer that is not the expected one, in the error
 CLICKS = 3  # a click on a step still rendering is lost, on a card or on Continue
 LEAVE_TIMEOUT_MS = 5_000  # how long Continue takes to leave a step, per click
 POLL_MS = 250
@@ -80,6 +82,7 @@ LACKS = {
     "candidate.phoneNumber": "a phone",
 }
 PDF = [".pdf", "application/pdf"]
+REMOVE_FILE = "button:has(svg[name=TrashIcon])"  # a stored file's Remove file, in any language
 
 # The profile form's controls, by its field ids.
 TEXTS = {
@@ -136,7 +139,11 @@ class Join:
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the candidate account"),
         SideEffect("profile", "hiring_system", "profile --answers saves the account profile"),
-        SideEffect("upload", "hiring_system", "a file is stored as soon as it is chosen"),
+        SideEffect(
+            "upload",
+            "hiring_system",
+            "a file is stored as soon as it is chosen, replacing the one the account keeps",
+        ),
         SideEffect("submit", "employer", "the application reaches the employer"),
     ]
 
@@ -215,7 +222,10 @@ class Join:
             "query": QUESTIONS,
         }
         answered = page.evaluate(_FETCH, [f"{GRAPHQL}?operationName=JobScreeningQuestions", body])
-        questions = answered["data"]["jobScreeningQuestions"]["questions"]
+        listed = ((answered or {}).get("data") or {}).get("jobScreeningQuestions")
+        if not listed:
+            raise RuntimeError(f"JobScreeningQuestions answered {str(answered)[:ANSWER_SHOWN]}")
+        questions = listed["questions"]
         self._questions = sorted(questions, key=lambda q: q.get("position") or 0)
         browser.click(page.locator("[data-testid=ApplyButton]").locator("visible=true").first)
         page.wait_for_url("**/apply/**", timeout=STEP_TIMEOUT_MS)
@@ -383,7 +393,13 @@ class Join:
     def _file(self, page: Page, field_id: str, answer: Answer | None) -> None:
         if not isinstance(answer, str):
             return
-        page.locator("input[type=file]").first.set_input_files(answer)
+        upload, stored = page.locator("input[type=file]"), page.locator(REMOVE_FILE)
+        with suppress(Timeout):  # the step before's Remove file stays a moment
+            upload.first.wait_for(state="attached", timeout=INPUT_TIMEOUT_MS)
+        upload.or_(stored).first.wait_for(state="attached", timeout=STEP_TIMEOUT_MS)
+        if not upload.count():  # a file the account keeps: the answer replaces it
+            stored.click(timeout=STEP_TIMEOUT_MS)
+        upload.first.set_input_files(answer)
         # once stored, the step shows the file in place of its input
         page.wait_for_function(
             "() => !document.querySelector('input[type=file]')", timeout=UPLOAD_TIMEOUT_MS

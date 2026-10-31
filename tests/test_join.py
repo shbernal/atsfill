@@ -187,6 +187,39 @@ def test_a_late_continue_never_presses_confirm(page, files, monkeypatch):
     assert page.get_by_text("Sent").count() == 0
 
 
+def test_a_stored_file_is_replaced_by_the_answer(page, files):
+    """The account keeps the CV of an application it sent: the step shows it, with no input."""
+    adapter = Join()
+    page.goto("https://join.com/companies/acme/105-ai-engineer")
+    fields = adapter.browser_read(page)
+    answers = {"cv": files[0], "question.1": "Fluent", "question.2": "Yes",
+               "question.3": "2026-03-15", "question.4": "50000"}  # fmt: skip
+    adapter.fill(page, answers)
+    read_back = adapter.read_back(page)
+    assert read_back["cv"] == "CV Ada.pdf"
+    assert [c.field_id for c in matching.check(fields, answers, read_back) if not c.match] == []
+
+
+def test_the_step_befores_file_is_not_taken_for_a_stored_one(page, files, monkeypatch):
+    """The cover letter's URL still shows the CV just uploaded, with its Remove file."""
+    monkeypatch.setattr(f"{__name__}.QUESTIONS", [])
+    adapter = Join()
+    page.goto("https://join.com/companies/acme/104-ai-engineer")
+    adapter.browser_read(page)
+    adapter.fill(page, {"cv": files[0], "coverLetter": files[1]})
+    assert adapter.read_back(page)["cv"] == "CV Ada.pdf"
+
+
+def test_a_questions_query_without_data_says_what_it_answered(page):
+    answer = {"data": None, "errors": [{"message": "Too many requests"}]}
+    questions = "**/candidate-api/graphql?operationName=JobScreeningQuestions"
+    page.context.route(questions, lambda route: route.fulfill(json=answer))
+    page.goto(JOB)
+    with pytest.raises(RuntimeError, match="Too many requests"):
+        Join().browser_read(page)
+    page.context.unroute(questions)
+
+
 def test_a_required_step_left_unanswered_is_not_taken(opened, page):
     adapter, _ = opened
     with pytest.raises(join.NotTaken, match="cv step keeps Continue disabled"):

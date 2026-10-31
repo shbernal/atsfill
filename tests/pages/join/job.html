@@ -27,7 +27,8 @@ const LATE = BASE.endsWith("/104");
 let rendering = false;  // meanwhile the step before's cards and Continue take no click
 let QUESTIONS = [];  // the job's, from its own query: a step each, `question-<position>`
 const asked = step => QUESTIONS.find(q => `question-${q.position}` === step);
-const state = {files: {}, answers: {}, month: new Date(2026, 0, 1)};
+// job 105: the account keeps the CV of an application it sent
+const state = {files: BASE.endsWith("/105") ? {cv: "old.pdf"} : {}, answers: {}, month: new Date(2026, 0, 1)};
 const app = document.getElementById("app");
 
 function button(label, attrs = "") {
@@ -48,7 +49,7 @@ function go(step) {
 
 function upload(step) {
   return `<h2>Upload</h2>` + (state.files[step]
-    ? `<p>Ada Placeholder</p>${button("Remove file")}`
+    ? `<p>Ada Placeholder</p><button type="button" data-remove="${step}"><svg name="TrashIcon"></svg>Remove file</button>`
     : `<input type="file" accept=".pdf"><input type="file" accept=".pdf" hidden>`);
 }
 
@@ -149,6 +150,10 @@ app.addEventListener("input", e => {
 app.addEventListener("click", async e => {
   const step = location.pathname.split("/apply/")[1];
   const target = e.target.closest("button, [role=radio], [data-day]");
+  if (target?.dataset.remove) {  // takes a click while the next step renders
+    delete state.files[target.dataset.remove];
+    return rendering || render();
+  }
   if (!target || rendering) return;
   const q = asked(step);
   if (target.dataset.testid === "ApplyButton") {
