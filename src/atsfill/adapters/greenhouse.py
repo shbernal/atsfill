@@ -11,13 +11,14 @@ import re
 import time
 import urllib.request
 from contextlib import suppress
+from dataclasses import replace
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from atsfill.core import browser, otp
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import HTTP_TIMEOUT_S, BrowserError, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOSTS = re.compile(r"^(job-boards|boards)(\.eu)?\.greenhouse\.io$")
 FORM = "#application-form"
@@ -29,6 +30,7 @@ EDUCATION_API = "https://boards-api.greenhouse.io/v1/boards/{board}/education/{k
 EMBED = "https://job-boards.greenhouse.io/embed/job_app"
 EMBED_TIMEOUT_MS = 15_000
 OPTIONS_TIMEOUT_MS = 3_000
+RACE_TIMEOUT_MS = 3_000
 HYDRATE_TIMEOUT_MS = 15_000
 FORM_TIMEOUT_MS = 20_000
 ANSWER_TIMEOUT_MS = 15_000  # an upload's file name, a suggestion: past it, a mismatch
@@ -52,6 +54,7 @@ OTP_ERROR = "#email-verification-error"
 # Sections the page adds or names its own way, or shows a question of only on another answer
 # (EEOC race after Hispanic/Latino): `request_read` declines a posting with any (ADR 0011).
 UNMAPPED = ("education", "compliance", "demographic_questions")
+ETHNICITY, NOT_HISPANIC, RACE = "hispanic_ethnicity", "No", "race"
 
 # The fields in page order. A select's options are read by opening it, from Python.
 _READ = """form => {
@@ -196,10 +199,11 @@ class Greenhouse:
         fields = [self._field(page, raw) for raw in raws]
         self._fields = {f.id: f for f in fields}
         self._kinds = {raw["id"]: raw["kind"] for raw in raws}
-        return fields
+        return self._with_race(page, fields)
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        for field_id, answer in answers.items():
+        # the page draws race only once the answer to Hispanic/Latino is in
+        for field_id, answer in sorted(answers.items(), key=lambda a: a[0] == RACE):
             values = [answer] if isinstance(answer, str) else answer
             match self._kinds[field_id]:
                 case "file":
@@ -234,6 +238,9 @@ class Greenhouse:
                     pass  # the input takes no text: left empty, it reads back as a mismatch
                 case _:
                     page.locator(_by_id(field_id)).fill(values[0])
+
+    def shown_fields(self, page: Page) -> list[str]:
+        return [raw["id"] for raw in page.locator(FORM).evaluate(_READ)]
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, list(self._fields))
@@ -294,6 +301,30 @@ class Greenhouse:
             raw.get("accept"),
             one_of=raw.get("oneOf"),
         )
+
+    def _with_race(self, page: Page, fields: list[Field]) -> list[Field]:
+        """`fields` with the EEOC race question, a follow-up of Hispanic/Latino: its page's own
+        label and options show only with the question, so the read answers No, reads it and
+        clears the answer. The API's options are not the page's."""
+        ethnicity = self._fields.get(ETHNICITY)
+        if (
+            RACE in self._fields
+            or ethnicity is None
+            or NOT_HISPANIC not in (ethnicity.options or [])
+        ):
+            return fields
+        _select(page, ETHNICITY, NOT_HISPANIC, False)
+        with suppress(Timeout):
+            page.locator(_by_id(RACE)).wait_for(timeout=RACE_TIMEOUT_MS)
+        raws = page.locator(FORM).evaluate(_READ)
+        raw = next((r for r in raws if r["id"] == RACE), None)
+        if raw is not None:
+            race = replace(self._field(page, raw), shown_when=Is(ETHNICITY, [NOT_HISPANIC]))
+            self._fields[RACE], self._kinds[RACE] = race, raw["kind"]
+            fields = [*fields]
+            fields.insert(fields.index(ethnicity) + 1, race)
+        _clear(page, ETHNICITY)
+        return fields
 
     def _education(self, page: Page, field_id: str) -> list[str] | None:
         """An education select's options, every page of them, read once per kind; None for
@@ -427,6 +458,14 @@ def _upload(field_id: str) -> str:
 
 def _exact(value: str) -> re.Pattern[str]:
     return re.compile(rf"^\s*{re.escape(value)}\s*$")
+
+
+def _clear(page: Page, field_id: str) -> None:
+    """Empties a single react-select."""
+    box = page.locator(_by_id(field_id))
+    box.click()
+    box.press("Backspace")
+    box.press("Escape")
 
 
 def _select(page: Page, field_id: str, value: str, suggested: bool) -> None:

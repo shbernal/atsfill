@@ -9,7 +9,7 @@ from atsfill.adapters import greenhouse
 from atsfill.adapters.greenhouse import Greenhouse, _api_fields
 from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import Blocked
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/greenhouse/job.html"
 JOB = "https://job-boards.greenhouse.io/acme/jobs/1234"
@@ -84,6 +84,8 @@ def test_browser_read_waits_for_the_live_page(page):
         "question_4",
         "question_2[]",
         "4000952002",
+        "hispanic_ethnicity",
+        "race",
         "gdpr_processing_consent_given",
     ]
     assert by_id["phone"].type is FieldType.PHONE
@@ -115,12 +117,40 @@ def test_every_answer_reads_back(page, resume):
         "question_4": ["Rust", "Go"],
         "question_2[]": ["French", "English"],
         "4000952002": "Decline To Self Identify",
+        "race": "Asian",  # listed first: it waits for the answer that shows it
+        "hispanic_ethnicity": "No",
         "gdpr_processing_consent_given": "Yes",
     }
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_race_is_a_follow_up_the_read_leaves_hidden(page):
+    adapter, fields = opened(page)
+    race = next(f for f in fields if f.id == "race")
+    assert race.label == "Please identify your race"
+    assert race.options == ["Asian", "White", "Decline To Self Identify"]
+    assert race.shown_when == Is("hispanic_ethnicity", ["No"]) and not race.required
+    assert "race" not in adapter.shown_fields(page)
+    assert "hispanic_ethnicity" not in adapter.read_back(page)
+
+
+@pytest.mark.parametrize(("answer", "shows"), [("No", True), ("Yes", False)])
+def test_shown_fields_follow_the_page(page, answer, shows):
+    adapter, _ = opened(page)
+    adapter.fill(page, {"hispanic_ethnicity": answer})
+    assert ("race" in adapter.shown_fields(page)) is shows
+
+
+def test_shown_fields_name_a_field_the_read_did_not_list(page):
+    adapter, _ = opened(page)
+    page.evaluate(
+        """() => document.getElementById("application-form").insertAdjacentHTML("beforeend",
+        '<label for="extra">Extra</label><input id="extra" type="text">')"""
+    )
+    assert "extra" in adapter.shown_fields(page)
 
 
 def test_a_resume_entered_manually_leaves_the_file_input(page):

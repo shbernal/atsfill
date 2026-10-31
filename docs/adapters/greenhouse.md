@@ -1,6 +1,6 @@
 # Greenhouse
 
-Observed on live postings, last on 2026-10-25; the OTP step from the page's script, 2026-10-27. The fixture page is [tests/pages/greenhouse/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
+Observed on live postings, last on 2026-10-31; the OTP step from the page's script, 2026-10-27. The fixture page is [tests/pages/greenhouse/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/greenhouse/job.html), served as Greenhouse's hosted page and an embedding employer page in `tests/test_greenhouse.py`.
 
 ## Where the form is
 
@@ -14,7 +14,7 @@ Observed on live postings, last on 2026-10-25; the OTP step from the page's scri
 The Job Board API answers without a key: `boards-api.greenhouse.io/v1/boards/<board>/jobs/<id>?questions=true` (EU boards too). Its `questions` give the field names the page uses as input ids, a file's paste-in textarea second (`resume_text`, `cover_letter_text`), and its `location_questions` the location, `candidate-location` on the page beside hidden latitude and longitude. Its other sections do not map to the page for certain, so `request_read` returns `None` on a posting with any of them and `read` falls back to the browser read:
 
 - `education` and `data_compliance` consents: the page adds education rows (`school--0`, …) and consent boxes the API does not list;
-- `compliance` (US EEOC): the page shows race only once Hispanic/Latino is answered No;
+- `compliance` (US EEOC): it lists race but not Hispanic/Latino, and race's options are not the page's, which leave out `Hispanic or Latino`;
 - `demographic_questions`: rendered under their own ids.
 
 On the page, `form#application-form`, each field rendering and on how many of 18 postings' pages (2026-10-19):
@@ -33,6 +33,10 @@ On the page, `form#application-form`, each field rendering and on how many of 18
 | `.file-upload` group, with an "Enter manually" textarea behind a button | `file` and `text` alternatives, `one_of` the file's id | 18 |
 
 Sections built of these: employment rows (company, title, month selects, four-character year inputs) on 2, education rows on 5, US EEOC selects on 9, demographic selects with a consent box on 1. A radio input has not been seen; one is listed as `unhandled_rendering`.
+
+The EEOC race select, optional, is a follow-up: the page draws it only while `hispanic_ethnicity` is answered `No`, and removes it on `Yes`, `Decline To Self Identify` or no answer. So the read picks `No`, reads the select, then clears the answer with Backspace, and lists `race` with `shown_when`. Filling answers it after Hispanic/Latino, whatever the answers' order.
+
+After a fill the adapter reads the form again: a field `browser_read` did not list stops the fill.
 
 Required fields carry `aria-required="true"`. Labels hold a `*` marker hidden from screen readers.
 
