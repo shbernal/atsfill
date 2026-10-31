@@ -439,6 +439,9 @@ class SuccessFactors:
             raise NotTaken(f"{key} is no longer on the page")
         return found | {"options": self._fields[key]["options"]}
 
+    def shown_fields(self, page: Page) -> list[str]:
+        return [d["key"] for d in page.evaluate(FIELDS)]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Each field's value; an attachment's, the file uploaded to it when it lists several."""
         values = {}
