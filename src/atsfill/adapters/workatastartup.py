@@ -97,6 +97,20 @@ _READ_BACK = """dialog => {
   return out;
 }"""
 
+# The fields the dialog shows, once tagged; a control `_TAG` did not place, by its place in the
+# dialog. The relocation box is the account profile's, not a field.
+_SHOWN = """dialog => {
+  const out = new Set();
+  [...dialog.querySelectorAll("input, select, textarea")].forEach((el, n) => {
+    if (el.type === "hidden" || !el.getClientRects().length) return;
+    const block = el.closest("[data-atsfill-question]");
+    if (block) out.add("question_" + block.dataset.atsfillQuestion);
+    else if (el.dataset.atsfillField === "message") out.add("message");
+    else if (!el.dataset.atsfillField) out.add(`control #${n + 1}`);
+  });
+  return [...out];
+}"""
+
 
 class WorkAtAStartup:
     name = "workatastartup"
@@ -260,6 +274,10 @@ class WorkAtAStartup:
         relocation = dialog.locator("[data-atsfill-field=open_to_relocation]")
         if relocation.count():
             relocation.uncheck()
+
+    def shown_fields(self, page: Page) -> list[str]:
+        self._tag(page)
+        return page.locator(DIALOG).first.evaluate(_SHOWN)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         self._tag(page)

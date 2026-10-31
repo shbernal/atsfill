@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from atsfill.adapters import workatastartup
-from atsfill.adapters.workatastartup import WorkAtAStartup
+from atsfill.adapters.workatastartup import DIALOG, WorkAtAStartup
 from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import (
     Blocked,
@@ -199,6 +199,21 @@ def test_every_answer_reads_back_and_the_relocation_box_is_unticked(page, site):
     checks = matching.check(fields, ANSWERS, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert not page.locator("[data-atsfill-field=open_to_relocation]").is_checked()
+
+
+def test_the_fields_shown_are_the_listed_ones_without_the_relocation_box(page, site):
+    adapter, fields = opened(page)
+    adapter.fill(page, ANSWERS)
+    assert adapter.shown_fields(page) == [f.id for f in fields]
+
+
+def test_a_control_the_read_did_not_list_counts_as_shown(page, site):
+    adapter, fields = opened(page)
+    page.locator(DIALOG).first.evaluate(
+        "d => d.insertAdjacentHTML('beforeend', '<input class=follow-up>')"
+    )
+    new = set(adapter.shown_fields(page)) - {f.id for f in fields}
+    assert len(new) == 1 and new.pop().startswith("control #")
 
 
 def test_submit_posts_the_answers_and_returns_the_jobs_applied_to(page, site):
