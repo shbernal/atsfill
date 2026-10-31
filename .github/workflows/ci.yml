@@ -34,7 +34,7 @@ jobs:
           key: camoufox-${{ runner.os }}-${{ steps.build.outputs.build }}
       - run: uv run atsfill install-browser
         env:
-          GITHUB_TOKEN: ${{ github.token }}  # until daijro/camoufox#920 is released: a pinned fetch lists every repo
+          GITHUB_TOKEN: ${{ github.token }}  # the fetch asks GitHub's API, rate limited without one
       - name: Time one browser launch, alone on the runner
         run: |
           echo "cores: $(nproc)"

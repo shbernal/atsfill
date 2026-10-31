@@ -18,10 +18,10 @@ from urllib.parse import urljoin
 from urllib.request import Request as HttpRequest
 from urllib.request import urlopen
 
-from camoufox.addons import ADDONS_DIR, DefaultAddons, get_addon_path, maybe_download_addons
+from camoufox.addons import DefaultAddons, get_addon_path
 from camoufox.exceptions import CamoufoxNotInstalled
 from camoufox.fingerprints import Screen, generate_fingerprint
-from camoufox.pkgman import installed_verstr
+from camoufox.pkgman import INSTALL_DIR, installed_verstr, launch_path
 from camoufox.sync_api import Camoufox
 from filelock import FileLock
 from filelock import Timeout as LockTimeout
@@ -58,11 +58,9 @@ BUDGET = 180.0  # seconds per command, lock wait included
 PROFILE_BUDGET = 300.0  # seconds for a `profile` run, which may save every profile step
 LOCK_POLL_S = 0.1
 HTTP_TIMEOUT_S = 20  # per request to a hiring system's API
-BUILD = "156.0.1-beta.36"  # the Camoufox browser build, pinned so results compare across machines
-BLOCKER = ADDONS_DIR / "UBO-frozen"  # Camoufox's uBlock Origin: annoyance lists on, updates off
+BUILD = "158.0.1-beta.41"  # the Camoufox browser build, pinned so results compare across machines
+BLOCKER = INSTALL_DIR / "atsfill" / f"UBO-{BUILD}"  # the build's uBlock Origin, annoyance lists on
 BLOCKER_LISTS = "annoyances"  # the group of uBlock Origin lists: cookie banners, pop-ups, widgets
-# On, its first update, 37s into a launch, leaves the blocker hiding nothing for the rest of it.
-BLOCKER_AUTO_UPDATE = "autoUpdate: true,"
 # The adapters' filters for the banners the lists miss: a list of the blocker's, on like them.
 FILTERS = "assets/atsfill/filters.txt"
 INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
@@ -90,14 +88,13 @@ def version() -> str:
 
 
 def install() -> int:
-    """Fetches the pinned browser build unless it is installed, then the add-ons every launch
-    loads, so that browsers started side by side do not each download them."""
+    """Fetches the pinned browser build unless it is installed, then builds the blocker every
+    launch loads, so that browsers started side by side do not each build it."""
     if version() != BUILD:
-        subprocess.call([sys.executable, "-m", "camoufox", "fetch", f"official/{BUILD}"])
+        subprocess.call([sys.executable, "-m", "camoufox", "fetch"])  # the package's paired build
     if version() != BUILD:  # `camoufox fetch` exits 0 when it fails
         print(f"the Camoufox build {BUILD} is not installed", file=sys.stderr)
         return 1
-    maybe_download_addons(list(DefaultAddons))
     try:
         _build_blocker()
     except OSError as e:
@@ -109,13 +106,13 @@ def install() -> int:
 def _build_blocker() -> None:
     """Copies Camoufox's uBlock Origin to `BLOCKER` with only its annoyance lists on, read
     from disk: fetched by each launch, they would hold its first page for seconds, and each
-    list on is compiled by each launch before the blocker starts. Its updates stay off: a fresh
-    profile would drop them with the browser anyway."""
-    ADDONS_DIR.mkdir(parents=True, exist_ok=True)
-    with FileLock(ADDONS_DIR / f"{BLOCKER.name}.lock"):
+    list on is compiled by each launch before the blocker starts. Camoufox's policy keeps it
+    from updating them: its first update, 37s into a launch, left it hiding nothing."""
+    BLOCKER.parent.mkdir(parents=True, exist_ok=True)
+    with FileLock(BLOCKER.with_name(f"{BLOCKER.name}.lock")):
         build = BLOCKER.with_name(f"{BLOCKER.name}.build")
         shutil.rmtree(build, ignore_errors=True)
-        shutil.copytree(get_addon_path(DefaultAddons.UBO.name), build)
+        shutil.copytree(get_addon_path(DefaultAddons.UBO.name, launch_path()), build)
         assets = build / "assets" / "assets.json"
         entries = json.loads(assets.read_text())
         for key, entry in entries.items():
@@ -135,10 +132,6 @@ def _build_blocker() -> None:
         (build / FILTERS).parent.mkdir()
         (build / FILTERS).touch()
         assets.write_text(json.dumps(entries))
-        settings = build / "js" / "background.js"
-        defaults = settings.read_text()
-        assert BLOCKER_AUTO_UPDATE in defaults  # gone from a new uBlock Origin: find its new form
-        settings.write_text(defaults.replace(BLOCKER_AUTO_UPDATE, "autoUpdate: false,"))
         shutil.rmtree(BLOCKER, ignore_errors=True)
         build.rename(BLOCKER)
 
@@ -193,7 +186,6 @@ def lock(data_dir: Path, deadline: float) -> Generator[None]:
 @contextmanager
 def _launch(data_dir: Path, headless: bool) -> Generator[Browser]:
     if not (BLOCKER / FILTERS).exists():  # installed before the blocker, or its filters, were
-        maybe_download_addons(list(DefaultAddons))
         _build_blocker()
     _write_filters()
     with Camoufox(
