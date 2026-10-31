@@ -25,7 +25,16 @@ from scripts import run_history
 from scripts.run_history import COMMANDS, DRAWN, MAIN, ROOT, WINDOW_DAYS, Run
 
 LABEL = "failure"
-TRIAGE_LABELS = ("agent:working", "agent:done", "agent:skip", "agent:stuck", "cannot-reproduce")
+TRIAGE_LABELS = {
+    "agent:working": "An agent is working on this issue right now",
+    "agent:done": "An agent opened a pull request for this issue",
+    "agent:skip": (
+        "An agent found this is not the code's to fix: "
+        "captcha, SMS OTP, rate limit, maintainer's choice"
+    ),
+    "agent:stuck": "An agent tried and could not fix this, or its run was interrupted twice",
+    "cannot-reproduce": "Re-run and no longer fails, or the posting is gone",
+}
 ISSUE_LIMIT = 200
 FREEHIRE_PAGE = 100  # freehire's cap per search
 FREEHIRE_PAGES = 50  # per source, before the rest is printed as unresolved
@@ -225,9 +234,9 @@ def _contains() -> Callable[[Run, str], bool]:
 def sync(found: list[Failure]) -> None:
     _gh("label", "create", LABEL, "--force", "--color", "f7768e",
         "--description", "A posting fails, per system, command and reason (ADR 0016)")  # fmt: skip
-    for name in TRIAGE_LABELS:
+    for name, description in TRIAGE_LABELS.items():
         _gh("label", "create", name, "--force", "--color", "8b90a8",
-            "--description", "Triage of a failure issue")  # fmt: skip
+            "--description", description)  # fmt: skip
     listed = _gh("issue", "list", "--label", LABEL, "--state", "all", "--limit", str(ISSUE_LIMIT),
                  "--json", "number,title,body,state,closedAt,labels")  # fmt: skip
     listed = json.loads(listed)
