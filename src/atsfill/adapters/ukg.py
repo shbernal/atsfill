@@ -35,7 +35,6 @@ SETTLE_MS = 500
 YES_NO = ["Yes", "No"]
 DATE_SHOWN = re.compile(r"(\d\d)/(\d\d)/(\d{4})")
 COUNTRY, STATE = "Country", "State"
-HISPANIC = "HispanicOrigin"  # race (`EthnicOrigin`) is asked when not Hispanic or Latino
 DECLINE_BOX = "input[type=checkbox][data-automation$='-decline-checkbox']"
 DAYS, DOCUMENTS = "availability_days", "documents"
 
@@ -50,7 +49,9 @@ ERRORS = [
 ]  # fmt: skip
 
 # Each visible field of the form, in page order: a control's id (a radio group's name), its
-# label, how it renders, whether it is required, its options and value.
+# label, how it renders, whether it is required, its options and value. Two follow-ups are
+# listed hidden, `unshown`, after the answer that shows them: race, when not Hispanic or Latino,
+# and the referrer's details, when referred by an employee.
 _READ = """root => {
   const clean = s => (s || "").replace(/\\s+/g, " ").trim();
   const shown = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length) &&
@@ -87,6 +88,7 @@ _READ = """root => {
     const type = (el.type || "").toLowerCase();
     if (["hidden", "file", "submit", "button"].includes(type) || !shown(el)) continue;
     if (el.matches("[data-automation$='-decline-checkbox']")) continue;  // its select's option
+    if (el.matches("[data-automation=select-document-checkbox]")) continue;  // the upload's own
     if (el.closest("ukg-input, ukg-input-container, [data-automation=upload-resume]")) continue;
     const id = type === "radio" ? el.name : el.id || el.name || el.dataset.automation;
     if (!id || seen.has(id)) continue;
@@ -131,8 +133,25 @@ _READ = """root => {
     const label = labelOf(race);
     out.splice(out.findIndex(f => f.id === "HispanicOrigin") + 1, 0, select(race, {
       id: race.id, label: clean(label?.textContent), required: required(race, label),
-      readonly: false, maxLength: null,
-      shownWhen: clean([...hispanic.options].find(o => o.value === "No")?.textContent)}));
+      readonly: false, maxLength: null, unshown: !shown(race),
+      shownWhen: ["HispanicOrigin",
+                  clean([...hispanic.options].find(o => o.value === "No")?.textContent)]}));
+  }
+  const referred = root.querySelector("input[type=radio][name=employeereferral][value=true]");
+  if (referred && out.some(f => f.id === "employeereferral")) {
+    const details = ["ReferralName", "ReferralEmail", "ReferralPhone"]
+      .map(id => root.querySelector(`input[id="${id}"]`)).filter(Boolean);
+    for (const el of details) {
+      const kept = out.findIndex(f => f.id === el.id);
+      if (kept >= 0) out.splice(kept, 1);
+    }
+    out.splice(out.findIndex(f => f.id === "employeereferral") + 1, 0, ...details.map(el => {
+      const label = labelOf(el);
+      return {id: el.id, label: clean(label?.textContent), required: required(el, label),
+              kind: "text", options: [], value: "", readonly: false, maxLength: el.maxLength,
+              unshown: !shown(el),
+              shownWhen: ["employeereferral", clean(referred.closest("label").textContent)]};
+    }));
   }
   const days = [...root.querySelectorAll("[data-automation=day-btn]")].filter(shown);
   if (days.length) {
@@ -396,6 +415,9 @@ class UKG:
                 case _:
                     _control(root, field_id).fill(values[0])
 
+    def shown_fields(self, page: Page) -> list[str]:
+        return [raw["id"] for raw in page.locator(FORM).evaluate(_READ) if not raw.get("unshown")]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, self._kinds)
         return {k: v for k, v in values.items() if v not in (None, "", [])}
@@ -496,7 +518,8 @@ def _field(raw: dict[str, Any], states: dict[str, list[str]] | None) -> Field:
         return Field(field_id, label, KINDS[kind], raw["required"], prefilled=value,
                      unfillable=reason)  # fmt: skip
     options = raw["options"] if kind in ("select", "radio") else None
-    shown_when = Is(HISPANIC, [raw["shownWhen"]]) if raw.get("shownWhen") else None
+    when = raw.get("shownWhen")
+    shown_when = Is(when[0], [when[1]]) if when else None
     if field_id == STATE and states is not None:
         sets = [OptionSet(Is(COUNTRY, [country]), names) for country, names in states.items()]
         return Field(field_id, label, FieldType.CHOICE, raw["required"], [], option_sets=sets)

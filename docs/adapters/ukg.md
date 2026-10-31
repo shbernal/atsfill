@@ -1,6 +1,6 @@
 # UKG
 
-UKG Pro Recruiting's job boards and application form, observed on live postings, last on 2026-10-27. The fixture page is [tests/pages/ukg/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/ukg/apply.html), served as an Acme tenant in `tests/test_ukg.py`: the form with one example of each rendering below.
+UKG Pro Recruiting's job boards and application form, observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/ukg/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/ukg/apply.html), served as an Acme tenant in `tests/test_ukg.py`: the form with one example of each rendering below.
 
 ## Where the form is
 
@@ -34,12 +34,15 @@ Each rendering, and how many of the sample's postings showed it:
 | equal-opportunity question (`Gender`, `HispanicOrigin`, `USFederalContractor`): a `select` with an "I decline to say" box under it (`[data-automation$=-decline-checkbox]`) that clears the select when ticked | `choice`, the box's label one more option | 6 of 14 |
 | race (`EthnicOrigin`): the same, shown when the ethnic origin is Not Hispanic/Latino | `choice`, a follow-up of `HispanicOrigin` | where the ethnic origin is asked |
 | radio group: referred by an employee, a Multiple Choice question | `choice` | all |
+| the referrer's name (required), email and phone: text inputs in the page while hidden, shown when referred | `text`, follow-ups of `employeereferral` on its Yes | where the referral is asked |
 | one checkbox (`WillingToRelocate`) | `choice` `Yes`/`No` | all |
 | date picker (`ukg-input type=date`, month, day and year inputs): when can you start, today by default | `date` | all |
 | day toggles (`[data-automation=day-btn]`) | `multi_choice` | |
 | Documents upload (`form[action*=/Documents/UploadFile]`), required with `IsResumeRequired` | `file` | all |
 
-A read-only field without a value (preferred name, former name) is listed `unsupported_rendering`; atsfill leaves it. The Upload Resume box at the top parses a resume into the profile and is not used.
+A read-only field without a value (preferred name, former name) is listed `unsupported_rendering`; atsfill leaves it. The Upload Resume box at the top parses a resume into the profile and is not used. An uploaded document's own box (`select-document-checkbox`) is not a field.
+
+Once filled, the same read gives the fields shown, without the follow-ups it lists while hidden.
 
 Where a tenant makes the address optional, Contact Information is a read-only panel of the account's (name, phone, email) whose controls, Country and State among them, sit in a closed edit dialog: the read lists none of them.
 
