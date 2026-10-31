@@ -442,6 +442,21 @@ def test_a_site_refusing_its_loaders_is_blocked(page):
         page.unroute("**/applySubmit")
 
 
+def test_a_site_refusing_mid_fill_is_blocked_not_a_step_that_fails(opened, page, resume):
+    """The read went through; its country requests are what got the fill's refused."""
+    adapter, _ = opened
+
+    def refused(route):
+        route.fulfill(status=403, content_type="text/html", body="<H1>403 ERROR</H1>")
+
+    page.route("**/applySubmit", refused)
+    try:
+        with pytest.raises(Blocked, match="rate_limited: .*403"):
+            adapter.fill(page, answers(resume))
+    finally:
+        page.unroute("**/applySubmit")
+
+
 def test_a_first_step_other_than_the_form_is_a_known_gap(page, monkeypatch):
     monkeypatch.setattr(phenom, "FORM_TIMEOUT_MS", 500)
     body = "<script>history.replaceState({}, '', location.href + '&stepname=login')</script>"

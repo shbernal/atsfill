@@ -71,6 +71,7 @@ MAX_STEPS = 12
 OPTIONS_TIMEOUT_S = 8
 LOADERS_AT_ONCE = 8  # a loader request a country: 245 on one site
 COUNTRIES_KEPT_S = 24 * 3600  # a site's country fields, kept between reads
+RATE_LIMITED = "rate_limited: the careers site answers /applySubmit 403"
 YES_NO = ["Yes", "No"]
 NO_YES = ["No", "Yes"]
 MONTH = " (MM/YYYY)"
@@ -373,11 +374,28 @@ class Phenom:
             raise RuntimeError(f"no configuration for the wizard ({e})") from None
         finally:  # raised once the read ends, so the answers that came are kept
             if refused:
-                raise Blocked("rate_limited: the careers site answers /applySubmit 403")
+                raise Blocked(RATE_LIMITED)
         self._raws = {raw["id"]: raw for raw in raws}
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        """Fills the steps. The firewall can start refusing mid-fill, which the page does not
+        show: the step just never passes."""
+        refused = False
+
+        def on_response(response: Any) -> None:
+            nonlocal refused
+            refused |= response.status == 403 and "/applySubmit" in response.url
+
+        page.on("response", on_response)
+        try:
+            self._fill_steps(page, answers)
+        finally:
+            page.remove_listener("response", on_response)
+            if refused:
+                raise Blocked(RATE_LIMITED)
+
+    def _fill_steps(self, page: Page, answers: dict[str, Answer]) -> None:
         page.context.clear_cookies()
         self._open(page, fresh=True)
         self._accept_terms(page)
