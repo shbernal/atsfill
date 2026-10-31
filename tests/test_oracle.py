@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.oracle import Oracle
+from atsfill.adapters.oracle import Oracle, _of_the_country
 from atsfill.core import browser, matching, otp
-from atsfill.core.adapter import Blocked
-from atsfill.core.results import FieldType, Is, OptionSet
+from atsfill.core.adapter import Blocked, NotTaken, RevealsFields
+from atsfill.core.results import Field, FieldType, Is, OptionSet
 
 PAGES = Path(__file__).parent / "pages/oracle"
 JOB = "https://acme.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/1234"
@@ -31,6 +31,7 @@ def page(tmp_path_factory):
     ):
         mp.setattr("atsfill.adapters.oracle.SETTLE_MS", 100)
         mp.setattr("atsfill.adapters.oracle.LIST_TIMEOUT_MS", 500)
+        mp.setattr("atsfill.adapters.oracle.LIST_POLL_MS", 10)
         mp.setattr("atsfill.adapters.oracle.SEARCH_TIMEOUT_MS", 1_000)
         mp.setattr("atsfill.adapters.oracle.UPLOAD_TIMEOUT_MS", 2_000)
         page.context.route("https://acme.fa.us2.oraclecloud.com/**", serve)
@@ -50,6 +51,16 @@ def resume(tmp_path) -> str:
     path = tmp_path / "CV Ada.pdf"
     path.write_bytes(b"%PDF-1.4")
     return str(path)
+
+
+def test_an_address_list_holds_the_page_countrys_items_only():
+    country = Field("country", "Country", FieldType.CHOICE, True, ["Spain"], default="Spain")
+    region = Field("region2", "State", FieldType.CHOICE, False, ["Madrid"])
+    described = [({}, country), ({"address": True}, region)]
+    assert _of_the_country(described)[0][1] == country
+    listed = _of_the_country(described)[1][1]
+    assert listed.options is None
+    assert listed.option_sets == [OptionSet(Is("country", ["Spain"]), ["Madrid"])]
 
 
 def test_detection_and_posting():
@@ -105,7 +116,11 @@ def test_browser_read(opened):
     assert fields["country"].label == "Country/Region"
     assert fields["country"].options == ["France", "Poland", "United Kingdom"]
     assert fields["city"].type is FieldType.TEXT  # an address search, left unpicked
-    assert fields["postalCode"].required  # the state is not, the postal code is
+    assert not fields["postalCode"].required  # the state is not, the postal code is
+    held = Is("country", ["United Kingdom"])
+    assert fields["postalCode"].required_when == held  # another country has its own rows
+    assert fields["addressLine1"].required_when == held
+    assert not fields["lastName"].required_when and not fields["country"].required_when
     assert fields["postalCode"].options is None  # under another country, a request each
     assert fields["postalCode"].option_sets == [
         OptionSet(Is("country", ["United Kingdom"]), ["0200, Acton, ACT", "2000, Sydney, NSW"])
@@ -150,6 +165,37 @@ def test_every_answer_reads_back(opened, page, resume):
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [c for c in checks if not c.match] == []
+
+
+def test_another_country_reveals_its_address_rows(opened, page):
+    adapter, fields = opened
+    assert isinstance(adapter, RevealsFields)
+    answers = {"email": "ada@example.com", "legalDisclaimer": "Yes", "country": "Poland"}
+    adapter.fill(page, answers)
+    new = [f for f in adapter.revealed(page) if f.id not in {g.id for g in fields}]
+    assert [(f.id, f.label, f.required) for f in new] == [("region3", "Province", True)]
+    adapter.fill(page, {"region3": "Mazovia"})  # on the form as it stands
+    assert adapter.read_back(page)["region3"] == "Mazovia"
+    assert adapter.read_back(page)["country"] == "Poland"
+    assert adapter.revealed(page) == list(adapter._fields.values())
+
+
+def test_the_forms_country_reveals_nothing(opened, page):
+    adapter, fields = opened
+    adapter.fill(page, {"email": "ada@example.com", "legalDisclaimer": "Yes"})
+    assert [f.id for f in adapter.revealed(page)] == [f.id for f in fields]
+
+
+def test_an_address_row_another_country_drops_is_not_taken(opened, page):
+    adapter, _ = opened
+    answers = {
+        "email": "ada@example.com",
+        "legalDisclaimer": "Yes",
+        "country": "Poland",
+        "city": "London",
+    }
+    with pytest.raises(NotTaken, match="^city is not on the form"):
+        adapter.fill(page, answers)
 
 
 def test_a_known_address_types_the_emailed_otp_and_replaces_the_drafts_resume(

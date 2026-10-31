@@ -4,7 +4,8 @@ as docs/adapters/oracle.md observes.
 The form opens only past an email step, and an email the employer's Oracle already knows gets an
 emailed OTP first, typed in by the core. Reading passes the step with a throwaway address;
 filling starts over with the answer's. Oracle keeps a draft of the application from then on,
-autosaved as fields change.
+autosaved as fields change. The address follows the country's format, and which rows a country
+shows is known only once it is picked: the fill reveals those of a country other than the form's.
 """
 
 import re
@@ -42,6 +43,8 @@ ATTACHED = ".attachment-upload-button__download, .misc-attachment-list__item-nam
 REMOVE = ".attachment-upload-button__filled .attachment-upload-button__bottom-button"
 STEP_TIMEOUT_MS = 30_000
 LIST_TIMEOUT_MS = 3_000
+LIST_POLL_MS = 300  # between two looks at a list, which a search narrows as it answers
+LIST_POLLS = 10
 SEARCH_TIMEOUT_MS = 6_000  # for a typed search's results
 PAGE_TIMEOUT_MS = 15_000  # per click on a page number
 SUBMIT_TIMEOUT_MS = 90_000
@@ -115,7 +118,7 @@ _READ = """() => {
       const named = row.querySelector("[id^=labelText-]");
       const input = row.querySelector("input:not([type=hidden]), textarea");
       let id = stable(named?.id || label?.getAttribute("for") || label?.id || input?.name);
-      const field = {id, label: text(row.querySelector(
+      const field = {id, address: !!row.closest(".address-form"), label: text(row.querySelector(
           ".input-row__linebreak, .input-row__label-text") || label),
         required: !!label?.classList.contains("input-row__label--required")
           || !!row.querySelector("[aria-required=true], [required]")};
@@ -260,6 +263,8 @@ class Oracle:
         self._kinds: dict[str, str] = {}
         self._pages: dict[str, int] = {}  # field id: the page of the form it is on
         self._picked: dict[str, str] = {}  # a geography field's id: the item picked in it
+        self._left_out: set[str] = set()  # the geography levels the most specific one fills
+        self._filling = False  # past the email step, with the answers given so far
         self._months: list[str] = []
         self._job = ""
 
@@ -284,7 +289,7 @@ class Oracle:
         self._pass_email_step(
             page, f"atsfill.read.{uuid.uuid4().hex[:12]}@example.com", bool(legal)
         )
-        self._kinds, self._pages = {}, {}
+        self._kinds, self._pages, self._left_out, self._filling = {}, {}, set(), False
         # The page numbers move between pages without checking the page left.
         for number in range(1, max(len(_page_numbers(page)), 1) + 1):
             _go_to(page, number)
@@ -293,13 +298,40 @@ class Oracle:
                 for raw in page.evaluate(_READ)
                 if raw["id"] not in self._kinds and (field := self._described(page, raw))
             ]
-            for raw, field in _geography(described):
+            kept = _geography(described)
+            self._left_out |= {r["id"] for r, _ in described} - {f.id for _, f in kept}
+            for raw, field in _of_the_country(kept):
                 self._kinds[field.id], self._pages[field.id] = raw["kind"], number
                 fields.append(field)
         self._fields = {f.id: f for f in fields}
         return fields
 
+    def revealed(self, page: Page) -> list[Field]:
+        """The fields of every page, once filled: an address row follows the country, which no
+        read lists but at a request per country, and a question can follow an answer."""
+        _settle(page)
+        for number in range(1, max(len(_page_numbers(page)), 1) + 1):
+            _go_to(page, number)
+            known = {*self._fields, *self._left_out}
+            described = [
+                (raw, field)
+                for raw in page.evaluate(_READ)
+                if raw["id"] not in known and (field := self._described(page, raw))
+            ]
+            for raw, field in _geography(described):
+                self._kinds[field.id], self._pages[field.id] = raw["kind"], number
+                self._fields[field.id] = field
+        return list(self._fields.values())
+
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
+        """Passes the email step under the answer's address and fills the form; once it did, what
+        `revealed` found, on the form as it stands."""
+        if not self._filling:
+            self._start(page, answers)
+            self._filling = True
+        self._fill_pages(page, answers)
+
+    def _start(self, page: Page, answers: dict[str, Answer]) -> None:
         if LEGAL in self._fields and answers.get(LEGAL) != "Yes":
             raise Unsupported("not_qualified: the form opens only once the terms are accepted")
         page.context.clear_cookies()
@@ -309,6 +341,8 @@ class Oracle:
         email = answers.get(EMAIL)
         assert isinstance(email, str)  # required, so answered
         self._pass_email_step(page, email, LEGAL in self._fields)
+
+    def _fill_pages(self, page: Page, answers: dict[str, Answer]) -> None:
         for number in sorted(set(self._pages.values())):
             on_page = [i for i in answers if self._pages.get(i) == number]
             if not on_page:
@@ -414,7 +448,7 @@ class Oracle:
         """The innermost row holding the field."""
         selector = page.evaluate(_ROW, field_id)
         if selector is None:
-            raise RuntimeError(f"{field_id} left the form while it was filled")
+            raise NotTaken(f"{field_id} is not on the form under the answers given before it")
         return page.locator(".input-row").filter(has=page.locator(selector)).last
 
     def _options(self, page: Page, field_id: str) -> list[str]:
@@ -560,6 +594,24 @@ def _geography(described: list[tuple[dict, Field]]) -> list[tuple[dict, Field]]:
     ]
 
 
+def _of_the_country(described: list[tuple[dict, Field]]) -> list[tuple[dict, Field]]:
+    """Keys the address rows to the page's country: required under it alone, as another has rows
+    of its own, which the fill reveals, and a list's items its alone, another's a request each."""
+    country = next((f.default for _, f in described if f.id == COUNTRY), None)
+    if not isinstance(country, str):
+        return described
+    held = Is(COUNTRY, [country])
+
+    def keyed(field: Field) -> Field:
+        if field.required:
+            field = replace(field, required=False, required_when=held)
+        if field.options:
+            field = replace(field, options=None, option_sets=[OptionSet(held, field.options)])
+        return field
+
+    return [(r, keyed(f) if r.get("address") else f) for r, f in described]
+
+
 def _page_numbers(page: Page) -> list[str]:
     """The page numbers of a form over several pages, none for a single page."""
     return [_text(t) for t in page.locator(PAGE_NUMBERS).all_inner_texts() if _text(t).isdigit()]
@@ -617,6 +669,18 @@ def _open_list(page: Page, box: Locator) -> list[str]:
     return options
 
 
+def _list_settled(page: Page, cells: Locator) -> list[str]:
+    """A list's items, once the search typed has stopped narrowing it."""
+    items = None
+    for _ in range(LIST_POLLS):
+        now = [_text(t) for t in cells.all_inner_texts()]
+        if now == items:
+            break
+        items = now
+        page.wait_for_timeout(LIST_POLL_MS)
+    return items or []
+
+
 def _choose(
     page: Page,
     box: Locator,
@@ -637,15 +701,15 @@ def _choose(
         cells = page.locator(f"[id='{box.get_attribute('aria-controls')}'] [role=gridcell]")
         with suppress(browser.Timeout):
             cells.first.wait_for(timeout=SEARCH_TIMEOUT_MS)
-        for i in range(cells.count()):
-            item = _text(cells.nth(i).inner_text())
+        for item in _list_settled(page, cells):
             if (
                 (exact and item == answer)
                 or (code and re.search(rf"{re.escape(answer)}(\D|$)", item))
                 or (field is not None and matching.matches(field, answer, item))
             ):
-                cells.nth(i).scroll_into_view_if_needed()
-                _click(page, cells.nth(i))
+                cell = cells.filter(has_text=_exact(item)).first  # by its text: a late search
+                cell.scroll_into_view_if_needed()  # moves it, or leaves it alone in the list
+                _click(page, cell)
                 return
         box.press("Escape")
         if field is not None:
