@@ -62,6 +62,8 @@ async function getFile(f) {
   const html = await view(f);
   setTimeout(() => {  // the page fades the step in
     strip.innerHTML = html;
+    const data = document.getElementById("applicant_disabled_data");  // the step's script fills it
+    if (data && !data.children.length) data.innerHTML = `<input type="text" name="disabled_employee_id">`;
     document.querySelectorAll("#steps a.step")
       .forEach(a => a.classList.toggle("current", a.dataset.file === f));
   }, 100);

@@ -88,7 +88,8 @@
   </ul>
   <ul class="list-group">
     <li class="list-group-item"><h4>Voluntary Self-Identification of Disability</h4>
-      <input type="text" name="disabled_employee_id" autocomplete="off">
+      <div id="applicant_disabled_data"></div>
+      <script>A.getHTML('applicantDisabledData', {"employee_id": ""}, 'applicant_disabled_data');</script>
     </li>
     <li class="list-group-item background-theme">
       <select class="form-control required zeroValue" name="is_disabled" id="is_disabled" data-question-title="Disability Classification">
