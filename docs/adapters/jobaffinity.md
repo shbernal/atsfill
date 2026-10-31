@@ -39,6 +39,8 @@ Each rendering, and in how many of 41 postings it shows (2026-10-28):
 
 "Available from" shows only when the availability is its date option: `shown_when` that option's text, on both forms.
 
+Once filled, the fields shown are the controls and documents with a box on the page, the questionnaire's tab included where it was opened.
+
 ## Filling
 
 - Documents first, then, on the older form, until the CV analysis is done, so a filled answer is never overwritten and an unanswered field holds what the analysis gave.
