@@ -48,5 +48,6 @@ Breezy can send a step to another on an answer (`next_section` actions); not see
 
 ## Read-back and submit
 
+- Once filled, the form's named controls are read again, each step's as they stay in the page: one an answer showed that `read` did not list stops the fill (`ListsShownFields`). None was seen. The date inputs a work history entry adds have no name, and are its listed fields.
 - The read-back is the page: a control's value, a select's option text, the checked options' text, a box as `Yes`/`No`, a file as the name Breezy shows.
 - Submit is "Submit Application" (`apply()`), posting to `app.breezy.hr/api/apply/<position id>`; the evidence is that answer. No send has been made through this adapter, so the answer and the page after a send are unobserved.

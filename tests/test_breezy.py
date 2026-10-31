@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from atsfill.adapters import breezy
 from atsfill.adapters.breezy import Breezy
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
@@ -152,6 +153,15 @@ def test_every_answer_reads_back_across_the_steps(page, resume):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
     assert page.get_by_text("Submit Application").is_visible()  # the last step
+    assert set(adapter.shown_fields(page)) <= {f.id for f in fields}
+
+
+def test_a_field_an_answer_shows_is_listed_shown(page):
+    adapter, fields = opened(page, APPLY)
+    page.locator(breezy.FORM).evaluate(
+        """form => form.insertAdjacentHTML("beforeend", '<input name="section_111_question_9">')"""
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"section_111_question_9"}
 
 
 def test_a_step_breezy_keeps_stops_the_fill(page):
