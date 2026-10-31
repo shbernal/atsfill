@@ -7,7 +7,7 @@ import pytest
 from atsfill.adapters.lever import Lever, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 
 PAGE = Path(__file__).parent / "pages/lever/apply.html"
 POSTING = "https://jobs.lever.co/acme/0a1b2c3d-0000-4000-8000-123456789abc"
@@ -79,6 +79,7 @@ def test_browser_read_opens_the_application(page):
         "eeo[gender]",
         "eeo[race]",
         "eeo[veteran]",
+        "eeo[disability]",
         "eeo[disabilitySignature]",
         "eeo[disabilitySignatureDate]",
         "comments",
@@ -100,6 +101,12 @@ def test_browser_read_opens_the_application(page):
     assert by_id["eeo[race]"].options == ["Two or More Races", "Decline to self-identify"]
     assert by_id["eeo[veteran]"].options[0] == "I am not a protected veteran"
     assert by_id["eeo[disabilitySignatureDate]"].type is FieldType.DATE
+    assert by_id["eeo[disabilitySignatureDate]"].shown_when == Is("eeo[disability]")
+    assert by_id["eeo[disabilitySignature]"].shown_when == Is("eeo[disability]")
+    assert [f.id for f in fields if f.shown_when] == [
+        "eeo[disabilitySignature]",
+        "eeo[disabilitySignatureDate]",
+    ]
     assert by_id["comments"].label.startswith("Add a cover letter")
     assert by_id["consent[store]"].label.startswith("I agree that Acme stores")
     assert by_id["consent[store]"].required
@@ -131,7 +138,8 @@ def test_every_answer_reads_back(page, resume):
         "eeo[gender]": "Decline to self-identify",
         "eeo[race]": "Decline to self-identify",
         "eeo[veteran]": "I am not a protected veteran",
-        "eeo[disabilitySignatureDate]": "2026-10-20",
+        "eeo[disabilitySignatureDate]": "2026-10-20",  # before what shows it: filled after
+        "eeo[disability]": "I do not want to answer",
         "comments": "Placeholder answer.",
         "consent[store]": "Yes",
         "consent[marketing]": "No",
@@ -142,6 +150,24 @@ def test_every_answer_reads_back(page, resume):
     assert len(checks) == len(answers)
     assert page.locator("[name=eeo\\[disabilitySignatureDate\\]]").input_value() == "10/20/2026"
     assert "London, Greater London" in page.locator("#selected-location").input_value()
+    assert adapter.shown_fields(page) == [f.id for f in fields]
+
+
+def test_a_follow_up_shows_only_once_its_answer_shows_it(page):
+    adapter, fields = opened(page)
+    assert not set(adapter.shown_fields(page)) & {"eeo[disabilitySignature]"}
+    adapter.fill(page, {"eeo[disability]": "I do not want to answer"})
+    assert "eeo[disabilitySignature]" in adapter.shown_fields(page)
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields}
+
+
+def test_a_field_an_answer_shows_is_listed_shown(page):
+    adapter, fields = opened(page)
+    page.locator("#disabilitySignatureSection").evaluate(
+        """section => section.parentElement.insertAdjacentHTML("beforeend",
+          '<div class="application-question"><input name="cards[new][field0]"></div>')"""
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"cards[new][field0]"}
 
 
 def test_a_location_with_no_pick_reads_back_empty(page, monkeypatch):

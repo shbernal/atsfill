@@ -229,7 +229,21 @@
     </div>
    </label>
   </div>
-  <div id="disabilitySignatureSection">
+  <div class="application-question">
+   <label>
+    <div class="application-label">Disability status</div>
+    <div class="application-field">
+     <div class="application-dropdown">
+      <select name="eeo[disability]" id="disability">
+       <option value="">Select ...</option>
+       <option value="No, I do not have a disability">No, I do not have a disability</option>
+       <option value="I do not want to answer">I do not want to answer</option>
+      </select>
+     </div>
+    </div>
+   </label>
+  </div>
+  <div id="disabilitySignatureSection" hidden>
    <div class="application-question">
     <label>
      <div class="application-label">Name</div>
@@ -280,6 +294,10 @@
  </div>
 </form>
 <script>
+  const disability = document.getElementById("disability");
+  disability.addEventListener("change", () => {
+    document.getElementById("disabilitySignatureSection").hidden = !disability.value;
+  });
   document.querySelectorAll("input[type=file]").forEach(input => input.addEventListener("change", () => {
     const zone = input.closest("a");
     zone.querySelector(".filename").textContent = input.files[0].name;

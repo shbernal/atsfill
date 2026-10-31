@@ -27,7 +27,7 @@ Every field is a named control, and the name is the field's id: `name`, `urls[Li
 | `pronouns`: checkboxes, and a hidden custom text input of the same name, left out | `multi_choice` | 8 |
 | `opportunityLocationId`: `select` valued by location id | `choice`, by option text | 4 |
 | `eeo[gender\|race\|veteran\|disability]`: `select`, or radios for race on 3; an option's text can differ from its value | `choice`, by option text | 19 |
-| `eeo[disabilitySignature]`, `eeo[disabilitySignatureDate]` (placeholder `MM/DD/YYYY`) | `text`, `date` | 7 |
+| `eeo[disabilitySignature]`, `eeo[disabilitySignatureDate]` (placeholder `MM/DD/YYYY`), hidden until `eeo[disability]` has any answer | `text`, `date`, a follow-up of `eeo[disability]` | 7 |
 | `surveysResponses[…]`: radios and checkboxes, as cards | `choice`, `multi_choice` | 5 |
 | `consent[store\|marketing]`: one checkbox beside a hidden `0` | `choice`, `Yes`/`No` | 10 |
 | `comments`: `textarea`, labelled by its placeholder | `text` | 1 |
@@ -40,7 +40,8 @@ Every field is a named control, and the name is the field's id: `name`, `urls[Li
 - The location is typed and Lever's first suggestion clicked; a typed value that is not a pick is not the field's value, so the location reads back from `selectedLocation`'s `name`, empty without a pick.
 - A suggestion ends with the country's ISO 3166 alpha-3 code, in the place's own language before it: `Madrid, Comunidad de Madrid, ESP` (2026-10-29), so `Madrid, Spain` matches it by the country's code.
 - Radios and checkboxes are checked by their option text; selects pick by option text.
-- The disability signature date is typed as `MM/DD/YYYY` and read back as `YYYY-MM-DD`.
+- The disability signature date is typed as `MM/DD/YYYY` and read back as `YYYY-MM-DD`. The signature is filled last, once its answer has shown it.
+- Once filled, the page's questions are read again, those on show: one an answer showed that `read` did not list stops the fill (`ListsShownFields`). None but the signature was seen.
 
 ## Read-back and submit
 
