@@ -9,12 +9,13 @@ information; the questions are saved by submit, for good.
 
 import re
 import time
+from collections.abc import Callable
 from typing import Any
 from urllib.parse import urlsplit
 
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported, known_gap
-from atsfill.core.browser import Locator, Page, Request, Response, Timeout
+from atsfill.core.browser import BrowserError, Locator, Page, Request, Response, Timeout
 from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOST = re.compile(r"^([a-z0-9-]+)\.gupy\.io$")
@@ -32,9 +33,26 @@ RESUME_WAIT_S = 15
 SAVE_TIMEOUT_MS = 30_000
 SIGN_IN_TIMEOUT_MS = 30_000
 FORMS_TIMEOUT_S = 10
+CLICK_ATTEMPTS = 3
 YES_NO = ["Yes", "No"]
+# What a Yes on an Additional information radio shows, the same on every posting, in no source a
+# read can see; the page will not save it empty.
+FOLLOW_UPS = {
+    "radioGroupIsIndicatedTitle": {
+        "guiddedApplicationAdditionalDataIndicatedByNameInput": (
+            "Name of the person who recommended you"
+        ),
+        "guiddedApplicationAdditionalDataIndicatedByEmailInput": (
+            "E-mail of the person who has referred you"
+        ),
+    },
+    "radioGroupIsCompanyEmployeeTitle": {
+        "guiddedApplicationAdditionalDataCorporateEmailInput": "Provide your corporate email",
+    },
+}
 TYPES = {
     "SELECT": FieldType.CHOICE,
+    "CONDITIONAL": FieldType.CHOICE,  # a SELECT with questions shown by its answer
     "MULTI_SELECT": FieldType.MULTI_CHOICE,
     "TEXT": FieldType.TEXT,
     "TEXT_AREA": FieldType.TEXT,
@@ -71,6 +89,11 @@ _READ_QUESTIONS = """(ids) => Object.fromEntries(ids.map(([id, title]) => {
   return [`question-${id}`, text?.value ?? null];
 }))"""
 
+# The questions page's controls: `question-<id>` radios, `checkbox-<id>-<n>` boxes, a text named by
+# its question's title.
+_SHOWN_QUESTIONS = f"""() => [...document.querySelectorAll({QUESTIONS!r})]
+  .map(e => e.name || e.id)"""
+
 
 class Gupy:
     name = "gupy"
@@ -86,6 +109,8 @@ class Gupy:
         self._questions: dict[str, dict[str, Any]] = {}
         self._fields: dict[str, Field] = {}
         self._additional: dict[str, Answer] = {}
+        self._additional_shown: list[str] = []  # saved before the questions open
+        self._given: set[str] = set()
 
     def detect(self, url: str, page: Page | None) -> bool:
         parts = urlsplit(url)
@@ -145,7 +170,7 @@ class Gupy:
                 page.wait_for_timeout(STEP_POLL_MS)
         finally:
             page.remove_listener("response", on_response)
-        fields = [_additional(raw) for raw in page.evaluate(_READ_ADDITIONAL)]
+        fields = _additional_fields(page.evaluate(_READ_ADDITIONAL))
         questions = (forms[-1].json().get("questionForm") or {}).get("questions") if forms else []
         self._questions = {f"question-{q['questionId']}": q for q in questions or []}
         fields += [_question(q) for q in self._questions.values()]
@@ -167,7 +192,7 @@ class Gupy:
                     continue
                 if button.is_enabled():
                     disabled_since = None
-                    browser.click(button)
+                    _click(lambda found=button: found)
                 # Continue Application is disabled while the resume loads, for good when the
                 # resume is incomplete
                 elif (disabled_since := disabled_since or time.monotonic()) < (
@@ -182,21 +207,43 @@ class Gupy:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         """Fills Additional information and, where the posting has questions, saves it and
         opens them; the questions are filled and left unsaved for submit."""
+        self._given = set(answers)
         for field_id, answer in answers.items():
             if field_id not in self._questions:
                 _set(page, self._fields[field_id], field_id, answer)
         self._additional = self._read_additional(page)
+        self._additional_shown = [raw["id"] for raw in page.evaluate(_READ_ADDITIONAL)]
         if not self._questions:
             return
         if page.locator(ADDITIONAL).count():
             browser.click(page.locator("button:has-text('Save and continue')").first)
         answer_now = page.locator(ANSWER_NOW).first
-        answer_now.wait_for(timeout=SAVE_TIMEOUT_MS)
+        try:
+            answer_now.wait_for(timeout=SAVE_TIMEOUT_MS)
+        except Timeout:
+            if page.locator(ADDITIONAL).count():
+                raise NotTaken("the page would not save Additional information") from None
+            raise
         browser.click(answer_now)
         page.locator(QUESTIONS).first.wait_for(timeout=SAVE_TIMEOUT_MS)
         for field_id, answer in answers.items():
             if (question := self._questions.get(field_id)) is not None:
                 _answer(page, self._fields[field_id], question, answer)
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """Additional information as it was saved, and the questions the page renders: a text
+        is known only by its title, which questions can share."""
+        by_title: dict[str, list[str]] = {}
+        for field_id, question in self._questions.items():
+            by_title.setdefault(question["title"], []).append(field_id)
+        for ids in by_title.values():
+            ids.sort(key=lambda i: i not in self._given)
+        shown = list(self._additional_shown)
+        for control in page.evaluate(_SHOWN_QUESTIONS) if page.locator(QUESTIONS).count() else []:
+            ids = by_title.get(control.removeprefix("input-"))
+            field_id = ids.pop(0) if ids else _question_id(control)
+            shown += [field_id] if field_id not in shown else []
+        return shown
 
     def _read_additional(self, page: Page) -> dict[str, Answer]:
         values = {raw["id"]: raw["value"] for raw in page.evaluate(_READ_ADDITIONAL)}
@@ -222,6 +269,23 @@ class Gupy:
         raise RuntimeError(f"{response.request.method} {response.url} answered {response.status}")
 
 
+def _additional_fields(raws: list[dict[str, Any]]) -> list[Field]:
+    """Additional information as the page has it, each radio before what its Yes shows."""
+    values = {raw["id"]: raw["value"] for raw in raws}
+    shown_by = {name for names in FOLLOW_UPS.values() for name in names}
+    fields = []
+    for raw in raws:
+        if raw["id"] in shown_by:
+            continue
+        fields.append(_additional(raw))
+        for name, label in FOLLOW_UPS.get(raw["id"], {}).items():
+            yes = Is(raw["id"], ["Yes"])
+            fields.append(
+                Field(name, label, FieldType.TEXT, True, prefilled=values.get(name), shown_when=yes)
+            )
+    return fields
+
+
 def _additional(raw: dict[str, Any]) -> Field:
     """A radio group is a choice; the source list, a combobox, is not filled."""
     name, label = raw["id"], raw["label"]
@@ -243,12 +307,24 @@ def _question(q: dict[str, Any]) -> Field:
         shown = Is(f"question-{q['parentQuestionId']}", q.get("conditionalTriggerOptions") or None)
     if kind is None:
         reason = f"unhandled_rendering: {q['title']!r} is a {q['type']} question"
-        return Field(field_id, q["title"], FieldType.TEXT, q["required"], unfillable=reason)
+        return Field(field_id, q["title"], FieldType.TEXT, q["required"], unfillable=reason,
+                     shown_when=shown)  # fmt: skip
     return Field(
         field_id, q["title"], kind, bool(q["required"]),
         options if kind is not FieldType.TEXT else None, prefilled=q.get("answer") or None,
         shown_when=shown,
     )  # fmt: skip
+
+
+def _click(find: Callable[[], Locator]) -> None:
+    """Clicks what `find` finds: the page renders again as it loads, detaching what it found."""
+    for _ in range(CLICK_ATTEMPTS - 1):
+        try:
+            return browser.click(find())
+        except BrowserError as e:
+            if "not attached" not in str(e):
+                raise
+    browser.click(find())
 
 
 def _label(page: Page, selector: str, text: str) -> Locator:
@@ -263,7 +339,7 @@ def _label(page: Page, selector: str, text: str) -> Locator:
 def _set(page: Page, field: Field, field_id: str, answer: Answer) -> None:
     match field.type, answer:
         case FieldType.CHOICE, str():
-            browser.click(_label(page, f'main input[name="{field_id}"]', answer))
+            _click(lambda: _label(page, f'main input[name="{field_id}"]', answer))
         case FieldType.TEXT, str():
             page.locator(f'main input[name="{field_id}"], main input[id="{field_id}"]').fill(answer)
         case kind, _:
@@ -288,6 +364,12 @@ def _answer(page: Page, field: Field, question: dict[str, Any], answer: Answer) 
             target.first.fill(answer)
         case kind, _:
             raise Unsupported(f"unhandled_rendering: cannot fill question-{qid}, a {kind}")
+
+
+def _question_id(control: str) -> str:
+    """The question of a radio or a checkbox's name; anything else as the page names it."""
+    box = re.fullmatch(r"checkbox-(\d+)-\d+", control)
+    return f"question-{box[1]}" if box else control
 
 
 def _css(text: str) -> str:

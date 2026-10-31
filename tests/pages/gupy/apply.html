@@ -16,9 +16,34 @@ const incomplete = false;  // the test serves it true for a resume left incomple
 let questions = [];
 const screen = document.getElementById("screen");
 
-function radio(name, value, text, checked) {
-  return `<label><input type="radio" name="${name}" value="${value}" ${checked ? "checked" : ""}>` +
+function radio(name, value, text, checked, onchange = "") {
+  return `<label><input type="radio" name="${name}" value="${value}" ${checked ? "checked" : ""} onchange="${onchange}">` +
     `<span aria-hidden="true"></span><span>${text}</span></label>`;
+}
+
+function shownBy(name) {  // the block a radio's Yes shows
+  document.getElementById(name).hidden = !document.querySelector(`[name=${name}][value=yes]`).checked;
+}
+
+function controls(q) {
+  const id = q.questionId;
+  const options = (q.options || []).map((o, n) => q.type === "MULTI_SELECT"
+    ? `<label><input type="checkbox" name="checkbox-${id}-${n}"><span>${o.label}</span></label>`
+    : radio(`question-${id}`, "", o.label, false, "followUps()")).join("");
+  const text = q.type === "TEXT_AREA"
+    ? `<textarea name="${q.title}" id="input-${q.title}"></textarea>`
+    : q.type === "TEXT" ? `<input type="text" name="${q.title}" id="input-${q.title}">` : "";
+  return `<p>${q.title} *</p>${options}${text}`;
+}
+
+function followUps() {  // a follow-up is on the page only under its trigger
+  for (const q of questions.filter(q => q.parentQuestionId)) {
+    const on = document.querySelector(`input[name="question-${q.parentQuestionId}"]:checked`);
+    const box = document.getElementById(`q-${q.questionId}`);
+    const shows = q.conditionalTriggerOptions.includes(on?.labels[0].innerText.trim());
+    if (shows && !box.innerHTML) box.innerHTML = controls(q);
+    if (!shows) box.innerHTML = "";
+  }
 }
 
 const screens = {
@@ -34,10 +59,20 @@ const screens = {
   additional: () => `
     <h1>Additional information</h1>
     <fieldset><legend>Someone who works at this company referred you for this position?</legend>
-      <div>${radio("radioGroupIsIndicatedTitle", "yes", "Yes")}${radio("radioGroupIsIndicatedTitle", "no", "No", true)}</div>
+      <div>${radio("radioGroupIsIndicatedTitle", "yes", "Yes", false, "shownBy('radioGroupIsIndicatedTitle')")}${radio("radioGroupIsIndicatedTitle", "no", "No", true, "shownBy('radioGroupIsIndicatedTitle')")}</div>
+      <div id="radioGroupIsIndicatedTitle" hidden>
+        <label for="guiddedApplicationAdditionalDataIndicatedByNameInput">Name of the person who recommended you</label>
+        <input type="text" id="guiddedApplicationAdditionalDataIndicatedByNameInput" name="guiddedApplicationAdditionalDataIndicatedByNameInput">
+        <label for="guiddedApplicationAdditionalDataIndicatedByEmailInput">E-mail of the person who has referred you</label>
+        <input type="text" id="guiddedApplicationAdditionalDataIndicatedByEmailInput" name="guiddedApplicationAdditionalDataIndicatedByEmailInput">
+      </div>
     </fieldset>
     <fieldset><legend>Do you work at Acme?</legend>
-      <div>${radio("radioGroupIsCompanyEmployeeTitle", "yes", "Yes")}${radio("radioGroupIsCompanyEmployeeTitle", "no", "No", true)}</div>
+      <div>${radio("radioGroupIsCompanyEmployeeTitle", "yes", "Yes", false, "shownBy('radioGroupIsCompanyEmployeeTitle')")}${radio("radioGroupIsCompanyEmployeeTitle", "no", "No", true, "shownBy('radioGroupIsCompanyEmployeeTitle')")}</div>
+      <div id="radioGroupIsCompanyEmployeeTitle" hidden>
+        <p>Provide your corporate email</p>
+        <input type="text" name="guiddedApplicationAdditionalDataCorporateEmailInput">
+      </div>
     </fieldset>
     <label for="source">Where did you find this job? (Optional)</label>
     <input type="text" id="source" name="howDidYouHearAboutUs" role="combobox">
@@ -46,16 +81,9 @@ const screens = {
     <h1>Company created questions</h1>
     <p>Attention: the answers cannot be edited later.</p>
     <button type="button" onclick="show('questions')">Answer now</button>`,
-  questions: () => `<h1>Questions created by the company Acme</h1>` + questions.map(q => {
-    const id = q.questionId;
-    const options = (q.options || []).map((o, n) => q.type === "MULTI_SELECT"
-      ? `<label><input type="checkbox" name="checkbox-${id}-${n}"><span>${o.label}</span></label>`
-      : radio(`question-${id}`, "", o.label)).join("");
-    const text = q.type === "TEXT_AREA"
-      ? `<textarea name="${q.title}" id="input-${q.title}"></textarea>`
-      : q.type === "TEXT" ? `<input type="text" name="${q.title}" id="input-${q.title}">` : "";
-    return `<div><p>${q.title} *</p>${options}${text}</div>`;
-  }).join("") + `<button type="button" onclick="sendAnswers()">Save and continue</button>`,
+  questions: () => `<h1>Questions created by the company Acme</h1>` + questions.map(q =>
+    `<div id="q-${q.questionId}">${q.parentQuestionId ? "" : controls(q)}</div>`).join("") +
+    `<button type="button" onclick="sendAnswers()">Save and continue</button>`,
 };
 
 function show(name) {
@@ -63,6 +91,10 @@ function show(name) {
 }
 
 async function saveAdditional() {
+  // the page will not save a Yes without the fields it shows, or an email it cannot read
+  const shown = [...document.querySelectorAll("#screen input[type=text]:not([role])")]
+    .filter(e => e.offsetParent !== null);
+  if (shown.some(e => !e.value || (e.name.includes("Email") && !e.value.includes("@")))) return;
   await fetch(APPLICATION.replace(/question-forms.*/, "curriculum-management/additional-info"),
     {method: "PUT", body: "{}"});
   show("intro");

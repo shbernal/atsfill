@@ -1,6 +1,6 @@
 # Gupy
 
-Observed on live postings of 13 employers, last on 2026-10-26, with the Test user's account. The fixture page is [tests/pages/gupy/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/gupy/apply.html), served with [forms.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/gupy/forms.json) as an Acme posting in `tests/test_gupy.py`: the register step's screens in turn, with one example of each question type.
+Observed on live postings of 13 employers, last on 2026-10-31, with the Test user's account. The fixture page is [tests/pages/gupy/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/gupy/apply.html), served with [forms.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/gupy/forms.json) as an Acme posting in `tests/test_gupy.py`: the register step's screens in turn, with one example of each question type.
 
 ## Where the form is
 
@@ -50,21 +50,27 @@ Each rendering, from the resume (the same on every posting) and the question for
 | a question `TEXT_AREA` | `text` | 6 |
 | a question `TEXT` | `text` | 3 |
 | a question `MULTI_SELECT` | `multi_choice` | 2 |
+| a question `CONDITIONAL`: a `SELECT`, with a question shown by its answer | `choice` | 1 |
+| Additional information: referred by someone at the company, Yes shows the person's name and email | `choice`, `text` | every |
+| Additional information: working at the company, Yes shows a corporate email | `choice`, `text` | every |
 
-No question had a `parentQuestionId` on these postings.
+One question of these postings had a `parentQuestionId`, under a `CONDITIONAL` one, its `conditionalTriggerOptions` the parent's labels. The page renders such a follow-up only under its trigger.
 
 ## Reading
 
 `browser_read` opens Apply and walks past what comes before Additional information: the contact details dialog (Remind me later), Complete resume, Continue Application, then Continue. It stops at Additional information, or at the questions' introduction ("Answer now") when an earlier visit saved Additional information. The buttons are found by their text, which is English for an English account. Continue Application is disabled while the resume loads; still disabled after `RESUME_WAIT_S`, the resume is incomplete: the `resume` gap.
 
-- Additional information: each radio group is a `choice` named by its input's name (`radioGroupIsIndicatedTitle`, `radioGroupIsCompanyEmployeeTitle`), labelled by its fieldset's legend, the checked option `prefilled` (No by default). The source combobox ("Where did you find this job?", optional) is listed `unhandled_rendering`.
-- The questions come from the page's own `question-forms` answer: `question-<questionId>`, `SELECT` a `choice`, `MULTI_SELECT` a `multi_choice`, `TEXT` and `TEXT_AREA` a `text`, `required` as given, a parent question a `shown_when`. Any other type is listed `unhandled_rendering`.
+- Additional information: each radio group is a `choice` named by its input's name (`radioGroupIsIndicatedTitle`, `radioGroupIsCompanyEmployeeTitle`), labelled by its fieldset's legend, the checked option `prefilled` (No by default). A Yes shows text inputs in no source a read can see, the same on every posting: the adapter names them in `FOLLOW_UPS` with a `shown_when` on their radio, `required` since the page will not save them empty. The source combobox ("Where did you find this job?", optional) is listed `unhandled_rendering`.
+- The questions come from the page's own `question-forms` answer: `question-<questionId>`, `SELECT` and `CONDITIONAL` a `choice`, `MULTI_SELECT` a `multi_choice`, `TEXT` and `TEXT_AREA` a `text`, `required` as given, a parent question a `shown_when`. Any other type is listed `unhandled_rendering`.
 
 ## Filling
 
 - Additional information's radios are clicked by their wrapping label's text. Where the posting has questions, Save and continue saves it (`PUT …/curriculum/<application>/additional-info`), and Answer now opens the questions.
 - The questions are on one page: a `SELECT` is radios `question-<id>`, a `MULTI_SELECT` checkboxes `checkbox-<id>-<n>`, each clicked by its label; a `TEXT_AREA` a `textarea` and a `TEXT` an input, each named by the question's title.
+- The page turns down a save it cannot read an email of, an address at `example.com` passing: nothing says so but Answer now not coming, `answer_not_taken`.
+- A radio or a button is clicked again if the page's rendering detached it.
 - Read-back: Additional information as it was before its save, the questions' checked labels and typed text.
+- `shown_fields`: Additional information as it was saved, then the controls the questions page renders. A text input is known only by its question's title, which follow-ups can share ("Comment"): the answered question claims it first. Two shown questions sharing a title are not handled by `fill`, which takes the first.
 - Submit is the last page's Save and continue: the questions, which "cannot be edited later", or Additional information on a posting without them. No send was made.
 
 ## Known gaps
@@ -75,6 +81,6 @@ No question had a `parentQuestionId` on these postings.
 
 The resume as observed: an academic entry is Education level, then Academic qualification and Status (react-aria comboboxes opened with ArrowDown), the institution and course (autocompletes), start and end month and year; a professional one Company, Position, current job, start and end, activities. About you with "Do you live in Brazil?" No asks Country, Address (an autocomplete that also fills State, City and Postal Code), State, City. Each part has its own Save and continue, which releases the next.
 
-Not handled yet, `unhandled`: a `CONDITIONAL` question type; a `question-forms` answer that was not JSON; a button detached from the page as it was clicked.
+Not handled yet, `unhandled`: a `question-forms` answer that was not JSON.
 
 Not observed yet: what the page shows once the questions are saved, and a posting without questions.
