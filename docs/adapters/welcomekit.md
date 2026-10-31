@@ -1,6 +1,6 @@
 # WelcomeKit
 
-WelcomeKit, Welcome to the Jungle's ATS (sold as Welcome to the Jungle Solutions), observed on live postings, last on 2026-10-29. Its forms need no account. The fixture pages are [tests/pages/welcomekit/](https://github.com/shbernal/atsfill/tree/main/tests/pages/welcomekit/): `old.html`, served as `welcomekit.co`, and `new.html` with its job's `new.json`, served as `ats.welcometothejungle.com` and its API in `tests/test_welcomekit.py`: one example of each rendering below.
+WelcomeKit, Welcome to the Jungle's ATS (sold as Welcome to the Jungle Solutions), observed on live postings, last on 2026-10-31. Its forms need no account. The fixture pages are [tests/pages/welcomekit/](https://github.com/shbernal/atsfill/tree/main/tests/pages/welcomekit/): `old.html`, served as `welcomekit.co`, and `new.html` with its job's `new.json`, served as `ats.welcometothejungle.com` and its API in `tests/test_welcomekit.py`: one example of each rendering below.
 
 ## Where the form is
 
@@ -44,9 +44,12 @@ A React app. Its job comes from `GET api.ats.welcometothejungle.com/api/v1/board
 
 A question of another type is `unhandled_rendering`; the app draws any type but `boolean` and `document` as a textarea.
 
+The JSON lists every field whatever the answers, so the adapter does not check the newer form's page after a fill: a question declares no condition, and 2 postings dry-run with their questions answered both ways showed nothing it leaves out (2026-10-31).
+
 ## Filling
 
 - Older form: a text input or textarea is filled, the select set by its option's text, a file attached to its input (it travels with the post). The consent box is under its iCheck box: its label is clicked.
+- Older form, once filled: the page's form is parsed again as the read parsed it, and a field the read did not list stops the fill. None showed on 3 postings, three answer sets each (2026-10-31).
 - Newer form: an input is filled. A file is uploaded as soon as it is attached (a presigned URL from `/api/v1/assets/presigned-url`, then storage); the widget then empties its input and shows the name and size in a ticked badge, which the fill waits for. A boolean question's Yes or No button is clicked unless already chosen; a click on the chosen one clears it.
 
 ## Read-back and submit

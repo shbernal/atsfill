@@ -220,3 +220,13 @@ def test_api_fields():
         adapter._api_fields([{"fields": [{"id": "x", "required": True, "type": "signature"}]}])
         is None
     )
+
+
+def test_shown_fields_name_a_field_the_read_did_not_list(page):
+    adapter, fields = opened(page)
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields}
+    page.locator("[data-ui=section-fields]").first.evaluate(
+        """s => s.insertAdjacentHTML("beforeend",
+        '<div><input id="follow_up" data-ui="follow_up"></div>')"""
+    )
+    assert "follow_up" in adapter.shown_fields(page)

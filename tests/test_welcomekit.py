@@ -195,3 +195,17 @@ def test_new_dry_run_reads_back_every_answer_then_submits(page, tmp_path):
     assert read_back["cv"] == "CV Ada.pdf"
     assert read_back["custom_questions.0"] == "Yes"
     assert adapter.submit(page) == f"{API}/board/organizations/acme-AbCd/jobs/{JOB}/apply 201"
+
+
+def test_old_shown_fields_name_a_field_the_read_did_not_list(page):
+    adapter, fields = opened(page, OLD)
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields}
+    page.locator("form#new_candidate").evaluate(
+        """f => f.insertAdjacentHTML("beforeend", '<input name="candidate[follow_up]">')"""
+    )
+    assert "follow_up" in adapter.shown_fields(page)
+
+
+def test_new_shows_nothing_its_api_does_not_list(page):
+    adapter, _ = opened(page, NEW)
+    assert adapter.shown_fields(page) == []

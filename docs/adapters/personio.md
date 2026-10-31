@@ -1,6 +1,6 @@
 # Personio
 
-Personio's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/personio/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/personio/apply.html), served as `acme.jobs.personio.com` in `tests/test_personio.py`: one example of each rendering below.
+Personio's career sites, observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/personio/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/personio/apply.html), served as `acme.jobs.personio.com` in `tests/test_personio.py`: one example of each rendering below.
 
 ## Where the form is
 
@@ -30,6 +30,7 @@ No checkbox, radio, textarea or consent box was seen: the privacy notice is text
 
 - A text, phone or date input is filled; a select is set to the value of the option whose text is the answer.
 - A document is attached to its category's input and waited for until its name shows as a pill.
+- Once filled, the form is parsed again as the read parsed it: a field the read did not list stops the fill. None showed on 3 postings, three answer sets each (2026-10-31).
 
 ## Read-back and submit
 

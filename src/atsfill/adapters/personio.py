@@ -111,6 +111,10 @@ class Personio:
                 case _:
                     control.fill(value)
 
+    def shown_fields(self, page: Page) -> list[str]:
+        form = html.parse(page.locator(FORM).evaluate("f => f.outerHTML"))
+        return [f.id for f, _ in _form(form)]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, [f.id for f in self._fields])
         out: dict[str, Answer] = {}

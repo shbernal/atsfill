@@ -243,6 +243,9 @@ class Workable:
                 case _:
                     field.fill(values[0])
 
+    def shown_fields(self, page: Page) -> list[str]:
+        return [raw["id"] for raw in page.locator(FORM).evaluate(_READ)]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, self._kinds)
         for field_id, fmt in self._formats.items():

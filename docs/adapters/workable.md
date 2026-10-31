@@ -1,6 +1,6 @@
 # Workable
 
-Observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/workable/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
+Observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/workable/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
 
 ## Where the form is
 
@@ -39,6 +39,7 @@ On the page, every field sits under an element whose `data-ui` is that id, so `b
 - The phone is typed with its dial code, which sets the country button; the read-back is the button's dial code then the number.
 - Attaching a file uploads it to Workable's S3 (`workable-application-form.s3…`) at once. The dropzone shows its name, a progress bar and an abort button (`[data-action=abort]`) while it uploads, about a second, then a delete button (`[data-action=delete]`). Attaching another file while one uploads empties the one uploading, so filling waits for the delete button, and a file reads back only once it shows.
 - A photo opens a crop dialog, confirmed by its `[data-ui=crop-image]` button; the dropzone then shows a preview whose `alt` is the file's name, and uploads it. Attaching the resume afterwards empties the photo, so the resume goes first.
+- Once filled, the form is read again as `browser_read` reads it: a field the read did not list stops the fill. None showed on 3 postings, three answer sets each (2026-10-31). The form API's fields carry no condition, but the fill runs on the page, so the page is what is checked.
 
 ## Read-back and submit
 

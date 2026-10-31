@@ -1,6 +1,6 @@
 # WeRecruit
 
-WeRecruit's apply form, observed on live postings, last on 2026-10-29. The fixture page is [tests/pages/werecruit/posting.html](https://github.com/shbernal/atsfill/tree/main/tests/pages/werecruit/), served as `careers.werecruit.io` and as an employer's own domain in `tests/test_werecruit.py`.
+WeRecruit's apply form, observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/werecruit/posting.html](https://github.com/shbernal/atsfill/tree/main/tests/pages/werecruit/), served as `careers.werecruit.io` and as an employer's own domain in `tests/test_werecruit.py`.
 
 ## Where the form is
 
@@ -30,6 +30,7 @@ The consent checkbox is in every page's markup but commented out. The CV and the
 ## Filling and submit
 
 - A text is filled, a select set to the value of the option whose text is the answer, a radio's label clicked, a document set on its file input.
+- Once filled, the form is parsed again as the read parsed it: a field the read did not list stops the fill. None showed on 2 postings, three answer sets each (2026-10-31).
 - The read-back is each control's value, a select's or radio's option text, a document's file name.
 - Submit clicks Je postule. jQuery Validate checks the form, then posts it as multipart to the posting's URL. The evidence is that post's URL and status; no post is a failure, with the errors the page shows. What the page answers to the post is unobserved: no send has been made through this adapter.
 - The phone is checked by a pattern that takes E.164 (`+33612345678`) but not a spaced `+33 6 12 34 56 78`.

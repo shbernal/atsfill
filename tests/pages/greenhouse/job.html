@@ -6,6 +6,7 @@
      page until typed into), a phone whose typed dial code sets its Country select, a textarea, a
      number input, a checkbox group, a consent box that appears with the live page, and attaches
      that swap their input for the file's name or, entered manually, add a textarea beside it.
+     The EEOC race select shows only while Hispanic/Latino is answered No.
      With `?otp` in the URL, the first submit asks the emailed OTP, a box per character,
      and the next takes only Ab3dEf7h. -->
 <style>.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; }</style>
@@ -75,6 +76,11 @@
     <label id="4000952002-label" for="4000952002">Gender</label>
     <input id="4000952002" role="combobox" aria-required="false">
   </div>
+  <div class="select" data-options="Yes|No|Decline To Self Identify">
+    <label id="hispanic_ethnicity-label" for="hispanic_ethnicity">Are you Hispanic/Latino?</label>
+    <input id="hispanic_ethnicity" role="combobox" aria-required="false">
+  </div>
+  <div id="ethnicity-follow-up"></div>
   <div id="late"></div>
   <button type="submit">Submit application</button>
 </form>
@@ -108,6 +114,7 @@
       else shown.innerHTML = id === "country" ? `<div class="iti__flag"></div><span>${label.split(" ").pop()}</span>` : label;
       input.value = "";
       close();
+      if (id === "hispanic_ethnicity") showRace(label === "No");
     };
     if (id === "country") select.pick = pick;
     const open = () => {
@@ -135,7 +142,21 @@
       if (e.key === "ArrowDown" && items.length) { e.preventDefault(); focus = (focus + 1) % items.length; show(); }
       if (e.key === "Enter" && items[focus]) { e.preventDefault(); pick(items[focus]); }
       if (e.key === "Escape") close();
+      if (e.key === "Backspace" && !input.value && !multi) {
+        shown.innerHTML = "";
+        if (id === "hispanic_ethnicity") showRace(false);
+      }
     });
+  }
+
+  function showRace(show) {
+    const place = document.getElementById("ethnicity-follow-up");
+    if (show === !!place.firstElementChild) return;
+    place.innerHTML = !show ? "" : `<div class="select" data-options="Asian|White|Decline To Self Identify">
+      <label id="race-label" for="race">Please identify your race</label>
+      <input id="race" role="combobox" aria-required="false">
+    </div>`;
+    if (show) live(place.firstElementChild);
   }
 
   // intl-tel-input: the dial code typed sets the Country select and spaces the number.

@@ -122,6 +122,9 @@ class WeRecruit:
                 case _:
                     control.fill(value)
 
+    def shown_fields(self, page: Page) -> list[str]:
+        return [c.field.id for c in _parse(page.content()) or []]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         shown = [c for c in self._controls if not c.field.unfillable]
         values = page.locator(FORM).evaluate(_READ_BACK, [c.name for c in shown])
