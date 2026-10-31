@@ -322,8 +322,10 @@ class Workday:
             _add_entries(page, answers)
             filled: set[str] = set()
             for _ in range(FOLLOW_UP_ROUNDS):  # an answer shows its follow-up questions
-                todo = [r for r in _rendered(page, answers) if r["id"] not in filled]
-                todo = [r for r in todo if r["id"] in answers and r["id"] in self._fields]
+                todo = [r for r in _rendered(page, answers) if r["id"] in answers]
+                todo = [r for r in todo if r["id"] in self._fields]
+                # a reply that came after its wait rendered over the answers given meanwhile
+                todo = [r for r in todo if r["id"] not in filled or _lost(r, answers[r["id"]])]
                 if not todo:
                     break
                 for raw in todo:
@@ -558,6 +560,11 @@ def _filled(page: Page, answers: dict[str, Answer]) -> list[dict[str, Any]]:
             break
         page.wait_for_timeout(SETTLE_MS)
     return raws
+
+
+def _lost(raw: dict[str, Any], answer: Answer) -> bool:
+    """Whether the page dropped a field's answer; an upload still attaching shows no value."""
+    return bool(answer) and raw["kind"] != "file" and raw["value"] in (None, "", [])
 
 
 def _field(raw: dict[str, Any]) -> Field | None:
