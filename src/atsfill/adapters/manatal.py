@@ -61,6 +61,23 @@ _READ = """fields => Object.fromEntries(fields.map(([id, kind, dom]) => {
     default: return [id, el ? el.value || null : null];
   }
 }))"""
+# The fields the form shows: a control by the field id of its element, else by its name, an
+# Other text box by its list. A radio or a box sits unrendered under its styled mark, and
+# select2 adds a search input of its own.
+_SHOWN = """fields => {
+  const form = document.querySelector("#submit-id-submit").closest("form");
+  const rendered = el => el.getClientRects().length > 0;
+  const out = new Set();
+  for (const el of form.querySelectorAll("input, select, textarea")) {
+    if (["hidden", "submit", "button"].includes(el.type)) continue;
+    if (el.matches(".select2-search__field")) continue;
+    if (!rendered(el) && !rendered(el.parentElement)) continue;
+    if (el.matches(".custom-other-val-input"))
+      out.add(`${el.closest("li").querySelector("input[name]").name}.other`);
+    else out.add(fields[el.id] ?? (el.name || el.id));
+  }
+  return [...out];
+}"""
 # Selects the options with these labels on a select2 multiple select, which select2 follows.
 _SELECT = """(el, labels) => {
   for (const o of el.options) o.selected = labels.includes(o.text.trim());
@@ -289,6 +306,9 @@ class Manatal:
                     raise Unsupported(
                         f"unhandled_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
+
+    def shown_fields(self, page: Page) -> list[str]:
+        return page.evaluate(_SHOWN, {dom: fid for fid, _, dom in _inputs(self._entries)})
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         inputs = [list(i) for i in _inputs(self._entries)]

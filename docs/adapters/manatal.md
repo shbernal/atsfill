@@ -41,6 +41,8 @@ A radio or checkbox list with an `Other` option opens a text box (`.custom-other
 
 A number input (`min="0"`) holds no text: an answer that is not a number is left out, reads back empty and the dry run refuses it.
 
+The endpoint lists every field, but the page draws them: once filled, the fields shown are the form's rendered controls, an `Other` box by its list. An "Add Education" entry draws its inputs only once clicked, which atsfill never does.
+
 ## Filling
 
 Nothing is saved before Apply: the app reads the inputs only when Apply is clicked, so `fill` sets inputs and `read_back` reads them as the app will.
