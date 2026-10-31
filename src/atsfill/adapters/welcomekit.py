@@ -179,6 +179,11 @@ class WelcomeKit:
                 case _:
                     control.fill(value)
 
+    def shown_fields(self, page: Page) -> list[str]:
+        """The older form's controls; the newer form's API lists every field whatever the
+        answers, so it has nothing to tell."""
+        return [] if self._new else [c.field.id for c in _old_controls(page.content())]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         form = page.locator("form").first if self._new else page.locator(OLD)
         controls = [
