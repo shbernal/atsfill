@@ -168,3 +168,12 @@ def test_posting_urls():
         assert adapter.posting(url) == JOB
     assert not adapter.detect("https://acme.jobs.personio.com/", None)
     assert not adapter.detect("https://www.example.com/job/1234567", None)
+
+
+def test_shown_fields_name_a_field_the_read_did_not_list(page):
+    adapter, fields = opened(page)
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields}
+    page.locator("form").evaluate(
+        """f => f.insertAdjacentHTML("beforeend", '<input name="follow_up">')"""
+    )
+    assert "follow_up" in adapter.shown_fields(page)
