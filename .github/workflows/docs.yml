@@ -14,6 +14,9 @@ concurrency:
   group: docs
   cancel-in-progress: true
 
+env:
+  DEPLOY_RETRY_WAIT_S: 30
+
 jobs:
   deploy:
     runs-on: ubuntu-26.04
@@ -24,7 +27,7 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.redeployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -38,7 +41,15 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+      # Creating the deployment drops now and then (#294). Only a second try within the run
+      # helps: a re-run of the job builds a second artifact, which deploy-pages refuses.
       - id: deployment
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+      - if: steps.deployment.outcome == 'failure'
+        run: sleep "$DEPLOY_RETRY_WAIT_S"
+      - id: redeployment
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v5
       - run: uv run --only-group docs python -m scripts.failures --sync
         env:
