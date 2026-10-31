@@ -52,7 +52,7 @@
           {"uniqueKey": "degree", "title": "Highest level of education", "questionType": "SINGLE_SELECT_DROPDOWN", "dataType": "enum", "isRequired": true, "strChoices": ["High School", "Bachelor's degree"], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": true},
           {"uniqueKey": "source", "title": "How did you hear about us?", "questionType": "SINGLE_SELECT_RADIO", "dataType": "enum", "isRequired": true, "strChoices": ["Job board", "Referral"], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": true, "allowComments": false},
           {"uniqueKey": "authorized", "title": "Are you authorized to work in the United States?", "questionType": "KNOCKOUT", "dataType": "select", "isRequired": true, "strChoices": ["Yes", "No"], "intChoices": [], "isMultiSelectEnabled": true, "isOtherEnabled": false, "allowComments": false},
-          {"uniqueKey": "shifts", "title": "Which shifts can you work?", "questionType": "MULTI_SELECT_CHECKBOX", "dataType": "select", "isRequired": true, "strChoices": ["Weekdays", "Weekends"], "intChoices": [], "isMultiSelectEnabled": true, "isOtherEnabled": false, "allowComments": false},
+          {"uniqueKey": "shifts", "title": "Which shifts can you work?", "questionType": "MULTI_SELECT_CHECKBOX", "dataType": "select", "isRequired": true, "strChoices": ["Weekdays", "Weekends"], "intChoices": [], "isMultiSelectEnabled": true, "isOtherEnabled": true, "allowComments": false},
           {"uniqueKey": "travel", "title": "Are you comfortable travelling?", "questionType": "YES_NO_SCALE_4", "dataType": "Number", "isRequired": false, "strChoices": [], "intChoices": [1, 2, 3, 4], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": false},
           {"uniqueKey": "licence", "title": "Please upload your licence.", "questionType": "DOCUMENT_UPLOAD", "dataType": "enum", "isRequired": false, "strChoices": [], "intChoices": [], "isMultiSelectEnabled": false, "isOtherEnabled": false, "allowComments": false}
         ]}}]
@@ -140,7 +140,11 @@
   <div data-testid="field"><div data-testid="customQuestions.g1.shifts" role="group">
     <div data-value="Weekdays" role="checkbox" aria-checked="false"><input type="checkbox" value="Weekdays"><div><p>Weekdays</p></div></div>
     <div data-value="Weekends" role="checkbox" aria-checked="false"><input type="checkbox" value="Weekends"><div><p>Weekends</p></div></div>
+    <div data-value="OTHER" role="checkbox" aria-checked="false"><input type="checkbox" value="OTHER"><div><p>Other</p></div></div>
   </div></div>
+  <div data-testid="field" hidden data-other-box="customQuestions.g1.shifts"><span>Other</span><span>*</span>
+    <div data-testid="customQuestions.g1.shifts_others"><input data-testid="input-customQuestions.g1.shifts_others" placeholder="Other" value=""></div>
+  </div>
 </div>
 <div><p>Are you comfortable travelling?</p>
   <div data-testid="field"><div data-testid="customQuestions.g1.travel" role="radiogroup">
@@ -244,7 +248,12 @@ for (const group of document.querySelectorAll("[role=radiogroup]")) {
   }
 }
 for (const box of document.querySelectorAll("[role=checkbox]")) {
-  box.onclick = () => box.setAttribute("aria-checked", box.getAttribute("aria-checked") !== "true");
+  box.onclick = () => {
+    box.setAttribute("aria-checked", box.getAttribute("aria-checked") !== "true");
+    const group = box.closest("[role=group]");
+    const other = document.querySelector(`[data-other-box='${group.dataset.testid}']`);
+    if (other && box.dataset.value === "OTHER") other.hidden = box.getAttribute("aria-checked") !== "true";
+  };
 }
 // "Add comment" gives way to the comment's text area.
 for (const button of document.querySelectorAll("[data-testid='Add comment']")) {

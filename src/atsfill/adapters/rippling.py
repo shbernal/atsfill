@@ -159,6 +159,26 @@ _SHOWN = """(root, [id, nth, testids]) => {
   return {kind: "unknown"};
 }"""
 
+# The fields the page shows, one `[data-testid=field]` block each, named by the first
+# `data-testid` in it that names a field. A second block of one id is its "Other" text box.
+_FIELDS = """(root, names) => {
+  const out = new Set();
+  const control = "input:not([type=hidden]), textarea, [role=combobox], [role=radio], "
+    + "[role=checkbox]";
+  const generic = ["field", "screen-reader-only"];
+  for (const block of root.querySelectorAll("[data-testid=field]")) {
+    if (block.parentElement.closest("[data-testid=field]")) continue;
+    if (!block.getClientRects().length || !block.querySelector(control)) continue;
+    const el = [...block.querySelectorAll("[data-testid]")]
+      .find(e => !generic.includes(e.dataset.testid));
+    if (!el) continue;
+    const id = el.dataset.testid.replace(/_others$/, "_other").replace(/-code$/, "");
+    const name = names[id] ?? id;
+    out.add(out.has(name) ? `${name}_other` : name);
+  }
+  return [...out];
+}"""
+
 
 class Rippling:
     name = "rippling"
@@ -236,9 +256,7 @@ class Rippling:
             if field_id.endswith("_comment"):
                 _comment(page, field_id.removesuffix("_comment"), value)
             elif field_id.endswith("_other"):
-                page.locator(f"[data-testid='{field_id.removesuffix('_other')}']").nth(1).locator(
-                    "input"
-                ).fill(value)
+                _other(page, field_id.removesuffix("_other")).fill(value)
             elif field_id == "phone_number":
                 _phone(page, value)
             elif field_id == "location":
@@ -248,11 +266,15 @@ class Rippling:
             else:
                 _fill(page, field_id, answer)
 
+    def shown_fields(self, page: Page) -> list[str]:
+        return page.locator("body").evaluate(_FIELDS, {v: k for k, v in TESTIDS.items()})
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         body, out = page.locator("body"), {}
         for field_id in self._fields:
             if field_id.endswith("_other"):
-                shown = body.evaluate(_SHOWN, [field_id.removesuffix("_other"), 1, TESTIDS])
+                box = _other(page, field_id.removesuffix("_other"))
+                shown = {"value": box.input_value() if box.count() else None}
             elif field_id == "phone_number":
                 code = page.locator("[data-testid='phone_number-code'] input").input_value()
                 number = page.locator("[data-testid='input-phone_number']").input_value()
@@ -356,6 +378,13 @@ def _click(target: Locator) -> None:
 
 def _box(page: Page, field_id: str) -> Locator:
     return page.locator(f"[data-testid='{TESTIDS.get(field_id, field_id)}']").first
+
+
+def _other(page: Page, field_id: str) -> Locator:
+    """The text box an "Other" answer shows: `<id>_others` under boxes, a second `<id>` under
+    radios."""
+    second = page.locator(f"[data-testid='{field_id}']").nth(1)
+    return page.locator(f"[data-testid='{field_id}_others']").or_(second).locator("input")
 
 
 def _option(page: Page, field_id: str, value: str) -> None:
