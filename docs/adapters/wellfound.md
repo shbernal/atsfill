@@ -92,6 +92,8 @@ Field ids: `question_<id>`, and `note` for the note. The dialog is the form hold
 
 ## Submitting
 
+The questions come from the dialog's read, the answers go to its controls. Once filled, the controls on show are named as the read names them: one an answer showed that the read did not list stops the fill (`ListsShownFields`). None was seen.
+
 Send application posts the GraphQL mutation `CreateJobApplication` (`{input}`), answered `jobListing {id currentUserApplied}`: `currentUserApplied` on the job is the evidence; without it, `unknown`. GraphQL `errors` are `blocked: answer_refused`. The page sends every GraphQL request through a wrapper that, on a response Cloudflare marks `cf-mitigated: challenge`, shows Turnstile ("One more step before you proceed...") and reloads the page once solved: `blocked: captcha`.
 
 No send has been observed.

@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
 from atsfill.core.browser import Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 # The white-label domains HiringThing serves its career sites on, as freehire indexes them.
 DOMAINS = (
@@ -56,6 +56,9 @@ SUBMIT_TIMEOUT_MS = 90_000
 REQUIRED = re.compile(r"\s*\(required\)\s*$")
 DATE = "%m/%d/%Y"
 YES_NO = ["Yes", "No"]
+SOURCE = "app.where_from"
+SOURCE_DETAIL = "app.where_from_other"  # rendered only once a source below is picked
+DETAILED_SOURCES = ("Friend/Colleague", "Other")
 TYPES = {
     "text": FieldType.TEXT,
     "date": FieldType.DATE,
@@ -176,10 +179,19 @@ class HiringThing:
         questions = _questions(props.get_attribute("data-react-props") or "{}")
         controls = form.evaluate(_CONTROLS)
         self._kinds = {c["id"]: c["kind"] for c in controls if c["kind"] != "unhandled"}
-        return [
+        fields = [
             _field(c, questions, _menu(page, c["id"]) if c["kind"] == "select" else None)
             for c in controls
         ]
+        source = next((f for f in fields if f.id == SOURCE), None)
+        if source and (detailed := [o for o in source.options or [] if o in DETAILED_SOURCES]):
+            self._kinds[SOURCE_DETAIL] = "text"
+            at = fields.index(source) + 1
+            fields.insert(at, _source_detail(detailed))
+        return fields
+
+    def shown_fields(self, page: Page) -> list[str]:
+        return [c["id"] for c in page.locator(FORM).evaluate(_CONTROLS)]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
@@ -273,6 +285,12 @@ def _field(control: dict, questions: dict[str, str], options: list[str] | None) 
         options = control["options"]
     max_length = control.get("maxLength") if kind == "text" else None
     return Field(field_id, label, TYPES[kind], required, options, max_length)
+
+
+def _source_detail(sources: list[str]) -> Field:
+    """What the page asks once one of `sources` is picked as the referral source."""
+    label = "Please Specify Source"
+    return Field(SOURCE_DETAIL, label, FieldType.TEXT, True, shown_when=Is(SOURCE, sources))
 
 
 def _combobox(page: Page, field_id: str) -> Locator:

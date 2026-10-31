@@ -48,6 +48,7 @@ Some sites (1 of 8) whose career page body has the class `cxApplyEnabled` show a
 
 - Fields are filled in the page's order, a country before its state, each looked up again first since its widget may have re-rendered.
 - Text is filled and the field left with Tab. A picklist is opened with its button (clicked again when the click only closed another list) and the item whose title is the answer clicked, else the first starting with it.
+- Once filled, the page's fields are read again by the rule `read` uses: one an answer showed that `read` did not list stops the fill (`ListsShownFields`). None was seen.
 - An attachment's button opens a callout of sources; its device input (`[role=dialog] input[type=file]`) uploads once set, and the field shows the file's name. A field holding a file shows a delete button instead: atsfill deletes the file, confirming the dialog (`#sfOverlayMgr button.globalPrimaryButton`), waits while the field shows neither button (deleting), then uploads. An upload is saved to the account's profile at once.
 
 ## Read-back and submit

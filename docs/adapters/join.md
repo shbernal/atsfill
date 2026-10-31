@@ -66,6 +66,7 @@ The question counts are postings, from 11 employers whose posting asks screening
 - An application sent leaves its CV and its work authorization on the account profile. The next wizard opens `cv` showing that file, without an input: once no input comes, the fill removes the file and uploads the answer, a declared side effect. What removing it does to the application already sent is unobserved. It skips `workAuthorization`, and the review shows the authorization reworded under the personal information, so the fill ends `mismatch` on that question.
 - A choice's cards are its options in order, each a letter, the option and, for a work authorization, a description; a boolean's read in the job's language (`Ja`, `Nein`) and are answered `Yes`, `No` by position.
 - The calendar is paged with its previous and next buttons to the answer's month.
+- A step the wizard shows and the read did not list stops the fill: a question or wizard step while it walks (`unhandled_rendering`), a document step from the steps walked (`ListsShownFields`). The fill does not look inside a step: the one control a step was seen with is its field.
 - The read-back is each question as its step was left (the checked card, the picked day, the input; a card the wizard moved on from is the one clicked), and the CV by name from the review page: the review shows a classed question under a label of its own and its answer reworded (`€50,000`, an availability in the account's language).
 
 ## Submitting

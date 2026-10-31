@@ -49,6 +49,8 @@ DECLINE = "Skip for now"  # its other button, Start my application, enrols the a
 FORM = 'form:has([data-test="JobApplicationModal--SubmitButton"])'
 SEND = '[data-test="JobApplicationModal--SubmitButton"]'
 NOTE = "note"
+NOTE_INPUT = "userNote"
+QUESTION = re.compile(r"customQuestionAnswers\[(\d+)\]")  # the start of a question's control name
 GONE = "no longer available"
 WRONG_PASSWORD = "Email or password is incorrect"
 PASSWORD_LENGTH = (8, 128)
@@ -258,6 +260,12 @@ class Wellfound:
                     said = f"cannot fill {field_id}, a {kind}, with {answer!r}"
                     raise Unsupported(f"unhandled_rendering: {said}")
 
+    def shown_fields(self, page: Page) -> list[str]:
+        """The dialog's controls, named as the read names its questions and its note."""
+        names = page.locator(FORM).evaluate("""form => [...form.querySelectorAll("[name]")]
+          .filter(e => e.getClientRects().length).map(e => e.name)""")
+        return list(dict.fromkeys(i for name in names if (i := _field_named(name))))
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         form = page.locator(FORM)
         values: dict[str, Answer] = {}
@@ -371,6 +379,14 @@ def _opened(page: Page, read: list[dict[str, Any]]) -> dict[str, Any]:
             return job
         page.wait_for_timeout(OPEN_POLL_MS)
     raise RuntimeError("Apply opened no dialog")
+
+
+def _field_named(name: str) -> str | None:
+    """The field a control of the dialog belongs to."""
+    if name == NOTE_INPUT:
+        return NOTE
+    question = QUESTION.match(name)
+    return f"question_{question[1]}" if question else None
 
 
 def _field(question: dict[str, Any]) -> Field:

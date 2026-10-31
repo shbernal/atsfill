@@ -272,6 +272,16 @@ def test_every_answer_reads_back(page, site):
     adapter.fill(page, ANSWERS)
     checks = matching.check(fields, ANSWERS, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
+    assert adapter.shown_fields(page) == [f.id for f in fields]
+
+
+def test_a_field_an_answer_shows_is_listed_shown(page, site):
+    adapter, fields = opened(page)
+    page.locator(wellfound.FORM).evaluate(
+        """form => form.insertAdjacentHTML("afterbegin",
+          '<input name="customQuestionAnswers[999][answer]">')"""
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"question_999"}
 
 
 def test_a_choice_answered_again_moves_the_ticks(page, site):

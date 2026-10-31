@@ -328,6 +328,11 @@ class Breezy:
             case _:
                 controls.first.fill(values[0])
 
+    def shown_fields(self, page: Page) -> list[str]:
+        """The controls `browser_read` names; a work history or education entry's have no name.
+        Every step stays in the page, the others hidden."""
+        return [raw["id"] for raw in page.locator(FORM).evaluate(_READ)]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         form = page.locator(FORM)
         out: dict[str, Answer] = {}

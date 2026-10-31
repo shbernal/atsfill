@@ -255,7 +255,7 @@ def test_fill_and_read_back(page, tmp_path):
     signed_in(page)
     page.goto(POSTING)
     adapter = SuccessFactors()
-    adapter.browser_read(page)
+    fields = adapter.browser_read(page)
     resume = str(testuser.resume(tmp_path / "resume.pdf"))
     letter = str(testuser.resume(tmp_path / "letter.pdf"))
     answers: dict[str, Answer] = {
@@ -274,3 +274,17 @@ def test_fill_and_read_back(page, tmp_path):
     back = adapter.read_back(page)
     files = {"resume": "resume.pdf", "cover-letter": "letter.pdf"}
     assert back == answers | files | {"firstName": "Ada"}
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields}
+
+
+def test_a_field_an_answer_shows_is_listed_shown(page):
+    signed_in(page)
+    page.goto(POSTING)
+    adapter = SuccessFactors()
+    fields = adapter.browser_read(page)
+    page.locator(".RCMFormField").first.evaluate(
+        """box => box.insertAdjacentHTML("afterend",
+          '<div class="RCMFormField"><label class="rcmFormFieldLabel">New question</label>' +
+          '<textarea></textarea></div>')"""
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"new-question"}

@@ -217,8 +217,20 @@
         document.getElementById(input.dataset.geo).value = parts.at(-1);
       }
       list.hidden = true;
+      input.dispatchEvent(new CustomEvent("change-country", {detail: cell.textContent}));
     }));
   };
+  // The address follows the country: another one's format has rows of its own.
+  const province = `<div class="input-row input-row--text" id="province-row">
+    <label class="input-row__label input-row__label--required" for="region3-71"><span class="input-row__linebreak" id="labelText-region3-71">Province</span></label>
+    <div class="input-row__control-container"><input class="input-row__control" id="region3-71" aria-required="true"></div>
+  </div>`;
+  document.getElementById("country-12").addEventListener("change-country", e => {
+    document.getElementById("province-row")?.remove();
+    const line = document.getElementById("addressLine1-28").closest(".input-row");
+    const town = document.getElementById("city-33")?.closest(".input-row");
+    if (e.detail === "Poland") { line.insertAdjacentHTML("afterend", province); town?.remove(); }
+  });
   for (const input of document.querySelectorAll("input[role=combobox]")) {
     input.addEventListener("click", () => show(input, false));
     input.addEventListener("input", () => show(input, true));

@@ -38,6 +38,7 @@ The page loads `GetPersonalDetails` (the profile's name, phone with its calling 
 - An uploaded resume is stored in the profile at once (`ApplyProcessUploadedResume`) and made its default (`SetDefaultResume`). An uploaded cover letter is not: the next Quick apply offers only the box and "Don't include".
 - The cover letter is written or uploaded, two alternatives sharing the key `coverLetter` (ADR 0005): the answers pick one, and neither leaves it out where the page allows.
 - Every question was required; the page marks none.
+- The employer's step shows the questions the GraphQL read lists. Its controls are read once answered, so one an answer showed that `read` did not list stops the fill (`ListsShownFields`): no such question was seen.
 - The profile step shows the SEEK profile (photo, career history, education, licences, skills), sent with the application. A profile without a career history stops Continue ("Career History - Please update your career history"), the known gap `profile_incomplete`; "I am new to the workforce" is the page's other way past it.
 - The review step offers profile visibility, not marked required: atsfill asks it, a setting the user picks, as long as the profile has none. "Show strong interest" stays off.
 - The read-back is each step's inputs as it was left, and the visibility picked on review.

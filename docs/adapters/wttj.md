@@ -42,7 +42,8 @@ No question rendered as a checkbox, a radio or a select: those, and any other ch
 
 - The email comes from the account and is disabled; the avatar is not read.
 - A field holding a value when the form opens is `prefilled` with it (a ticked box `Yes`, a résumé its `data-id`); one not answered keeps what the account profile put there, required or not. The account profile's location arrives up to a second after the rest, so the form is read once it has, or after 3 seconds.
-- The account profile's CV shows first, with a Remove button: remove it, then upload the tailored PDF. "Utiliser comme CV par défaut", which would replace the account profile's CV, is never ticked.
+- The account profile's CV shows first, with a Remove button: remove it, then upload the tailored PDF. The upload shows a box, `save_resume` ("Utiliser uniquement pour cette candidature"), which decides whether the CV replaces the account profile's: left as it is, and not a field.
+- Once filled, the form's inputs are read again: one an answer showed that `read` did not list stops the fill (`ListsShownFields`). None was seen, on 9 dry-runs.
 - Location suggestions load only while typing key by key, into a box cleared by select-all and Backspace: Playwright's `fill("")` (select-all and Delete) leaves the account profile's value in it, and the answer lands after it. The first suggestion, "Position actuelle", geolocates and is skipped. Suggestions read `Paris, Île-de-France, France`. The first answer typed on a page sometimes loads none, "Position actuelle" alone, for good: it is typed again.
 - Nothing is sent before submit, the CV included, so the read-back is the form's inputs and the CV's shown name (`[data-id]`).
 

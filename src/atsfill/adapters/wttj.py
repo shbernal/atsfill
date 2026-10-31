@@ -36,9 +36,10 @@ SUGGEST_POLL_MS = 250
 KEY_DELAY_MS = 30
 YES_NO = ["Yes", "No"]
 
-# The fillable fields: an input's name is its id. Email comes from the account, disabled.
+# The fillable fields: an input's name is its id. Email comes from the account, disabled; an
+# upload shows `save_resume`, whether the CV stays on the account, left as it is.
 _READ = """form => [...form.querySelectorAll("input[name], textarea[name], select[name]")]
-  .filter(e => !e.disabled && e.name !== "avatar")
+  .filter(e => !e.disabled && !["avatar", "save_resume"].includes(e.name))
   .map(e => {
     const label = form.querySelector(`label[for="${CSS.escape(e.id)}"]`);
     return {id: e.name, tag: e.tagName.toLowerCase(), type: e.type,
@@ -171,6 +172,10 @@ class WelcomeToTheJungle:
                         f"unhandled_rendering: cannot fill {field_id}, a {kind}, with {answer!r}"
                     )
                     raise Unsupported(reason)
+
+    def shown_fields(self, page: Page) -> list[str]:
+        raws = page.locator(FORM).first.evaluate(_READ)
+        return list(dict.fromkeys(r["id"] for r in raws if r["type"] != "hidden"))
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).first.evaluate(_READ_BACK, list(self._fields))

@@ -3,7 +3,7 @@
 <!-- A Welcome to the Jungle job as the adapter meets it, signed in: the apply button is a sign-in
      link until the page knows the account, the form opens in a modal prefilled from the
      profile with its CV and without a cover letter, a second PDF field (a portfolio) beside
-     the CV, the profile's location arrives last, the location suggests only as you type with "current position" first, the location
+     the CV, an uploaded CV offers to stay on the account, the profile's location arrives last, the location suggests only as you type with "current position" first, the location
      box keeps the profile's value unless emptied with Backspace, the first answer typed into
      it loads no suggestions, and the send is a POST to /api/v1/applications. -->
 <a data-testid="job_header-button-apply" href="/en/authenticate/signin">Postuler</a>
@@ -49,6 +49,7 @@
       const name = e.target.files[0].name;
       input.parentElement.querySelector("#cv")?.remove();
       input.insertAdjacentHTML("beforebegin", `<div data-id="${name}"><div>${name}</div></div>`);
+      if (input.name === "resume") input.insertAdjacentHTML("afterend", '<input type="checkbox" name="save_resume">');
     });
     const location_ = form.querySelector("#location");
     setTimeout(() => location_.value = location_.defaultValue = "Lyon, France", 500);

@@ -4,10 +4,11 @@ from pathlib import Path
 
 import pytest
 
+from atsfill.adapters import hiringthing
 from atsfill.adapters.hiringthing import HiringThing
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
-from atsfill.core.results import Answer, FieldType
+from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
 PAGES = Path(__file__).parent / "pages/hiringthing"
@@ -69,6 +70,8 @@ def test_browser_read(page):
         "job_assessment.question_1005.response.0.name",
         "job_assessment.question_1005.response.0.phone",
         "job_assessment.question_1005.response.0.st_date",
+        "app.where_from",
+        "app.where_from_other",
         "disclosure_agree",
         "subscribe",
         "files.Resume",
@@ -97,6 +100,12 @@ def test_browser_read(page):
     assert entry.type is FieldType.DATE
     assert by_id["files.Resume"].type is FieldType.FILE
     assert by_id["files.Resume"].label == "Resume: (Word/PDF)"
+    assert by_id["app.where_from"].options == ["Indeed", "Friend/Colleague", "Other"]
+    assert by_id["app.where_from_other"].required  # whenever shown
+    assert by_id["app.where_from_other"].shown_when == Is(
+        "app.where_from", ["Friend/Colleague", "Other"]
+    )
+    assert [f.id for f in fields if f.shown_when] == ["app.where_from_other"]
 
 
 def test_every_answer_reads_back(page, tmp_path):
@@ -117,6 +126,8 @@ def test_every_answer_reads_back(page, tmp_path):
         "job_assessment.question_1005.response.0.name": "Acme",
         "job_assessment.question_1005.response.0.phone": "+12025550143",
         "job_assessment.question_1005.response.0.st_date": "2020-01-31",
+        "app.where_from": "Other",
+        "app.where_from_other": "A newsletter",
         "disclosure_agree": "Yes",
         "subscribe": "No",
         "files.Resume": cv,
@@ -133,6 +144,21 @@ def test_every_answer_reads_back(page, tmp_path):
     checks = matching.check(fields, answers, read_back)
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+    assert adapter.shown_fields(page) == [f.id for f in fields]
+
+
+def test_a_source_that_asks_nothing_keeps_its_detail_hidden(page):
+    adapter, fields = opened(page)
+    adapter.fill(page, {"app.where_from": "Indeed"})
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields} - {"app.where_from_other"}
+
+
+def test_a_field_an_answer_shows_is_listed_shown(page):
+    adapter, fields = opened(page)
+    page.locator(hiringthing.FORM).evaluate(
+        """form => form.insertAdjacentHTML("beforeend", '<input name="app.other_thing">')"""
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"app.other_thing"}
 
 
 def test_the_test_user_answers_every_field(page, tmp_path):

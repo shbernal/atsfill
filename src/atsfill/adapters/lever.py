@@ -7,6 +7,7 @@ id. Nothing but the resume reaches Lever before submit, so the read-back is the 
 
 import re
 from contextlib import suppress
+from dataclasses import replace
 from datetime import date
 from typing import Any
 from urllib.parse import urlsplit
@@ -14,7 +15,7 @@ from urllib.parse import urlsplit
 from atsfill.core import browser
 from atsfill.core.adapter import Blocked, Gap, Unsupported
 from atsfill.core.browser import Locator, Page, Timeout
-from atsfill.core.results import Answer, Field, FieldType, SideEffect
+from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 HOSTS = re.compile(r"^jobs\.(eu\.)?lever\.co$")
 JOB = re.compile(r"^/([^/]+)/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b")
@@ -26,6 +27,8 @@ SUGGEST_TIMEOUT_MS = 10_000
 SUBMIT_TIMEOUT_MS = 90_000
 KEY_DELAY_MS = 40
 YES_NO = ["Yes", "No"]
+DISABILITY = "eeo[disability]"
+SIGNATURE = ("eeo[disabilitySignature]", "eeo[disabilitySignatureDate]")  # shown by its answer
 KINDS = {
     "text": FieldType.TEXT,
     "phone": FieldType.PHONE,
@@ -38,7 +41,8 @@ KINDS = {
     "checkboxes": FieldType.MULTI_CHOICE,
 }
 
-# The fields in page order, one per control name: its question's label, and how it renders.
+# The fields in page order, one per control name: its question's label, how it renders, and
+# whether its question is on show.
 _READ = """form => {
   const text = el => {
     if (!el) return "";
@@ -62,7 +66,7 @@ _READ = """form => {
       const label = box.querySelector(".application-label .text") ||
         box.querySelector(".application-label");
       field = {id: name, label: text(label), required: !!box.querySelector(".required"),
-               options: [], count: 0};
+               options: [], count: 0, shown: box.getClientRects().length > 0};
       if (el.type === "file") {
         field.kind = "file";
       } else if (el.tagName === "SELECT") {
@@ -153,14 +157,20 @@ class Lever:
         except Timeout:
             raise Unsupported("posting_gone: no application form on the page") from None
         fields, self._kinds = [], {}
-        for raw in form.evaluate(_READ):
-            fields.append(_field(raw))
+        raws = form.evaluate(_READ)
+        asked = {raw["id"] for raw in raws}
+        for raw in raws:
+            field = _field(raw)
+            if raw["id"] in SIGNATURE and DISABILITY in asked:
+                field = replace(field, shown_when=Is(DISABILITY))
+            fields.append(field)
             self._kinds[raw["id"]] = raw["kind"]
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         # the resume is parsed into the form, so it goes first and is waited for
-        for name, answer in sorted(answers.items(), key=lambda a: a[0] != "resume"):
+        first = sorted(answers.items(), key=lambda a: a[0] != "resume")
+        for name, answer in sorted(first, key=lambda a: a[0] in SIGNATURE):
             values = [answer] if isinstance(answer, str) else answer
             controls = page.locator(f"{FORM} [name={_quoted(name)}]:not([type=hidden])")
             match self._kinds[name]:
@@ -182,6 +192,9 @@ class Lever:
                     controls.first.fill(f"{day.month:02}/{day.day:02}/{day.year}")
                 case _:
                     controls.first.fill(values[0])
+
+    def shown_fields(self, page: Page) -> list[str]:
+        return [raw["id"] for raw in page.locator(FORM).evaluate(_READ) if raw["shown"]]
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, self._kinds)
