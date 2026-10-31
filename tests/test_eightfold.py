@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from atsfill.adapters.eightfold import Eightfold, _form
-from atsfill.core import browser, matching
+from atsfill.core import browser, conditions, matching
 from atsfill.core.adapter import Blocked, Unsupported
 from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
@@ -161,6 +161,54 @@ def test_a_question_its_answer_hides_is_not_filled(page):
     read_back = adapter.read_back(page)
     assert read_back["Q_HEAR_ABOUT_US"] == "Job Board"
     assert "Q_EVENTS" not in read_back
+
+
+def unmet(adapter, page, fields, answers) -> list[str]:
+    """The fields the filled page shows though the answers keep them hidden."""
+    by_id, form = {f.id: f for f in fields}, conditions.Form(fields, answers)
+    return [i for i in adapter.shown_fields(page) if not form.shown(by_id[i])]
+
+
+def test_shown_fields_name_each_control_as_the_read_does(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"country": "United States", "Q_HEAR_ABOUT_US": "Events"}
+    adapter.fill(page, answers)
+    shown = adapter.shown_fields(page)
+    assert "Q_EVENTS" in shown and "1443109865728" in shown
+    assert not set(shown) - {f.id for f in fields}
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_the_answers_keep_hidden_stays_hidden(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"country": "United States", "Q_HEAR_ABOUT_US": "Job Board"}
+    adapter.fill(page, answers)
+    assert "Q_EVENTS" not in adapter.shown_fields(page)
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_shown_with_its_condition_unmet_is_caught(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"country": "United States", "Q_HEAR_ABOUT_US": "Job Board"}
+    adapter.fill(page, answers)
+    page.evaluate("""document.getElementById("events").innerHTML =
+        document.getElementById("events-field").innerHTML""")
+    assert unmet(adapter, page, fields, answers) == ["Q_EVENTS"]
+
+
+def test_a_control_no_question_ends_as_is_shown_by_its_element_id(page):
+    adapter, _ = opened(page)
+    adapter.fill(page, {"firstname": "Ada"})
+    page.evaluate("""document.getElementById("events").innerHTML =
+        '<div id="Application_questions_q_unlisted_error"></div>'""")
+    assert "Application_questions_q_unlisted" in adapter.shown_fields(page)
+
+
+def test_a_control_is_the_question_with_the_longest_id_it_ends_with(page):
+    adapter = Eightfold()
+    adapter._ends = {"town": "town", "q_town": "q_town"}
+    page.set_content('<div id="Contact_q_town_error"></div>')
+    assert adapter.shown_fields(page) == ["q_town"]
 
 
 def test_the_test_user_leaves_out_what_its_answers_hide(tmp_path):
