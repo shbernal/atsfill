@@ -128,6 +128,19 @@ async function workflow() {
   await draw();
 }
 
+let followUps = {};
+
+function follow(g, code) {
+  for (const a of JSON.parse(g.dataset.shows)) {
+    const there = app.querySelector(`adp-form-group[data-name="${a.questionID}"]`);
+    if (a.answerID !== code) there?.remove();
+    else if (!there) {
+      g.insertAdjacentHTML("afterend", group(followUps[a.questionID]));
+      wire(g.nextElementSibling);
+    }
+  }
+}
+
 async function draw() {
   const query = new URLSearchParams(location.search);
   let shown = pages[number];
@@ -143,8 +156,12 @@ async function draw() {
   const repeat = Object.fromEntries((shown.sectionLabels ?? []).map(l => [l.code, l.value]));
   const index = q => Number(q.questionLabels?.find(l => l.code === "repeatIndex")?.value ?? 0);
   const label = repeat.sectionRepeatLabel;
+  // A question another's answer shows is on the page only under that answer.
+  const shownBy = shown.questions.flatMap(q => q.dependencies ?? []).flatMap(d => d.attributes);
+  const followUp = q => shownBy.some(a => a.questionID === q.questionID);
+  followUps = Object.fromEntries(shown.questions.filter(followUp).map(q => [q.questionID, q]));
   app.innerHTML = `<h2>${section.sectionTitle}</h2><sdf-alert></sdf-alert>` +
-    shown.questions.filter(q => !index(q)).map(group).join("") +
+    shown.questions.filter(q => !index(q) && !followUp(q)).map(group).join("") +
     (label ? `<div class="entries"></div>${button(`Add ${label.toLowerCase()}`)}` : "") +
     (number ? button("Previous") : "") + button("Next");
   app.querySelectorAll("adp-form-group").forEach(wire);
@@ -188,7 +205,8 @@ function group(q) {
   }[kind] ?? "";
   const shown = q.disabledIndicator ? `<p>${value}</p>` : inner;  // a value the page keeps
   return `<adp-form-group data-name="${q.questionID}" class="van-type-${kind}" data-link="${
-    q.links?.[0]?.href ?? ""}" data-required="${q.requiredIndicator}">
+    q.links?.[0]?.href ?? ""}" data-required="${q.requiredIndicator}" data-shows='${
+    JSON.stringify((q.dependencies ?? []).flatMap(d => d.attributes))}'>
     <label>${label}</label>${shown}<rm-sr-field-error></rm-sr-field-error></adp-form-group>`;
 }
 
@@ -217,6 +235,7 @@ async function wire(g) {
     list.onclick = e => {
       select.querySelector("#selected-label").textContent = e.target.getAttribute("aria-label");
       list.classList.add("hidden"); filter.classList.add("hidden");
+      follow(g, e.target.getAttribute("value"));
     };
   } else if (g.classList.contains("van-type-radio-group")) {
     const items = (await api(`${API}/rm${g.dataset.link}&$skip=0&$top=1000`)).listItems;

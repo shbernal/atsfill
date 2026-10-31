@@ -1,6 +1,6 @@
 # Eightfold
 
-Eightfold's career sites, observed on live postings, last on 2026-10-22. The fixture page is [tests/pages/eightfold/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/eightfold/apply.html) with its questions API answer [questions.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/eightfold/questions.json), served as `acme.eightfold.ai` in `tests/test_eightfold.py`: one example of each rendering below, Eightfold's controls reduced to their markup and a few lines that act as they do.
+Eightfold's career sites, observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/eightfold/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/eightfold/apply.html) with its questions API answer [questions.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/eightfold/questions.json), served as `acme.eightfold.ai` in `tests/test_eightfold.py`: one example of each rendering below, Eightfold's controls reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 
@@ -34,7 +34,8 @@ Without an account, a control showing a value before any answer holds the page's
 
 ## Filling
 
-- The resume first, then the questions in the API's order. A follow-up is filled once the answers filled before it meet its condition, and waited for briefly. The API lists every question whatever the answers, so the adapter does not list the fields a fill shows.
+- The resume first, then the questions in the API's order. A follow-up is filled once the answers filled before it meet its condition, and waited for briefly. 
+- The API lists every question whatever the answers, and `shown_fields` holds the page to it: each error line's element id is the question whose id it ends with, the longest such (`q_town` over `town`), one no question ends as its element id.
 - Text inputs are filled; a dropdown is opened and its option clicked; a radio or a box is clicked through its input; a date is paged to in the picker and clicked; a pill not in the answer is removed and one missing picked.
 
 ## Read-back and submit

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from atsfill.adapters.bamboohr import BambooHR, _form, _from_page, _to_page
-from atsfill.core import browser, matching
+from atsfill.core import browser, conditions, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType, Is, OptionSet
 from tests import testuser
@@ -166,6 +166,56 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def unmet(adapter, page, fields, answers) -> list[str]:
+    """The fields the filled page shows though the answers keep them hidden."""
+    by_id, form = {f.id: f for f in fields}, conditions.Form(fields, answers)
+    return [i for i in adapter.shown_fields(page) if not form.shown(by_id[i])]
+
+
+def test_shown_fields_name_every_control_as_the_read_does(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"question_14": "Other", "veteranStatusId": "Not a Veteran"}
+    adapter.fill(page, answers)
+    shown = adapter.shown_fields(page)
+    assert set(shown) == {f.id for f in fields}
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_the_answers_keep_hidden_stays_hidden(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"question_14": "She/Her"}
+    adapter.fill(page, answers)
+    assert "question_14_other" not in adapter.shown_fields(page)
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_shown_with_its_condition_unmet_is_caught(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {"question_14": "She/Her"}
+    adapter.fill(page, answers)
+    page.locator("form").first.evaluate(
+        """form => {
+          const other = document.createElement("input");
+          other.name = "customQuestionAnswers.multi_14_other";
+          form.append(other);
+        }"""
+    )
+    assert unmet(adapter, page, fields, answers) == ["question_14_other"]
+
+
+def test_a_control_the_read_did_not_list_is_shown_by_its_name(page):
+    adapter, _ = opened(page)
+    adapter.fill(page, {"firstName": "Ada"})
+    page.locator("form").first.evaluate(
+        """form => {
+          const added = document.createElement("input");
+          added.name = "addedByAnAnswer";
+          form.append(added);
+        }"""
+    )
+    assert "addedByAnAnswer" in adapter.shown_fields(page)
 
 
 def test_a_country_without_a_list_takes_a_typed_state(page):

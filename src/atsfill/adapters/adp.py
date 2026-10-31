@@ -49,6 +49,9 @@ NEXT = "#ja_sv_cw_next_footer_btn"
 PREVIOUS = "#ja_sv_cw_prev_footer_btn"
 SUBMIT = "#submitApplication"
 ATTEST = "input[name=self_att_agree_chk]"
+SIGNATURE = "attestation.signature"
+OPT_OUT = "resume.ai_opt_out"
+LATE = {SIGNATURE: OPTION_TIMEOUT_MS, OPT_OUT: UPLOAD_TIMEOUT_MS}  # boxes shown a moment after
 PERSON = "/jobApplication/applicant/person"
 PAY = "/jobApplication/requestedPayRate"
 
@@ -74,6 +77,7 @@ SHOWN_BY_COUNTRY = {"county"}  # once a country with counties is picked
 ADDRESS_MAX = 30  # "Address Line 1 must not exceed 30 characters"
 FIXED = {"personal.email"}  # the verified email, read only
 QUESTIONS = "#question_0, #questionYes_0, #desiredSalaryId, #refferalOptions, #commentTextArea"
+NOT_FIELDS = re.compile(r"select-filter-input|react-select-.*")  # a list's own inputs
 
 # Voluntary Self-ID: its lists and radio groups, each with the meta's indicator that shows it
 # and its code list; a radio's value is its code
@@ -113,6 +117,7 @@ class ADP:
         self._values: dict[str, Answer] = {}
         self._codes: dict[str, dict[str, str]] = {}  # a radio's label by its value, by field id
         self._amounts: set[str] = set()  # the page shows them formatted: `50,000.00`
+        self._shown: dict[str, None] = {}  # the fields each step showed, in order
 
     def detect(self, url: str, page: Page | None) -> bool:
         return _posting(url) is not None
@@ -166,7 +171,7 @@ class ADP:
         asked = self._questions(control, transforms)
         self._steps = [
             Step("Personal Information", PERSONAL[0][1], self._personal(page, transforms)),
-            Step("Resume", "input[type=file]", [self._resume()]),
+            Step("Resume", "input[type=file]", [self._resume(), self._opt_out()]),
         ]  # fmt: skip
         # A wizard with nothing to ask has no Questions step; one that asks nothing the meta
         # lists has no box of its own: Next moves past it
@@ -176,24 +181,43 @@ class ADP:
             fields = self._self_id(transforms, indicators)
             self._steps.append(Step("Voluntary Self-ID", "#vsidWhy, #vsidEthRace", fields))
         self._steps.append(Step("Review Your Application", ""))
-        self._steps.append(Step("Self-Attest & Submit", SUBMIT, [self._attestation(control)]))
+        attest = [self._attestation(control), self._signature()]
+        self._steps.append(Step("Self-Attest & Submit", SUBMIT, attest))
         return [f for s in self._steps for f in s.fields]
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         """Answers each step and moves on with Next, up to the attestation, which it agrees to
         without Submit."""
-        self._values = {}
+        self._values, self._shown = {}, {}
         answers = {f.id: f.prefilled for s in self._steps for f in s.fields
                    if f.prefilled is not None} | answers  # fmt: skip
         for step in self._steps:
             _wait_for_step(page, step)
+            before = {key for key, _ in page.evaluate(_CONTROLS)}
             for f in step.fields:
                 if f.id in answers and f.id not in FIXED:
                     self._set(page, f, answers[f.id])
+            self._shown |= dict.fromkeys(self._shown_on(page, step, before))
             self._values |= self._read(page, step)
             if step.marker == SUBMIT:
                 return
             _next(page, step)
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The fields each step showed once answered: the wizard holds one step at a time."""
+        return list(self._shown)
+
+    def _shown_on(self, page: Page, step: Step, before: set[str]) -> list[str]:
+        """The open step's fields: those with an enabled box, then the controls its answers
+        added that no field has. What it showed before them is not all fields, such as a
+        preferred name's box, so a control counts only as an answer's."""
+        boxes = {name for box in self._boxes.values() for name in re.findall(r"[\w-]+", box)}
+        shown = [f.id for f in step.fields if _enabled(page.locator(self._boxes[f.id]).first)]
+        for key, dom in page.evaluate(_CONTROLS):
+            listed = key in boxes or dom in boxes or NOT_FIELDS.fullmatch(key)
+            if key and key not in before and not listed:
+                shown.append(key)
+        return shown
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Each step's values as it was left."""
@@ -245,6 +269,17 @@ class ADP:
     def _resume(self) -> Field:
         self._boxes["resume"] = "input[type=file]"
         return Field("resume", "Resume", FieldType.FILE, True, accept=[".pdf", ".doc", ".docx"])
+
+    def _opt_out(self) -> Field:
+        """The opt-out an employer's uploaded résumé shows, in no meta: listed on every form,
+        its box left alone unless answered."""
+        self._boxes[OPT_OUT] = "input[name=candidateProfileRelevanceOptionDivId]"
+        label = (
+            "I want to opt out from having my resume reviewed by artificial intelligence as "
+            "part of the application process."
+        )
+        return Field(OPT_OUT, label, FieldType.CHOICE, False, YES_NO, default="No",
+                     shown_when=Is("resume"))  # fmt: skip
 
     def _questions(self, control: dict[str, Any], transforms: dict[str, Any]) -> list[Field]:
         """The questionnaire, each question its `#question_<n>` by position; then the desired
@@ -356,8 +391,17 @@ class ADP:
         self._boxes["attestation"] = ATTEST
         return Field("attestation", label, FieldType.CHOICE, True, YES_NO)
 
+    def _signature(self) -> Field:
+        """The name agreeing shows beneath the box, in no meta; the page's own words."""
+        self._boxes[SIGNATURE] = "#electronicSignature"
+        return Field(SIGNATURE, "Please type your full name.", FieldType.TEXT, True,
+                     shown_when=Is("attestation", ["Yes"]))  # fmt: skip
+
     def _set(self, page: Page, f: Field, answer: Answer) -> None:
         box = page.locator(self._boxes[f.id]).first
+        if f.id in LATE:
+            with suppress(Timeout):
+                box.wait_for(state="attached", timeout=LATE[f.id])
         if not box.count():
             return  # not shown: its condition is unmet
         if f.type is FieldType.FILE:
@@ -416,6 +460,10 @@ class ADP:
         return values
 
 
+# The open step's controls: what names each, and its id
+_CONTROLS = """() => [...document.querySelectorAll(
+  "input, textarea, select, sdf-select-simple, wfn-dropdown-list"
+)].map(e => [e.name || e.id, e.id])"""
 # The meta lists the questionnaire of the posting its header names
 _FETCH = """async ([url, requisition]) => {
   const headers = {requisitionoid: requisition, 'x-requested-with': 'XMLHttpRequest'};
@@ -518,6 +566,11 @@ def _label(page: Page, selector: str) -> str:
     if label.count():
         return " ".join(label.first.inner_text().split())
     return ""
+
+
+def _enabled(box: Locator) -> bool:
+    """A box the step shows and takes an answer in: race stays disabled until ethnicity allows."""
+    return box.count() > 0 and not box.evaluate("e => e.disabled === true")
 
 
 def _wait_for_step(page: Page, step: Step) -> None:

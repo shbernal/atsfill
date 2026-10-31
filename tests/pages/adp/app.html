@@ -254,7 +254,7 @@ function selfId() {
 function attest() {
   return `<p>${meta.data.control.attestations[0].messageTxt}</p><span id="self_att_agree_chk">
     <input id="checkbox_1" type="checkbox" name="self_att_agree_chk" class="hidden">
-    <label for="checkbox_1">Yes, I agree to sign electronically.</label></span>`;
+    <label for="checkbox_1">Yes, I agree to sign electronically.</label></span><div id="signature"></div>`;
 }
 
 function wire() {
@@ -278,6 +278,21 @@ function wire() {
   });
   app.querySelectorAll(".react").forEach(wireReact);
   app.querySelectorAll("sdf-select-simple").forEach(wireSelect);
+  // Agreeing shows the signature, which Submit needs.
+  const agree = app.querySelector("input[name=self_att_agree_chk]");
+  if (agree) agree.onchange = () => {
+    app.querySelector("#signature").innerHTML = agree.checked
+      ? `<input type="text" id="electronicSignature" aria-label="Please type your full name." aria-required="true">`
+      : "";
+  };
+  // Race stays disabled until the ethnicity allows it.
+  const race = app.querySelector("#vsidRace");
+  if (race) {
+    race.disabled = true;
+    app.querySelector("#vsidEthinicity").closest(".react").addEventListener("picked", e => {
+      race.disabled = !e.target.textContent.includes("Not Hispanic or Latino");
+    });
+  }
   // The country's pick turns the state into a list, its select in its shadow root, and shows the county.
   const country = app.querySelector("#PersonalAddress_country");
   if (country) country.closest(".react").addEventListener("picked", () => {
@@ -299,6 +314,9 @@ function wire() {
   if (file) file.onchange = async () => {
     await api(`/mascsr/applicant/work-fulfillment/document.upload`, {method: "POST", body: "{}"});
     app.querySelector("#uploaded").textContent = file.files[0].name;
+    app.querySelector("#uploaded").insertAdjacentHTML("afterend",
+      `<div id="candidateProfileRelevanceOptionDivId"><input id="checkbox_2" type="checkbox"
+        name="candidateProfileRelevanceOptionDivId" class="hidden"><label for="checkbox_2">I want to opt out</label></div>`);
   };
   app.querySelectorAll(".number").forEach(n => n.onblur = () => {
     const value = Number(n.value.replaceAll(",", ""));
@@ -317,7 +335,7 @@ function wire() {
     draw();
   });
   app.querySelector("#submitApplication")?.addEventListener("click", () => {
-    if (!app.querySelector("input[name=self_att_agree_chk]").checked) return;
+    if (!app.querySelector("#electronicSignature")?.value) return;
     sessionStorage.removeItem("step");
     app.innerHTML = "<h1>Thank you for applying</h1>";
   });

@@ -8,8 +8,8 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 
 from atsfill.adapters.isolvedhire import IsolvedHire
-from atsfill.core import browser, matching
-from atsfill.core.adapter import Blocked, Refused, SignUpDetails
+from atsfill.core import browser, conditions, matching
+from atsfill.core.adapter import Blocked, NotTaken, Refused, SignUpDetails
 from atsfill.core.results import AnyOf, FieldType, Is
 from tests import testuser
 
@@ -174,7 +174,7 @@ def test_the_read_lists_every_step(page):
     assert list(by_id) == [
         "screening.101", "screening.107", "screening.102", "screening.103", "screening.104",
         "screening.105", "screening.106", "resume.resume", "eeoc.sex_type", "eeoc.is_vet_2014",
-        "eeoc.disabled_employee_id", "eeoc.is_disabled", "source.source_type_id",
+        "eeoc.is_disabled", "eeoc.disabled_employee_id", "source.source_type_id",
         "source.source_id", "source.source_other",
     ]  # fmt: skip
     assert by_id["screening.101"].options == ["Yes", "No"]
@@ -187,6 +187,9 @@ def test_the_read_lists_every_step(page):
     assert by_id["resume.resume"].type is FieldType.FILE
     assert by_id["eeoc.sex_type"].label == "Sex/Gender"
     assert by_id["eeoc.is_disabled"].options[0].startswith("Yes")
+    employee = by_id["eeoc.disabled_employee_id"]
+    assert employee.label == "Employee ID (if applicable)"
+    assert employee.unfillable and not employee.required
     sources = by_id["source.source_id"].option_sets or []
     assert [(s.when, s.options) for s in sources] == [
         (Is("source.source_type_id", ["Company Website"]), ["Acme Website", "Other"]),
@@ -226,6 +229,71 @@ def test_every_answer_reads_back(page, tmp_path):
     adapter.fill(page, answers)
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.answer, c.read_back) for c in checks if not c.match] == []
+
+
+SHOWN = {
+    "screening.101": "Yes", "screening.102": "Bachelor's Degree", "screening.103": "Grade 3",
+    "screening.105": ["North"], "screening.106": "Day", "eeoc.sex_type": "Male",
+    "eeoc.is_vet_2014": "I DON'T WISH TO ANSWER", "eeoc.is_disabled": "I do not want to answer",
+    "source.source_type_id": "Company Website", "source.source_id": "Acme Website",
+}  # fmt: skip
+
+
+def unmet(adapter, page, fields, answers) -> list[str]:
+    """The fields the filled page shows though the answers keep them hidden."""
+    by_id, form = {f.id: f for f in fields}, conditions.Form(fields, answers)
+    return [i for i in adapter.shown_fields(page) if not form.shown(by_id[i])]
+
+
+def test_the_follow_ups_the_answers_show_are_shown(page, tmp_path):
+    adapter, fields = opened(page)
+    answers = {
+        **SHOWN,
+        "resume.resume": str(testuser.resume(tmp_path / "cv.pdf")),
+        "screening.101": "No",
+        "screening.107": "Yes",
+        "source.source_type_id": "Referral",
+        "source.source_id": "Employee Referral",
+        "source.source_other": "Jane Doe",
+    }
+    adapter.fill(page, answers)
+    shown = adapter.shown_fields(page)
+    assert "screening.107" in shown and "source.source_other" in shown
+    assert not set(shown) - {f.id for f in fields}
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_the_answers_keep_hidden_stays_hidden(page, tmp_path):
+    adapter, fields = opened(page)
+    answers = {**SHOWN, "resume.resume": str(testuser.resume(tmp_path / "cv.pdf"))}
+    adapter.fill(page, answers)
+    shown = adapter.shown_fields(page)
+    assert "screening.107" not in shown and "source.source_other" not in shown
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_field_the_read_did_not_list_is_shown(page, site, tmp_path):
+    adapter, _ = opened(page)
+    site.saved["eeoc"] = STEPS["eeoc"].replace(
+        "</form>", '<input type="text" id="999" class="required"></form>'
+    )
+    answers = {**SHOWN, "resume.resume": str(testuser.resume(tmp_path / "cv.pdf"))}
+    with pytest.raises(NotTaken):  # the page's required field, left empty
+        adapter.fill(page, answers)
+    assert "eeoc.999" in adapter.shown_fields(page)
+
+
+def test_a_follow_up_shown_with_its_condition_unmet_is_caught(page, site, tmp_path):
+    adapter, fields = opened(page)
+    site.saved["screening"] = STEPS["screening"].replace("</form>", f"{STEPS['children']}</form>")
+    answers = {
+        **SHOWN,
+        "screening.107": "Yes",
+        "resume.resume": str(testuser.resume(tmp_path / "cv.pdf")),
+    }
+    adapter.fill(page, answers)
+    without = {k: v for k, v in answers.items() if k != "screening.107"}
+    assert unmet(adapter, page, fields, without) == ["screening.107"]
 
 
 def test_a_missing_answer_stops_its_step(page):

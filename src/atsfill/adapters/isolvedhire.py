@@ -139,6 +139,10 @@ _READ = """html => {
     } else field.kind = "text";
     out.push(field);
   }
+  if (html.includes("applicantDisabledData") && !seen.has("disabled_employee_id")) {
+    out.push({key: "disabled_employee_id", kind: "scripted", label: "Employee ID (if applicable)",
+              required: false, options: [], value: "", disabled: false});
+  }
   const app = root.querySelector("input[name=applications_id]")?.value;
   return {fields: out, app};
 }"""
@@ -190,6 +194,7 @@ class IsolvedHire:
         self._steps: list[str] = []
         self._fields: dict[str, Field] = {}
         self._raws: dict[str, dict[str, Any]] = {}  # by field id, as the read found it
+        self._shown: dict[str, None] = {}  # the fields each step showed, in order
 
     def detect(self, url: str, page: Page | None) -> bool:
         return _job(url) is not None
@@ -284,13 +289,19 @@ class IsolvedHire:
         """Confirms the account's contact details, then walks the steps in order: each answered
         and saved with Proceed to Next Step, which goes no further while one is invalid."""
         _confirm_contact(page)
+        self._shown = {}
         for step in self._steps:
             _go(page, step)
             for field_id, field in self._fields.items():
                 if field_id.startswith(f"{step}.") and field_id in answers:
                     self._answer(page, field, answers[field_id])
             _settle(page)
+            self._shown |= dict.fromkeys(_shown(page, step))
             _next(page, step)
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The fields each step showed once answered: the wizard holds one step at a time."""
+        return list(self._shown)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Each step as the system saved it, fetched again."""
@@ -474,6 +485,15 @@ def _read_step(page: Page, step: str) -> tuple[list[dict[str, Any]], str | None]
             listed = page.evaluate(_OPTIONS, page.evaluate(_VIEW, ["getSources", params]) or "")
             source["value"] = dict(listed).get(source["saved"], "")
     return raws, read["app"]
+
+
+def _shown(page: Page, step: str) -> list[str]:
+    """The ids of the open step's fields, read as `_read_step` reads them; a disabled and empty
+    control takes no answer, `source_other` until a source asks for it."""
+    if step in ENTRY_LISTS:
+        return [f"{step}.entries"]
+    raws = page.evaluate(_READ, page.locator("#landingStrip").inner_html())["fields"]
+    return [f"{step}.{raw['key']}" for raw in raws if raw["value"] or not raw["disabled"]]
 
 
 def _texts(options: Locator) -> list[str]:

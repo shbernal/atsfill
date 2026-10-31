@@ -10,5 +10,10 @@
   {"questionId": 104, "order": 4, "title": "Which tools do you use?", "required": true,
    "type": "MULTI_SELECT", "options": [{"label": "Spreadsheets"}, {"label": "Databases"},
    {"label": "None of these"}], "answer": null, "parentQuestionId": null,
-   "conditionalTriggerOptions": null}
+   "conditionalTriggerOptions": null},
+  {"questionId": 105, "order": 5, "title": "Have you led a team?", "required": true,
+   "type": "CONDITIONAL", "options": [{"label": "Yes"}, {"label": "No"}], "answer": null,
+   "parentQuestionId": null, "conditionalTriggerOptions": null},
+  {"questionId": 106, "order": 6, "title": "Tell us more", "required": true, "type": "TEXT",
+   "options": null, "answer": null, "parentQuestionId": 105, "conditionalTriggerOptions": ["Yes"]}
 ]}}

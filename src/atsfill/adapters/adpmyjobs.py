@@ -95,6 +95,7 @@ class ADPMyJobs:
         self._codes: dict[str, dict[str, str]] = {}  # by field id: an option's label by code
         self._values: dict[str, Answer] = {}
         self._fixed: set[str] = set()  # disabled questions, their value shown as text
+        self._shown: dict[str, None] = {}  # the fields each page showed, in order
 
     def detect(self, url: str, page: Page | None) -> bool:
         return _posting(url) is not None
@@ -202,7 +203,7 @@ class ADPMyJobs:
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         """Answers each section page by page, saving each with Next, up to the last section's
         last page, or its review."""
-        self._values = {}
+        self._values, self._shown = {}, {}
         answers = {f.id: f.prefilled for s in self._sections for f in s.fields
                    if f.prefilled is not None} | answers  # fmt: skip
         for section in self._sections:
@@ -210,9 +211,10 @@ class ADPMyJobs:
                 _on_section(page, section)
                 _to_page(page, section, ids)
                 _add_entries(page, section, number)
-                if unlisted := _unlisted(page, section):
-                    raise NotTaken(f"{section.title} shows {unlisted}, which the read did not list")
+                _all_listed(page, section)
                 self._answer(page, section, answers)
+                _all_listed(page, section)  # before a Next saves what the answers showed
+                self._shown |= dict.fromkeys(_shown_ids(page, section))
                 self._values |= self._read(page, section)
                 last = number == max(len(section.pages), 1) - 1
                 if section is self._sections[-1] and last and not section.review:
@@ -220,6 +222,10 @@ class ADPMyJobs:
                 self._next(page, section, last and not section.review)
             if section.review and section is not self._sections[-1]:
                 self._next(page, section)  # the review's Next saves the section
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The fields each page showed once answered: the workflow keeps one page at a time."""
+        return list(self._shown)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Each section's values as it was left."""
@@ -654,13 +660,24 @@ _SHOWN = """es => es
   .map(e => [e.dataset.name, e.querySelector('label')?.innerText.trim()])"""
 
 
-def _unlisted(page: Page, section: Section) -> str:
-    """The questions the open page shows that the read did not list, by label."""
+def _all_listed(page: Page, section: Section) -> None:
+    """Stops on a question the open page shows that the read did not list, before its Next
+    saves the section for good."""
     if section.component.startswith("prescreen"):
-        return ""
+        return
     listed = {f.id.removeprefix(f"{section.component}.") for f in section.fields}
     shown = page.locator("adp-form-group").evaluate_all(_SHOWN)
-    return ", ".join(repr(label or name) for name, label in shown if name not in listed)
+    unlisted = ", ".join(repr(label or name) for name, label in shown if name not in listed)
+    if unlisted:
+        raise NotTaken(f"{section.title} shows {unlisted}, which the read did not list")
+
+
+def _shown_ids(page: Page, section: Section) -> list[str]:
+    """The ids of the fields the open page shows; a prescreen's questions have no group."""
+    if section.component.startswith("prescreen"):
+        return [f.id for f in section.fields if _box(page, section, f).count()]
+    shown = page.locator("adp-form-group").evaluate_all(_SHOWN)
+    return [f"{section.component}.{name}" for name, _ in shown]
 
 
 def _on_section(page: Page, section: Section) -> None:

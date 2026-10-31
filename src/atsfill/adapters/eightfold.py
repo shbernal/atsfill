@@ -92,6 +92,9 @@ _DOM_IDS = """keys => {
   return out;
 }"""
 
+# The element ids of the controls on the page.
+_SHOWN = """() => [...document.querySelectorAll('[id$="_error"]')].map(e => e.id.slice(0, -6))"""
+
 _READ_BACK = """controls => {
   const out = {};
   for (const [qid, dom, kind] of controls) {
@@ -150,6 +153,7 @@ class Eightfold:
     def __init__(self) -> None:
         self._controls: list[_Control] = []  # in the form's order
         self._fields: list[Field] = []
+        self._ends: dict[str, str] = {}  # each question's id, by what its element id ends with
 
     def detect(self, url: str, page: Page | None) -> bool:
         if _pid(url) is None:
@@ -216,6 +220,7 @@ class Eightfold:
             if control.field.id in held and control.field.prefilled is None:
                 control.field = replace(control.field, default=held[control.field.id])
         self._fields = [c.field for c in self._controls]
+        self._ends = {end: c.field.id for c in self._controls for end in c.ends}
         self._controls = [c for c in self._controls if not c.field.unfillable]
         return self._fields
 
@@ -236,6 +241,15 @@ class Eightfold:
                     continue
             _fill(page, control, answer)
             given[control.field.id] = answer
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """The questions rendered once filled, each control's by the longest question id its
+        element id ends with; one no question's id ends as the page names it."""
+        shown: dict[str, None] = {}
+        for dom in page.evaluate(_SHOWN):
+            ends = [end for end in self._ends if dom == end or dom.endswith(f"_{end}")]
+            shown[self._ends[max(ends, key=len)] if ends else dom] = None
+        return list(shown)
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         unplaced = [[c.field.id, c.ends] for c in self._controls if c.dom is None]

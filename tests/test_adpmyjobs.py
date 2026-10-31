@@ -9,7 +9,7 @@ import pytest
 
 from atsfill.adapters import adpmyjobs
 from atsfill.adapters.adpmyjobs import ADPMyJobs
-from atsfill.core import browser, otp
+from atsfill.core import browser, conditions, otp
 from atsfill.core.adapter import NotTaken, Refused, SignedOut, SignUpDetails, Unsupported
 from atsfill.core.results import AnyOf, FieldType, Is
 
@@ -321,6 +321,69 @@ def test_fill_walks_every_section_and_page_up_to_the_review(opened, page, ats, r
     }
     assert adapter.submit(page) == "the page said Application Submitted!"
     assert "appbuilder_eform" in ats.saved
+
+
+WALK = {
+    "contact.phoneType": "Cell",
+    "contact.state": "District Of Columbia",
+    "contact.zip": "20001",
+    "prescreen1.q_1": "No",
+    "prescreen1.q_3": "50000",
+    "prescreen1.q_4": "Yes",
+    "prescreen1.q_5": "2026-12-01",
+    "prescreen1.q_6": ["Full-Time"],
+    "appbuilder_eform.relatives": "No",
+    "appbuilder_eform.employer_1": "Acme",
+}
+
+
+def unmet(adapter, page, fields, answers) -> list[str]:
+    """The fields the filled page shows though the answers keep them hidden."""
+    by_id, form = {f.id: f for f in fields}, conditions.Form(fields, answers)
+    return [i for i in adapter.shown_fields(page) if not form.shown(by_id[i])]
+
+
+def test_shown_fields_follow_the_answers_page_by_page(opened, page, resume):
+    adapter, fields = opened
+    answers = {**WALK, "contact.phoneType": "Work", "contact.extension": "12",
+               "documents.resume": resume}  # fmt: skip
+    adapter.fill(page, answers)
+    shown = adapter.shown_fields(page)
+    assert {"contact.extension", "prescreen1.q_3", "appbuilder_eform.sign"} <= set(shown)
+    assert "prescreen1.q_2" not in shown and not set(shown) - {f.id for f in fields}
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_the_answers_keep_hidden_stays_hidden(opened, page, resume):
+    adapter, fields = opened
+    answers = {**WALK, "documents.resume": resume}
+    adapter.fill(page, answers)
+    assert "contact.extension" not in adapter.shown_fields(page)
+    assert unmet(adapter, page, fields, answers) == []
+
+
+def test_a_follow_up_shown_with_its_condition_unmet_is_caught(opened, page, resume, monkeypatch):
+    adapter, fields = opened
+    plain = {k: v for k, v in CONTACT[1].items() if k != "dependencies"}
+    monkeypatch.setitem(globals(), "CONTACT", [CONTACT[0], plain, *CONTACT[2:]])
+    page.reload()
+    answers = {**WALK, "documents.resume": resume}
+    adapter.fill(page, answers)
+    assert unmet(adapter, page, fields, answers) == ["contact.extension"]
+
+
+def test_a_question_an_answer_shows_unlisted_stops_before_next_saves(
+    opened, page, ats, monkeypatch
+):
+    adapter, _ = opened
+    shows = [{"attributes": [{"answerID": "W", "questionID": "new"}]}]
+    new = {"questionID": "new", "answerDataTypeCode": "TEXT", "questionText": "Not in the read"}
+    changed = [CONTACT[0], {**CONTACT[1], "dependencies": shows}, new, *CONTACT[3:]]
+    monkeypatch.setitem(globals(), "CONTACT", changed)
+    page.reload()
+    with pytest.raises(NotTaken, match="'Not in the read', which the read did not list"):
+        adapter.fill(page, {**WALK, "contact.phoneType": "Work"})
+    assert "contact" not in ats.saved
 
 
 def test_a_posting_applied_to_is_continued_without_another_send(opened, page, ats):

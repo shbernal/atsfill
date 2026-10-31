@@ -1,6 +1,6 @@
 # isolved Hire
 
-isolved Applicant Tracking's career sites, observed on live postings on 2026-10-26 and 2026-10-27, headless, with the Test user's account. The fixture pages are [tests/pages/isolvedhire/](https://github.com/shbernal/atsfill/tree/main/tests/pages/isolvedhire/), served as an Acme site by `tests/test_isolvedhire.py`: the sign-in and sign-up ([account.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/account.html), [sign-up.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/sign-up.html)), the wizard ([apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/apply.html)) and its steps as `/apply/view.php` serves them ([steps.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/steps.html)), one example of each rendering.
+isolved Applicant Tracking's career sites, observed on live postings on 2026-10-26, 2026-10-27 and 2026-10-31, headless, with the Test user's account. The fixture pages are [tests/pages/isolvedhire/](https://github.com/shbernal/atsfill/tree/main/tests/pages/isolvedhire/), served as an Acme site by `tests/test_isolvedhire.py`: the sign-in and sign-up ([account.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/account.html), [sign-up.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/sign-up.html)), the wizard ([apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/apply.html)) and its steps as `/apply/view.php` serves them ([steps.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/isolvedhire/steps.html)), one example of each rendering.
 
 ## Where the form is
 
@@ -31,6 +31,7 @@ From the 15 employers of the sample, read signed in. A step's fields are read fr
 | | checkboxes sharing the question's id as their name | `multi_choice` | 3 |
 | `resume` | file input (DOC, DOCX, TXT or PDF), uploaded with the Upload Files button it adds; the step loads again listing the file under Submitted Documents | `file` | 15 |
 | `eeoc` | radio groups `sex_type`, `ethnic_type`, `is_vet_2014`, each with a decline option, named by their fieldset's legend; `select#is_disabled` | `choice` | 6 |
+| | "Employee ID (if applicable)", `disabled_employee_id`: the disability form's own, its name no `disabled` control; the step's script renders it after it loads (`A.getHTML('applicantDisabledData', ...)`), so it is in no step `/apply/view.php` serves | listed by its script's call, not fillable, optional | 2 |
 | `source` | `source_type_id`, then `source_id` loaded for the type from `f=getSources`, Other added to every list | `choice`, `source_id` by option set | 15 |
 | | `source_other`, enabled for the source Other or the type Referral (value 4) | `text`, `shown_when` | 15 |
 | `references` | text inputs `name_<n>`, `company_<n>`, `occupation_<n>`, `phone_<n>`, `email_<n>`, `years_known_<n>` | `text` | 1 |
@@ -40,6 +41,7 @@ From the 15 employers of the sample, read signed in. A step's fields are read fr
 
 - A question saves its answer as it is given (`updateAnswer`); the other steps save on Proceed to Next Step. The fill opens each step from the steps list, answers it and proceeds; a step that stays shows its errors (`[id^=message_]`), the reason the fill stops. It ends on `submit`.
 - Once saved, the source is locked: the step shows the type and source disabled, the source's id in a hidden input. A later fill lists them prefilled, and an answer that differs is not taken.
+- `shown_fields` reads each step's controls as the fill leaves it, the read's own way over the live step: a follow-up the answers open is there, `source_other` counts once enabled.
 - The read-back fetches each step again: the answers as the system saved them, the source's name looked up in its type's list, the resume the last file listed.
 
 ## Known gaps
