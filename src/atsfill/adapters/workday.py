@@ -194,6 +194,7 @@ def _profile_hosts(request: Request, scope: str | None) -> list[str]:
 
 class Workday:
     name = "workday"
+    lists_every_field = "the fill stops on a field the read did not list, page by page"
     per_employer = True
     asks: set[str] = set()
     known_gaps = {

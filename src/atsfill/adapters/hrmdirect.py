@@ -95,6 +95,7 @@ _FIELDS = """form => [...form.querySelectorAll('.form-field')].flatMap(f => {
 
 class HRMDirect:
     name = "hrmdirect"
+    lists_every_field = "the fill stops on a field the read did not list, page by page"
     per_employer = True
     asks = {"name"}
     known_gaps = {"screening_first": Gap.FLOW}
