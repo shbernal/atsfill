@@ -60,6 +60,23 @@ def opened(page, form: list[dict] = FORM) -> tuple[Manatal, list]:
     return adapter, adapter.browser_read(page)
 
 
+def test_the_fields_shown_are_the_listed_ones_until_other_opens_its_box(page):
+    adapter, fields = opened(page)
+    entries = {f.id for f in fields if f.unfillable and "entries" in f.unfillable}
+    listed = {f.id for f in fields} - entries
+    assert set(adapter.shown_fields(page)) == listed - {"18.other"}
+    page.locator('input[name="18"][value="Other"]').evaluate("box => box.click()")
+    assert "18.other" in adapter.shown_fields(page)
+
+
+def test_a_control_the_read_did_not_list_counts_as_shown(page):
+    adapter, fields = opened(page)
+    page.locator("#form").evaluate(
+        "f => f.insertAdjacentHTML('beforeend', '<input name=unlisted>')"
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"unlisted"}
+
+
 def test_detect_and_posting():
     adapter = Manatal()
     assert adapter.posting(JOB + "/apply") == adapter.posting(JOB)

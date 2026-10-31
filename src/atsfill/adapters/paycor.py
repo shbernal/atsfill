@@ -268,6 +268,10 @@ class Paycor:
                         f"unhandled_rendering: cannot fill {field.id}, a {kind}, with {answer!r}"
                     )
 
+    def shown_fields(self, page: Page) -> list[str]:
+        """The form's controls; the answers to the pages before it are hidden inputs by now."""
+        return [c["id"] for c in page.evaluate(_CONTROLS)]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         held: dict[str, Answer] = {}
         for field, step in self._before:

@@ -73,6 +73,7 @@ Signed in with the profile complete and visible, Apply on `/jobs/<job id>` opens
 - Where the job is outside the profile's location preferences (10 of 16 employers), a checkbox "This role doesn't match your location preferences. Check here if you're open to relocating — we'll update your profile so companies can contact you.", ticked when the dialog opens. Sent ticked, it changes the account profile, so atsfill always unticks it: relocation is the profile's `relocate`, set by `profile`, never by an application.
 - Otherwise, on some jobs, a note that the qualifications might not match, with no control.
 - Nothing is sent while the dialog is filled: no draft, no autosave.
+- Once filled, the fields shown are the dialog's message and question blocks; any other control but the relocation box counts as shown and not listed.
 
 ## Submitting
 

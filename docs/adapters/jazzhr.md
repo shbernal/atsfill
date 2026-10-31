@@ -33,6 +33,8 @@ The form is server-rendered HTML in a Bootstrap layout: each field a `.form-grou
 
 Every other control is hidden and not a field. The disability name and date are required by the page only when a disability is declared: their `required_when` is the status on its `YES` option.
 
+No answer showed a field of its own: the read takes what shows, and once filled the same read gives the fields shown, so a question hidden until an answer would stop the fill as not listed.
+
 ## Filling
 
 - Plain inputs, selects (by the option's text), radios and boxes, set directly; nothing reaches JazzHR before submit.

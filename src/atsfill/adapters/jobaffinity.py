@@ -68,6 +68,19 @@ _READ_BACK = """(form, fields) => {
   }
   return out;
 }"""
+# The fields a form shows, by the names `_parse` gives them: its controls, a radio group once,
+# and its documents, the older form's in forms of their own beside it.
+_SHOWN = """form => {
+  const shown = el => el.getClientRects().length > 0;
+  const skipped = ["hidden", "submit", "button", "file"];
+  const names = [...form.querySelectorAll("input, select, textarea")]
+    .filter(el => el.name && !skipped.includes(el.type) && shown(el)).map(el => el.name);
+  const newer = [...form.querySelectorAll("[data-form-field-name]")]
+    .filter(shown).map(el => el.dataset.formFieldName);
+  const older = [...document.querySelectorAll("form[id^='js-'][id$='-form']")]
+    .filter(shown).map(el => el.id.slice("js-".length, -"-form".length));
+  return [...new Set([...names, ...newer, ...older])];
+}"""
 
 
 @dataclass
@@ -151,6 +164,12 @@ class JobAffinity:
             for c in shown:
                 if c.questionnaire:
                     _set(questions, c, answers[c.field.id])
+
+    def shown_fields(self, page: Page) -> list[str]:
+        shown = page.locator(NEW if self._form.new else OLD).evaluate(_SHOWN)
+        if self._questions:
+            shown += self._questions.locator(QUESTIONNAIRE).evaluate(_SHOWN)
+        return shown
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         main = [c for c in self._form.controls if not c.questionnaire]

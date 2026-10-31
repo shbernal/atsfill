@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.jazzhr import JazzHR, _field
+from atsfill.adapters.jazzhr import FORM, JazzHR, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType, Is
@@ -145,6 +145,20 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
+
+
+def test_the_fields_shown_are_the_listed_ones(page, resume):
+    adapter, fields = opened(page)
+    adapter.fill(page, {"resume": resume, "eeoc_disability": "I DO NOT WANT TO ANSWER"})
+    assert adapter.shown_fields(page) == [f.id for f in fields]
+
+
+def test_a_question_the_read_did_not_list_counts_as_shown(page):
+    adapter, fields = opened(page)
+    page.locator(FORM).evaluate(
+        "f => f.insertAdjacentHTML('beforeend', '<input id=resumator-unlisted-value>')"
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"unlisted"}
 
 
 def test_a_resume_pasted_as_text(page):

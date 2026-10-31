@@ -16,6 +16,8 @@ Paycor Recruiting's apply pages (the former Newton), observed on live postings, 
 
 ## Reading the form
 
+Once filled, the same read of the form's controls gives the fields shown: a control under `display: none` counts as neither.
+
 A field's id is the control's `name`; a qualifying question's is `question.<id>`, a self-identification group's `eeo.<name>`, the resume upload's `resume`. Labels: a standard field's `label[for]`, a custom question's `.gnewtonQuestionLabelClass label`, else the control's `title`, else its section title. A control under `display: none` is left out, and so is the `fax_number` honeypot.
 
 Each rendering, and in how many of 40 postings it shows (2026-10-20; 30 forms read, 9 behind the self-identification pages, 1 closed):
@@ -39,7 +41,7 @@ Each rendering, and in how many of 40 postings it shows (2026-10-20; 30 forms re
 | custom date (`_answer_date`): a text `mm/dd/yyyy` turned by the page into a native date input | `date` | 13 |
 | custom country select with its state select (`data-state-id`): the page's script holds every country's state list (`var ca_country_states = [...]`) and refills the state on a change; a country without one disables the state and drops its `required` | the state a dependent list: `choice`, one option set per country with a list and one for no country, the list the page starts with; `options` empty under any other country; required only under a country with a list | 1 |
 | employer's self-identification inside the form: gender, race, veteran radios | `choice` | 13 |
-| text message opt-in (`candidateTextMessagingOptIn`), enabled once a mobile number is typed | `choice` | 14 |
+| text message opt-in (`candidateTextMessagingOptIn`), enabled once a valid mobile number is typed (a `555` number stays refused, the group disabled) | `choice` | 14 |
 | privacy policy acknowledgement (`ccpaDisclaimerAgree`) | `multi_choice` | 30 |
 | a disclaimer's date (`current_date`), signature date | not a field: hidden | 30 |
 

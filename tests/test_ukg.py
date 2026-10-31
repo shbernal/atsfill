@@ -6,7 +6,7 @@ from urllib.parse import unquote, urlsplit
 
 import pytest
 
-from atsfill.adapters.ukg import UKG, _register
+from atsfill.adapters.ukg import FORM, UKG, _register
 from atsfill.core import browser
 from atsfill.core.adapter import Refused, SignUpDetails
 from atsfill.core.results import FieldType, Is, OptionSet
@@ -127,6 +127,15 @@ def test_browser_read_lists_each_rendering(page):
     assert fields["ApplicantSource"].required
     assert fields["employeereferral"].options == ["Yes", "No"]
     assert not fields["employeereferral"].required
+    referred = Is("employeereferral", ["Yes"])
+    assert list(fields)[list(fields).index("employeereferral") + 1 :][:3] == [
+        "ReferralName",
+        "ReferralEmail",
+        "ReferralPhone",
+    ]
+    assert all(fields[f"Referral{d}"].shown_when == referred for d in ("Name", "Email", "Phone"))
+    assert fields["ReferralName"].required and not fields["ReferralEmail"].required
+    assert fields["ReferralName"].max_length == 100
     assert fields["AvailableStartDate"].type is FieldType.DATE
     assert fields["AvailableStartDate"].default == "2026-10-25"
     assert fields["MultipleChoiceResponse0"].label == "Are you 18 years of age or older?"
@@ -152,6 +161,44 @@ def test_a_read_only_contact_panel_lists_no_state(page):
     page.evaluate("document.getElementById('Country').closest('.form-group').hidden = true")
     fields = {f.id: f for f in adapter.browser_read(page)}
     assert "Country" not in fields and "State" not in fields
+
+
+def test_race_counts_as_shown_only_once_the_ethnic_origin_shows_it(page):
+    adapter, fields = opened(page)
+    assert "EthnicOrigin" in fields
+    assert "EthnicOrigin" not in adapter.shown_fields(page)
+    adapter.fill(page, {"HispanicOrigin": "Not Hispanic/Latino"})
+    assert "EthnicOrigin" in adapter.shown_fields(page)
+
+
+def test_the_referrers_details_count_as_shown_once_a_referral_shows_them(page):
+    adapter, _ = opened(page)
+    assert "ReferralName" not in adapter.shown_fields(page)
+    adapter.fill(page, {"employeereferral": "Yes", "ReferralName": "Jane Doe"})
+    assert {"ReferralName", "ReferralEmail", "ReferralPhone"} <= set(adapter.shown_fields(page))
+    assert adapter.read_back(page)["ReferralName"] == "Jane Doe"
+
+
+def test_an_uploaded_documents_own_box_is_no_field(page, resume):
+    adapter, fields = opened(page)
+    adapter.fill(page, {"documents": resume})
+    assert set(adapter.shown_fields(page)) <= set(fields)
+
+
+def test_the_state_counts_as_shown_once_a_country_shows_it(page):
+    adapter, fields = opened(page)
+    assert "State" in fields
+    assert "State" not in adapter.shown_fields(page)
+    adapter.fill(page, {"Country": "United States"})
+    assert "State" in adapter.shown_fields(page)
+
+
+def test_a_question_the_read_did_not_list_counts_as_shown(page):
+    adapter, fields = opened(page)
+    page.locator(FORM).evaluate(
+        "f => f.insertAdjacentHTML('beforeend', '<input id=TextResponse9>')"
+    )
+    assert set(adapter.shown_fields(page)) - set(fields) == {"TextResponse9"}
 
 
 def test_fill_and_read_back(page, resume):

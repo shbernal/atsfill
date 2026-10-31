@@ -88,6 +88,20 @@
         <div class="radio"><label><input type="radio" name="employeereferral" value="true"> <span>Yes</span></label></div>
         <div class="radio"><label><input type="radio" name="employeereferral" value="false"> <span>No</span></label></div>
       </div>
+      <div id="ReferralRow" style="display:none">
+        <div class="form-group">
+          <label for="ReferralName" class="control-label required">Name</label>
+          <input type="text" class="form-control" maxlength="100" id="ReferralName" required>
+        </div>
+        <div class="form-group">
+          <label for="ReferralEmail" class="control-label">Email</label>
+          <input type="text" class="form-control" maxlength="128" id="ReferralEmail">
+        </div>
+        <div class="form-group">
+          <label for="ReferralPhone" class="control-label">Phone</label>
+          <input type="text" class="form-control" maxlength="25" id="ReferralPhone">
+        </div>
+      </div>
       <div class="form-group">
         <label for="ApplicationAvailableStartDateInput" class="control-label required">When can you start? (MM/DD/YYYY)</label>
         <react-ko-es6-bridge><div data-automation="available-start-date-datepicker">
@@ -172,7 +186,7 @@
   upload.addEventListener("change", () => {
     const name = upload.files[0].name;
     document.getElementById("Files").innerHTML =
-      `<div data-automation="file-name"><strong class="hidden">File Name</strong>` +
+      `<div data-automation="file-name"><input type="checkbox" data-automation="select-document-checkbox" checked><strong class="hidden">File Name</strong>` +
       `<span id="FileName0">${name}</span></div>`;
   });
   // an equal-opportunity question's decline box clears its select when ticked
@@ -187,6 +201,10 @@
   hispanic.addEventListener("change", race);
   document.querySelector("[data-automation=ethnic-origin-decline-checkbox]")
     .addEventListener("change", race);
+  // the referrer's details are asked when referred by an employee
+  for (const radio of document.querySelectorAll("[name=employeereferral]"))
+    radio.addEventListener("change", () => document.getElementById("ReferralRow").style.display =
+      radio.checked && radio.value === "true" ? "" : "none");
   // autoNumeric groups a Numeric question's number
   const numeric = document.getElementById("NumericResponse2");
   numeric.addEventListener("blur", () => {

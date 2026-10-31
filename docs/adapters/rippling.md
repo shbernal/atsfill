@@ -1,6 +1,6 @@
 # Rippling
 
-Rippling Recruiting's job boards, observed on live postings, last on 2026-10-29. The fixture page is [tests/pages/rippling/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/rippling/apply.html), served as `ats.rippling.com` in `tests/test_rippling.py`: one example of each rendering below, Rippling's components reduced to their markup and a few lines that act as they do.
+Rippling Recruiting's job boards, observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/rippling/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/rippling/apply.html), served as `ats.rippling.com` in `tests/test_rippling.py`: one example of each rendering below, Rippling's components reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 
@@ -29,12 +29,14 @@ Each rendering, and in how many of 79 employers' forms it shows (2026-10-22):
 | radio group (`role=radiogroup` of `role=radio`): `SINGLE_SELECT_RADIO` | `choice` | 22 |
 | boxes (`role=group` of `role=checkbox`): `MULTI_SELECT_CHECKBOX`, also when its choices are Yes/No | `multi_choice` | 7 |
 | "Add comment" (`allowComments`): a button that gives way to an optional textarea | `text`, optional | 19 |
-| "Other" (`isOtherEnabled`): a last choice whose pick shows a text box under the same `data-testid` | `choice` with `Other`, then `text` `shown_when` it is Other, required as its list is (the box marked `*`) | 9 |
+| "Other" (`isOtherEnabled`): a last choice whose pick shows a text box: a second element of the same `data-testid` under radios, `<id>_others` under boxes | `choice` with `Other`, then `text` `shown_when` it is Other, required as its list is (the box marked `*`) | 9 |
 | `textarea`: `LONG_ANSWER` | `text` | 10 |
 | four-step scale (`YES_NO_SCALE_4`): a radio group named by `aria-label` (Strong No, No, Yes, Strong Yes) | `choice` | 6 |
 | date (`DATE`): `MM`, `DD` and `YYYY` inputs | `date` | 3 |
 
 A type outside this table, or a field the data lists and the page does not show, is listed as `unhandled_rendering`. A hidden `aiOptOut` input is not a field.
+
+A form's data carries a `skipLogic` list, empty on all 25 forms read on 2026-10-31. Once filled, the fields shown are the page's `[data-testid=field]` blocks, so a question skip logic showed would stop the fill as not listed.
 
 Out of scope: a video question (`videoScreeningQuestions`, recorded in the page with the microphone), `out_of_scope: video.<id> is a video recorded live`. None was seen.
 

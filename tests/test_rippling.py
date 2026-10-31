@@ -83,6 +83,7 @@ def test_browser_read(page):
         f"{Q}source_other",
         f"{Q}authorized",
         f"{Q}shifts",
+        f"{Q}shifts_other",
         f"{Q}travel",
         f"{Q}licence",
         "eeoc.gender",
@@ -151,6 +152,31 @@ def test_every_answer_reads_back(page, resume):
     assert len(checks) == len(answers)
     assert read_back["phone_number"] == "+44 7700900123"
     assert read_back["first_name"] == "Ada"  # typed over what the résumé's parse filled
+
+
+def test_an_other_text_box_under_boxes_reads_back(page):
+    adapter, fields = opened(page)
+    answers: dict[str, Answer] = {f"{Q}shifts": ["Other"], f"{Q}shifts_other": "Nights"}
+    adapter.fill(page, answers)
+    checks = matching.check(fields, answers, adapter.read_back(page))
+    assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
+
+
+def test_the_fields_shown_are_those_listed_and_the_other_boxes_once_open(page):
+    adapter, fields = opened(page)
+    open_later = {f"{Q}degree_comment", f"{Q}source_other", f"{Q}shifts_other"}
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields} - open_later
+    adapter.fill(page, {f"{Q}shifts": ["Other"], f"{Q}source": "Other"})
+    assert {f"{Q}shifts_other", f"{Q}source_other"} <= set(adapter.shown_fields(page))
+
+
+def test_a_question_the_read_did_not_list_counts_as_shown(page):
+    adapter, fields = opened(page)
+    page.locator("main").evaluate(
+        "m => m.insertAdjacentHTML('beforeend', '<div data-testid=field>"
+        "<div data-testid=customQuestions.g1.new><input></div></div>')"
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {f"{Q}new"}
 
 
 def test_a_long_file_name_reads_back_whole(page, tmp_path):

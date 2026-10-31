@@ -212,6 +212,29 @@ def test_the_test_user_answers_every_field(page, tmp_path, url):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
 
 
+def test_the_fields_shown_are_the_listed_ones_with_the_questionnaire_answered(page, resume):
+    adapter, fields = opened(page, OLD)
+    adapter.fill(page, old_answers(resume))
+    assert sorted(adapter.shown_fields(page)) == sorted(f.id for f in fields)
+
+
+@pytest.mark.parametrize("url", [OLD, NEW])
+def test_a_follow_up_counts_as_shown_once_its_answer_shows_it(page, url):
+    adapter, _ = opened(page, url)
+    assert "availability_date" not in adapter.shown_fields(page)
+    adapter.fill(page, {"availability": "Disponible à partir du..."})
+    assert "availability_date" in adapter.shown_fields(page)
+
+
+@pytest.mark.parametrize("url", [OLD, NEW])
+def test_a_control_the_read_did_not_list_counts_as_shown(page, url):
+    adapter, fields = opened(page, url)
+    page.locator("#identity, .candidate-application-form").first.evaluate(
+        "f => f.insertAdjacentHTML('beforeend', '<input name=unlisted>')"
+    )
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"unlisted"}
+
+
 def test_a_posting_gone(page):
     with pytest.raises(Unsupported, match="posting_gone"):
         opened(page, "https://jobaffinity.fr/apply/gone00000000000000")
