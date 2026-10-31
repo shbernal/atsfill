@@ -31,7 +31,9 @@ The wizard is pages (`.form-progress-holder li`, "Page 1", "Page 2", "Page 3" on
 | upload (`qa-resume-upload resume`, `appcoverletter`): a `file-upload` input in a menu with Dropbox and Google Drive | `file` | 1 |
 | LinkedIn profile (`qa-resume-upload applinkedin`), the resume's alternative | out of scope | 1 |
 
-Reading walks the pages from the first, pressing Continue as long as a page saves with what it holds: a fresh application stops on the first page, its resume empty. A fill saves the pages it can and is refused (`answer_not_taken: … read again`) on a page showing required fields the read did not list; the next read walks the saved pages. A survey therefore dry-runs a posting twice.
+Reading walks the pages from the first, pressing Continue as long as a page saves with what it holds: a fresh application stops on the first page, its resume empty. A survey therefore dry-runs a posting twice.
+
+The adapter makes the check itself, page by page, once a page's answers are in: only the current page is in the DOM, so it does not list the fields shown to the core (`ListsShownFields`). A field the read did not list, optional or required, stops the fill before the page is saved, so none is left empty on a `ready`. On a page the read did not reach it is `refused: answer_not_taken` with `read again`, a normal second round: the next read walks the saved pages and lists it. On a page the read reached, an answer opened it (an option's follow-up): the page stays unsaved, no read would list it, so it ends `unhandled_rendering`.
 
 ## Filling
 
@@ -39,6 +41,7 @@ Reading walks the pages from the first, pressing Continue as long as a page save
 - A radio or a box is clicked through its label; one box is a `Yes`/`No` choice.
 - A date is typed `MM/DD/YYYY`; its datepicker stays open over the fields below it and is hidden.
 - An upload is set on the menu's file input and waited for until its row shows the file's name without "Uploading…".
+- A page that does not move on Continue stops the fill: `refused: answer_not_taken`.
 
 ## Submit
 
