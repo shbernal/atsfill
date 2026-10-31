@@ -149,6 +149,10 @@ class Recruitee:
                 case _:
                     controls.first.fill(values[0])
 
+    def shown_fields(self, page: Page) -> list[str]:
+        form = html.parse(page.locator(FORM).evaluate("f => f.outerHTML"))
+        return [raw["id"] for raw in _read(form)]
+
     def read_back(self, page: Page) -> dict[str, Answer]:
         values = page.locator(FORM).evaluate(_READ_BACK, self._kinds)
         return {k: v for k, v in values.items() if v not in (None, "", [])}

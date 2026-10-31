@@ -201,3 +201,12 @@ def test_a_video_question_is_out_of_scope(page):
     video = next(f for f in adapter.browser_read(page) if f.unfillable)
     assert video.required
     assert video.unfillable == f"out_of_scope: {video.id} is a video recorded live"
+
+
+def test_shown_fields_name_a_field_the_read_did_not_list(page):
+    adapter, fields = opened(page)
+    assert set(adapter.shown_fields(page)) == {f.id for f in fields}
+    page.locator("form#offer-application-form").evaluate(
+        """f => f.insertAdjacentHTML("beforeend", '<input name="follow_up">')"""
+    )
+    assert "follow_up" in adapter.shown_fields(page)

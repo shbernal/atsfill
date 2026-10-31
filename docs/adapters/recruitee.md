@@ -1,6 +1,6 @@
 # Recruitee
 
-Observed on live postings, last on 2026-10-25. The fixture page is [tests/pages/recruitee/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/recruitee/apply.html), served as a posting's application page in `tests/test_recruitee.py`.
+Observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/recruitee/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/recruitee/apply.html), served as a posting's application page in `tests/test_recruitee.py`.
 
 ## Where the form is
 
@@ -41,6 +41,7 @@ Out of scope here: a video recorded live (Ziggeo), see ADR 0014.
 - Radios and checkboxes are drawn hidden under styled boxes: atsfill finds the option by its label and dispatches a click on the input itself.
 - Files are attached and stay in the page; nothing reaches Recruitee before submit.
 - A cover letter written: the switch is clicked, then the textarea filled.
+- Once filled, the form is parsed again as the read parsed it: a field the read did not list stops the fill. None showed on 3 postings, three answer sets each (2026-10-31).
 
 ## Read-back and submit
 
