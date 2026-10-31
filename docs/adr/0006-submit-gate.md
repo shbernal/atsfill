@@ -21,7 +21,7 @@
 | `unknown` | submit was clicked and no evidence came before the time budget ran out |
 | `unsupported` | no adapter for the system, a required field atsfill cannot fill (ADR 0014), a flow the adapter does not handle, or a step on another site; the reason comes back |
 
-The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `answer_not_taken: …` (no suggestion or option holds it), `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `no_otp_command`, `time_budget`, `overlaid: …` (the overlay on a control), `no_adapter`, `out_of_scope: <field id> is <what>`, `unsupported_rendering: <gap id>: …`, `unsupported_flow: <gap id>: …` (a known gap, ADR 0014), `unhandled_rendering: …` (a rendering the adapter does not know), `external_step: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`, `held: …`.
+The reason is a snake_case code, followed by `: detail` where there is one: `invalid_answers: …`, `unknown_field: <field ids>`, `answer_not_taken: …` (no suggestion or option holds it), `mismatch: <field ids>`, `submit_not_enabled`, `already_sent`, `no_otp_command`, `time_budget`, `overlaid: …` (the overlay on a control), `no_adapter`, `out_of_scope: <field id> is <what>`, `unsupported_rendering: <gap id>: …`, `unsupported_flow: <gap id>: …` (a known gap, ADR 0014), `unhandled_rendering: …` (a rendering the adapter does not know), `external_step: …`, `adapter_error: …` (an error the adapter did not expect, before any click), `no_evidence`, `error_after_click: …`, `held: …`.
 
 The exit code is 0 for `ready` and `submitted`, 1 for any other status, 2 for a usage error.
 

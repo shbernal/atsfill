@@ -4,7 +4,7 @@ import pytest
 
 from atsfill.core import attempts
 from atsfill.core.conditions import Form, faults
-from atsfill.core.matching import check, knockouts, matches, problems, to_fill
+from atsfill.core.matching import as_listed, check, knockouts, matches, problems, to_fill
 from atsfill.core.results import AllOf, Answer, AnyOf, Field, FieldType, Is, OptionSet, Status
 
 LEVELS = ["Native-level fluency", "Full professional fluency"]
@@ -85,10 +85,18 @@ def test_an_empty_list_with_nothing_to_clear_is_not_filled():
     assert to_fill(fields, answers) == {"held": [], "default": [], "other": LEVELS}
 
 
+def test_an_answer_takes_the_spelling_of_the_option_it_means():
+    choice = Field("c", "C", FieldType.CHOICE, True, ["France ", "Spain"])
+    many = Field("m", "M", FieldType.MULTI_CHOICE, False, ["French ", "French"])
+    text = Field("t", "T", FieldType.TEXT, False)
+    answers = {"c": "France", "m": ["French ", "French"], "t": " x ", "other": "France"}
+    assert as_listed([choice, many, text], answers) == answers | {"c": "France "}
+    assert as_listed([choice], {"c": "Italy"}) == {"c": "Italy"}
+
+
 def test_problems_before_filling():
     fields = [field(FieldType.CHOICE, LEVELS), Field("cv", "CV", FieldType.FILE, False)]
     assert problems(fields, {"x": "?", "f": "Fluent", "cv": "resume.pdf"}) == [
-        "no field x",
         f"f: 'Fluent' is not one of {LEVELS}",
         "cv: a file answer is an absolute path",
     ]

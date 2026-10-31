@@ -27,6 +27,7 @@
     <label><input type="radio" name="right" value="true" hidden data-form="application"><span>Yes</span></label>
     <label><input type="radio" name="right" value="false" hidden data-form="application"><span>No</span></label>
   </fieldset>
+  <fieldset data-field-path="permit" hidden><input data-form="application"></fieldset>
   <fieldset data-field-path="level">
     <label><input type="radio" name="level" value="native" hidden data-form="application"><span>Native</span></label>
     <label><input type="radio" name="level" value="fluent" hidden data-form="application"><span>Fluent</span></label>
@@ -67,6 +68,9 @@
     if (input.type === "radio") return save(form, path, input.value === "true" ? true : input.value === "false" ? false : input.value);
     save(form, path, input.value);
   }));
+  document.querySelector("[name=right][value=true]").addEventListener("change", () => {
+    document.querySelector("[data-field-path=permit]").hidden = false;
+  });
   const date = document.querySelector("[data-field-path=start] input");
   const picker = document.querySelector(".react-datepicker");
   date.addEventListener("focus", () => { picker.hidden = false; });

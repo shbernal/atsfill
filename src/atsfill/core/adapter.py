@@ -308,6 +308,16 @@ class ReadsByRequest(Adapter, Protocol):
 
 
 @runtime_checkable
+class RevealsFields(Adapter, Protocol):
+    """An adapter whose system keeps a follow-up's condition to itself: no read can list the
+    field, only a saved answer shows it, so the fill finds it and answers it (ADR 0005)."""
+
+    def revealed(self, page: Page) -> list[Field]:
+        """Every field the filled page shows, each as `browser_read` lists it."""
+        ...
+
+
+@runtime_checkable
 class ListsShownFields(Adapter, Protocol):
     """An adapter whose form can show fields after an answer: once filled, it says which the
     page shows, so that one `browser_read` did not list stops the fill (ADR 0005)."""

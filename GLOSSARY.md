@@ -58,7 +58,7 @@ One input on a form, identified by a stable id taken from the form. Its label is
 _Avoid_: input, question
 
 **Follow-up**:
-A field the form shows only once other fields' answers meet its condition.
+A field the form shows only once other fields' answers meet its condition. Where the system keeps that condition to itself, `read` cannot list it and the fill finds it.
 _Avoid_: dependent field, branching question, conditional question
 
 **Alternative**:
