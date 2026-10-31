@@ -9,7 +9,7 @@ from urllib.parse import parse_qsl
 
 import pytest
 
-from atsfill.adapters.paycor import Paycor, _field
+from atsfill.adapters.paycor import FORM, Paycor, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import Answer, FieldType, Is, OptionSet
@@ -197,6 +197,21 @@ def test_every_answer_reads_back(page, resume):
     checks = matching.check(fields, answers, adapter.read_back(page))
     assert [c.field_id for c in checks if not c.match] == []
     assert page.locator("#firstName").input_value() == "Ada"  # over what the resume parsed
+
+
+def test_the_fields_shown_are_the_forms_own(page, resume):
+    adapter, fields = opened(page)
+    adapter.fill(page, {"eeo.gender": "I decline to identify", "eeo.race": "Hispanic or Latino",
+                        "eeo.veteran": "I DO NOT WISH TO IDENTIFY AT THIS TIME",
+                        "question.q1": "Yes", "question.q2": "No", "resume": resume})  # fmt: skip
+    before = {f.id for f in fields if f.id.startswith(("eeo.", "question."))}
+    assert sorted(adapter.shown_fields(page)) == sorted({f.id for f in fields} - before)
+
+
+def test_a_question_the_read_did_not_list_counts_as_shown(page):
+    adapter, fields = opened(page)
+    page.locator(FORM).evaluate("f => f.insertAdjacentHTML('beforeend', '<input name=unlisted>')")
+    assert set(adapter.shown_fields(page)) - {f.id for f in fields} == {"unlisted"}
 
 
 def test_submit_posts_the_form(page, resume):
