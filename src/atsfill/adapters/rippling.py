@@ -214,8 +214,8 @@ class Rippling:
             return None
 
     def browser_read(self, page: Page) -> list[Field]:
-        job = _job(page.url)
-        assert job is not None
+        if (job := _job(page.url)) is None:  # a closed posting redirects to its board
+            raise Unsupported(f"posting_gone: redirected to {page.url}")
         apply = APPLY.format(board=job[0], job=job[1])
         if urlsplit(page.url).path != urlsplit(apply).path:
             page.goto(apply)
