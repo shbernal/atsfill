@@ -354,6 +354,12 @@ def _shown_as_listed(
         result.reason = f"mismatch: {', '.join(wrong)} shows though its condition is unmet"
 
 
+def _refuse(result: Result, problems: list[matching.Problem], *more: str) -> None:
+    result.status = Status.REFUSED
+    result.reason = "invalid_answers: " + "; ".join([*problems, *more])
+    result.refused = [f"{p.field_id}: {p.rule}" for p in problems]
+
+
 def _no_field(result: Result, answers: dict[str, Answer]) -> bool:
     """Refuses an answer to no listed field. Ids come from `read`, so it says as much about the
     adapter as about the answers: a form that changed, or a field read missed."""
@@ -376,8 +382,11 @@ def _revealed(
         if _unfillable(result, mine):
             return mine
         if problems := matching.problems(result.fields, mine):
-            problems += [f"{f.id} takes {f.options}" for f in new if f.options and f.id not in mine]
-            result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
+            _refuse(
+                result,
+                problems,
+                *[f"{f.id} takes {f.options}" for f in new if f.options and f.id not in mine],
+            )
             return mine
         left = [f for f in new if f.id not in mine]
         result.warnings += [f"an answer showed {f.id} ({f.label}), left empty" for f in left]
@@ -459,7 +468,7 @@ def _fill(
             return result
         given = matching.as_listed(result.fields, given)
         if problems := matching.problems(result.fields, given):
-            result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
+            _refuse(result, problems)
             return result
         result.warnings = matching.knockouts(result.fields, given)
         adapter.fill(page, matching.to_fill(result.fields, given))
@@ -695,7 +704,7 @@ def _save_profile(
             result.status, result.reason = step_result.status, step_result.reason
             return
         if problems := matching.problems(fields, mine):
-            result.status, result.reason = Status.REFUSED, "invalid_answers: " + "; ".join(problems)
+            _refuse(result, problems)
             return
         checks = matching.check(fields, mine, adapter.profile_read_back(page))
         if not all(c.match for c in checks):

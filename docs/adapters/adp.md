@@ -33,7 +33,7 @@ Every employer of the 16 showed the same steps: Personal Information, Resume, Qu
 | | address lines 1 to 3 | `text` | inputs, line 1 a Google Places search that also takes a typed line; 30 characters at most | 16 |
 | | city, postal code, county | `text` | inputs; once the country is picked the postal code is "Zip Code" and County shows | 16 |
 | | state | `choice` | a textbox until the country is picked, then a `wfn-dropdown-list` (`DC - District of Columbia`), its options `role=option`, its select in its shadow root | 16 |
-| Resume | résumé | `file` | Upload File (or Enter Text) and a file input; Next is disabled until one is uploaded | 16 |
+| Resume | résumé | `file` | Upload File (or Enter Text) and a file input; Next is disabled until one is uploaded, which can be after the step lists the file at 0% | 16 |
 | | the AI opt-out | `choice` (Yes, No), `shown_when` the résumé is answered, optional | once the upload is done: "I want to opt out from having my resume reviewed by artificial intelligence as part of the application process.", a box (`input[name=candidateProfileRelevanceOptionDivId]`) under the employer's notice on its Profile Relevancy score, in no meta. Listed on every form: which employers show it is not known | 2 |
 | Questions | `Yes/No Buttons` | `choice` | `sdf-radio-group`, radios `#questionYes_<n>`, `#questionNo_<n>` | 12 |
 | | `Drop List` | `choice` | `sdf-select-simple#question_<n>`, its items `sdf-select-item` in a floating pane | 10 |

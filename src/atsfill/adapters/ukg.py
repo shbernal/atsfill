@@ -514,7 +514,7 @@ def _field(raw: dict[str, Any], states: dict[str, list[str]] | None) -> Field:
     if kind == "file":
         return Field(field_id, label, FieldType.FILE, raw["required"], accept=raw["accept"])
     if raw.get("readonly"):  # the account's name, changed on its profile only
-        reason = f"unsupported_rendering: {field_id} is read-only" if not value else None
+        reason = f"unsupported_rendering: {field_id} is read-only"
         return Field(field_id, label, KINDS[kind], raw["required"], prefilled=value,
                      unfillable=reason)  # fmt: skip
     options = raw["options"] if kind in ("select", "radio") else None

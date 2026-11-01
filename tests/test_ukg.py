@@ -7,7 +7,7 @@ from urllib.parse import unquote, urlsplit
 import pytest
 
 from atsfill.adapters.ukg import FORM, UKG, _register
-from atsfill.core import browser
+from atsfill.core import browser, matching
 from atsfill.core.adapter import Refused, SignUpDetails
 from atsfill.core.results import FieldType, Is, OptionSet
 
@@ -107,7 +107,7 @@ def test_a_sign_in_left_at_the_details_step_is_finished_with_the_details(page):
 def test_browser_read_lists_each_rendering(page):
     _, fields = opened(page)
     assert page.url == APPLY
-    assert fields["FirstName"].prefilled == "Ada" and fields["FirstName"].unfillable is None
+    assert fields["FirstName"].prefilled == "Ada" and fields["FirstName"].unfillable
     assert "PreferredName" in fields and fields["PreferredName"].unfillable  # read-only, empty
     assert fields["Prefix"].options == ["Dr.", "Mr."]
     assert fields["Phone"].type is FieldType.PHONE and fields["Phone"].required
@@ -199,6 +199,12 @@ def test_a_question_the_read_did_not_list_counts_as_shown(page):
         "f => f.insertAdjacentHTML('beforeend', '<input id=TextResponse9>')"
     )
     assert set(adapter.shown_fields(page)) - set(fields) == {"TextResponse9"}
+
+
+def test_an_answer_to_a_read_only_field_is_refused_before_typing(page):
+    _, fields = opened(page)
+    problems = matching.problems(list(fields.values()), {"FirstName": "Jane"})
+    assert [p for p in problems if p.field_id == "FirstName" and p.rule == "unfillable"]
 
 
 def test_fill_and_read_back(page, resume):

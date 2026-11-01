@@ -240,7 +240,7 @@ def emit(
 def _slim(result: dict, command: str | None) -> dict:
     """A form command's result without what the consumer already has: the URL it passed and,
     after `read`, the fields, the side effects and each answer it gave."""
-    del result["url"]
+    del result["url"], result["refused"]
     if command != "read":
         del result["fields"], result["side_effects"]
         result["checks"] = [

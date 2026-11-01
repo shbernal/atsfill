@@ -108,6 +108,7 @@ class Result:
     notice: str | None = None  # telemetry's, the first time it is on (ADR 0016)
     report: str | None = None  # how to send a failed run's report, when it was not sent
     warnings: list[str] = field(default_factory=list)  # the knockout answers a fill gave
+    refused: list[str] = field(default_factory=list)  # telemetry's `field_id: rule` per problem
 
 
 @dataclass

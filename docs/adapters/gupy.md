@@ -70,7 +70,7 @@ One question of these postings had a `parentQuestionId`, under a `CONDITIONAL` o
 - The page turns down a save it cannot read an email of, an address at `example.com` passing: nothing says so but Answer now not coming, `answer_not_taken`.
 - A radio or a button is clicked again if the page's rendering detached it.
 - Read-back: Additional information as it was before its save, the questions' checked labels and typed text.
-- `shown_fields`: Additional information as it was saved, then the controls the questions page renders. A text input is known only by its question's title, which follow-ups can share ("Comment"): the answered question claims it first. Two shown questions sharing a title are not handled by `fill`, which takes the first.
+- `shown_fields`: Additional information as it was saved, then the controls the questions page renders. A text input is known only by its question's title, which follow-ups can share ("Comment"): the answered questions claim the controls of their title in order, and `fill` and the read-back pair them the same way.
 - Submit is the last page's Save and continue: the questions, which "cannot be edited later", or Additional information on a posting without them. No send was made.
 
 ## Known gaps

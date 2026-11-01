@@ -27,7 +27,7 @@ Each rendering, and how many of the sample's postings showed it:
 | Rendering | Field type | Postings |
 |---|---|---|
 | text input, `textarea`: address, city, zip, middle name, availability notes, a Text or Numeric question | `text` | all |
-| the account's name (`FirstName`, `FamilyName`): read-only, the account's value | `text`, `prefilled` | all |
+| the account's name (`FirstName`, `FamilyName`): read-only, the account's value | `text`, `prefilled`, `unsupported_rendering`: an answer to it is refused before typing | all |
 | `type=tel` (`Phone`, `SecondaryPhone`) | `phone` | all |
 | `select`: title, suffix, country, how did you hear (`ApplicantSource`) | `choice` | all |
 | state (`State`): a `select` shown once a country with states is picked, filled from `…/Candidate/GetStates?countryId=<id>` | `choice`, the states per country in `option_sets` | all |

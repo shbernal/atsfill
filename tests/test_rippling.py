@@ -217,6 +217,12 @@ def test_a_posting_gone(page):
         Rippling().browser_read(page)
 
 
+def test_a_posting_redirected_to_its_board_is_gone(page):
+    page.goto("https://ats.rippling.com/acme/jobs")
+    with pytest.raises(Unsupported, match="posting_gone"):
+        Rippling().browser_read(page)
+
+
 def test_unknown_question_types_are_unhandled():
     data = json.loads(json.dumps(DATA_JSON))
     post = data["props"]["pageProps"]["apiData"]["jobPost"]

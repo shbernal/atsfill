@@ -28,6 +28,7 @@ UPLOADED = "[data-action=delete]"  # an uploading file shows its name and an abo
 FORM_TIMEOUT_MS = 30_000
 OPTIONS_TIMEOUT_MS = 5_000
 CHECK_TIMEOUT_MS = 3_000
+CHECK_CLICKS = 3  # a form can lose a click on an option
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 KEY_DELAY_MS = 20
@@ -361,16 +362,18 @@ def _pick(page: Page, field: Locator, role: str, value: str) -> None:
 
 
 def _check(option: Locator, checked: bool) -> None:
-    """Clicks a radio or checkbox unless it already is `checked`. Its `aria-checked` is the
-    form's state: the hidden input it holds is remounted, and catches up, on a later render."""
+    """Clicks a radio or checkbox unless it already is `checked`, again where the form lost the
+    click, as it can the first of a page. Its `aria-checked` is the form's state: the hidden
+    input it holds is remounted, and catches up, on a later render."""
     state = "true" if checked else "false"
-    if option.get_attribute("aria-checked") == state:
-        return
-    browser.click(option)
-    with suppress(Timeout):
-        option.and_(option.page.locator(f"[aria-checked={state}]")).wait_for(
-            timeout=CHECK_TIMEOUT_MS
-        )
+    for _ in range(CHECK_CLICKS):
+        if option.get_attribute("aria-checked") == state:
+            return
+        browser.click(option)
+        with suppress(Timeout):
+            option.and_(option.page.locator(f"[aria-checked={state}]")).wait_for(
+                timeout=CHECK_TIMEOUT_MS
+            )
 
 
 def _options(page: Page, field_id: str) -> list[str]:

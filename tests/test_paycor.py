@@ -9,6 +9,7 @@ from urllib.parse import parse_qsl
 
 import pytest
 
+from atsfill.adapters import paycor
 from atsfill.adapters.paycor import FORM, Paycor, _field
 from atsfill.core import browser, matching
 from atsfill.core.adapter import NotTaken, Unsupported
@@ -81,6 +82,13 @@ def resume(tmp_path) -> str:
     path = tmp_path / "CV Ada.pdf"
     path.write_bytes(b"%PDF-1.4")
     return str(path)
+
+
+def test_a_radio_the_page_leaves_disabled_is_not_taken(page, monkeypatch):
+    monkeypatch.setattr(paycor, "CONTROL_TIMEOUT_MS", 200)
+    page.set_content('<input type="radio" name="opt" disabled>')
+    with pytest.raises(NotTaken, match="opt stays disabled"):
+        Paycor()._until_enabled(page, page.locator("[name=opt]"), "opt")
 
 
 def test_detection_and_posting():

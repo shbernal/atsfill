@@ -134,6 +134,7 @@ def event(command: str, result: Result) -> dict:
         "verdict": verdict(result),
         "status": result.status.value,
         "reason": _code(result.reason),
+        "refused": result.refused or None,
         "version": version("atsfill"),
         "posting": None if command == "profile" else posting_hash(_posting(result)),
         "source": source,

@@ -241,6 +241,15 @@ class Eightfold:
                     continue
             _fill(page, control, answer)
             given[control.field.id] = answer
+        self._again(page, given)
+
+    def _again(self, page: Page, given: dict[str, Answer]) -> None:
+        """Fills once more an answered control a later render emptied."""
+        placed = [c for c in self._controls if c.dom and given.get(c.field.id)]
+        values = self._values(page, placed)
+        for control in placed:
+            if not values.get(control.field.id):
+                _fill(page, control, given[control.field.id])
 
     def shown_fields(self, page: Page) -> list[str]:
         """The questions rendered once filled, each control's by the longest question id its

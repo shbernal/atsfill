@@ -584,8 +584,12 @@ def _wait_for_step(page: Page, step: Step) -> None:
 
 
 def _next(page: Page, step: Step) -> None:
-    """Next, once the step is left; the page's errors where it stays."""
-    page.locator(NEXT).click()
+    """Next, once the step is left; the page's errors where it stays. It is disabled while a
+    résumé uploads, past the moment the step lists the file."""
+    try:
+        page.locator(NEXT).click(timeout=UPLOAD_TIMEOUT_MS)
+    except Timeout:
+        raise NotTaken(f"{step.name}: Next stayed disabled: {_errors(page)}") from None
     deadline = time.monotonic() + STEP_TIMEOUT_MS / 1000
     while step.marker and page.locator(step.marker).first.count():
         if time.monotonic() > deadline:

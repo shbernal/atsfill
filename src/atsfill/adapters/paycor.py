@@ -14,7 +14,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from atsfill.core.adapter import Blocked, Gap, NotTaken, Unsupported
-from atsfill.core.browser import Page
+from atsfill.core.browser import Locator, Page, Timeout
 from atsfill.core.results import Answer, Field, FieldType, Is, OptionSet, SideEffect
 
 HOST = "recruitingbypaycor.com"
@@ -43,6 +43,7 @@ KINDS = {
 }
 STEPS = 6  # pages before the form: the EEO introduction, its two pages, the questions
 PAGE_TIMEOUT_MS = 30_000
+CONTROL_TIMEOUT_MS = 10_000  # a radio stays disabled until the answer it hangs on is taken
 UPLOAD_TIMEOUT_MS = 60_000
 SUBMIT_TIMEOUT_MS = 90_000
 
@@ -255,11 +256,7 @@ class Paycor:
                 case "select", str():
                     named.select_option(label=answer)
                 case "radio", str():
-                    named.first.wait_for(state="attached")
-                    page.wait_for_function(
-                        "n => [...document.getElementsByName(n)].some(e => !e.disabled)",
-                        arg=field.id,
-                    )
+                    self._until_enabled(page, named, field.id)
                     self._pick(named, field, [answer])
                 case "checkbox", list():
                     self._pick(named, field, answer)
@@ -267,6 +264,20 @@ class Paycor:
                     raise Unsupported(
                         f"unhandled_rendering: cannot fill {field.id}, a {kind}, with {answer!r}"
                     )
+
+    def _until_enabled(self, page: Page, radios: Locator, field_id: str) -> None:
+        """Waits for a radio group the page enables on an earlier answer: the opt-in, on a phone
+        it takes."""
+        try:
+            radios.first.wait_for(state="attached", timeout=CONTROL_TIMEOUT_MS)
+            page.wait_for_function(
+                "n => [...document.getElementsByName(n)].some(e => !e.disabled)",
+                arg=field_id,
+                timeout=CONTROL_TIMEOUT_MS,
+            )
+        except Timeout:
+            detail = f"{field_id} stays disabled: the page refused an answer before it"
+            raise NotTaken(detail) from None
 
     def shown_fields(self, page: Page) -> list[str]:
         """The form's controls; the answers to the pages before it are hidden inputs by now."""

@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from atsfill.adapters import eightfold
 from atsfill.adapters.eightfold import Eightfold, _form
 from atsfill.core import browser, conditions, matching
 from atsfill.core.adapter import Blocked, Unsupported
@@ -153,6 +154,15 @@ def test_the_country_code_shared_by_several_countries_is_its_main_one(page):
         "🇺🇸 (+1) United States of America"
     )
     assert adapter.read_back(page)["phone"] == "+1 2025550143"
+
+
+def test_an_answer_a_later_render_emptied_is_filled_again(page):
+    adapter, _ = opened(page)
+    adapter.fill(page, {"firstname": "Ada"})
+    control = next(c for c in adapter._controls if c.field.id == "firstname")
+    eightfold._box(page, control).locator("input").first.fill("")
+    adapter._again(page, {"firstname": "Ada"})
+    assert adapter.read_back(page)["firstname"] == "Ada"
 
 
 def test_a_question_its_answer_hides_is_not_filled(page):
