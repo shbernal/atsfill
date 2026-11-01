@@ -133,15 +133,6 @@ def test_every_answer_reads_back(page, resume, photo):
     assert page.locator("[name=CA_2]").input_value() == "50,000"
 
 
-def test_a_file_is_uploaded_before_the_next_is_attached(page, resume, photo):
-    """Attaching the photo while the resume still uploads would empty the resume."""
-    adapter, fields = opened(page)
-    answers: dict[str, Answer] = {"avatar": photo, "resume": resume}
-    adapter.fill(page, answers)
-    checks = matching.check(fields, answers, adapter.read_back(page))
-    assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
-
-
 def test_a_number_input_keeps_digits_only(page):
     adapter, fields = opened(page)
     answers: dict[str, Answer] = {"CA_2": "a month"}

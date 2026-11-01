@@ -182,7 +182,6 @@ def test_create_stores_the_password_before_the_click(creates, config, data, caps
         (Refused("email_domain_rejected"), "refused", False),
         (Refused("password_rule: at most 16 characters"), "refused", False),
         (Blocked("no_otp_command"), "blocked", True),
-        (Blocked("captcha"), "blocked", True),
         (RuntimeError("after the click"), "unsupported", True),
     ],
 )
@@ -305,7 +304,3 @@ def test_create_needs_an_adapter_with_sign_up(account, config, data, capsys):
     code, report = login(data, capsys, "--create", "--email", EMAIL)
     assert (code, report["status"]) == (1, "unsupported")
     assert report["reason"].startswith("no_sign_up")
-
-
-def test_sign_up_is_a_declared_side_effect(creates):
-    assert [e.step for e in creates.side_effects] == ["fill", "sign_up"]

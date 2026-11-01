@@ -112,7 +112,6 @@ ENTRY_LISTS: list[EntryList] = [
         ("lastYearAttended", "To (Actual or Expected)", "year", "To (Actual or Expected)"),
     ]),
 ]  # fmt: skip
-SCHOOL_SEARCH = "university"  # finds schools where the tenant lists them
 # The school: a search prompt where the tenant lists schools, else a text input; one field
 SCHOOL_IDS = {"education--schoolName": "education--school"}
 BRACKETED = re.compile(r"\(([^()]+)\)")

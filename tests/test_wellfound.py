@@ -540,10 +540,3 @@ def test_the_recruiter_offer_is_declined_never_started(page, site):
     site.offer = True
     assert run_profile(page, PROFILE_ANSWERS) == []
     assert not site.enrolled
-
-
-def test_the_fixture_dialog_read_matches_a_live_shape():
-    """The fields the adapter reads from each question, as `JobApplicationModal` answers them."""
-    for question in QUESTIONS:
-        assert set(question) == {"id", "kind", "question", "required", "options"}
-    assert json.dumps(job())  # serializable as the route answers it

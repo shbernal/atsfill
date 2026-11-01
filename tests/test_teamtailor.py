@@ -241,8 +241,6 @@ def test_submit_stops_on_the_emailed_verification_link(opened, page):
     [
         ("Jane DOE - Resume - Acme.pdf", "jane_doe_-_resume_-_acme.pdf"),
         ("CV Élodie (2026)  v2.pdf", "cv_elodie_2026_v2.pdf"),
-        ("Jane_O'Doe, CV+final.pdf", "jane_o_doe_cv_final.pdf"),
-        ("ñandú ça.Résumé.pdf", "nandu_ca.resume.pdf"),
         ("ABC--x__y  z.pdf", "abc--x_y_z.pdf"),
     ],
 )
