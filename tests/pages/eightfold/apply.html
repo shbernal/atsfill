@@ -142,7 +142,8 @@
 const STATES = {"Canada": ["Ontario", "Quebec"], "United States": ["District of Columbia", "Ohio"]};
 
 // A combobox renders its listbox at the end of the page when clicked; an option sets its value,
-// and the combobox takes the focus back a moment later.
+// and the combobox takes the focus back a moment later. A combobox's `data-lost` clicks on an
+// option do nothing, the list staying open; its `data-closes` is how late its list closes, in ms.
 function open(combo) {
   document.querySelectorAll("[role=listbox]").forEach(l => l.remove());
   const list = document.createElement("ul");
@@ -155,7 +156,7 @@ function open(combo) {
     option.setAttribute("role", "option");
     option.title = text;
     option.innerHTML = `<span>${text}</span>`;
-    option.onclick = () => { pick(combo, text); list.remove(); setTimeout(() => combo.focus(), 60); };
+    option.onclick = () => { if (combo.dataset.lost > 0) { combo.dataset.lost--; return; } pick(combo, text); setTimeout(() => { list.remove(); combo.focus(); }, Number(combo.dataset.closes ?? 60)); };
     li.append(option);
     list.append(li);
   }
