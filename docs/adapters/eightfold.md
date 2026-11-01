@@ -36,6 +36,7 @@ Without an account, a control showing a value before any answer holds the page's
 
 - The resume first, then the questions in the API's order. A follow-up is filled once the answers filled before it meet its condition, and waited for briefly. 
 - The API lists every question whatever the answers, and `shown_fields` holds the page to it: each error line's element id is the question whose id it ends with, the longest such (`q_town` over `town`), one no question ends as its element id.
+- A later render can empty a control filled before it, a different one on each run, so once all are filled the ones reading empty are filled again.
 - Text inputs are filled; a dropdown is opened and its option clicked; a radio or a box is clicked through its input; a date is paged to in the picker and clicked; a pill not in the answer is removed and one missing picked.
 
 ## Read-back and submit
