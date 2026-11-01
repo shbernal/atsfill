@@ -66,7 +66,7 @@ FILTERS = "assets/atsfill/filters.txt"
 INCLUDE = re.compile(r"^!#include (\S+)$", re.M)
 # A page holding a banner the lists hide: until they do, the blocker is still starting.
 PROBE = ("https://blocker.invalid/", '<div id="cookie-banner">probe</div>')
-BLOCKER_TIMEOUT_MS = 30_000  # its lists take seconds to compile on each launch, more under load
+BLOCKER_TIMEOUT_MS = 120_000  # its lists compile on each launch: 4s alone, 47s at load 150
 OVERLAY_GRACE_MS = 1_000  # how long a cover may stay on a click target before it counts
 OVERLAY_POLL_MS = 100
 
@@ -226,7 +226,10 @@ def _wait_for_blocker(browser: Browser) -> None:
     try:
         page.locator("#cookie-banner").wait_for(state="hidden", timeout=BLOCKER_TIMEOUT_MS)
     except Timeout:
-        raise BrowserError("the blocker hid no banner: run `atsfill install-browser`") from None
+        raise BrowserError(
+            f"the blocker hid no banner within {BLOCKER_TIMEOUT_MS // 1000}s: try again if the"
+            " machine is busy; if it is idle, run `atsfill install-browser`"
+        ) from None
     finally:
         context.close()
 

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 import pytest
 
 from atsfill.core import browser, commands, otp
+from atsfill.core.adapter import Blocked
 from atsfill.core.results import Status
 from tests.fake import FakeOtp
 
@@ -89,13 +90,13 @@ def test_no_otp_in_time_blocks(account, config, tmp_path, monkeypatch):
     )
 
 
-def test_a_command_that_waits_is_stopped_at_the_timeout(account, config, tmp_path, monkeypatch):
+def test_a_command_that_waits_is_stopped_at_the_timeout(tmp_path, monkeypatch):
     monkeypatch.setattr(otp, "OTP_TIMEOUT_S", 1)
-    config(f'fakeaccount = "{command(tmp_path, "import time; time.sleep(30)")}"')
-    started = datetime.now(UTC)
-    report = login(tmp_path)
-    assert report.status is Status.BLOCKED and "printed none within 1s" in (report.reason or "")
-    assert (datetime.now(UTC) - started).total_seconds() < 20
+    line = command(tmp_path, "import time; time.sleep(30)")
+    started = time.monotonic()
+    with pytest.raises(Blocked, match="printed none within 1s"):
+        otp._wait(otp.Source("fakeaccount", line, None, datetime.now(UTC)), EMAIL, "the sign-in")
+    assert time.monotonic() - started < 20
 
 
 def test_without_an_entry_the_otp_blocks(account, config, tmp_path):

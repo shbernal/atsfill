@@ -352,6 +352,7 @@ def test_the_profile_form_reads_back_what_it_is_filled_with_and_saves(page, acco
     checks = matching.check(fields, answers, adapter.profile_read_back(page))
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     adapter.save(page)
+    assert page.url.endswith("/talent/me")
     assert account["phoneNumber"] == "+12125550123"
     assert [account[k] for k in ("firstName", "country", "city")] == ["Jane", "Germany", "Berlin"]
 
