@@ -258,6 +258,13 @@ def test_the_opt_out_a_resume_shows_is_answered(opened, page, resume):
     assert unmet(adapter, page, fields, answers) == []
 
 
+def test_a_next_left_disabled_is_not_taken(page, monkeypatch):
+    monkeypatch.setattr(adp, "UPLOAD_TIMEOUT_MS", 200)
+    page.set_content(f'<button id="{adp.NEXT.removeprefix("#")}" disabled>Next</button>')
+    with pytest.raises(NotTaken, match="Next stayed disabled"):
+        adp._next(page, adp.Step("Resume", "#x"))
+
+
 def test_fill_walks_every_step_up_to_the_attestation(opened, page, ats, resume):
     adapter, _ = opened
     answers = complete(resume)
