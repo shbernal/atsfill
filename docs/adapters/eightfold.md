@@ -38,6 +38,7 @@ Without an account, a control showing a value before any answer holds the page's
 - The API lists every question whatever the answers, and `shown_fields` holds the page to it: each error line's element id is the question whose id it ends with, the longest such (`q_town` over `town`), one no question ends as its element id.
 - A later render can empty a control filled before it, a different one on each run, so once all are filled the ones reading empty are filled again.
 - A combobox takes the focus back a moment after its option is clicked, and what is typed before that lands in it and is lost, with the combobox's value, so a pick waits for the focus.
+- A dropdown's list can lose a click on its option, intermittently, seen on a lookup's list just loaded for the country picked: the combobox stays empty and the list stays open past 7 seconds, over the next control, which ends `overlaid` naming the option on top. A list still open over an unchanged combobox is that lost click, and the option is clicked again, up to three times. A list can also close seconds late on a page still loading with the pick already taken, and clicked again the option would clear, so a changed combobox is not clicked again. A list that stays open is dismissed for the read-back to catch.
 - Text inputs are filled; a dropdown is opened and its option clicked; a radio or a box is clicked through its input; a date is paged to in the picker and clicked; a pill not in the answer is removed and one missing picked.
 
 ## Read-back and submit

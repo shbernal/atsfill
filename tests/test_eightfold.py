@@ -172,6 +172,34 @@ def test_a_pick_waits_for_the_combobox_to_take_the_focus_back(page):
     assert combo.evaluate("el => document.activeElement === el")
 
 
+def test_an_option_whose_click_the_list_lost_is_clicked_again(page):
+    opened(page)
+    combo = page.locator("#Contact_Information_country input")
+    combo.evaluate("el => el.dataset.lost = 1")
+    eightfold._pick(page, combo, "Canada", exact=True)
+    assert combo.input_value() == "Canada"
+    assert combo.get_attribute("data-lost") == "0"
+    assert not page.locator("[role=listbox]").count()
+
+
+def test_a_list_that_stays_open_is_dismissed_with_the_combobox_left_empty(page):
+    opened(page)
+    combo = page.locator("#Contact_Information_country input")
+    combo.evaluate(f"el => el.dataset.lost = {eightfold.PICK_CLICKS}")
+    eightfold._pick(page, combo, "Canada", exact=True)
+    assert combo.input_value() == ""
+    assert not page.locator("[role=listbox]").count()
+
+
+def test_a_list_closing_late_keeps_its_pick(page):
+    opened(page)
+    combo = page.locator("#Contact_Information_phone-country-code input")
+    combo.evaluate(f"el => el.dataset.closes = {2 * eightfold.LIST_CLOSE_TIMEOUT_MS}")
+    eightfold._pick(page, combo, "🇨🇦 (+1) Canada", exact=True)  # clicked twice, it would clear
+    assert combo.input_value() == "🇨🇦 (+1) Canada"
+    assert not page.locator("[role=listbox]").count()
+
+
 def test_a_lost_number_is_filled_again_under_the_code_it_kept(page):
     adapter, _ = opened(page)
     adapter.fill(page, {"phone": "+12025550143"})

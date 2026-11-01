@@ -37,6 +37,8 @@ FORM_TIMEOUT_MS = 30_000
 SHOWN_TIMEOUT_MS = 2_000
 OPTIONS_TIMEOUT_MS = 5_000
 FOCUS_TIMEOUT_MS = 500
+LIST_CLOSE_TIMEOUT_MS = 2_000  # a list can close late on a page still loading
+PICK_CLICKS = 3  # the list can lose a click on its option
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 PARSE_SETTLE_MS = 2_000
@@ -485,16 +487,27 @@ def _pick(page: Page, combo, value: str, exact: bool) -> None:
 
 def _choose(page: Page, combo, option) -> None:
     """Clicks a combobox's option and waits for its list to close and the combobox to take the
-    focus back: typed before that, the next answer lands in the combobox."""
+    focus back: typed before that, the next answer lands in the combobox. A list still open over
+    an unchanged combobox lost the click, so the option is clicked again; clicked once it took,
+    it would clear. A list that stays open is dismissed, as it lies over the next control, for
+    the read-back to catch what the combobox holds."""
     listbox = page.locator(f"[id={json.dumps(combo.get_attribute('aria-controls'))}]")
-    option.click()
-    with suppress(Timeout):
-        listbox.wait_for(state="hidden", timeout=FOCUS_TIMEOUT_MS)
-        page.wait_for_function(
-            "el => document.activeElement === el",
-            arg=combo.element_handle(),
-            timeout=FOCUS_TIMEOUT_MS,
-        )
+    held = combo.input_value()
+    for _ in range(PICK_CLICKS):
+        with suppress(Timeout):
+            option.click(timeout=LIST_CLOSE_TIMEOUT_MS)
+            listbox.wait_for(state="hidden", timeout=LIST_CLOSE_TIMEOUT_MS)
+        if listbox.is_hidden():
+            with suppress(Timeout):
+                page.wait_for_function(
+                    "el => document.activeElement === el",
+                    arg=combo.element_handle(),
+                    timeout=FOCUS_TIMEOUT_MS,
+                )
+            return
+        if combo.input_value() != held:
+            break
+    combo.press("Escape")
 
 
 def _phone(page: Page, box, value: str) -> None:
