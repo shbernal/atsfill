@@ -54,7 +54,7 @@ Work history, education and references are flat custom questions (three blocks e
 - The pages before the form are walked again from the start with the answers; reading walks them picking the last option and Yes.
 - The resume is uploaded first and waited for (`ajaxResumeFilename`): its parse fills fields, which the answers then override.
 - Controls are filled in page order, so a country comes before its state and the mobile number before the opt-in. Text is filled, a native date takes `YYYY-MM-DD`, a text date `MM/DD/YYYY`, a select its option's text, radios and boxes are clicked.
-- A state answered under a country without states is refused before typing; a state select the page still leaves disabled is `answer_not_taken`.
+- A state answered under a country without states is refused before typing; a state select the page still leaves disabled is `answer_not_taken`, and so is a radio group left disabled: the opt-in, on a mobile number the page refuses.
 
 ## Read-back and submit
 
