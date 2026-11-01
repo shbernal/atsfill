@@ -36,6 +36,7 @@ PICKER = "[data-testid=picker-dialog]"
 FORM_TIMEOUT_MS = 30_000
 SHOWN_TIMEOUT_MS = 2_000
 OPTIONS_TIMEOUT_MS = 5_000
+FOCUS_TIMEOUT_MS = 500
 UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 PARSE_SETTLE_MS = 2_000
@@ -479,17 +480,37 @@ def _pick(page: Page, combo, value: str, exact: bool) -> None:
     if not option.count():
         page.keyboard.press("Escape")
         raise NotTaken(f"no option {value!r}")
+    _choose(page, combo, option)
+
+
+def _choose(page: Page, combo, option) -> None:
+    """Clicks a combobox's option and waits for its list to close and the combobox to take the
+    focus back: typed before that, the next answer lands in the combobox."""
+    listbox = page.locator(f"[id={json.dumps(combo.get_attribute('aria-controls'))}]")
     option.click()
+    with suppress(Timeout):
+        listbox.wait_for(state="hidden", timeout=FOCUS_TIMEOUT_MS)
+        page.wait_for_function(
+            "el => document.activeElement === el",
+            arg=combo.element_handle(),
+            timeout=FOCUS_TIMEOUT_MS,
+        )
 
 
 def _phone(page: Page, box, value: str) -> None:
     """Picks the country code the number starts with, the longest that fits, then types the
-    rest of the number. Where several countries share it, its main country."""
+    rest of the number. Where several countries share it, its main country. One already showing
+    a code that fits stays: clicking the selected option clears it."""
     digits = re.sub(r"\D", "", value)
     combo = box.locator("input[role=combobox]").first
     number = box.locator("input:not([role=combobox])").first
     if not value.startswith("+"):
         number.fill(value)
+        return
+    if (held := DIAL.search(combo.input_value())) and digits.startswith(
+        code := held[1].replace(" ", "")
+    ):
+        number.fill(digits[len(code) :])
         return
     _click(combo)
     options = page.locator(f"[id={json.dumps(combo.get_attribute('aria-controls'))}] [role=option]")
@@ -504,7 +525,7 @@ def _phone(page: Page, box, value: str) -> None:
         number.fill(digits)
         return
     _, _, i, code = max(fits)
-    options.nth(-i).click()
+    _choose(page, combo, options.nth(-i))
     number.fill(digits[len(code) :])
 
 

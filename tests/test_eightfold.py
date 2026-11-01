@@ -165,6 +165,28 @@ def test_an_answer_a_later_render_emptied_is_filled_again(page):
     assert adapter.read_back(page)["firstname"] == "Ada"
 
 
+def test_a_pick_waits_for_the_combobox_to_take_the_focus_back(page):
+    adapter, _ = opened(page)
+    combo = page.locator("#Contact_Information_country input")
+    eightfold._pick(page, combo, "Canada", exact=True)
+    assert combo.evaluate("el => document.activeElement === el")
+
+
+def test_a_lost_number_is_filled_again_under_the_code_it_kept(page):
+    adapter, _ = opened(page)
+    adapter.fill(page, {"phone": "+12025550143"})
+    page.locator("#Contact_Information_phone").fill("")
+    adapter._again(page, {"phone": "+12025550143"})
+    assert adapter.read_back(page)["phone"] == "+1 2025550143"
+
+
+def test_a_code_that_does_not_fit_the_number_is_replaced(page):
+    adapter, _ = opened(page)
+    adapter.fill(page, {"phone": "+33123456789"})
+    adapter.fill(page, {"phone": "+12025550143"})
+    assert adapter.read_back(page)["phone"] == "+1 2025550143"
+
+
 def test_a_question_its_answer_hides_is_not_filled(page):
     adapter, _ = opened(page)
     adapter.fill(page, {"Q_HEAR_ABOUT_US": "Job Board", "Q_EVENTS": "Conference"})
