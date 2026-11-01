@@ -33,7 +33,7 @@ On the page, every field sits under an element whose `data-ui` is that id, so `b
 
 ## Filling
 
-- An option's state is its `aria-checked`. Its hidden input is remounted on each render and catches up only on a later one, so options are clicked and read back by `aria-checked`.
+- An option's state is its `aria-checked`. Its hidden input is remounted on each render and catches up only on a later one, so options are clicked and read back by `aria-checked`. The form can lose a click, the first of a page on one posting, so an option is clicked again until its `aria-checked` follows.
 - A dropdown is opened and the option with the exact text clicked. Its list stays on the page about 200 ms after closing and takes clicks meant for the field below, so filling waits for it to go.
 - The date input takes typed digits in its placeholder's order and adds the slashes.
 - The phone is typed with its dial code, which sets the country button; the read-back is the button's dial code then the number.

@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from atsfill.adapters import workable
 from atsfill.adapters.workable import Workable
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
@@ -53,6 +54,18 @@ def opened(page) -> tuple[Workable, list]:
     page.goto(JOB)
     assert adapter.detect(JOB, None)
     return adapter, adapter.browser_read(page)
+
+
+def test_an_option_is_clicked_again_where_the_form_lost_the_click(page):
+    page.set_content(
+        """<div id=o role=radio aria-checked=false>Yes</div><script>
+        o.addEventListener("click", () => {
+          if (o.dataset.lost) o.setAttribute("aria-checked", "true");
+          o.dataset.lost = "yes";
+        })</script>"""
+    )
+    workable._check(page.locator("#o"), True)
+    assert page.locator("#o").get_attribute("aria-checked") == "true"
 
 
 def test_browser_read_opens_the_application(page):
