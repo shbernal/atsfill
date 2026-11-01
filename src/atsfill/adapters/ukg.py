@@ -33,7 +33,6 @@ UPLOAD_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 SETTLE_MS = 500
 YES_NO = ["Yes", "No"]
-DATE_SHOWN = re.compile(r"(\d\d)/(\d\d)/(\d{4})")
 COUNTRY, STATE = "Country", "State"
 DECLINE_BOX = "input[type=checkbox][data-automation$='-decline-checkbox']"
 DAYS, DOCUMENTS = "availability_days", "documents"

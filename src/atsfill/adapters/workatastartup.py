@@ -437,7 +437,6 @@ def _in_entry(form: Locator, entry: str | None, node: str) -> Locator:
 ENGINEERING = Is("role", ["Engineering"])
 A_ROLE = Is("role")  # shown once a role is picked
 YES_NO = ["Yes", "No"]
-SIZES = ["Not Interested", "OK", "Preferred"]
 T, C, M, TA = FieldType.TEXT, FieldType.CHOICE, FieldType.MULTI_CHOICE, FieldType.TYPEAHEAD
 STEPS: dict[str, list[Control]] = {
     "personal": [

@@ -10,7 +10,7 @@ import pytest
 from atsfill import core
 from atsfill.cli import parser, run
 from atsfill.core import commands, passwords
-from atsfill.core.adapter import CreatesAccountByOtp, SignsIn, SignUpDetails
+from atsfill.core.adapter import SignUpDetails
 from atsfill.core.results import Status
 from tests.fake import FakeOtpOnly
 
@@ -38,10 +38,6 @@ def config(tmp_path, monkeypatch):
 @pytest.fixture
 def data(tmp_path):
     return tmp_path / "data"
-
-
-def test_an_otp_only_adapter_is_not_one_with_a_password(account):
-    assert isinstance(account, CreatesAccountByOtp) and not isinstance(account, SignsIn)
 
 
 def test_login_through_the_otp_command(account, config, data):

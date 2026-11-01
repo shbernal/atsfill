@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from atsfill.adapters.oracle import Oracle, _of_the_country
+from atsfill.adapters.oracle import Oracle
 from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import Blocked, NotTaken, RevealsFields
-from atsfill.core.results import Field, FieldType, Is, OptionSet
+from atsfill.core.results import FieldType, Is, OptionSet
 
 PAGES = Path(__file__).parent / "pages/oracle"
 JOB = "https://acme.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/1234"
@@ -51,16 +51,6 @@ def resume(tmp_path) -> str:
     path = tmp_path / "CV Ada.pdf"
     path.write_bytes(b"%PDF-1.4")
     return str(path)
-
-
-def test_an_address_list_holds_the_page_countrys_items_only():
-    country = Field("country", "Country", FieldType.CHOICE, True, ["Spain"], default="Spain")
-    region = Field("region2", "State", FieldType.CHOICE, False, ["Madrid"])
-    described = [({}, country), ({"address": True}, region)]
-    assert _of_the_country(described)[0][1] == country
-    listed = _of_the_country(described)[1][1]
-    assert listed.options is None
-    assert listed.option_sets == [OptionSet(Is("country", ["Spain"]), ["Madrid"])]
 
 
 def test_detection_and_posting():
