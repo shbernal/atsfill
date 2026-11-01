@@ -49,7 +49,7 @@
   </div>
   <div class="field"><fieldset>
     <legend id="Contact_Information_phone_legend">Phone</legend>
-    <div id="Contact_Information_phone-country-code"><input role="combobox" aria-label="Country code" aria-controls="list-cc" placeholder="Select country code"
+    <div id="Contact_Information_phone-country-code"><input role="combobox" aria-label="Country code" aria-controls="list-cc" placeholder="Select country code" data-toggles="1"
       data-options="🇨🇦 (+1) Canada|🇫🇷 (+33) France|🇬🇬 (+44 1481) Guernsey|🇬🇧 (+44) United Kingdom|🇺🇸 (+1) United States of America"></div>
     <input data-test-id="Contact_Information_phone" id="Contact_Information_phone" placeholder="Phone Number" value="">
     <div id="Contact_Information_phone_error"></div>
@@ -141,7 +141,8 @@
 <script>
 const STATES = {"Canada": ["Ontario", "Quebec"], "United States": ["District of Columbia", "Ohio"]};
 
-// A combobox renders its listbox at the end of the page when clicked; an option sets its value.
+// A combobox renders its listbox at the end of the page when clicked; an option sets its value,
+// and the combobox takes the focus back a moment later.
 function open(combo) {
   document.querySelectorAll("[role=listbox]").forEach(l => l.remove());
   const list = document.createElement("ul");
@@ -154,7 +155,7 @@ function open(combo) {
     option.setAttribute("role", "option");
     option.title = text;
     option.innerHTML = `<span>${text}</span>`;
-    option.onclick = () => { pick(combo, text); list.remove(); };
+    option.onclick = () => { pick(combo, text); list.remove(); setTimeout(() => combo.focus(), 60); };
     li.append(option);
     list.append(li);
   }
@@ -169,7 +170,7 @@ function pick(combo, text) {
     pills.append(pill);
     return;
   }
-  combo.value = text;
+  combo.value = combo.dataset.toggles && combo.value === text ? "" : text;
   if (combo.dataset.shows === "state") {  // the state's options load for the country picked
     document.querySelector("#Contact_Information_state input").dataset.options = STATES[text].join("|");
   } else if (combo.dataset.shows === "events") {
@@ -187,7 +188,8 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape") document.querySelectorAll("[role=listbox]").forEach(l => l.remove());
 });
 
-// A file input lists what it holds; the resume waits for the privacy dialog's agreement.
+// A file input lists what it holds; the resume waits for the privacy dialog's agreement, and its
+// parse sets a phone's empty country code.
 for (const input of document.querySelectorAll("input[type=file]")) {
   input.parentElement.querySelector("button").onclick = () => input.click();
   input.onchange = () => {
@@ -199,7 +201,11 @@ for (const input of document.querySelectorAll("input[type=file]")) {
     dialog.classList.remove("hidden");
     document.getElementById("confirmUploadResume").onclick = () => {
       dialog.classList.add("hidden");
-      fetch("/api/application/v2/resume_upload?user_mode=logged_out_candidate", {method: "POST"}).then(show);
+      fetch("/api/application/v2/resume_upload?user_mode=logged_out_candidate", {method: "POST"}).then(() => {
+        const code = document.querySelector("[aria-label='Country code']");
+        code.value ||= code.dataset.options.split("|").find(o => o.endsWith("France"));
+        show();
+      });
     };
     document.getElementById("cancelUploadResume").onclick = () => dialog.classList.add("hidden");
   };
