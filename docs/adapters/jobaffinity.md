@@ -5,7 +5,7 @@ JobAffinity's apply pages, observed on live postings, last on 2026-10-28. The fi
 ## Where the form is
 
 - Every posting is `jobaffinity.fr/apply/<token>`, whatever the employer; LinkedIn adds a `?src=` that is dropped. The double-send key is that URL without its query. Freehire lists no JobAffinity source: postings are found through LinkedIn and on employers' career sites, which link to the apply page or frame it (the page's `frame-ancestors` names them).
-- The page is rendered on the server, in one of two generations, chosen per employer: the older form (18 of 41 postings, 5 of 9 employers) and the newer one (23, 4). `request_read` fetches it over HTTP, `browser_read` takes the page's HTML, and one parser lists the fields from both: parity holds by construction.
+- The page is rendered on the server, in one of two generations, chosen per employer: the older form (18 of 41 postings, 5 of 9 employers) and the newer one (23, 4). `request_read` fetches it over HTTP, `browser_read` takes the page's HTML, and one parser lists the fields from both: parity holds by construction. The server localizes the country list by `Accept-Language`, so the request sends the machine's locale, as the browser does.
 - An unknown token answers 404 with no form: `posting_gone`. A closed posting is unobserved.
 - A document is uploaded as soon as it is attached: it reaches JobAffinity before the submit.
 

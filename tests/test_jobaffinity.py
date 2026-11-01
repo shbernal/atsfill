@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from atsfill.adapters import jobaffinity
 from atsfill.adapters.jobaffinity import JobAffinity
 from atsfill.core import browser, matching
 from atsfill.core.adapter import Unsupported
@@ -144,6 +145,19 @@ def test_request_read_lists_the_same_fields(page, monkeypatch, url):
     monkeypatch.setattr("urllib.request.urlopen", urlopen)
     assert JobAffinity().request_read(f"{url}?src=x") == fields
     assert fetched == [url, QUESTIONNAIRE] if url == OLD else [url]
+
+
+def test_a_request_asks_for_the_language_the_browser_gets(monkeypatch):
+    sent = []
+
+    def urlopen(request, timeout):
+        sent.append(request.get_header("Accept-language"))
+        return io.BytesIO(b"")
+
+    monkeypatch.setattr(jobaffinity, "machine_locale", lambda: "de-DE")
+    monkeypatch.setattr(jobaffinity.urllib.request, "urlopen", urlopen)
+    jobaffinity._get("https://jobaffinity.fr/apply/x")
+    assert sent == ["de-DE"]
 
 
 def old_answers(resume: str) -> dict[str, Answer]:

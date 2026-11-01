@@ -17,7 +17,7 @@ from urllib.parse import parse_qs, urljoin, urlsplit
 
 from atsfill.core import html
 from atsfill.core.adapter import Gap, Unsupported, known_gap
-from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout
+from atsfill.core.browser import HTTP_TIMEOUT_S, Page, Timeout, machine_locale
 from atsfill.core.results import Answer, Field, FieldType, Is, SideEffect
 
 ORIGIN = "https://jobaffinity.fr"
@@ -32,6 +32,7 @@ UPLOAD_TIMEOUT_MS = 30_000
 ANALYSIS_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 YES_NO = ["Yes", "No"]
+BROWSER_LANGUAGE = "en-US"  # what the browser sends on a machine with no locale
 CONSENT = "gdpr_agreement"
 AVAILABILITY, AVAILABLE_FROM, FROM_DATE = "availability", "availability_date", "date"
 DMY = "JJ/MM/AAAA"  # the hint under the older form's text date input
@@ -223,7 +224,10 @@ def _token(url: str) -> str | None:
 
 
 def _get(url: str) -> str:
-    request = urllib.request.Request(url, headers={"User-Agent": "atsfill"})
+    """The page as the browser gets it: the server localizes the country list."""
+    language = machine_locale() or BROWSER_LANGUAGE
+    headers = {"User-Agent": "atsfill", "Accept-Language": language}
+    request = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(request, timeout=HTTP_TIMEOUT_S) as response:
         return response.read().decode()
 
