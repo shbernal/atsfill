@@ -77,7 +77,7 @@ _READ_ADDITIONAL = """() => {
 }"""
 
 # The employer's questions, by question id: the checked labels, or the text typed.
-_READ_QUESTIONS = """(ids) => Object.fromEntries(ids.map(([id, title]) => {
+_READ_QUESTIONS = """(ids) => Object.fromEntries(ids.map(([id, title, nth]) => {
   const radios = [...document.querySelectorAll(`input[name="question-${id}"]`)];
   const boxes = [...document.querySelectorAll(`input[name^="checkbox-${id}-"]`)];
   const picked = [...radios, ...boxes].filter(e => e.checked)
@@ -85,7 +85,7 @@ _READ_QUESTIONS = """(ids) => Object.fromEntries(ids.map(([id, title]) => {
   if (boxes.length) return [`question-${id}`, picked];
   if (radios.length) return [`question-${id}`, picked[0] ?? null];
   const text = [...document.querySelectorAll("textarea, input[type=text]")]
-    .find(e => e.name === title || e.id === `input-${title}`);
+    .filter(e => e.name === title || e.id === `input-${title}`)[nth];
   return [`question-${id}`, text?.value ?? null];
 }))"""
 
@@ -228,16 +228,25 @@ class Gupy:
         page.locator(QUESTIONS).first.wait_for(timeout=SAVE_TIMEOUT_MS)
         for field_id, answer in answers.items():
             if (question := self._questions.get(field_id)) is not None:
-                _answer(page, self._fields[field_id], question, answer)
+                _answer(page, self._fields[field_id], question, answer, self._nth(field_id))
 
-    def shown_fields(self, page: Page) -> list[str]:
-        """Additional information as it was saved, and the questions the page renders: a text
-        is known only by its title, which questions can share."""
+    def _by_title(self) -> dict[str, list[str]]:
+        """A text is known only by its title, which questions can share: the page's controls of
+        one title are taken as its questions, the answered ones first."""
         by_title: dict[str, list[str]] = {}
         for field_id, question in self._questions.items():
             by_title.setdefault(question["title"], []).append(field_id)
         for ids in by_title.values():
             ids.sort(key=lambda i: i not in self._given)
+        return by_title
+
+    def _nth(self, field_id: str) -> int:
+        """Which of the controls titled as its question is this field's."""
+        return self._by_title()[self._questions[field_id]["title"]].index(field_id)
+
+    def shown_fields(self, page: Page) -> list[str]:
+        """Additional information as it was saved, and the questions the page renders."""
+        by_title = self._by_title()
         shown = list(self._additional_shown)
         for control in page.evaluate(_SHOWN_QUESTIONS) if page.locator(QUESTIONS).count() else []:
             ids = by_title.get(control.removeprefix("input-"))
@@ -252,7 +261,7 @@ class Gupy:
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Additional information as it was saved, or as the page holds it; the questions'."""
         additional = self._additional or self._read_additional(page)
-        ids = [[q["questionId"], q["title"]] for q in self._questions.values()]
+        ids = [[q["questionId"], q["title"], self._nth(i)] for i, q in self._questions.items()]
         values = page.evaluate(_READ_QUESTIONS, ids) if page.locator(QUESTIONS).count() else {}
         return {**additional, **{k: v for k, v in values.items() if v not in (None, "", [])}}
 
@@ -346,7 +355,7 @@ def _set(page: Page, field: Field, field_id: str, answer: Answer) -> None:
             raise Unsupported(f"unhandled_rendering: cannot fill {field_id}, a {kind}")
 
 
-def _answer(page: Page, field: Field, question: dict[str, Any], answer: Answer) -> None:
+def _answer(page: Page, field: Field, question: dict[str, Any], answer: Answer, nth: int) -> None:
     qid = question["questionId"]
     match field.type, answer:
         case FieldType.CHOICE, str():
@@ -361,7 +370,7 @@ def _answer(page: Page, field: Field, question: dict[str, Any], answer: Answer) 
             target = page.locator(f'textarea[name="{_css(title)}"], input[name="{_css(title)}"]')
             if not target.count():
                 target = page.locator(f'[id="input-{_css(title)}"]')
-            target.first.fill(answer)
+            target.nth(nth).fill(answer)
         case kind, _:
             raise Unsupported(f"unhandled_rendering: cannot fill question-{qid}, a {kind}")
 

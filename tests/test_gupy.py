@@ -1,5 +1,6 @@
 """The Gupy adapter on tests/pages/gupy: the register step's screens, an Acme posting's."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -9,7 +10,7 @@ from atsfill.adapters.gupy import Gupy
 from atsfill.core import browser, conditions, matching
 from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.browser import BrowserError
-from atsfill.core.results import FieldType, Is
+from atsfill.core.results import Field, FieldType, Is
 
 PAGES = Path(__file__).parent / "pages/gupy"
 JOB = "https://acme.gupy.io/jobs/12345?jobBoardSource=gupy_public_page"
@@ -184,6 +185,28 @@ def test_shown_fields_tell_questions_sharing_a_title_apart(page):
     adapter._given = {"question-2"}
     page.set_content('<textarea name="Comment"></textarea>')
     assert adapter.shown_fields(page) == ["question-2"]
+
+
+def test_questions_sharing_a_title_each_get_their_own_control(page):
+    adapter = Gupy()
+    field = Field("question-1", "Comment", FieldType.TEXT, False)
+    adapter._questions = {
+        "question-1": {"questionId": 1, "title": "Comment"},
+        "question-2": {"questionId": 2, "title": "Comment"},
+    }
+    adapter._fields = {"question-1": field, "question-2": replace(field, id="question-2")}
+    adapter._given = set(adapter._questions)
+    page.set_content('<textarea name="Comment"></textarea><textarea name="Comment"></textarea>')
+    for field_id, value in (("question-1", "first"), ("question-2", "second")):
+        gupy._answer(
+            page,
+            adapter._fields[field_id],
+            adapter._questions[field_id],
+            value,
+            adapter._nth(field_id),
+        )
+    values = page.evaluate(gupy._READ_QUESTIONS, [[1, "Comment", 0], [2, "Comment", 1]])
+    assert values == {"question-1": "first", "question-2": "second"}
 
 
 def test_a_saving_the_page_refuses_is_not_taken(opened, page, monkeypatch):
