@@ -12,7 +12,7 @@ At `basic`, the default, one `run` event:
 | `command` | `read`, `fill`, `send` or `profile` |
 | `verdict` | `pass`, `fail`, `excluded` or `unsupported` |
 | `status`, `reason` | `refused`, `mismatch`: the reason's code only, never its detail |
-| `refused` | for `invalid_answers`, each `field id: rule`, as `q_12: not_an_option`: the id the form gives the field, never the answer |
+| `refused` | for `invalid_answers` and `behind_consent`, each `field id: rule`, as `q_12: not_an_option`: the id the form gives the field, never the answer |
 | `version` | the atsfill version |
 | `posting` | a hash of the posting, see below; none after `profile`, which has no posting |
 | `source` | `user` for an installed release, `dev` for a checkout of the repository |

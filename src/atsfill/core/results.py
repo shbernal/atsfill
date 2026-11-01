@@ -76,6 +76,7 @@ class Field:
     option_sets: list[OptionSet] | None = None  # a dependent list's; `options` where none holds
     min_length: int | None = None  # a text the system refuses shorter
     knockouts: list[str] | None = None  # the options whose choice ends the application (ADR 0005)
+    notice: str | None = None  # the text a consent stands under: what a Yes accepts (ADR 0005)
 
 
 @dataclass(frozen=True)

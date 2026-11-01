@@ -5,8 +5,8 @@ observes.
 Applying needs an account, one per tenant: the account scope. The form is a wizard of pages,
 each saved to a draft application as it is left; only the current page is in the DOM. The
 read walks the pages that save with what they hold, the posting's questionnaires and apply
-flow standing for the pages it does not reach; the read-back is each page's values, read
-before it is saved.
+flow standing for the pages it does not reach; a page behind a consent's tick only a fill
+reaches, on the user's answer; the read-back is each page's values, read before it is saved.
 """
 
 import re
@@ -193,7 +193,7 @@ def _profile_hosts(request: Request, scope: str | None) -> list[str]:
 
 class Workday:
     name = "workday"
-    lists_every_field = "the fill stops on a field the read did not list, page by page"
+    behind_consent = "the pages after a consent's tick, which the draft does not keep"
     per_employer = True
     asks: set[str] = set()
     known_gaps = {
@@ -216,6 +216,8 @@ class Workday:
         self._listed: set[str] = set()  # the ids the read listed, unfillable ones too
         self._walked: set[str] = set()  # the pages the read reached
         self._walled = False  # no read gets past the page this one stopped on
+        self._behind = False  # the fill stopped on a page behind that one, for `revealed`
+        self._phone_codes = ""
         self._values: dict[str, Answer] = {}
         self._apply = ""
 
@@ -292,15 +294,16 @@ class Workday:
         page.goto(self._apply)
         _wait_for_page(page)
         seen: dict[str, list[Field]] = {}
-        self._walked, self._walled = set(), False
+        self._walked, self._walled, self._behind = set(), False, False
+        self._phone_codes = f"{calypso}/jobapplication/{found.tenant}{PHONE_CODES}"
         for _ in range(MAX_PAGES):
             step = _step(page)
             if step == REVIEW:  # repeats the answers, an upload without its input
                 break
             self._walked.add(step)
             if not _questions_page(step):
-                phone_codes = f"{calypso}/jobapplication/{found.tenant}{PHONE_CODES}"
-                seen[step] = _read(page, phone_codes, {f.id for f in from_api.get(step, [])})
+                listed = {f.id for f in from_api.get(step, [])}
+                seen[step] = _read(page, self._phone_codes, listed)
             try:
                 _save_and_continue(page)
             except NotTaken:
@@ -316,10 +319,13 @@ class Workday:
         return fields
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        """Fills each page of the wizard from the first and saves it, up to Review."""
-        page.goto(self._apply)
-        _wait_for_page(page)
-        self._values = {}
+        """Fills each page of the wizard from the first and saves it, up to Review, or up to a
+        page behind the consent: the next call goes on from there with what `revealed` listed."""
+        if not self._behind:
+            page.goto(self._apply)
+            _wait_for_page(page)
+            self._values = {}
+        self._behind = False
         pending: set[PageRequest] = set()
         page.on("request", lambda r: pending.add(r) if DEFINITION in r.url else None)
         for done in ("requestfinished", "requestfailed"):
@@ -343,6 +349,8 @@ class Workday:
                         _until_rendered(page, pending)
                 page.wait_for_timeout(SETTLE_MS)
             self._unread(page)
+            if self._behind:
+                return
             self._values |= {r["id"]: r["value"] for r in _filled(page, answers)}
             if self._values.get(PHONE_NUMBER) and (code := _phone_code(page)):
                 self._values[PHONE_NUMBER] = f"+{code} {self._values[PHONE_NUMBER]}"
@@ -351,21 +359,31 @@ class Workday:
 
     def _unread(self, page: Page) -> None:
         """Stops on fields the read did not list, optional ones too. A page the read did not
-        reach is read once the pages before it are saved, unless no read can get there. On one
-        it read, an answer opened the field (a country's address, a referral's name): the page
-        stops unsaved, so no read would list it."""
+        reach is read once the pages before it are saved; where no read can get there, `revealed`
+        lists it. On one it read, an answer opened the field (a country's address, a referral's
+        name): the page stops unsaved, so no read would list it."""
         unread = _not_listed(_page_fields(page), self._listed)
         if not unread:
             return
         step, labels = _step(page), ", ".join(r["label"] for r in unread)
         if step not in self._walked and self._walled:
-            raise Unsupported(f"unhandled_rendering: {step} shows {labels}, which no read reaches")
-        if step not in self._walked:
+            self._behind = True
+        elif step not in self._walked:
             raise NotTaken(f"{step} shows fields the read did not: {labels}; read again")
-        if step == MY_INFORMATION and any(r["id"].startswith(ADDRESS) for r in unread):
+        elif step == MY_INFORMATION and any(r["id"].startswith(ADDRESS) for r in unread):
             detail = f"the country answered shows fields the read did not: {labels}"
             raise Unsupported(known_gap(self, "other_country", detail))
-        raise Unsupported(f"unhandled_rendering: an answer showed {labels}, not listed")
+        else:
+            raise Unsupported(f"unhandled_rendering: an answer showed {labels}, not listed")
+
+    def revealed(self, page: Page) -> list[Field]:
+        """The fields of the page behind the consent the fill stopped on, none once it ended."""
+        if not self._behind:
+            return []
+        fields = _read(page, self._phone_codes, self._listed)
+        self._fields |= {f.id: f for f in fields if not f.unfillable}
+        self._listed |= {f.id for f in fields}
+        return fields
 
     def read_back(self, page: Page) -> dict[str, Answer]:
         """Each page's values, read before it was saved; one file as its name."""
@@ -607,6 +625,7 @@ def _field(raw: dict[str, Any]) -> Field | None:
     return Field(
         raw["id"], raw["label"], kind, raw["required"], options,
         prefilled=None if site else value, default=value if site else None,
+        notice=raw["notice"],
     )  # fmt: skip
 
 
@@ -978,7 +997,8 @@ def _errors(page: Page) -> str:
     return re.sub(r"\s+", " ", " ".join(page.locator(ERRORS).all_inner_texts())).strip()
 
 
-# Each field the page shows: its id, label, whether required (`*`), rendering and value.
+# Each field the page shows: its id, label, whether required (`*`), rendering, value, and the
+# text a consent's box stands under.
 _FIELDS = """() => {
   const text = e => (e?.innerText ?? "").replace(/\\s+/g, " ").trim();
   const labelOf = (f, e) => text(f.querySelector(`label[for="${CSS.escape(e.id)}"]`)
@@ -1029,8 +1049,11 @@ _FIELDS = """() => {
         kind = "text";
         value = typed.value;
       }
+      const notice = kind === "box" && f.closest("[role=group]")
+        ?.querySelector("[data-automation-id=instructionalText]");
       return {id: f.dataset.fkitId, label: label.replace(/\\*$/, "").trim(),
-              required: label.endsWith("*"), kind, value, options};
+              required: label.endsWith("*"), kind, value, options,
+              notice: text(notice || null) || null};
     });
 }"""
 

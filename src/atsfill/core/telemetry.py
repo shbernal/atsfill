@@ -46,6 +46,7 @@ REPORT = (
 # `unknown_field` is not one: ids come from `read`, so it can be a field read missed.
 EXCLUDED = (
     "invalid_answers",
+    "behind_consent",
     "answer_not_taken",
     "not_qualified",
     "already_sent",

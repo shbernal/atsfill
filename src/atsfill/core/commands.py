@@ -34,6 +34,7 @@ from atsfill.core.adapter import (
     ProfileIncomplete,
     ReadsByRequest,
     Refused,
+    RevealsBehindConsent,
     RevealsFields,
     SendsToOpen,
     SignedOut,
@@ -354,9 +355,14 @@ def _shown_as_listed(
         result.reason = f"mismatch: {', '.join(wrong)} shows though its condition is unmet"
 
 
-def _refuse(result: Result, problems: list[matching.Problem], *more: str) -> None:
+def _refuse(
+    result: Result,
+    problems: list[matching.Problem],
+    *more: str,
+    code: str = "invalid_answers",
+) -> None:
     result.status = Status.REFUSED
-    result.reason = "invalid_answers: " + "; ".join([*problems, *more])
+    result.reason = f"{code}: " + "; ".join([*problems, *more])
     result.refused = [f"{p.field_id}: {p.rule}" for p in problems]
 
 
@@ -386,9 +392,14 @@ def _revealed(
                 result,
                 problems,
                 *[f"{f.id} takes {f.options}" for f in new if f.options and f.id not in mine],
+                code=(
+                    "behind_consent"
+                    if isinstance(adapter, RevealsBehindConsent)
+                    else "invalid_answers"
+                ),
             )
             return mine
-        left = [f for f in new if f.id not in mine]
+        left = [f for f in new if f.id not in mine and f.prefilled is None]
         result.warnings += [f"an answer showed {f.id} ({f.label}), left empty" for f in left]
         adapter.fill(page, matching.to_fill(new, {f.id: mine[f.id] for f in new if f.id in mine}))
     _no_field(result, answers)
