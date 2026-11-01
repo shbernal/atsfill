@@ -290,7 +290,10 @@ def test_the_pages_a_read_did_not_reach_are_read_once_those_before_them_are_save
     adapter, fields = read_again(page)
     by_id = {f.id: f for f in fields}
     assert by_id["personalInfoPerson--gender"].options == ["Female", "Male", "Not declared"]
-    assert by_id["termsAndConditions--acceptTermsAndAgreements"].required
+    consent = by_id["termsAndConditions--acceptTermsAndAgreements"]
+    assert consent.required
+    assert consent.notice == "Acme collects what you provide to review your application."
+    assert by_id["personalInfoPerson--gender"].notice is None
     answers = ANSWERS | {
         linked_in: "https://example.com/ada",
         "resumeAttachments--attachments": resume,
@@ -351,7 +354,7 @@ def test_a_field_that_stays_unlisted_after_the_read_is_not_read_again(opened, pa
         adapter.fill(page, answers)
 
 
-def test_a_page_behind_the_consent_no_draft_keeps_is_never_read(opened, page, resume):
+def test_a_page_behind_the_consent_no_draft_keeps_is_listed_by_the_fill(opened, page, resume):
     adapter, _ = opened
     page.evaluate("sessionStorage.setItem('self-identify', '1')")
     answers = ANSWERS | {"resumeAttachments--attachments": resume}
@@ -369,10 +372,38 @@ def test_a_page_behind_the_consent_no_draft_keeps_is_never_read(opened, page, re
         adapter.fill(page, answers)
     adapter, fields = read_again(page)  # the gender saved, the tick gone: it stops there again
     assert not any(f.id.startswith("selfIdentified") for f in fields)
-    with pytest.raises(
-        Unsupported, match="^unhandled_rendering: Self Identify shows Language, which no read"
-    ):
-        adapter.fill(page, answers)
+    adapter.fill(page, answers)
+    assert (
+        page.locator("[data-automation-id=progressBarActiveStep]")
+        .inner_text()
+        .endswith("Self Identify")
+    )
+    new = {f.id: f for f in adapter.revealed(page)}
+    assert list(new) == [
+        "selfIdentifiedDisabilityData--disabilityForm",
+        "selfIdentifiedDisabilityData--name",
+        "selfIdentifiedDisabilityData--employeeId",
+        "selfIdentifiedDisabilityData--dateSignedOn",
+        "selfIdentifiedDisabilityData--disabilityStatus",
+    ]
+    assert new["selfIdentifiedDisabilityData--disabilityForm"].prefilled == "English"
+    assert new["selfIdentifiedDisabilityData--dateSignedOn"].type is FieldType.DATE
+    assert new["selfIdentifiedDisabilityData--disabilityStatus"].required
+    adapter.fill(
+        page,
+        {
+            "selfIdentifiedDisabilityData--name": "Ada",
+            "selfIdentifiedDisabilityData--dateSignedOn": "2026-11-02",
+            "selfIdentifiedDisabilityData--disabilityStatus": ["I do not want to answer"],
+        },
+    )
+    assert (
+        page.locator("[data-automation-id=progressBarActiveStep]").inner_text().endswith("Review")
+    )
+    assert adapter.revealed(page) == []
+    read_back = adapter.read_back(page)
+    assert read_back["selfIdentifiedDisabilityData--name"] == "Ada"
+    assert read_back["personalInfoPerson--gender"] == "Not declared"
 
 
 def test_a_follow_up_of_a_follow_up_holds_on_its_parent_s_answers():

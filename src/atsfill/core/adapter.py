@@ -318,6 +318,15 @@ class RevealsFields(Adapter, Protocol):
 
 
 @runtime_checkable
+class RevealsBehindConsent(RevealsFields, Protocol):
+    """A `RevealsFields` whose fields stand on pages behind a consent's tick, which no draft
+    keeps: a read gives no answer, so it stops at the tick, and only a fill gets past it. A
+    refusal for them is `behind_consent`, counted apart from other answers (ADR 0005)."""
+
+    behind_consent: str  # where they stand
+
+
+@runtime_checkable
 class ListsShownFields(Adapter, Protocol):
     """An adapter whose form can show fields after an answer: once filled, it says which the
     page shows, so that one `browser_read` did not list stops the fill (ADR 0005)."""

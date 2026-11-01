@@ -34,6 +34,8 @@ An alternative is a field that takes the same thing as others in a different sha
 
 A system can keep a follow-up's condition to itself, so that no read can list the field and only a saved answer shows it. Its adapter implements `RevealsFields`, in place of `ListsShownFields`: once filled, every field the page shows. The core treats a new field as read had listed it, and repeats until the answers reveal nothing more: it fills the field's answer, kept back until then, or refuses (`invalid_answers`) on a required field without one, naming its id and options since `fill` prints no fields. An optional one left empty is a warning. So answers to such a system are checked in two rounds: `unknown_field` comes only after the fill, and `read` cannot show these follow-ups; the first fill does.
 
+A system can also keep a page behind a required consent's tick that no draft keeps (`RevealsBehindConsent`). `read` takes no answers, and a tick is the user's to give, so it never ticks: it stops there, and only a fill, on the user's Yes, gets past it. The page's fields are revealed the same way; a required one without an answer refuses `behind_consent` in place of `invalid_answers`, so that the telemetry counts these postings. A field's `notice` is the text a consent stands under: what a Yes accepts, for each posting, since no two employers word it alike. No config accepts a consent in the user's name. `read` taking the consents' answers would spare the refused round, a change the count decides.
+
 The read-back is compared to the answers by field type:
 
 | Type | Matches when |

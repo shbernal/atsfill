@@ -296,6 +296,19 @@ def test_a_revealed_field_without_an_answer_refuses_naming_what_it_asks(
     )
 
 
+def test_a_revealed_field_behind_a_consent_refuses_on_its_own(
+    revealing, config, url, answers, data
+):
+    revealing.behind_consent = "the pages after a consent"
+    revealing.reveals = {"level": [VISA]}
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.REFUSED,
+        "behind_consent: no answer for required visa (Visa status?); "
+        "visa takes ['Citizen', 'None']",
+    )
+
+
 def test_a_revealed_field_takes_its_answer(revealing, config, url, answers, data):
     revealing.reveals = {"level": [VISA]}
     result = core.fill(url, answers | {"visa": "Citizen"}, data_dir=data)

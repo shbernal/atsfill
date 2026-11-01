@@ -68,15 +68,24 @@
     "Voluntary Disclosures": [
       {id: "personalInfoPerson--gender", label: "Gender*", kind: "list", portal: true,
        options: ["Female", "Male", "Not declared"]},
-      {id: "termsAndConditions--acceptTermsAndAgreements", label: "I Agree*", kind: "box"},
+      {id: "termsAndConditions--acceptTermsAndAgreements", label: "I Agree*", kind: "box",
+       notice: "Acme collects what you provide to review your application."},
     ],
     "Review": [],
   };
   if (sessionStorage.getItem("self-identify")) {  // a page after the disclosures, on some postings
     const review = PAGES.Review;
     delete PAGES.Review;
-    PAGES["Self Identify"] = [{id: "selfIdentifiedDisabilityData--disabilityForm", label: "Language*",
-                               kind: "list", value: "English", options: ["English"]}];
+    PAGES["Self Identify"] = [
+      {id: "selfIdentifiedDisabilityData--disabilityForm", label: "Language*", kind: "list",
+       value: "English", options: ["English", "Spanish"]},
+      {id: "selfIdentifiedDisabilityData--name", label: "Name*", kind: "text"},
+      {id: "selfIdentifiedDisabilityData--employeeId", label: "Employee ID (if applicable)", kind: "text"},
+      {id: "selfIdentifiedDisabilityData--dateSignedOn", label: "Date*", kind: "date"},
+      {id: "selfIdentifiedDisabilityData--disabilityStatus", label: "Please check one of the boxes below:*",
+       kind: "boxes", options: ["Yes, I have a disability", "No, I do not have a disability",
+                                "I do not want to answer"]},
+    ];
     PAGES.Review = review;
   }
   const STEPS = Object.keys(PAGES);
@@ -236,7 +245,11 @@
         input.onchange = () => { for (const file of input.files) setTimeout(() => item(file.name), 300); };
         box.append(input, items);
       }
-      page.append(box);
+      if (f.notice) {  // a consent: the box in its section, under the notice
+        const section = el(`<div role="group" aria-labelledby="Terms-and-Conditions-section"><div data-automation-id="instructionalText"><p>${f.notice}</p></div></div>`);
+        section.append(box);
+        page.append(section);
+      } else page.append(box);
     }
   }
 
