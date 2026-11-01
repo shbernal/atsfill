@@ -12,12 +12,13 @@ At `basic`, the default, one `run` event:
 | `command` | `read`, `fill`, `send` or `profile` |
 | `verdict` | `pass`, `fail`, `excluded` or `unsupported` |
 | `status`, `reason` | `refused`, `mismatch`: the reason's code only, never its detail |
+| `refused` | for `invalid_answers`, each `field id: rule`, as `q_12: not_an_option`: the id the form gives the field, never the answer |
 | `version` | the atsfill version |
 | `posting` | a hash of the posting, see below; none after `profile`, which has no posting |
 | `source` | `user` for an installed release, `dev` for a checkout of the repository |
 | `commit` | for `dev` only, the checkout's commit when it has no uncommitted changes |
 
-Nothing the user typed is sent: no answers, no field values, no URL, no account, no email address, no file. Each event has its own random id and there is no install id, so nothing ties one machine's events together. Events go to PostHog's EU Cloud (Frankfurt), which drops IP addresses; atsfill turns GeoIP off too.
+Nothing the user typed is sent: no answers, no field values, no id of a field the form does not list, no URL, no account, no email address, no file. Each event has its own random id and there is no install id, so nothing ties one machine's events together. Events go to PostHog's EU Cloud (Frankfurt), which drops IP addresses; atsfill turns GeoIP off too.
 
 ## A failed run's report
 

@@ -20,7 +20,7 @@ PostHog, checked 2026-10-27:
 
 **Telemetry.** atsfill sends anonymous events to PostHog EU Cloud, with no per-install id. The config key `telemetry` is `off`, `basic` (the default) or `detailed`; `DO_NOT_TRACK=1` forces `off`. Nothing is sent from the test suite or CI, enforced in code, not by convention. The core bounds the flush itself (`flush` with a timeout, low `timeout` and `max_retries`), so telemetry never holds a command past its time budget.
 
-**`basic`.** One event per `read`, `fill` and `send`: the hiring system, the command, the verdict, the status and reason code, the atsfill version, the posting hash, `source` (`dev` or `user`), and `commit` when `source = dev`, since a checkout reports the last release's version. Nothing the user typed.
+**`basic`.** One event per `read`, `fill` and `send`: the hiring system, the command, the verdict, the status and reason code, for `invalid_answers` each listed field's id and the rule its answer broke, the atsfill version, the posting hash, `source` (`dev` or `user`), and `commit` when `source = dev`, since a checkout reports the last release's version. Nothing the user typed.
 
 - **Posting hash**: a plain hash of the posting's key, the one the double-send guard uses (the URL where no adapter gives one), without its fragment and `utm_` parameters, scheme and host lowercased. A key keeps the rest of its query, which tells postings apart on some systems. Pseudonymous, not anonymous: the maintainer can match a hash to a public posting by hashing a list of postings. The telemetry docs page says so in those words.
 - An `unsupported` posting carries the registry source its URL matches, else `unknown`.

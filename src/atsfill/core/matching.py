@@ -3,11 +3,25 @@
 import re
 import unicodedata
 from pathlib import Path, PurePath
+from typing import Self
 from urllib.parse import urlsplit
 
 from atsfill.core.conditions import Form, describe
 from atsfill.core.countries import ALPHA_3
 from atsfill.core.results import Answer, Check, Field, FieldType
+
+
+class Problem(str):
+    """What refuses an answer, in words that can quote it. `field_id` and `rule` never do: the
+    id is a listed field's and the rule one of this module's, so telemetry can carry them."""
+
+    field_id: str
+    rule: str
+
+    def __new__(cls, field_id: str, rule: str, text: str) -> Self:
+        problem = super().__new__(cls, text)
+        problem.field_id, problem.rule = field_id, rule
+        return problem
 
 
 def _norm(value: str) -> str:
@@ -97,15 +111,18 @@ def check(
     ]
 
 
-def _answer_problem(field: Field, answer: object, form: Form) -> str | None:
+def _answer_problem(field: Field, answer: object, form: Form) -> tuple[str, str] | None:
+    """The rule an answer breaks, and how."""
     if field.type is FieldType.MULTI_CHOICE:
         if not (isinstance(answer, list) and all(isinstance(v, str) for v in answer)):
-            return "a multi_choice answer is a list of strings"
+            return "shape", "a multi_choice answer is a list of strings"
         if not answer:
-            return "required, so an empty list does not answer it" if form.asked(field) else None
+            if form.asked(field):
+                return "missing", "required, so an empty list does not answer it"
+            return None
         values = answer
     elif not isinstance(answer, str):
-        return f"a {field.type} answer is a string"
+        return "shape", f"a {field.type} answer is a string"
     else:
         values = [answer]
     if field.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE) and not _in_options(
@@ -113,26 +130,26 @@ def _answer_problem(field: Field, answer: object, form: Form) -> str | None:
     ):
         held = form.option_set(field)
         under = f", the options when {describe(held.when, form.by_id)}" if held else ""
-        return f"{answer!r} is not one of {form.options(field)}{under}"
+        return "not_an_option", f"{answer!r} is not one of {form.options(field)}{under}"
     length = len(_norm(values[0]))
     if (
         field.type in (FieldType.TEXT, FieldType.URL)
         and field.max_length
         and length > field.max_length
     ):
-        return f"{length} characters, over the limit of {field.max_length}"
+        return "too_long", f"{length} characters, over the limit of {field.max_length}"
     if field.type is FieldType.TEXT and field.min_length and length < field.min_length:
-        return f"{length} characters, under the minimum of {field.min_length}"
+        return "too_short", f"{length} characters, under the minimum of {field.min_length}"
     if field.type is FieldType.URL and not _absolute_url(values[0]):
-        return "a url answer is an absolute http(s) URL"
+        return "shape", "a url answer is an absolute http(s) URL"
     if field.type is FieldType.DATE and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", values[0]):
-        return "a date answer is YYYY-MM-DD"
+        return "shape", "a date answer is YYYY-MM-DD"
     if field.type is FieldType.FILE:
         path = Path(values[0])
         if not path.is_absolute():
-            return "a file answer is an absolute path"
+            return "shape", "a file answer is an absolute path"
         if not path.is_file():
-            return f"no file at {path}"
+            return "no_file", f"no file at {path}"
     return None
 
 
@@ -166,39 +183,37 @@ def as_listed(fields: list[Field], answers: dict[str, Answer]) -> dict[str, Answ
     return out
 
 
-def problems(fields: list[Field], answers: dict[str, Answer]) -> list[str]:
+def problems(fields: list[Field], answers: dict[str, Answer]) -> list[Problem]:
     """What refuses answers to the form's fields before typing: missing required answers, more
     than one alternative answered, answers to follow-ups the answers keep hidden, bad values."""
     by_id = {f.id: f for f in fields}
     form = Form(fields, known(fields, answers))
     out = [
-        f"no answer for required {f.id} ({f.label})"
+        Problem(f.id, "missing", f"no answer for required {f.id} ({f.label})")
         for f in fields
         if form.required(f) and f.prefilled is None and not f.unfillable and f.id not in answers
     ]
     for key, members in form.groups.items():
         given = [m.id for m in members if m.id in answers]
         if len(given) > 1:
-            out.append(f"{key}: one of {', '.join(given)}, not both")
+            out.append(Problem(key, "both", f"{key}: one of {', '.join(given)}, not both"))
         elif form.group_required(key) and not given and all(m.prefilled is None for m in members):
             labels = " or ".join(dict.fromkeys(m.label for m in members))
-            out.append(f"no answer for required {key} ({labels})")
+            out.append(Problem(key, "missing", f"no answer for required {key} ({labels})"))
     out += [
-        f"{i}: not asked, it shows when {describe(f.shown_when, by_id)}"
+        Problem(i, "not_asked", f"{i}: not asked, it shows when {describe(f.shown_when, by_id)}")
         for i in answers
         if (f := by_id.get(i)) and f.shown_when and not form.shown(f)
     ]
     out += [
-        f"{i}: cannot be filled ({f.unfillable})"
+        Problem(i, "unfillable", f"{i}: cannot be filled ({f.unfillable})")
         for i in answers
         if (f := by_id.get(i)) and f.unfillable
     ]
     out += [
-        f"{i}: {problem}"
+        Problem(i, broken[0], f"{i}: {broken[1]}")
         for i, a in answers.items()
-        if i in by_id
-        and not by_id[i].unfillable
-        and (problem := _answer_problem(by_id[i], a, form))
+        if i in by_id and not by_id[i].unfillable and (broken := _answer_problem(by_id[i], a, form))
     ]
     return out
 

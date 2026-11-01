@@ -3,8 +3,8 @@ import json
 import pytest
 
 from atsfill import core
-from atsfill.core import accounts, commands, paths, snapshot, telemetry
-from atsfill.core.results import Result, Status
+from atsfill.core import accounts, commands, matching, paths, snapshot, telemetry
+from atsfill.core.results import Field, FieldType, Result, Status
 from tests.fake import Fake
 
 URL = "https://Jobs.Example.com/acme/1234?utm_source=x#apply"
@@ -91,6 +91,17 @@ def test_the_event_holds_codes_and_a_hash_never_the_url_or_answers(monkeypatch):
         "source": "dev",
         "commit": "abc1234",
     }
+
+
+def test_a_refusal_names_its_fields_and_rules_never_the_answer(monkeypatch):
+    monkeypatch.setattr(telemetry, "origin", lambda: ("user", None))
+    field = Field("level", "Level", FieldType.CHOICE, True, ["Basic"])
+    problems = matching.problems([field], {"level": "my secret"})
+    result = Result(Status.REFUSED, URL, "fake", "invalid_answers: " + "; ".join(problems))
+    result.refused = [f"{p.field_id}: {p.rule}" for p in problems]
+    event = telemetry.event("fill", result)
+    assert event["refused"] == ["level: not_an_option"]
+    assert "my secret" not in json.dumps(event)
 
 
 def test_no_adapter_names_the_source_its_host_is_on(monkeypatch):
