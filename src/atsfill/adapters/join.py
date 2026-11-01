@@ -376,8 +376,9 @@ class Join:
         return {k: v for k, v in values.items() if v}
 
     def save(self, page: Page) -> None:
-        """Save changes posts `UpdateTalentPersonalInformation`; the button stays disabled while
-        a required field is empty or nothing changed."""
+        """Save changes posts `UpdateTalentPersonalInformation`, then the page returns to the
+        account page: a navigation started before that would be aborted by it. The button stays
+        disabled while a required field is empty or nothing changed."""
         button = page.locator("form button[type=submit]").last
         try:  # it is enabled a moment after the last change
             page.wait_for_function(
@@ -397,6 +398,7 @@ class Join:
             raise RuntimeError(f"UpdateTalentPersonalInformation answered {response.status}")
         if errors := response.json().get("errors"):
             raise Refused(f"step_refused: {GENERAL}: {errors[0].get('message')}")
+        page.wait_for_url(lambda url: url != PROFILE, timeout=SAVE_TIMEOUT_MS)
 
     def _file(self, page: Page, field_id: str, answer: Answer | None) -> None:
         if not isinstance(answer, str):
