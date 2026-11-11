@@ -46,9 +46,9 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
     i, n = map(int, shard.split("/"))
     units: dict[str, list[pytest.Item]] = {}
     for item in items:
-        defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[unresolved-attribute]
+        defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[missing-attribute]
         shared = any(d[-1].scope == "module" for d in defs)
-        units.setdefault(item.module.__name__ if shared else item.nodeid, []).append(item)  # ty: ignore[unresolved-attribute]
+        units.setdefault(item.module.__name__ if shared else item.nodeid, []).append(item)  # ty: ignore[missing-attribute]
     order = sorted(units, key=lambda key: ("::" in key, key))
     kept = {id(t) for k, key in enumerate(order) if k % n == i - 1 for t in units[key]}
     config.hook.pytest_deselected(items=[t for t in items if id(t) not in kept])

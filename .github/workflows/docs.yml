@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # the run history draws dev runs on a commit of main only
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: astral-sh/setup-uv@v10.3.3
       - uses: actions/configure-pages@v6
       - run: uv run --only-group docs python scripts/run_history.py
         env:
