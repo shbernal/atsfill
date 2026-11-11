@@ -805,8 +805,7 @@ def login(
     `email` is remembered for the account; `password` is used for this sign-in only. `create`
     creates the account with a password atsfill generates and stores first (a side effect),
     giving the sign-up the user's `details`; with a password already stored, the account may
-    exist, so it signs in with that password and keeps the account's email, if it has one,
-    instead, the
+    exist, so it signs in with that password and keeps the account's email if it has one, the
     `details` finishing a sign-up the account was left in. An account without a password signs
     in through the user's OTP command in place of a password source, and is created the same
     way."""
