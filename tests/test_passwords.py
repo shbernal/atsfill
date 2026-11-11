@@ -206,6 +206,16 @@ def test_create_signs_in_with_a_password_already_stored(creates, config, data, c
     assert core.accounts.email(data / "users/default", "fakeaccount", None) == EMAIL
 
 
+def test_create_with_a_password_stored_and_no_email_signs_in_with_the_given_one(
+    creates, config, data, capsys
+):
+    passwords.store(data / "users/default", "fakeaccount", None, PASSWORD)
+    code, report = login(data, capsys, "--create", "--email", EMAIL)
+    assert (code, report["status"], report["password"]) == (0, "signed_in", "kept")
+    assert creates.sign_ins == 1 and creates.created is None
+    assert core.accounts.email(data / "users/default", "fakeaccount", None) == EMAIL
+
+
 def test_create_signs_up_again_after_a_sign_up_blocked_before_the_account_existed(
     creates, config, data, capsys
 ):
