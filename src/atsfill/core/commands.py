@@ -802,10 +802,10 @@ def login(
     """Signs in with the account's password source, headless, and stores the session; without
     a source, or with `window`, opens a window on the system's login page for a person.
 
-    `email` is remembered for the account; `password` is used for this sign-in only. `create`
-    creates the account with a password atsfill generates and stores first (a side effect),
-    giving the sign-up the user's `details`; with a password already stored, the account may
-    exist, so it signs in with that password and keeps the account's email if it has one, the
+    `email` is remembered for the account, replacing a stored one; `password` is used for this
+    sign-in only. `create` creates the account with a password atsfill generates and stores
+    first (a side effect), giving the sign-up the user's `details`; with a password already
+    stored, the account may exist, so it signs in with that password and the given email, the
     `details` finishing a sign-up the account was left in. An account without a password signs
     in through the user's OTP command in place of a password source, and is created the same
     way."""
@@ -827,7 +827,7 @@ def login(
         report.status, report.reason = Status.BLOCKED, f"password_source: {e}"
         return report
     kept = stored is not None
-    if email and not (kept and accounts.email(mine, adapter, scope)):
+    if email:
         accounts.remember(mine, adapter, scope, email)
     if create and not kept:
         assert email
