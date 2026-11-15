@@ -1,6 +1,6 @@
 # Jobstreet
 
-SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`, `id`) and Hong Kong and Thailand (`hk.jobsdb.com`, `th.jobsdb.com`), observed on live postings on 2026-10-26, 2026-10-28 and 2026-10-29, headless Camoufox. The fixture pages are [tests/pages/jobstreet/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/job.html), a posting and its Quick apply wizard, and [tests/pages/jobstreet/login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/login.html), SEEK's sign-in, served by `tests/test_jobstreet.py`.
+SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`, `id`) and Hong Kong and Thailand (`hk.jobsdb.com`, `th.jobsdb.com`), observed on live postings on 2026-10-26, 2026-10-28, 2026-10-29 and 2026-11-15, headless Camoufox. The fixture pages are [tests/pages/jobstreet/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/job.html), a posting and its Quick apply wizard, and [tests/pages/jobstreet/login.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/jobstreet/login.html), SEEK's sign-in, served by `tests/test_jobstreet.py`.
 
 ## Where the form is
 
@@ -11,12 +11,12 @@ SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`
 
 ## Account
 
-- One SEEK account per email for every site, with no password: each sign-in and sign-up is an emailed OTP (ADR 0015). Each site keeps its own session (`appSession`, an Auth0 client per site), so a session on one does not sign in another: the account scope is the site (`ph.jobstreet.com`), and `login jobstreet --url <posting>` signs in on the posting's site.
+- One SEEK account per email for every site, with no password: each sign-in and sign-up is an emailed OTP (ADR 0015). Each site is its own Auth0 client, signed in apart (the client's tokens in the site's local storage, its `auth0.<client>.is.authenticated` cookie): the account scope is the site (`ph.jobstreet.com`), and `login jobstreet --url <posting>` signs in on the posting's site.
 - Signed out, `/job/<id>/apply` goes to `<site>/oauth/login` and SEEK's sign-in on `login.seek.com` (Auth0), which can take up to ~50 seconds to show its form: an Email address (`#emailAddress`), a Cloudflare Turnstile widget and "Email me a sign in code" (Google, Facebook and Apple sign-ins aside). Clicked before the widget passes, the page says "Please complete the recaptcha." and sends nothing; it passed on its own headless within seconds.
-- The OTP step is one input labelled "verification input": six digits from `usersupport@jobstreet.com`, subject "<code> is your code for Jobstreet", which sign in on their own once typed.
+- The OTP step is one input labelled "verification input": six digits from `usersupport@jobstreet.com`, subject "<code> is your code for Jobstreet", which sign in on their own once typed. The account then lands on `<site>/sign-in/onboarding`, five questions on the roles it wants, signed in already: atsfill leaves them unanswered.
 - An email without an account lands on `<site>/oauth/signin-confirmation`: "Register a new account?", the privacy box (`#privacy-chkbox`, required) and the marketing one (declined), then "Register new account" through `/sign-in/onboarding/provision` back to the site. A sign-in stops there, `refused: no_account`; `login --create` registers.
-- The signed-in check is the site's `/profile`, which redirects an account to `/profile/me` (307) and shows a visitor its page. Outside the browser Cloudflare can answer it 403 or with its challenge, which tells neither: `status` then reads a stored session `unknown`. The site can end a session its own way, which `/profile` does not see: the page's token refresh (`login.seek.com/oauth/token`) is answered 403 and Quick apply goes to SEEK's sign-in, seen on a session used for 90 minutes; atsfill signs in again by OTP (ADR 0015).
-- Firefox cannot gather the sign-in's storage (`storage_state` aborts on Cloudflare's frame): the session is stored as its cookies, which hold it.
+- The signed-in check is SEEK's silent sign-in: `login.seek.com/authorize?prompt=none` for the site's client, named by its `is.authenticated` cookie, answers the site's `/oauth/callback/` with a `code` while the session holds and `error=login_required` once it ended; a session without the cookie is signed out. The site's `/profile` shows an account and a visitor the same page. Cloudflare can answer 403 or its challenge, which tells neither: `status` then reads a stored session `unknown`. The site can end a session its own way, which `/profile` does not see: the page's token refresh (`login.seek.com/oauth/token`) is answered 403 and Quick apply goes to SEEK's sign-in, seen on a session used for 90 minutes; atsfill signs in again by OTP (ADR 0015).
+- The session is stored with the site's local storage; where Firefox cannot gather it (`storage_state` aborting on Cloudflare's frame), its cookies alone, from which the page signs in silently again.
 
 ## Reading and filling
 
@@ -27,7 +27,7 @@ The page loads `GetPersonalDetails` (the profile's name, phone with its calling 
 | `/apply` | `firstName`, `lastName` | `text` | inputs, the profile's values; required | 5 walked |
 | `/apply` | `currentLocation` | `typeahead` | `#currentLocation2`, suggestions while typing (`Makati City Metro Manila`); required | 5 walked |
 | `/apply` | `phone` | `phone` | a calling code select (`#countryCallingCode`, `Philippines (+63)`) and `#phoneNumber`; "recommended" | 5 walked |
-| `/apply` | `resume` | `file` | Upload (`#resume-fileFile`), then a radio named for the file; or "Don't include a resumé" | 5 walked |
+| `/apply` | `resume` | `file` | Upload (`#resume-fileFile`), then a radio named for the file, beside the profile's resumes of the same name; or "Don't include a resumé" | 5 walked |
 | `/apply` | `coverLetter` | `text` | "Write a cover letter" with its box, or "Don't include a cover letter"; `one_of` `coverLetter` | 5 walked |
 | `/apply` | `coverLetterFile` | `file` | Upload (`[data-testid=coverLetter-method-upload]`, a button over `#coverLetter-fileFile`), then a radio of the same test id named for the file; `one_of` `coverLetter` | 1 walked |
 | `/apply/role-requirements` | `question.<id>` | `choice` | `SingleChoiceQuestion`: a native select named `questionnaire.<id>`, or radios (`Ya`, `Tidak`) whose labels take the click | selects on 9 postings, radios on 1 |
@@ -35,7 +35,8 @@ The page loads `GetPersonalDetails` (the profile's name, phone with its calling 
 | `/apply/review` | `profileVisibility` | `choice` | Public, Standard, Limited, Hidden radios, while the profile has none | 2 walked |
 
 - The personal details open for editing with the profile's values, and the step does not continue until they are saved: Save writes them to the profile (`UpdatePersonalDetails`), changed or not. The read-back is what Save was given, or the profile's values when the details opened saved.
-- An uploaded resume is stored in the profile at once (`ApplyProcessUploadedResume`) and made its default (`SetDefaultResume`). An uploaded cover letter is not: the next Quick apply offers only the box and "Don't include".
+- An uploaded resume is stored in the profile at once (`ApplyProcessUploadedResume`) and made its default (`SetDefaultResume`). A profile keeps ten: past them the upload is answered `BAD_USER_INPUT` and the page shows nothing, the known gap `resume_limit`. An uploaded cover letter is not stored: the next Quick apply offers only the box and "Don't include".
+- An upload's radio shows a few seconds after the file is set: atsfill waits for a picked radio named for the file that was not there before, since the profile's resumes can share the name.
 - The cover letter is written or uploaded, two alternatives sharing the key `coverLetter` (ADR 0005): the answers pick one, and neither leaves it out where the page allows.
 - Every question was required; the page marks none.
 - The employer's step shows the questions the GraphQL read lists. Its controls are read once answered, so one an answer showed that `read` did not list stops the fill (`ListsShownFields`): no such question was seen.
@@ -48,6 +49,7 @@ The page loads `GetPersonalDetails` (the profile's name, phone with its calling 
 | Gap | What | Code | Postings |
 |---|---|---|---|
 | `profile_incomplete` | the SEEK profile has no career history, which the profile step requires and atsfill does not fill | `unsupported_flow` | 1 account, before its first role |
+| `resume_limit` | the SEEK profile holds the ten resumes it keeps, refuses another upload, and atsfill does not delete one | `unsupported_flow` | 1 account, after ten dry runs |
 
 ## Submitting
 

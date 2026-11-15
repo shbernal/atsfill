@@ -11,7 +11,7 @@ import re
 import time
 from contextlib import suppress
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import (
@@ -30,12 +30,16 @@ from atsfill.core.results import Answer, Field, FieldType, SideEffect
 HOST = re.compile(r"^(?:[a-z]{2})\.(?:jobstreet|jobsdb)\.com$")
 JOB = re.compile(r"^/(?:[a-z]{2}/)?job/(\d+)")
 SIGN_IN_HOST = "login.seek.com"
+AUTHENTICATED = re.compile(r"^auth0\.(\w+)\.is\.authenticated$")  # auth0-spa-js, per client
 APPLY = "[data-automation=job-detail-apply]"
 CONTINUE = "[data-testid=continue-button]"
 SUBMIT = "[data-testid=review-submit-application]"
 SAVE_DETAILS = "[data-automation=personal-details-save-button]"
 RESUME_FILE = "input[type=file][id^=resume]"
 LETTER_FILE = "input[type=file][id^=coverLetter]"
+RESUMES = "input[type=radio][name^=document-select]"
+LETTER_UPLOADED = "input[type=radio][data-testid=coverLetter-method-upload]"
+RESUMES_KEPT = 10  # a profile holding this many resumes answers another upload BAD_USER_INPUT
 CHALLENGE = "Just a moment..."  # Cloudflare's interstitial: it passes on its own, or on a reload
 CHALLENGE_TRIES = 2
 SIGN_IN_TIMEOUT_MS = 90_000  # SEEK's sign-in takes up to ~50 s to show its form
@@ -92,6 +96,14 @@ _QUESTIONS = """() => {
 }"""
 
 
+# The values of the radios a selector finds labelled with a file's name, the checked ones only
+# with `checked`.
+_NAMED = """([radios, name, checked]) => [...document.querySelectorAll(radios)]
+  .filter(e => (!checked || e.checked)
+    && document.querySelector(`label[for="${e.id}"]`)?.innerText.trim() === name)
+  .map(e => e.value)"""
+
+
 # The questions the employer's step shows, by control name.
 _ASKED = """() => [...document.querySelectorAll('[name^="questionnaire."]')].map(e => e.name)"""
 
@@ -100,7 +112,7 @@ class Jobstreet:
     name = "jobstreet"
     per_employer = True  # one SEEK account, signed in on each site apart: the scope is the site
     asks: set[str] = set()
-    known_gaps = {"profile_incomplete": Gap.FLOW}
+    known_gaps = {"profile_incomplete": Gap.FLOW, "resume_limit": Gap.FLOW}
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the SEEK account"),
         SideEffect("fill", "hiring_system", "the personal details are saved to the SEEK profile"),
@@ -129,14 +141,37 @@ class Jobstreet:
         return f"https://{scope}/oauth/login?returnUrl=%2F"
 
     def signed_in(self, request: Request, scope: str | None) -> bool | None:
-        """The site's `/profile` redirects an account to `/profile/me` and shows a visitor its
-        page. Cloudflare can answer 403 outside the browser, which tells neither."""
-        response = request.get(f"https://{scope}/profile", max_redirects=0)
-        if response.status == 403 or response.headers.get("cf-mitigated") == "challenge":
-            return None
-        return response.status in (302, 307) and response.headers.get("location", "").endswith(
-            "/profile/me"
+        """The site's Auth0 client marks a signed-in site with its `is.authenticated` cookie,
+        naming the client; SEEK's sign-in then answers that client's silent authorize with a
+        code while its session holds, `login_required` once it ended. Cloudflare can answer
+        403 outside the browser, which tells neither."""
+        client = next(
+            (
+                m[1]
+                for c in request.storage_state()["cookies"]
+                if c["domain"].lstrip(".") == scope and (m := AUTHENTICATED.match(c["name"]))
+            ),
+            None,
         )
+        if client is None:
+            return False
+        query = urlencode(
+            {
+                "client_id": client,
+                "redirect_uri": f"https://{scope}/oauth/callback/",
+                "response_type": "code",
+                "response_mode": "query",
+                "scope": "openid",
+                "prompt": "none",
+            }
+        )
+        response = request.get(f"https://{SIGN_IN_HOST}/authorize?{query}", max_redirects=0)
+        answer = parse_qs(urlsplit(response.headers.get("location", "")).query)
+        if "code" in answer:
+            return True
+        if answer.get("error") == ["login_required"]:
+            return False
+        return None
 
     def sign_in_by_otp(self, page: Page, email: str) -> None:
         _sign_in(page, email, create=False)
@@ -206,6 +241,10 @@ class Jobstreet:
         self._asked = []
         self._read = {k: f.prefilled for k in DETAILS if (f := self._fields[k]).prefilled}
         self._read |= _personal_details(page, self._fields, answers)
+        stored = page.locator(f"{RESUMES}:not([value=dont-include])").count()
+        if answers.get("resume") is not None and stored >= RESUMES_KEPT:
+            detail = f"the profile holds {stored} resumes, and SEEK refuses another upload"
+            raise Unsupported(known_gap(self, "resume_limit", detail))
         _documents_fill(page, answers)
         documents = page.evaluate(_STEP_ONE)
         self._read |= {k: documents[k] for k in DOCUMENTS if documents[k]}
@@ -431,11 +470,11 @@ def _documents_fill(page: Page, answers: dict[str, Answer]) -> None:
     """Uploads the resume, which the page then picks, or leaves it out; the same for the cover
     letter, uploaded or written in its box."""
     if (resume := answers.get("resume")) is not None:
-        _upload(page, RESUME_FILE, str(resume))
+        _upload(page, RESUME_FILE, RESUMES, str(resume))
     elif (none := page.locator("input[type=radio][value=dont-include]")).count():
         none.check(force=True)
     if (letter := answers.get("coverLetterFile")) is not None:
-        _upload(page, LETTER_FILE, str(letter))
+        _upload(page, LETTER_FILE, LETTER_UPLOADED, str(letter))
     elif (letter := answers.get("coverLetter")) is not None:
         page.locator("input[type=radio][data-testid=coverLetter-method-change]").check(force=True)
         page.locator("[data-testid=coverLetterTextInput]").fill(str(letter))
@@ -443,11 +482,17 @@ def _documents_fill(page: Page, answers: dict[str, Answer]) -> None:
         none.check(force=True)
 
 
-def _upload(page: Page, selector: str, path: str) -> None:
-    """Sets the file, then waits for the radio the page adds and picks, labelled with its name."""
-    page.locator(selector).set_input_files(path)
+def _upload(page: Page, selector: str, radios: str, path: str) -> None:
+    """Sets the file, then waits for the radio the page adds to `radios` and picks, labelled
+    with its name: the profile's resumes can carry that name already."""
     name = path.rsplit("/", 1)[-1]
-    page.locator("label", has_text=name).first.wait_for(timeout=SAVE_TIMEOUT_MS)
+    before = page.evaluate(_NAMED, [radios, name, False])
+    page.locator(selector).set_input_files(path)
+    page.wait_for_function(
+        f"([args, before]) => ({_NAMED})(args).some(v => !before.includes(v))",
+        arg=[[radios, name, True], before],
+        timeout=SAVE_TIMEOUT_MS,
+    )
 
 
 def _answer(page: Page, field: Field, answer: Answer) -> None:
