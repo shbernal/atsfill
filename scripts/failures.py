@@ -310,7 +310,7 @@ def show(found: list[Failure], system: str, command: str, reason: str | None, ke
     if not active:
         print(f"No failure on {system} {command} in the last {WINDOW_DAYS} days.")
         return
-    urls = dict(run_history.query(key, URLS.format(system=system)))
+    urls = {p: u for p, u in run_history.query(key, URLS.format(system=system)) if u}
     missing = {f.posting for f in active} - urls.keys()
     urls |= _freehire(system, missing) if missing else {}
     for f in active:
