@@ -31,7 +31,7 @@ The profile is a wizard at `www.workatastartup.com/application/<step>`, read and
 - Steps: `personal`, `location`, `role`, `experience`, `skills` (Engineering only), `career`, `share`.
 - Save & next (Continue on an incomplete profile, Finish on the last step) posts `POST /application/next`, `{from: <step>, profile: {data: {…}}}`, answered `{redirect_to}`, where the page goes next. A value the server refuses is 422 with `errors` ("Phone number is an invalid number"): `refused: step_refused: <step>: <errors>`. A required field left empty shows "Required" under it and posts nothing: `refused: step_refused: <step>`.
 - The job search status is `share`, on `personal`: "I'm actively looking for a job", "I'm open to new opportunities", or "I'm not looking for a job / not ready to meet founders yet. HIDE MY PROFILE." Any but the last lets the account apply; which one is the user's answer, never atsfill's.
-- `experience` offers a resume upload, a LinkedIn import, or "fill in your experience manually": atsfill takes the manual path, the only one read back field by field, and fills the first entry of Work History and of Education.
+- `experience` offers a resume upload, a LinkedIn import, or "fill in your experience manually": atsfill takes the manual path, the only one read back field by field, and reads and fills the first entry of Work History and of Education, leaving any further entry as it is.
 - The page loads a SEON device fingerprint (`/api/sessions`) on every step.
 
 | Field ids | Field type | Rendering |

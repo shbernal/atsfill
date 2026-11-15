@@ -406,7 +406,8 @@ def test_an_empty_answer_clears_the_yc_companies_to_be_hidden_from(page, site):
 
 def test_a_company_the_search_does_not_name_exactly_is_not_taken(page, site):
     adapter = step(page, "personal")
-    with pytest.raises(NotTaken, match="no suggestion for 'Acme Robo' in hidden_companies"):
+    said = "no suggestion for 'Acme Robo' in hidden_companies; suggestions: 'Acme Robotics'$"
+    with pytest.raises(NotTaken, match=said):
         adapter.profile_fill(page, {"hidden_companies": ["Acme Robo"]})
 
 
@@ -445,6 +446,29 @@ def test_each_step_reads_back_what_it_is_filled_with(page, site, name, answers):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     adapter.save(page)
     assert site.saved[-1]["from"] == name
+
+
+def test_several_entries_read_and_fill_the_first(page, site):
+    site.profile["positions"].append(
+        {"id": 3, "employer_name_other": "Globex", "title": "Intern", "start_date": "2018-06",
+         "end_date": "2019-08", "summary": "Earlier."}
+    )  # fmt: skip
+    site.profile["educations"].append(
+        {"id": 4, "school_name_other": "Night School", "field_of_study": "Math", "degree": "Other"}
+    )
+    adapter = step(page, "experience")
+    prefilled = {f.id: f.prefilled for f in adapter.profile_read(page) if f.prefilled is not None}
+    assert prefilled["work_employer"] == "Acme Corp"
+    assert prefilled["education_degree"] == "Bachelor"
+    answers: dict[str, Answer] = {
+        "work_employer": "Acme Labs", "work_title": "Staff Engineer", "work_current": "No",
+        "work_to": "03/2024", "education_school": "City College", "education_degree": "Master",
+    }  # fmt: skip
+    adapter.profile_fill(page, answers)
+    back = adapter.profile_read_back(page)
+    assert {k: back.get(k) for k in answers} == answers
+    assert page.locator('input[aria-label="Employer Name"]').nth(1).input_value() == "Globex"
+    assert page.locator('input[aria-label="Degree type"]').nth(1).input_value() == "Other"
 
 
 def test_experience_is_filled_manually(page, site):
