@@ -4,7 +4,7 @@ docs/adapters/hireology.md observes.
 The job page renders its application form from a public form API, which lists every field by
 id, type and requirement. `request_read` fetches it over HTTP, `browser_read` through the page's own
 browser context, and both list the fields from it. Each field renders as one control whose id is
-`<field id>-<n>`; nothing but the submit reaches Hireology.
+`<field id>-<n>-<n>`; nothing but the submit reaches Hireology.
 """
 
 import json
@@ -25,7 +25,7 @@ JOB = re.compile(r"^/[^/]+/(\d+)(?:/|$)")
 API = "https://api.hireology.com/v2/public/application_forms/{job}"
 APPLIED = re.compile(r"^https://api\.hireology\.com/v2/public/")
 FORM = "#application"
-SUBMIT = f"{FORM} #submit"
+SUBMIT = f"{FORM} [data-qa-id=submit]"
 FORM_TIMEOUT_MS = 30_000
 SUBMIT_TIMEOUT_MS = 90_000
 SHOWN_TIMEOUT_MS = 2_000
@@ -101,8 +101,8 @@ LABELS = {
 }
 # The page's heading of a section whose labels repeat others' ("City").
 SECTIONS = {"experience": "Work history: ", "education": "Education: ", "military": "Military: "}
-# A field the page shows only once another is answered, and on which answers: the school fields
-# stay hidden until an education is picked.
+# A field the page shows only once another is answered, and on which answers: the education
+# entry's fields stay hidden until an education is picked.
 SHOWN_BY: dict[str, Is] = {
     "referred_by": Is("candidate_referred", ["Yes"]),
     "non_complete_in_place_reason": Is("non_complete_in_place", ["Yes"]),
@@ -124,9 +124,20 @@ SHOWN_BY: dict[str, Is] = {
     },
     **{
         f: Is("highest_grade", ["Did Not Complete High School"], negated=True)
-        for f in ("institute_name", "graduation_year", "education_city", "education_state_id")
+        for f in (
+            "institute_name",
+            "graduation_year",
+            "education_city",
+            "education_state_id",
+            "participation_extra_activities",
+            "part_time",
+            "gained_academic_awards",
+        )
     },
 }
+# A field the page disables and clears once another is answered, plainly shown on a form without
+# that other field.
+ENABLED_BY = {"end_date": Is("current", ["No"])}
 TYPES = {
     "text": FieldType.TEXT,
     "email": FieldType.TEXT,
@@ -140,12 +151,16 @@ TYPES = {
     "file": FieldType.FILE,
 }
 
-# The control a field renders as: the element whose id is `<field id>-<n>`, a radio group's
-# and a month's wrapper included; `n` is 0, or 1 for the education entry.
+# The control a field renders as: the element whose `data-qa-id` is `<field id>-<n>-<n>`, a
+# radio group's fieldset and a month's select included; `n` is 0, or 1 for the education entry.
 _CONTROL = """(form, id) => {
-  const own = new RegExp(`^${id.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}-\\\\d+$`);
-  return [...form.querySelectorAll("[id]")].find(e => own.test(e.id))?.id ?? null;
+  const own = new RegExp(`^${id.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}(-\\\\d+)+$`);
+  return [...form.querySelectorAll("[data-qa-id]")].find(e => own.test(e.dataset.qaId))
+    ?.dataset.qaId ?? null;
 }"""
+
+# Whether a field's control is on the page and enabled: a disabled one is not filled.
+_ENABLED = """(form, dom) => !form.querySelector(`[data-qa-id="${dom}"]`).matches(":disabled")"""
 
 # The form API's answer, fetched as the page fetches it.
 _FETCH = """async url => {
@@ -153,9 +168,11 @@ _FETCH = """async url => {
   return response.ok ? {json: await response.json()} : {status: response.status};
 }"""
 
-# Picks a dropdown's option by its text: React keeps the value only from a change it sees.
+# Picks a dropdown's option by its text, else by its value (a month's `01`): React keeps the
+# value only from a change it sees.
 _SELECT = """(el, text) => {
-  const option = [...el.options].find(o => o.text.trim() === text);
+  const options = [...el.options];
+  const option = options.find(o => o.text.trim() === text) ?? options.find(o => o.value === text);
   if (!option) return;
   Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value").set.call(el, option.value);
   el.dispatchEvent(new Event("change", {bubbles: true}));
@@ -165,8 +182,9 @@ _SELECT = """(el, text) => {
 _READ_BACK = """(form, kinds) => {
   const out = {};
   for (const [id, kind] of Object.entries(kinds)) {
-    const own = new RegExp(`^${id.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}-\\\\d+$`);
-    const el = [...form.querySelectorAll("[id]")].find(e => own.test(e.id));
+    const own = new RegExp(`^${id.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}(-\\\\d+)+$`);
+    const el = [...form.querySelectorAll("[data-qa-id]")].find(e => own.test(e.dataset.qaId));
+    const part = suffix => form.querySelector(`[data-qa-id="${el.dataset.qaId}-${suffix}"]`);
     if (!el) continue;
     if (kind === "radio") {
       const checked = el.querySelector("input:checked");
@@ -174,12 +192,11 @@ _READ_BACK = """(form, kinds) => {
     } else if (kind === "checkbox") out[id] = el.checked ? "Yes" : "No";
     else if (kind === "select") out[id] = el.value ? el.selectedOptions[0].text.trim() : null;
     else if (kind === "month") {
-      const month = document.getElementById(`${el.id}-month`).value;
-      const year = document.getElementById(`${el.id}-year`).value;
+      const month = el.value;
+      const year = part("year").value;
       out[id] = month || year ? `${month}/${year}` : null;
     } else if (kind === "file") {
-      const shown = el.closest(".careers-file-input__container")
-        ?.querySelector("[data-qa-id=careers-filename]");
+      const shown = part("filename");
       out[id] = shown ? shown.textContent.trim() : null;
     } else out[id] = el.value;
   }
@@ -232,8 +249,11 @@ class Hireology:
         return [f for f, _ in out]
 
     def shown_fields(self, page: Page) -> list[str]:
-        form = page.locator(FORM)
-        return [i for i in self._kinds if form.evaluate(_CONTROL, i) is not None]
+        form, out = page.locator(FORM), []
+        for field_id in self._kinds:
+            if (dom := form.evaluate(_CONTROL, field_id)) and form.evaluate(_ENABLED, dom):
+                out.append(field_id)
+        return out
 
     def fill(self, page: Page, answers: dict[str, Answer]) -> None:
         form = page.locator(FORM)
@@ -244,13 +264,13 @@ class Hireology:
             value = answer if isinstance(answer, str) else answer[0]
             if field_id in SHOWN_BY:  # rendered a moment after the answer that shows it
                 with suppress(Timeout):
-                    form.locator(f"[id^='{field_id}-']").first.wait_for(
+                    form.locator(f"[data-qa-id^='{field_id}-']").first.wait_for(
                         state="attached", timeout=SHOWN_TIMEOUT_MS
                     )
             dom = form.evaluate(_CONTROL, field_id)
             if dom is None:
                 continue  # shown by another answer, which was not given
-            control = page.locator(f"[id='{dom}']")
+            control = page.locator(f"[data-qa-id='{dom}']")
             match kind:
                 case "file":
                     control.set_input_files(value)
@@ -263,8 +283,8 @@ class Hireology:
                         browser.click(page.locator(f"label[for='{dom}']"))
                 case "month":
                     month, _, year = value.partition("/")
-                    page.locator(f"[id='{dom}-month']").fill(month)
-                    page.locator(f"[id='{dom}-year']").fill(year)
+                    control.evaluate(_SELECT, month)
+                    page.locator(f"[data-qa-id='{dom}-year']").evaluate(_SELECT, year)
                 case _:
                     control.fill(value)
 
@@ -298,7 +318,8 @@ def _exact(value: str) -> re.Pattern[str]:
 
 def _form(api: dict[str, Any]) -> list[tuple[Field, str]]:
     """Each field of the form API's template with its API type; an entry the page can repeat
-    is read once, as its first. A field shown by one the form does not ask is never shown."""
+    is read once, as its first. A field shown by one the form does not ask is never shown; one
+    disabled by such a field is always shown."""
     out = []
     for section in api["template"]["sections"]:
         for fieldset in section["fieldsets"]:
@@ -307,7 +328,11 @@ def _form(api: dict[str, Any]) -> list[tuple[Field, str]]:
                     (_field(entry, SECTIONS.get(section["id"], "")), entry["attributes"]["type"])
                 )
     ids = {f.id for f, _ in out}
-    return [(f, k) for f, k in out if f.id not in SHOWN_BY or SHOWN_BY[f.id].field_id in ids]
+    out = [(f, k) for f, k in out if f.id not in SHOWN_BY or SHOWN_BY[f.id].field_id in ids]
+    for i, (f, k) in enumerate(out):
+        if (when := ENABLED_BY.get(f.id)) and when.field_id in ids:
+            out[i] = (replace(f, shown_when=when), k)
+    return out
 
 
 def _field(entry: dict[str, Any], section: str) -> Field:
@@ -343,9 +368,9 @@ def _field(entry: dict[str, Any], section: str) -> Field:
 
 def _default(attributes: dict[str, Any], kind: str) -> str | None:
     """The answer the page shows picked before any, from the API's `value`: an option's name,
-    a box's `Yes` or `No`."""
+    a box's `Yes` or `No`, `No` without a value."""
     value = attributes.get("value")
-    if kind == "checkbox" and isinstance(value, bool):
-        return YES_NO[0] if value else YES_NO[1]
+    if kind == "checkbox":
+        return YES_NO[0] if value is True else YES_NO[1]
     names = {str(o.get("value")): o["name"] for o in attributes.get("options") or []}
     return names.get(str(value)) if isinstance(value, str | int) else None

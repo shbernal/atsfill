@@ -75,9 +75,12 @@ def test_browser_read(page):
         "earliest_availability",
         "company_name",
         "start_date",
+        "end_date",
         "current",
         "highest_grade",
         "institute_name",
+        "part_time",
+        "part_time_text",
         "custom_why_do_you_want_this_role",
         "legal",
         "signature",
@@ -92,10 +95,14 @@ def test_browser_read(page):
     assert by_id["state_id"].default == "MD" and by_id["sms_opt_in"].default == "Yes"
     assert by_id["resume"].accept == [".pdf", ".doc", ".docx"]
     assert by_id["earliest_availability"].type is FieldType.DATE
+    assert by_id["end_date"].shown_when == Is("current", ["No"])  # Current disables it
+    assert by_id["current"].default == "No"
     assert by_id["start_date"].label == "Work history: Start date (MM/YYYY)"
     assert by_id["institute_name"].shown_when == Is(
         "highest_grade", ["Did Not Complete High School"], negated=True
     )  # hidden until an education is picked
+    assert by_id["part_time"].shown_when == by_id["institute_name"].shown_when
+    assert by_id["part_time_text"].shown_when == Is("part_time", ["Yes"])
     assert by_id["custom_why_do_you_want_this_role"].label == "Why do you want this role?"
     assert by_id["custom_why_do_you_want_this_role"].max_length == 255
     assert by_id["legal"].label == "Do you have a legal right to work in the United States?"
@@ -130,6 +137,8 @@ def test_every_answer_reads_back(page, resume):
         "current": "Yes",
         "highest_grade": "High School/GED",
         "institute_name": "Acme High School",
+        "part_time": "Yes",
+        "part_time_text": "Placeholder answer.",
         "custom_why_do_you_want_this_role": "Placeholder answer.",
         "legal": "Yes",
         "signature": "Ada Placeholder",
@@ -146,7 +155,17 @@ def test_a_field_its_answer_hides_is_not_read_back(page):
     adapter.fill(page, answers)
     read_back = adapter.read_back(page)
     assert read_back["highest_grade"] == "Did Not Complete High School"
-    assert "institute_name" not in read_back
+    assert "institute_name" not in read_back and "part_time" not in read_back
+
+
+def test_current_disables_the_end_date(page):
+    adapter, fields = opened(page)
+    adapter.fill(page, {"end_date": "02/2021", "current": "No"})
+    assert adapter.read_back(page)["end_date"] == "02/2021"
+    assert "end_date" in adapter.shown_fields(page)
+    adapter.fill(page, {"current": "Yes"})
+    assert "end_date" not in adapter.read_back(page)
+    assert "end_date" not in adapter.shown_fields(page)
 
 
 def test_the_test_user_answers_what_shows_the_most(tmp_path):
@@ -173,7 +192,7 @@ def test_an_unknown_field_type_is_unhandled():
 
 def test_a_field_missing_from_the_page_is_unhandled(page):
     page.goto(JOB)
-    page.evaluate("() => document.getElementById('company_name-0').remove()")
+    page.evaluate("() => document.getElementById('company_name-0-0').remove()")
     fields = {f.id: f for f in Hireology().browser_read(page)}
     assert fields["company_name"].unfillable == (
         "unhandled_rendering: company_name is not on the page"
