@@ -45,6 +45,8 @@ STEP_TIMEOUT_MS = 30_000
 LIST_TIMEOUT_MS = 3_000
 LIST_POLL_MS = 300  # between two looks at a list, which a search narrows as it answers
 LIST_POLLS = 10
+PICK_ATTEMPTS = 3  # a list's item, detached or gone as the list renders anew
+RERENDER_MS = 500  # for a list rendered anew to settle
 SEARCH_TIMEOUT_MS = 6_000  # for a typed search's results
 PAGE_TIMEOUT_MS = 15_000  # per click on a page number
 SUBMIT_TIMEOUT_MS = 90_000
@@ -692,7 +694,16 @@ def _choose(
 ) -> None:
     """Types into a dropdown, which filters its list, and picks the item that is the answer
     (or holds it as a phone code, or matches it as a suggestion). A list whose search does not match
-    its items' text as typed is looked through whole."""
+    its items' text as typed is looked through whole. A late search answer renders the list anew
+    under the pick, the item found detached or gone: the list is read again."""
+
+    def wanted(item: str) -> bool:
+        return (
+            (exact and item == answer)
+            or (code and re.search(rf"{re.escape(answer)}(\D|$)", item) is not None)
+            or (field is not None and matching.matches(field, answer, item))
+        )
+
     for typed in (answer, ""):
         _click(page, box)
         box.fill("")
@@ -701,20 +712,30 @@ def _choose(
         cells = page.locator(f"[id='{box.get_attribute('aria-controls')}'] [role=gridcell]")
         with suppress(browser.Timeout):
             cells.first.wait_for(timeout=SEARCH_TIMEOUT_MS)
-        for item in _list_settled(page, cells):
-            if (
-                (exact and item == answer)
-                or (code and re.search(rf"{re.escape(answer)}(\D|$)", item))
-                or (field is not None and matching.matches(field, answer, item))
-            ):
-                cell = cells.filter(has_text=_exact(item)).first  # by its text: a late search
-                cell.scroll_into_view_if_needed()  # moves it, or leaves it alone in the list
-                _click(page, cell)
+        for _ in range(PICK_ATTEMPTS):
+            item = next(filter(wanted, _list_settled(page, cells)), None)
+            if item is None:
+                break
+            if _picked(page, cells.filter(has_text=_exact(item)).first):  # by its text
                 return
+            page.wait_for_timeout(RERENDER_MS)
         box.press("Escape")
         if field is not None:
             break  # a search lists nothing untyped
     raise NotTaken(f"no item for {answer!r} in a dropdown")
+
+
+def _picked(page: Page, cell: Locator) -> bool:
+    """Clicks a list's item; false when the list rendered anew under the click."""
+    if not cell.count():
+        return False
+    try:
+        _click(page, cell)
+    except browser.BrowserError as e:  # a Timeout too
+        if not isinstance(e, browser.Timeout) and "not attached" not in str(e):
+            raise
+        return False
+    return True
 
 
 def _field(raw: dict[str, Any]) -> Field:

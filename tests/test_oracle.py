@@ -208,3 +208,14 @@ def test_a_known_address_without_an_otp_command_is_blocked(opened, page, tmp_pat
         pytest.raises(Blocked, match="^no_otp_command: the email step sent an OTP to known@"),
     ):
         adapter.fill(page, {"email": "known@example.com", "legalDisclaimer": "Yes"})
+
+
+def test_a_list_rendered_anew_under_the_pick_is_read_again(opened, page):
+    adapter, _ = opened
+    answers = {
+        "email": "ada@example.com",
+        "legalDisclaimer": "Yes",
+        "postalCode": "0200, Acton, ACT",
+    }
+    adapter.fill(page, answers)  # the search renders its items anew, then drops them all
+    assert adapter.read_back(page)["postalCode"] == "0200, Acton, ACT"

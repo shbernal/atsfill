@@ -204,9 +204,11 @@
   document.querySelector("#email-19").value = sessionStorage.getItem("email") || "";
   const items = input => input.dataset.options ? input.dataset.options.split("|")
     : (input.value ? input.dataset.search.split("|").filter(o => o.toLowerCase().startsWith(input.value.toLowerCase())) : []);
-  const show = (input, filter) => {
+  const LATE_MS = 200;
+  const show = (input, filter, code = false) => {
     const list = document.getElementById(input.getAttribute("aria-controls"));
-    const shown = items(input).filter(o => !filter || o.toLowerCase().includes(input.value.toLowerCase()));
+    const typed = input.value.toLowerCase();
+    const shown = items(input).filter(o => !filter || (code ? o.split(", ")[0].toLowerCase().startsWith(typed) : o.toLowerCase().includes(typed)));
     list.innerHTML = shown.map(o => `<div role="row"><div role="gridcell" class="cx-select__list-item"><span>${o}</span></div></div>`).join("");
     list.hidden = false;
     list.querySelectorAll("[role=gridcell]").forEach(cell => cell.addEventListener("click", () => {
@@ -233,7 +235,21 @@
   });
   for (const input of document.querySelectorAll("input[role=combobox]")) {
     input.addEventListener("click", () => show(input, false));
-    input.addEventListener("input", () => show(input, true));
+    input.addEventListener("input", () => {
+      show(input, true);
+      if (!input.dataset.geo) return;
+      // The geography's search answers late, on the code alone: until then it renders the same
+      // items anew, detaching those found, and its answer can drop them all.
+      const late = input.late = {}, until = performance.now() + LATE_MS;
+      const again = () => {
+        const list = document.getElementById(input.getAttribute("aria-controls"));
+        if (list.hidden || input.late !== late) return;
+        if (performance.now() > until) return show(input, true, true);
+        show(input, true);
+        setTimeout(again, 5);
+      };
+      setTimeout(again, 5);
+    });
     input.addEventListener("keydown", e => {
       if (e.key === "Escape") document.getElementById(input.getAttribute("aria-controls")).hidden = true;
     });
