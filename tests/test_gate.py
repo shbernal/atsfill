@@ -3,6 +3,10 @@ from pathlib import Path
 from atsfill.core import browser
 from scripts import backlog, gate
 
+# The page holds the iframe as it loads, yet on a busy runner the browser's answer to the
+# wait alone took over 500 ms; a page without one waits it out twice.
+EMBED_TIMEOUT_MS = 3_000
+
 
 def test_skipped_postings_are_listed_apart_from_not_ready():
     rows = [
@@ -39,7 +43,7 @@ def test_an_embedded_form_is_claimed_once_its_page_is_open(tmp_path, monkeypatch
         "https://www.example.com/careers/1": f'<iframe id="grnhse_iframe" src="{embed}"></iframe>',
         "https://www.example.com/careers/2": "<p>Our openings</p>",
     }
-    monkeypatch.setattr("atsfill.adapters.greenhouse.EMBED_TIMEOUT_MS", 500)
+    monkeypatch.setattr("atsfill.adapters.greenhouse.EMBED_TIMEOUT_MS", EMBED_TIMEOUT_MS)
     with browser.open_page(tmp_path) as page:
         page.context.route(
             "https://www.example.com/**",
