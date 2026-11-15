@@ -31,7 +31,7 @@ The posting's steps are `selection-process/candidate/application/<application>/s
 The register step has two parts:
 
 1. **My resume**, one per account, shared by every application ("adjustments will be replicated across all your active applications"). `curriculum-management/candidate/curriculum/<candidate>/completion-status` reports `personalInfoCompleted`, `experiencesCompleted`, `formationsCompleted`; "Save and continue" releases the next part only once they are.
-2. **The employer's questions**, `question-forms/candidates/applications/<application>/steps/<step>/forms`: `questionForm.questions`, each with `title`, `required`, `type`, `options`, `answer`, and `parentQuestionId` with `conditionalTriggerOptions` for a question shown by another's answer. One posting of 11 had no form.
+2. **The employer's questions**, `question-forms/candidates/applications/<application>/steps/<step>/forms`: `questionForm.questions`, each with `title`, `required`, `type`, `options`, `answer`, and `parentQuestionId` with `conditionalTriggerOptions` for a question shown by another's answer. A posting without a form answers it 404 with an empty body; 3 of 14 had none.
 
 ## Inventory
 
@@ -61,7 +61,7 @@ One question of these postings had a `parentQuestionId`, under a `CONDITIONAL` o
 `browser_read` opens Apply and walks past what comes before Additional information: the contact details dialog (Remind me later), Complete resume, Continue Application, then Continue. It stops at Additional information, or at the questions' introduction ("Answer now") when an earlier visit saved Additional information. The buttons are found by their text, which is English for an English account. Continue Application is disabled while the resume loads; still disabled after `RESUME_WAIT_S`, the resume is incomplete: the `resume` gap.
 
 - Additional information: each radio group is a `choice` named by its input's name (`radioGroupIsIndicatedTitle`, `radioGroupIsCompanyEmployeeTitle`), labelled by its fieldset's legend, the checked option `prefilled` (No by default). A Yes shows text inputs in no source a read can see, the same on every posting: the adapter names them in `FOLLOW_UPS` with a `shown_when` on their radio, `required` since the page will not save them empty. The source combobox ("Where did you find this job?", optional) is listed `unhandled_rendering`.
-- The questions come from the page's own `question-forms` answer: `question-<questionId>`, `SELECT` and `CONDITIONAL` a `choice`, `MULTI_SELECT` a `multi_choice`, `TEXT` and `TEXT_AREA` a `text`, `required` as given, a parent question a `shown_when`. Any other type is listed `unhandled_rendering`.
+- The questions come from the page's own `question-forms` answer, none when it is not OK: `question-<questionId>`, `SELECT` and `CONDITIONAL` a `choice`, `MULTI_SELECT` a `multi_choice`, `TEXT` and `TEXT_AREA` a `text`, `required` as given, a parent question a `shown_when`. Any other type is listed `unhandled_rendering`.
 
 ## Filling
 
@@ -81,6 +81,4 @@ One question of these postings had a `parentQuestionId`, under a `CONDITIONAL` o
 
 The resume as observed: an academic entry is Education level, then Academic qualification and Status (react-aria comboboxes opened with ArrowDown), the institution and course (autocompletes), start and end month and year; a professional one Company, Position, current job, start and end, activities. About you with "Do you live in Brazil?" No asks Country, Address (an autocomplete that also fills State, City and Postal Code), State, City. Each part has its own Save and continue, which releases the next.
 
-Not handled yet, `unhandled`: a `question-forms` answer that was not JSON.
-
-Not observed yet: what the page shows once the questions are saved, and a posting without questions.
+Not observed yet: what the page shows once the questions are saved, and what Save and continue does on a posting without questions.

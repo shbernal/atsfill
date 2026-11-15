@@ -171,7 +171,9 @@ class Gupy:
         finally:
             page.remove_listener("response", on_response)
         fields = _additional_fields(page.evaluate(_READ_ADDITIONAL))
-        questions = (forms[-1].json().get("questionForm") or {}).get("questions") if forms else []
+        # a posting without a form answers 404, with no body
+        answer = forms[-1].json() if forms and forms[-1].ok else {}
+        questions = (answer.get("questionForm") or {}).get("questions")
         self._questions = {f"question-{q['questionId']}": q for q in questions or []}
         fields += [_question(q) for q in self._questions.values()]
         self._fields = {f.id: f for f in fields if not f.unfillable}
