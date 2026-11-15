@@ -25,7 +25,7 @@ dependencies = [
     "filelock==4.2.10",
     "keyring==25.7.0",
     "packaging==26.3",
-    "posthog==7.87.1",
+    "posthog==7.91.1",
 ]
 
 [project.urls]
@@ -50,8 +50,8 @@ commit-check = [
 dev = [
     "pytest>=9.2.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.17.4",
-    "ty==0.0.101",
+    "ruff>=0.17.5",
+    "ty==0.0.104",
 ]
 
 [tool.ruff]
