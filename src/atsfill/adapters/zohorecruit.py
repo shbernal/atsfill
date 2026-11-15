@@ -35,6 +35,7 @@ FORM_TIMEOUT_MS = 30_000
 SHOWN_TIMEOUT_MS = 2_000
 TAG_TIMEOUT_MS = 2_000
 TAG_ATTEMPTS = 4
+BOX_ATTEMPTS = 3
 SUBMIT_TIMEOUT_MS = 90_000
 YES_NO = ["Yes", "No"]
 NONE = "-None-"
@@ -412,8 +413,10 @@ def _fill(page: Page, control: _Control, el, answer: Answer) -> None:
             _pick(page, el, [answer] if isinstance(answer, str) else answer)
         case "radio":
             browser.click(el.locator("label").filter(has_text=_exact(value)))
-        case "boolean":
-            if el.locator("input").is_checked() != (value == "Yes"):
+        case "boolean":  # a click can be lost while the page settles: its box stays as it was
+            for _ in range(BOX_ATTEMPTS):
+                if el.locator("input").is_checked() == (value == "Yes"):
+                    break
                 browser.click(el.locator("label"))
         case "date":
             fmt = el.locator("lyte-input").get_attribute("lt-prop-format") or "MM/DD/YYYY"
