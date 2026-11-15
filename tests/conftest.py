@@ -17,8 +17,9 @@ import pytest
 from atsfill.core import browser, otp
 
 PAGES = Path(__file__).parent / "pages"
-# Each test's seconds in CI, all phases: the `durations` artifact of a CI run, its shards'
-# files merged. Refreshed when the parts drift apart; a test it lacks counts the median.
+# Each test's seconds in CI, all phases, refreshed when the shards drift apart from a CI
+# run's artifacts: `gh run download <run> -p 'durations-*' -D d && jq -s add d/*/*.json`.
+# A test it lacks counts the median.
 DURATIONS = Path(__file__).parent / "durations.json"
 TIMES: dict[str, float] = {}
 
