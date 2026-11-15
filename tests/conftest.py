@@ -49,15 +49,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     """Deals the suite into parts of about equal time, by `DURATIONS`: the tests on a
-    module's browser as one unit, the rest one by one; the longest unit goes first, each to
-    the part with the least time yet. A test it does not know counts the median."""
+    module's browser, a module-scoped fixture of its own, as one unit, the rest one by one;
+    the longest unit goes first, each to the part with the least time yet. A test it does
+    not know counts the median."""
     if not (shard := config.getoption("shard")):
         return
     i, n = map(int, shard.split("/"))
     units: dict[str, list[pytest.Item]] = {}
     for item in items:
         defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[missing-attribute]
-        shared = any(d[-1].scope == "module" for d in defs)
+        module = item.nodeid.split("::")[0]
+        shared = any(d[-1].scope == "module" and d[-1].baseid == module for d in defs)
         units.setdefault(item.module.__name__ if shared else item.nodeid, []).append(item)  # ty: ignore[missing-attribute]
     known = json.loads(DURATIONS.read_text()) if DURATIONS.exists() else {}
     default = statistics.median(known.values()) if known else 1.0
