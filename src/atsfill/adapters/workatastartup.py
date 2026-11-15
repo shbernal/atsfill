@@ -406,8 +406,10 @@ class Control:
         match self.kind:
             case "phone":
                 return form.locator("input[type=tel]")
-            case "country" | "combo":
+            case "country":
                 return form.locator(f'input[aria-label="{self.where}"]')
+            case "combo":
+                return _in_entry(form, self.entry, f"input[@aria-label = '{self.where}']")
             case "companies":
                 return form.locator('input[aria-label="Company name"]')
             case "multi" | "skills":
@@ -497,8 +499,16 @@ STEPS: dict[str, list[Control]] = {
         ),
     ],
     "experience": [
-        Control("work_employer", "Work History: Employer Name", "combo", T, False, "Employer Name"),
-        Control("work_title", "Work History: Title", "combo", T, False, "Title"),
+        Control(
+            "work_employer",
+            "Work History: Employer Name",
+            "combo",
+            T,
+            False,
+            "Employer Name",
+            "work",
+        ),
+        Control("work_title", "Work History: Title", "combo", T, False, "Title", "work"),
         Control("work_location", "Work History: Location", "input", T, False, "location", "work"),
         Control(
             "work_from", "Work History: From (MM/YYYY)", "month", T, False, "start_date", "work"
@@ -517,7 +527,15 @@ STEPS: dict[str, list[Control]] = {
             Is("work_current", ["No"]),
         ),
         Control("work_summary", "Work History: Summary", "input", T, False, "summary", "work"),
-        Control("education_school", "Education: School Name", "combo", T, False, "School Name"),
+        Control(
+            "education_school",
+            "Education: School Name",
+            "combo",
+            T,
+            False,
+            "School Name",
+            "education",
+        ),
         Control(
             "education_field",
             "Education: Field of Study / Major",
@@ -525,8 +543,17 @@ STEPS: dict[str, list[Control]] = {
             T,
             False,
             "Field of Study / Major",
+            "education",
         ),
-        Control("education_degree", "Education: Degree type", "combo", T, False, "Degree type"),
+        Control(
+            "education_degree",
+            "Education: Degree type",
+            "combo",
+            T,
+            False,
+            "Degree type",
+            "education",
+        ),
         Control(
             "education_from",
             "Education: From (MM/YYYY)",
@@ -719,16 +746,18 @@ def _pick(
     box.press_sequentially(answer, delay=KEY_DELAY_MS)
     options = page.locator("[role=option]:visible, li[id^=downshift-][id*=-item-]:visible")
     field = Field(c.id, c.label, FieldType.TYPEAHEAD, False)
+    seen: list[str] = []
     deadline = time.monotonic() + SUGGEST_TIMEOUT_S
     while time.monotonic() < deadline:
-        for option in options.all():
-            text = option.inner_text().strip()
+        seen = [o.inner_text().strip() for o in options.all()]
+        for i, text in enumerate(seen):
             if text == answer if exact else matching.matches(field, answer, text):
-                option.click()
+                options.nth(i).click()
                 return
         page.wait_for_timeout(SUGGEST_POLL_MS)
     if strict:
-        raise NotTaken(f"no suggestion for {answer!r} in {c.id}")
+        said = ", ".join(repr(t) for t in seen) or "none"
+        raise NotTaken(f"no suggestion for {answer!r} in {c.id}; suggestions: {said}")
     box.press("Escape")
 
 

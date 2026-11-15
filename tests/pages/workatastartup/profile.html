@@ -93,7 +93,6 @@ const render = {
     <label for="_r_5_">How many years of professional experience do you have?${req}</label>
     <input id="_r_5_" type="number" name="experience" value="${esc(data.experience)}">`,
   experience: () => {
-    const [w, e] = [data.positions?.[0] ?? {}, data.educations?.[0] ?? {}];
     const months = ["", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
     const years = ["", ...Array.from({length: 30}, (_, i) => String(2026 - i))];
     const date = (id, part, value) => {
@@ -102,23 +101,25 @@ const render = {
         <select name="${id}_${part}_year" aria-label="${part} year">${years.map(o => `<option value="${o}" ${o === y ? "selected" : ""}>${o || "Year"}</option>`).join("")}</select>`;
     };
     if (!data.manual) return `<button type="button" class="manual">fill in your experience manually</button>`;
-    return `
-      <div><h4>Work History<button type="button">add another</button></h4>
-        <div><input role="combobox" aria-label="Employer Name" id="downshift-1-input" value="${esc(w.employer_name_other)}"></div>
-        <div><input role="combobox" aria-label="Title" id="downshift-2-input" value="${esc(w.title)}"></div>
+    let box = 0;  // downshift ids run on across entries
+    const combo = (label, value) => `<div><input role="combobox" aria-label="${label}" id="downshift-${++box}-input" value="${esc(value)}"></div>`;
+    const work = (w, i) => `<div class="entry">
+        ${combo("Employer Name", w.employer_name_other)}${combo("Title", w.title)}
         <div id="PlacesAutocomplete__root"><input role="combobox" type="text" name="location" value="${esc(w.location)}"></div>
-        ${date(w.id ?? 1, "start_date", w.start_date)}
-        <span class="end" ${w.is_current ? "hidden" : ""}>${date(w.id ?? 1, "end_date", w.end_date)}</span>
+        ${date(w.id ?? i + 1, "start_date", w.start_date)}
+        <span class="end" ${w.is_current ? "hidden" : ""}>${date(w.id ?? i + 1, "end_date", w.end_date)}</span>
         <label><input type="checkbox" name="is_current" ${w.is_current ? "checked" : ""}> I currently work here</label>
         <textarea name="summary">${w.summary ?? ""}</textarea>
-      </div>
-      <div><h4>Education<button type="button">add another</button></h4>
-        <div><input role="combobox" aria-label="School Name" id="downshift-3-input" value="${esc(e.school_name_other)}"></div>
-        <div><input role="combobox" aria-label="Field of Study / Major" id="downshift-4-input" value="${esc(e.field_of_study)}"></div>
-        <div><input role="combobox" aria-label="Degree type" id="downshift-5-input" value="${esc(e.degree)}"></div>
-        ${date(e.id ?? 2, "start_date", e.start_date)}${date(e.id ?? 2, "end_date", e.end_date)}
+      </div>`;
+    const school = (e, i) => `<div class="entry">
+        ${combo("School Name", e.school_name_other)}${combo("Field of Study / Major", e.field_of_study)}${combo("Degree type", e.degree)}
+        ${date(e.id ?? i + 101, "start_date", e.start_date)}${date(e.id ?? i + 101, "end_date", e.end_date)}
         <textarea name="summary">${e.summary ?? ""}</textarea>
       </div>`;
+    const each = (list, entry) => (list?.length ? list : [{}]).map(entry).join("");
+    return `
+      <div><h4>Work History<button type="button">add another</button></h4>${each(data.positions, work)}</div>
+      <div><h4>Education<button type="button">add another</button></h4>${each(data.educations, school)}</div>`;
   },
   skills: () => `
     <label>Which technologies/skills are you most experienced and interested in working with? (Choose up to 10)${req}
@@ -212,7 +213,7 @@ form.querySelector(".manual")?.addEventListener("click", () => {
   app.querySelector("form").innerHTML = render.experience() + `<button type="submit">Save &amp; next</button>`;
 });
 form.addEventListener("change", e => {
-  if (e.target.name === "is_current") form.querySelector(".end").hidden = e.target.checked;
+  if (e.target.name === "is_current") e.target.closest(".entry").querySelector(".end").hidden = e.target.checked;
 });
 
 form.onsubmit = async e => {
