@@ -253,8 +253,8 @@ class Join:
             raise Blocked("login_required: run `atsfill login join`")
         # the wizard's page names the documents the job asks, each required or optional
         raw = page.locator("script#__NEXT_DATA__").text_content() or "{}"
-        state = json.loads(raw)["props"]["pageProps"].get("initialState") or {}
-        documents = (state.get("job") or {}).get("documentsConfig") or [{"type": "CV"}]
+        data = json.loads(raw)["props"]["pageProps"].get("pageData") or {}
+        documents = (data.get("job") or {}).get("documentsConfig") or [{"type": "CV"}]
         fields = [
             *(Field(*DOCUMENTS[d["type"]], FieldType.FILE, d.get("constraint") != "OPTIONAL",
                     accept=PDF) for d in documents if d["type"] in DOCUMENTS),
