@@ -185,6 +185,22 @@ def test_an_answer_given_while_a_step_renders_is_given_again(page, files, monkey
     assert [c.field_id for c in checks if not c.match] == []
 
 
+def test_a_choice_after_a_choice_waits_for_its_own_cards(page, files, monkeypatch):
+    """The step before's cards stay a moment, the one at the answer's index already checked."""
+    level = {**QUESTIONS[0], "id": 11, "question": "Your seniority?"}
+    level["options"] = ["Junior", "Senior"]
+    asked = [{**q, "position": i + 1} for i, q in enumerate([QUESTIONS[0], level])]
+    monkeypatch.setattr(f"{__name__}.QUESTIONS", asked)
+    adapter = Join()
+    page.goto("https://join.com/companies/acme/104-ai-engineer")
+    fields = adapter.browser_read(page)
+    answers = {"cv": files[0], "question.1": "Fluent", "question.11": "Senior"}
+    adapter.fill(page, answers)
+    assert page.url.endswith("/apply/review")
+    checks = matching.check(fields, answers, adapter.read_back(page))
+    assert [c.field_id for c in checks if not c.match] == []
+
+
 def test_a_late_continue_never_presses_confirm(page, files, monkeypatch):
     """A last card leaves the wizard on `review`, whose footer's last button is the send."""
     monkeypatch.setattr(f"{__name__}.QUESTIONS", QUESTIONS[:2])

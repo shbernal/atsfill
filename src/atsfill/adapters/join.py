@@ -123,6 +123,18 @@ _CONTINUE = """(button, step) => {
   return true;
 }"""
 
+# Whether the cards shown are the question's: its options (a choice), or under its text (a
+# boolean, whose cards are in the job's language).
+_OWN_CARDS = """([question, options]) => {
+  const cards = [...document.querySelectorAll("[role=radio]")].map(card => {
+    const lines = card.innerText.split("\\n").map(line => line.trim()).filter(Boolean);
+    return lines[1] ?? lines[0] ?? "";
+  });
+  return options
+    ? cards.length === options.length && cards.every((card, i) => card === options[i])
+    : document.body.innerText.includes(question);
+}"""
+
 _CHECKED = """cards => cards.map(card => card.getAttribute("aria-checked") === "true")"""
 
 # The ids of the inputs that are empty, of those given.
@@ -422,6 +434,12 @@ class Join:
         match question["type"]:
             case "BOOLEAN" | "SINGLE_CHOICE":
                 cards.first.wait_for(timeout=STEP_TIMEOUT_MS)
+                with suppress(Timeout):  # the step before's cards stay a moment
+                    page.wait_for_function(
+                        _OWN_CARDS,
+                        arg=[question["question"], question["options"]],
+                        timeout=INPUT_TIMEOUT_MS,
+                    )
                 # the cards are the options in order: a letter, the option, a description
                 texts = [_card(t) for t in cards.all_inner_texts()]
                 options = YES_NO if question["type"] == "BOOLEAN" else question["options"]
