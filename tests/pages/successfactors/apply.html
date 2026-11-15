@@ -62,7 +62,7 @@
     <div class="RCMFormField rcmFormElement">
       <label for="127:_input" class="rcmFormFieldLabel"><span class="requiredField">*</span>&nbsp;Have you previously worked for Acme?</label>
       <span class="sfCascadingPicklist"><div class="paginatedPicklistContainer">
-        <input aria-label="Have you previously worked for Acme?" type="text" placeholder="Keine Auswahl" aria-owns="128:_listSelect" role="combobox" aria-required="true" class="rcmpaginatedselectinput" id="127:_input" value="">
+        <input aria-label="Have you previously worked for Acme?" type="text" placeholder="Keine Auswahl" aria-controls="128:_listSelect" role="combobox" aria-required="true" class="rcmpaginatedselectinput" id="127:_input" value="">
         <button type="button" id="127:_selectButton" class="rcmpaginatedselectbutton" onclick="toggle('127', ['No', 'Yes'])"></button>
       </div></span>
     </div>
@@ -93,7 +93,7 @@
   <script>
     function toggle(id, options) {
       const input = document.getElementById(id + ':_input');
-      const owns = input.getAttribute('aria-owns');
+      const owns = input.getAttribute('aria-owns') || input.getAttribute('aria-controls');
       const open = document.getElementById(owns);
       if (open) { open.remove(); return; }
       const ul = document.createElement('ul');

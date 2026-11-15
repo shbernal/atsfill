@@ -1,6 +1,6 @@
 # SAP SuccessFactors
 
-SAP SuccessFactors Recruiting's career sites and candidate pages, observed on live postings, last on 2026-10-27. The fixture pages are in [tests/pages/successfactors/](https://github.com/shbernal/atsfill/tree/main/tests/pages/successfactors/): the posting, the sign-in, sign-up and Quick Apply pages, and an application page with one example of each rendering below, served as an Acme career site and its data center host in `tests/test_successfactors.py`.
+SAP SuccessFactors Recruiting's career sites and candidate pages, observed on live postings, last on 2026-11-15. The fixture pages are in [tests/pages/successfactors/](https://github.com/shbernal/atsfill/tree/main/tests/pages/successfactors/): the posting, the sign-in, sign-up and Quick Apply pages, and an application page with one example of each rendering below, served as an Acme career site and its data center host in `tests/test_successfactors.py`.
 
 ## Where the form is
 
@@ -31,7 +31,7 @@ The application (`/portalcareer`) is one page of collapsible sections opened by 
 |---|---|---|
 | text input (`input[data-testid=sfTextField]`), with a `name` | `text` | 5 of 5 |
 | `textarea` | `text` | 1 |
-| paginated picklist: `input.rcmpaginatedselectinput` (`role=combobox`, `aria-owns` its `ul[role=listbox]`) and a button opening it, the items `li[role=option] a[title]`; a country, Yes/No questions, EEO answers | `choice`, the options read by opening it | 5 of 5 |
+| paginated picklist: `input.rcmpaginatedselectinput` (`role=combobox`, `aria-owns` its `ul[role=listbox]`, or `aria-controls` on 1 employer) and a button opening it, the items `li[role=option] a[title]`; a country, Yes/No questions, EEO answers | `choice`, the options read by opening it | 5 of 5 |
 | cascading picklist whose items follow its parent (a state after the country), empty when read, or its button disabled until the parent is answered | `typeahead` | 3 |
 | radio group (`input[type=radio]`) | `choice` | 1 |
 | `select` | `choice` | |
