@@ -46,7 +46,7 @@ PROFILE = {
     "hidden_companies": ["Globex"],
     "city_current": "New York, NY, USA", "us_authorized": "yes", "us_visa_sponsorship": "no",
     "remote": "yes", "relocate": "no", "role": "eng", "eng_type": ["Backend"], "in_school": "no",
-    "job_type": ["fulltime"], "experience": "5", "manual": True,
+    "job_type": ["fulltime"], "experience": "5",
     "positions": [{"id": 1, "employer_name_other": "Acme Corp", "title": "Engineer",
                    "start_date": "2020-01", "is_current": True}],
     "educations": [{"id": 2, "school_name_other": "State University", "field_of_study": "CS",
@@ -356,7 +356,7 @@ def test_a_step_the_wizard_does_not_load_yet(page, site):
         }),
         ("location", {
             "city_current": "New York, NY, USA", "us_authorized": "Yes", "relocate": "No",
-            "us_visa_sponsorship": "Yes", "remote": "I'm open to working remotely",
+            "us_visa_sponsorship": "No", "remote": "I'm open to working remotely",
         }),
         ("role", {
             "role": "Engineering", "eng_type": ["Backend"], "in_school": "No",
@@ -467,14 +467,28 @@ def test_several_entries_read_and_fill_the_first(page, site):
     adapter.profile_fill(page, answers)
     back = adapter.profile_read_back(page)
     assert {k: back.get(k) for k in answers} == answers
-    assert page.locator('input[aria-label="Employer Name"]').nth(1).input_value() == "Globex"
-    assert page.locator('input[aria-label="Degree type"]').nth(1).input_value() == "Other"
+    adapter.save(page)
+    data = site.saved[-1]["profile"]["data"]
+    assert data["positions"][1]["employer_name_other"] == "Globex"
+    assert data["educations"][1]["degree"] == "Other"
 
 
-def test_experience_is_filled_manually(page, site):
-    site.profile["manual"] = False
-    fields = step(page, "experience").profile_read(page)
-    assert "work_employer" in {f.id for f in fields}
+def test_an_empty_list_gets_a_new_entry(page, site):
+    site.profile["positions"] = []
+    adapter = step(page, "experience")
+    fields = {f.id: f for f in adapter.profile_read(page)}
+    assert fields["work_employer"].prefilled is None
+    answers: dict[str, Answer] = {"work_employer": "Acme Labs", "work_from": "02/2021"}
+    adapter.profile_fill(page, answers)
+    assert {k: adapter.profile_read_back(page).get(k) for k in answers} == answers
+    adapter.save(page)
+    assert site.saved[-1]["profile"]["data"]["positions"][0]["employer_name_other"] == "Acme Labs"
+
+
+def test_an_entry_the_editor_does_not_keep(page, site):
+    adapter = step(page, "experience")
+    with pytest.raises(Refused, match="^step_refused: experience: Work"):
+        adapter.profile_fill(page, {"work_employer": ""})
 
 
 def test_a_step_the_system_refuses(page, site):

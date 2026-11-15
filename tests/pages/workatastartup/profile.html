@@ -2,11 +2,15 @@
 <meta charset="utf-8">
 <title>My profile | Work at a Startup</title>
 <!-- The profile wizard at /application/<step>, one step per page as the live wizard renders it:
-labelled inputs, radio fieldsets, checkbox groups, a react-select country and multi-select
-(Backspace in its empty box removes the last pick), a places combobox, downshift comboboxes
-that take free text, a downshift search of YC companies picked as chips, month and year selects named after the entry, a skill list with a rating
-per skill, and a rating grid. The route injects PROFILE (the saved data) and STEPS (each step's
-status); Save & next posts {from, profile: {data}} to /application/next. -->
+labelled inputs, radio fieldsets (an option's name, then its description), checkbox groups
+each with a hidden input of the same name, a react-select country and multi-select (Backspace
+in its empty box removes the last pick), a places combobox, a downshift search of YC
+companies picked as chips, a skill list with a rating per skill, and a rating grid. Experience
+lists its Work and Education entries as cards: Edit, or Add where there is none, opens an
+editor dialog of downshift comboboxes that take free text, month and year selects named after
+the editor, Cancel, and a submit that keeps the entry in the list. The route injects PROFILE
+(the saved data) and STEPS (each step's status); Save & next posts {from, profile: {data}} to
+/application/next. -->
 <div id="app"></div>
 <script>
 const PROFILE = window.PROFILE ?? {};
@@ -15,7 +19,7 @@ const step = location.pathname.split("/").pop();
 const active = STEPS.find(s => s.name === step && s.status !== "locked") ? step : STEPS[0]?.name;
 const app = document.getElementById("app");
 app.dataset.page = JSON.stringify({
-  component: "jobs/public/pages/ProfileWizardPage",
+  component: "jobs/public/pages/ProfileWizardV3Page",
   props: {sectionAppProps: {activeSection: active, sectionInfo: STEPS.map(({name, status}) => ({name, status}))}},
 });
 const data = structuredClone(PROFILE);
@@ -24,7 +28,7 @@ const req = `<span> *</span>`;
 
 function radios(name, legend, options, labels = options) {
   return `<fieldset><legend>${legend}${req}</legend>${options.map((v, i) =>
-    `<label><input type="radio" name="${name}" id="_r_${name}__${v}" value="${v}" ${data[name] === v ? "checked" : ""}>${labels[i]}</label>`
+    `<label><input type="radio" name="${name}" value="${v}" ${data[name] === v ? "checked" : ""}><span><span>${labels[i]}</span></span></label>`
   ).join("")}</fieldset>`;
 }
 
@@ -36,7 +40,7 @@ function menu(box, items, pick, kind = "option") {
   if (kind === "places") list.setAttribute("role", "listbox");
   items.forEach((item, i) => {
     const el = document.createElement(kind === "downshift" ? "li" : "div");
-    if (kind === "downshift") el.id = `${box.id.replace("-input", "")}-item-${i}`;
+    if (kind === "downshift") el.id = `${box.dataset.menu ?? box.id.replace("-input", "")}-item-${i}`;
     else el.setAttribute("role", "option");
     el.textContent = item;
     el.onmousedown = e => { e.preventDefault(); pick(item); list.remove(); };
@@ -71,14 +75,14 @@ const render = {
     <label for="_r_0_">What city do you live in?${req}</label>
     <div id="PlacesAutocomplete__root"><input role="combobox" id="_r_0_" type="text" name="city_current" value="${esc(data.city_current)}"></div>
     ${radios("us_authorized", "I am legally authorized to work in the United States.", ["yes", "no"], ["Yes", "No"])}
-    ${radios("us_visa_sponsorship", "I do not require visa sponsorship to work legally in the United States.", ["no", "yes"], ["Yes", "No"])}
+    ${radios("us_visa_sponsorship", "Do you require visa sponsorship to work legally in the United States (now or in the future)?", ["yes", "no"], ["Yes", "No"])}
     ${radios("remote", "Are you open to working remotely?", ["no", "yes", "only"],
       ["I don't want to work remotely", "I'm open to working remotely", "I only want to work remotely"])}
     ${radios("relocate", "Are you willing to relocate?", ["no", "yes"], ["No", "Yes"])}`,
   role: () => `
     <fieldset><legend>What job function best fits what you're looking for?${req}</legend>
       ${[["eng", "Engineering", "Software, hardware and data"], ["design", "Design", "Web, mobile, UI/UX"]].map(([v, b, small]) =>
-        `<label><input type="radio" name="role" value="${v}" ${data.role === v ? "checked" : ""}><b>${b}</b><small>${small}</small></label>`).join("")}
+        `<label><input type="radio" name="role" value="${v}" ${data.role === v ? "checked" : ""}><span><span>${b}</span><span>${small}</span></span></label>`).join("")}
     </fieldset>
     <div class="eng" ${data.role === "eng" ? "" : "hidden"}>
       <label for="_r_1_">Which engineering roles are you most interested in? (Choose up to four)${req}</label>
@@ -88,38 +92,18 @@ const render = {
     ${radios("in_school", "Are you a full-time student at a school or bootcamp?", ["yes", "no"], ["Yes", "No"])}
     <fieldset><legend>What job type(s) are you most interested in?${req}</legend>
       ${[["fulltime", "Full-time employee"], ["contract", "Contractor"]].map(([v, l]) =>
-        `<label><input type="checkbox" name="job_type" value="${v}" ${(data.job_type ?? []).includes(v) ? "checked" : ""}>${l}</label>`).join("")}
+        `<label><span><input type="hidden" name="job_type" value="0"><input type="checkbox" name="job_type" value="${v}" ${(data.job_type ?? []).includes(v) ? "checked" : ""}></span><span>${l}</span></label>`).join("")}
     </fieldset>
     <label for="_r_5_">How many years of professional experience do you have?${req}</label>
     <input id="_r_5_" type="number" name="experience" value="${esc(data.experience)}">`,
   experience: () => {
-    const months = ["", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
-    const years = ["", ...Array.from({length: 30}, (_, i) => String(2026 - i))];
-    const date = (id, part, value) => {
-      const [y, m] = (value ?? "").split("-");
-      return `<select name="${id}_${part}_month" aria-label="${part} month">${months.map(o => `<option value="${o}" ${o === m ? "selected" : ""}>${o || "Month"}</option>`).join("")}</select>
-        <select name="${id}_${part}_year" aria-label="${part} year">${years.map(o => `<option value="${o}" ${o === y ? "selected" : ""}>${o || "Year"}</option>`).join("")}</select>`;
-    };
-    if (!data.manual) return `<button type="button" class="manual">fill in your experience manually</button>`;
-    let box = 0;  // downshift ids run on across entries
-    const combo = (label, value) => `<div><input role="combobox" aria-label="${label}" id="downshift-${++box}-input" value="${esc(value)}"></div>`;
-    const work = (w, i) => `<div class="entry">
-        ${combo("Employer Name", w.employer_name_other)}${combo("Title", w.title)}
-        <div id="PlacesAutocomplete__root"><input role="combobox" type="text" name="location" value="${esc(w.location)}"></div>
-        ${date(w.id ?? i + 1, "start_date", w.start_date)}
-        <span class="end" ${w.is_current ? "hidden" : ""}>${date(w.id ?? i + 1, "end_date", w.end_date)}</span>
-        <label><input type="checkbox" name="is_current" ${w.is_current ? "checked" : ""}> I currently work here</label>
-        <textarea name="summary">${w.summary ?? ""}</textarea>
-      </div>`;
-    const school = (e, i) => `<div class="entry">
-        ${combo("School Name", e.school_name_other)}${combo("Field of Study / Major", e.field_of_study)}${combo("Degree type", e.degree)}
-        ${date(e.id ?? i + 101, "start_date", e.start_date)}${date(e.id ?? i + 101, "end_date", e.end_date)}
-        <textarea name="summary">${e.summary ?? ""}</textarea>
-      </div>`;
-    const each = (list, entry) => (list?.length ? list : [{}]).map(entry).join("");
-    return `
-      <div><h4>Work History<button type="button">add another</button></h4>${each(data.positions, work)}</div>
-      <div><h4>Education<button type="button">add another</button></h4>${each(data.educations, school)}</div>`;
+    const card = (kind, title, line) => `<div><div><span>${esc(title)}</span><p>${esc(line)}</p></div>
+      <div><button type="button" aria-label="Edit ${esc(title)}" data-edit="${kind}"></button></div></div>`;
+    const section = (heading, add, kind, cards) => `<div><div><h2>${heading}</h2><button type="button" data-add="${kind}">${add}</button></div>
+      <div>${cards.join("")}</div></div>`;
+    return `<div><p>Add your experience below, or import it from a resume or LinkedIn.</p><button type="button">Import experience</button></div>
+      ${section("Work", "Add a role", "work", (data.positions ?? []).map(w => card("work", w.title ?? "", w.employer_name_other ?? "")))}
+      ${section("Education", "Add a school", "education", (data.educations ?? []).map(e => card("education", e.school_name_other ?? "", e.degree ?? "")))}`;
   },
   skills: () => `
     <label>Which technologies/skills are you most experienced and interested in working with? (Choose up to 10)${req}
@@ -149,9 +133,67 @@ for (const box of form.querySelectorAll("[name=city_current]")) {
   box.oninput = () => menu(box, box.value.length > 2 ? CITIES.filter(c => c.startsWith(box.value)) : [],
     c => { box.value = c; }, "places");
 }
-for (const box of form.querySelectorAll("input[id^=downshift-]")) {
-  box.oninput = () => menu(box, box.ariaLabel === "Employer Name" ? EMPLOYERS.filter(e => e.startsWith(box.value)) : [],
-    e => { box.value = e; }, "downshift");
+const MONTHS = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+const YEARS = Array.from({length: 40}, (_, i) => String(2030 - i));
+let menus = 0;  // downshift ids run on across editors
+function editor(kind, i) {  // the entry's editor dialog; i < 0 adds an entry
+  const list = kind === "work" ? (data.positions ??= []) : (data.educations ??= []);
+  const entry = i >= 0 ? structuredClone(list[i]) : {};
+  const id = kind === "work" ? "experience-editor" : "education-editor";
+  const combo = (key, label) => `<label for="${id}_${key}">${label}</label><div><input role="combobox"
+    aria-label="${label}" id="${id}_${key}" data-menu="downshift-${menus++}" data-key="${key}" value="${esc(entry[key])}"></div>`;
+  const date = (part, label, value) => {
+    const [y, m] = (value ?? "").split("-");
+    return `<div class="${part}"><label>${label}</label>
+      <select name="${id}_${part}_month" aria-label="${label} month"><option value="" hidden>Month</option>${MONTHS.map(o => `<option value="${o}" ${o === m ? "selected" : ""}>${o}</option>`).join("")}</select>
+      <select name="${id}_${part}_year" aria-label="${label} year"><option value="" hidden>Year</option>${YEARS.map(o => `<option value="${o}" ${o === y ? "selected" : ""}>${o}</option>`).join("")}</select></div>`;
+  };
+  const fields = kind === "work"
+    ? `${combo("employer_name_other", "Company")}${combo("title", "Job title")}
+       <div id="PlacesAutocomplete__root"><input role="combobox" type="text" name="location" value="${esc(entry.location)}"></div>
+       ${date("start_date", "From", entry.start_date)}${entry.is_current ? "" : date("end_date", "To", entry.end_date)}
+       <label><input type="checkbox" name="is_current" ${entry.is_current ? "checked" : ""}>I currently work here</label>`
+    : `${combo("school_name_other", "School")}${combo("field_of_study", "Field of study")}${combo("degree", "Degree")}
+       ${date("start_date", "From", entry.start_date)}${date("end_date", "To", entry.end_date)}`;
+  const submit = i >= 0 ? "Save changes" : kind === "work" ? "Add role" : "Add school";
+  const dialog = document.createElement("div");
+  dialog.setAttribute("role", "dialog");
+  dialog.innerHTML = `<h2>${i >= 0 ? "Edit" : "Add"} ${kind}</h2><form novalidate>${fields}
+    <textarea name="summary" aria-label="Summary (optional)">${esc(entry.summary)}</textarea>
+    <button type="button" class="cancel">Cancel</button><button type="submit">${submit}</button></form>`;
+  document.body.append(dialog);
+  const edit = dialog.querySelector("form");
+  dialog.onkeydown = e => { if (e.key === "Escape") dialog.remove(); };
+  edit.querySelector(".cancel").onclick = () => dialog.remove();
+  for (const box of edit.querySelectorAll("[data-menu]")) {
+    box.oninput = () => menu(box, box.ariaLabel === "Company" ? EMPLOYERS.filter(e => e.startsWith(box.value)) : [],
+      e => { box.value = e; }, "downshift");
+  }
+  edit.querySelector("[name=is_current]")?.addEventListener("change", e => {
+    const start = edit.querySelector(".start_date");
+    if (e.target.checked) edit.querySelector(".end_date")?.remove();
+    else start.insertAdjacentHTML("afterend", date("end_date", "To", entry.end_date));
+  });
+  edit.onsubmit = e => {
+    e.preventDefault();
+    const first = edit.querySelector("[data-menu]");
+    if (!first.value) { first.ariaInvalid = "true"; return; }
+    for (const box of edit.querySelectorAll("[data-key]")) entry[box.dataset.key] = box.value;
+    const when = part => {
+      const [m, y] = [`${part}_month`, `${part}_year`].map(n => edit.querySelector(`[name=${id}_${n}]`)?.value);
+      return m && y ? `${y}-${m}` : null;
+    };
+    entry.start_date = when("start_date");
+    entry.end_date = when("end_date");
+    entry.summary = edit.querySelector("[name=summary]").value;
+    const current = edit.querySelector("[name=is_current]");
+    if (current) entry.is_current = current.checked;
+    const place = edit.querySelector("[name=location]");
+    if (place) entry.location = place.value;
+    if (i >= 0) list[i] = entry; else list.push(entry);
+    dialog.remove();
+    form.innerHTML = render.experience() + `<button type="submit">Save &amp; next</button>`;
+  };
 }
 
 const companies = form.querySelector("[aria-label='Company name']");
@@ -193,10 +235,10 @@ const skillBox = form.querySelector("[aria-label^='Which technologies']");
 if (skillBox) {
   data.top_skills ??= [];
   const rows = () => {
-    form.querySelector(".skills").innerHTML = data.top_skills.map(s => `<div><span role="button" aria-label="remove">×</span>${SKILLS[s.value]}
+    form.querySelector(".skills").innerHTML = data.top_skills.map(s => `<div><div>${SKILLS[s.value]}</div><button type="button" aria-label="Delete ${SKILLS[s.value]}"></button>
       ${["beginner", "intermediate", "advanced"].map(l => `<label><input type="radio" name="top_skills_${s.value}" value="${l}"
         aria-label="${SKILLS[s.value]}: ${l[0].toUpperCase() + l.slice(1)}" ${s.rating === l ? "checked" : ""}>${l}</label>`).join("")}</div>`).join("");
-    form.querySelectorAll(".skills [aria-label=remove]").forEach((x, i) => x.onclick = () => { data.top_skills.splice(i, 1); rows(); });
+    form.querySelectorAll(".skills [aria-label^='Delete ']").forEach((x, i) => x.onclick = () => { data.top_skills.splice(i, 1); rows(); });
     form.querySelectorAll(".skills input").forEach(r => r.onchange = () => {
       data.top_skills.find(s => `top_skills_${s.value}` === r.name).rating = r.value;
     });
@@ -208,12 +250,10 @@ if (skillBox) {
   skillBox.onkeydown = e => { if (e.key === "Backspace" && !skillBox.value) { data.top_skills.pop(); rows(); } };
 }
 
-form.querySelector(".manual")?.addEventListener("click", () => {
-  data.manual = true;
-  app.querySelector("form").innerHTML = render.experience() + `<button type="submit">Save &amp; next</button>`;
-});
-form.addEventListener("change", e => {
-  if (e.target.name === "is_current") e.target.closest(".entry").querySelector(".end").hidden = e.target.checked;
+form.addEventListener("click", e => {
+  const edit = e.target.closest("[data-edit]"), add = e.target.closest("[data-add]");
+  if (edit) editor(edit.dataset.edit, [...form.querySelectorAll(`[data-edit=${edit.dataset.edit}]`)].indexOf(edit));
+  if (add) editor(add.dataset.add, -1);
 });
 
 form.onsubmit = async e => {
@@ -230,6 +270,7 @@ form.onsubmit = async e => {
   if (companies) values.hidden_companies = data.hidden_companies;
   const tel = form.querySelector("[type=tel]");
   if (tel) values.phone_number = tel.value;
+  if (active === "experience") Object.assign(values, {positions: data.positions, educations: data.educations});
   const r = await fetch("/application/next", {method: "POST", body: JSON.stringify({from: active, profile: {data: values}})});
   if (r.ok) setTimeout(async () => location.href = (await r.json()).redirect_to, 300);
 };
