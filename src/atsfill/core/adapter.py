@@ -1,4 +1,6 @@
 import re
+from collections.abc import Generator
+from contextlib import contextmanager
 from dataclasses import dataclass, fields
 from enum import StrEnum
 from typing import Protocol, Self, runtime_checkable
@@ -36,6 +38,26 @@ class Unsupported(Exception):
 
     A field atsfill cannot fill is not raised: `browser_read` returns it with `unfillable` set.
     """
+
+
+class NotSent(Exception):
+    """Raised by `SendsToOpen.open` around an error it knows came before anything was sent: the
+    core records no attempt and handles `cause` as it would without a send (ADR 0006)."""
+
+    def __init__(self, cause: Exception) -> None:
+        super().__init__(cause)
+        self.cause = cause
+
+
+@contextmanager
+def before_send() -> Generator[None]:
+    """Wraps what `SendsToOpen.open` does before its click in `NotSent`."""
+    try:
+        yield
+    except SignedOut, Unsupported, Blocked:
+        raise
+    except Exception as e:
+        raise NotSent(e) from e
 
 
 class Gap(StrEnum):
@@ -284,7 +306,8 @@ class SendsToOpen(Adapter, Protocol):
     def open(self, page: Page) -> str | None:
         """Opens the form from the loaded posting: sends the application where the account has
         none for it, returning the evidence of that send; continues the one it has, returning
-        None. Raises `SignedOut`, `Unsupported` or `Blocked` only before sending."""
+        None. Raises `SignedOut`, `Unsupported` or `Blocked` only before sending, and wraps any
+        other error before it in `NotSent` (`before_send`)."""
         ...
 
 
