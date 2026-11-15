@@ -2,6 +2,8 @@
 sign-in."""
 
 import json
+import os
+from datetime import datetime
 from pathlib import Path
 from typing import cast
 
@@ -37,7 +39,29 @@ ANSWERS = {
     "GetJobApplicationProcess": {
         "jobApplicationProcess": {"linkOut": False, "questionnaire": {"questions": QUESTIONS}}
     },
+    "DocumentsQuery": {"viewer": {"resumes": []}},
 }
+STORED = "2026-10-28T19:38:53.993Z"
+QUESTIONS_ANSWERED = {
+    "question.PH_Q_1": "₱30K",
+    "question.PH_Q_2": ["SAP"],
+    "question.PH_Q_3": "No",
+}
+
+
+def stored(monkeypatch, *names: str) -> None:
+    """The profile stores a resume under each name, the first its default."""
+    resumes = [
+        {"id": f"id-{i}", "createdDateUtc": STORED, "isDefault": i == 0,
+         "fileMetadata": {"name": name, "size": "8 B"}}
+        for i, name in enumerate(names)
+    ]  # fmt: skip
+    monkeypatch.setitem(ANSWERS, "DocumentsQuery", {"viewer": {"resumes": resumes}})
+
+
+def uploaded(page) -> str | None:
+    """The file the fixture page stored on upload."""
+    return page.evaluate("JSON.parse(sessionStorage.getItem('state')).resume ?? null")
 
 
 def serve(route) -> None:
@@ -213,12 +237,35 @@ def test_a_profile_without_a_career_history_is_a_known_gap(page):
         adapter.fill(page, answers)
 
 
-def test_a_resume_past_the_ten_seek_keeps_is_a_known_gap(page, resume):
+def test_a_resume_past_the_ten_seek_keeps_is_a_known_gap(monkeypatch, page, resume):
+    stored(monkeypatch, *["resume.pdf"] * 10)
     adapter = Jobstreet()
-    page.goto(f"{JOB}?fullresumes")
+    page.goto(JOB)
     adapter.browser_read(page)
     with pytest.raises(Unsupported, match="unsupported_flow: resume_limit: the profile holds 10"):
         adapter.fill(page, {"resume": resume})
+
+
+def test_a_resume_the_profile_stored_since_it_changed_is_picked(monkeypatch, page, resume):
+    stored(monkeypatch, *["resume.pdf"] * 9, "CV Ada.pdf")  # full, which picking does not mind
+    before = datetime.fromisoformat(STORED).timestamp() - 60
+    os.utime(resume, (before, before))
+    adapter = Jobstreet()
+    page.goto(JOB)
+    adapter.browser_read(page)
+    adapter.fill(page, {"resume": resume, **QUESTIONS_ANSWERED})
+    assert adapter.read_back(page)["resume"] == "CV Ada.pdf"
+    assert uploaded(page) is None
+
+
+def test_a_resume_changed_since_the_profile_stored_it_is_uploaded(monkeypatch, page, resume):
+    stored(monkeypatch, "CV Ada.pdf")  # the file is written after STORED
+    adapter = Jobstreet()
+    page.goto(JOB)
+    adapter.browser_read(page)
+    adapter.fill(page, {"resume": resume, **QUESTIONS_ANSWERED})
+    assert adapter.read_back(page)["resume"] == "CV Ada.pdf"
+    assert uploaded(page) == "CV Ada.pdf"
 
 
 def test_sign_in_types_the_otp_after_the_recaptcha(page, otp_command):
