@@ -105,6 +105,22 @@ def test_a_refusal_names_its_fields_and_rules_never_the_answer(monkeypatch):
     assert "my secret" not in json.dumps(event)
 
 
+@pytest.mark.parametrize(
+    "reason, error",
+    [
+        ("error_after_click: TimeoutError: Jane Doe's page timed out", "TimeoutError"),
+        ("adapter_error: KeyError: 'jane@example.com'", "KeyError"),
+        ("adapter_error: no class, a message", None),
+        ("mismatch: Level: Basic", None),
+    ],
+)
+def test_an_error_names_its_class_never_its_message(monkeypatch, reason, error):
+    monkeypatch.setattr(telemetry, "origin", lambda: ("user", None))
+    event = telemetry.event("send", Result(Status.UNKNOWN, URL, "fake", reason))
+    assert event.get("error") == error
+    assert "Jane" not in json.dumps(event) and "jane" not in json.dumps(event)
+
+
 def test_no_adapter_names_the_source_its_host_is_on(monkeypatch):
     monkeypatch.setattr(telemetry, "origin", lambda: ("user", None))
     result = Result(Status.UNSUPPORTED, "https://acme.icims.com/jobs/1/job", reason="no_adapter")

@@ -7,6 +7,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -56,11 +57,22 @@ EXCLUDED = (
     "external_step",
 )
 
+# Reason codes whose detail starts with the exception's class: `code: Class: message`.
+ERRORS = ("error_after_click", "adapter_error")
+CLASS = re.compile(r"[A-Z]\w*")
+
 logging.getLogger("posthog").disabled = True
 
 
 def _code(reason: str | None) -> str | None:
     return reason.partition(":")[0] if reason else None
+
+
+def _error(reason: str | None) -> str | None:
+    """The exception's class in an error's reason, never its message."""
+    code, _, detail = (reason or "").partition(": ")
+    name = detail.partition(":")[0]
+    return name if code in ERRORS and CLASS.fullmatch(name) else None
 
 
 def verdict(result: Result) -> str:
@@ -135,6 +147,7 @@ def event(command: str, result: Result) -> dict:
         "verdict": verdict(result),
         "status": result.status.value,
         "reason": _code(result.reason),
+        "error": _error(result.reason),
         "refused": result.refused or None,
         "version": version("atsfill"),
         "posting": None if command == "profile" else posting_hash(_posting(result)),
