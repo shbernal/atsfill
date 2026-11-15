@@ -11,6 +11,8 @@ from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
+pytestmark = pytest.mark.blocker
+
 PAGES = Path(__file__).parent / "pages/hiringthing"
 HOST = "https://acme.hiringthing.com"
 JOB = f"{HOST}/job/1234567/acme-role"

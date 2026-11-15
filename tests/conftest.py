@@ -1,9 +1,12 @@
 import functools
+import json
+import statistics
 import sys
 import threading
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import unquote
 
 import keyring
@@ -14,6 +17,11 @@ import pytest
 from atsfill.core import browser, otp
 
 PAGES = Path(__file__).parent / "pages"
+# Each test's seconds in CI, all phases, refreshed when the shards drift apart from a CI
+# run's artifacts: `gh run download <run> -p 'durations-*' -D d && jq -s add d/*/*.json`.
+# A test it lacks counts the median.
+DURATIONS = Path(__file__).parent / "durations.json"
+TIMES: dict[str, float] = {}
 
 
 class Pages(SimpleHTTPRequestHandler):
@@ -36,11 +44,13 @@ class Pages(SimpleHTTPRequestHandler):
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--shard", help="i/n: runs the i-th of n parts of the suite")
+    parser.addoption("--store-durations", help="path: writes each test's seconds there")
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Deals the suite into parts in turn: the tests on a module's browser as one, then the
-    rest one by one."""
+    """Deals the suite into parts of about equal time, by `DURATIONS`: the tests on a
+    module's browser as one unit, the rest one by one; the longest unit goes first, each to
+    the part with the least time yet. A test it does not know counts the median."""
     if not (shard := config.getoption("shard")):
         return
     i, n = map(int, shard.split("/"))
@@ -49,10 +59,31 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[missing-attribute]
         shared = any(d[-1].scope == "module" for d in defs)
         units.setdefault(item.module.__name__ if shared else item.nodeid, []).append(item)  # ty: ignore[missing-attribute]
-    order = sorted(units, key=lambda key: ("::" in key, key))
-    kept = {id(t) for k, key in enumerate(order) if k % n == i - 1 for t in units[key]}
+    known = json.loads(DURATIONS.read_text()) if DURATIONS.exists() else {}
+    default = statistics.median(known.values()) if known else 1.0
+    weight = {k: sum(known.get(t.nodeid, default) for t in units[k]) for k in units}
+    loads = [0.0] * n
+    kept: set[int] = set()
+    for key in sorted(units, key=lambda k: (-weight[k], k)):
+        part = loads.index(min(loads))
+        loads[part] += weight[key]
+        if part == i - 1:
+            kept |= {id(t) for t in units[key]}
     config.hook.pytest_deselected(items=[t for t in items if id(t) not in kept])
     items[:] = [t for t in items if id(t) in kept]
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    TIMES[report.nodeid] = TIMES.get(report.nodeid, 0.0) + report.duration
+
+
+def pytest_sessionfinish(session: pytest.Session) -> None:
+    """Under xdist, the controller sees every worker's reports and writes them."""
+    path = session.config.getoption("store_durations")
+    if path and not hasattr(session.config, "workerinput"):
+        Path(path).write_text(
+            json.dumps({k: round(v, 2) for k, v in sorted(TIMES.items())}, indent=0) + "\n"
+        )
 
 
 class MemoryKeyring(keyring.backend.KeyringBackend):
@@ -75,16 +106,32 @@ class MemoryKeyring(keyring.backend.KeyringBackend):
             raise keyring.errors.PasswordDeleteError(username)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def offline() -> Generator[None]:
+CAMOUFOX, WAIT_FOR_BLOCKER = browser.Camoufox, browser._wait_for_blocker
+
+
+def launch(blocked: bool) -> Callable[..., Any]:
     """Every host name resolves to this machine, so a request no route serves fails here
     instead of reaching a live site: a redirect `route.fulfill` answers is followed outside
     the context's routes."""
-    launch = functools.partial(
-        browser.Camoufox, firefox_user_prefs={"network.dns.forceResolve": "127.0.0.1"}
-    )
+
+    def start(**options: Any) -> Any:
+        if not blocked:
+            options["addons"] = []
+        return CAMOUFOX(**options, firefox_user_prefs={"network.dns.forceResolve": "127.0.0.1"})
+
+    return start
+
+
+@pytest.fixture(scope="module", autouse=True)
+def offline(request) -> Generator[None]:
+    """The browser starts offline. The blocker is most of a launch's time, so it starts only
+    for a module marked `blocker`: its pages hold a banner the blocker hides, as outside the
+    tests. Module-scoped, so a module's own browser starts after it."""
+    blocked = request.node.get_closest_marker("blocker") is not None
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(browser, "Camoufox", launch)
+        mp.setattr(browser, "Camoufox", launch(blocked))
+        if not blocked:
+            mp.setattr(browser, "_wait_for_blocker", lambda _: None)
         yield
 
 

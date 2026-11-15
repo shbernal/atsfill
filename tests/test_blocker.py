@@ -3,6 +3,8 @@ import pytest
 from atsfill.adapters import filters
 from atsfill.core import browser
 
+pytestmark = pytest.mark.blocker
+
 
 def test_the_first_page_a_browser_opens_has_its_cookie_banner_hidden(tmp_path):
     url = "https://careers.example.com/"

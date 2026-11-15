@@ -13,9 +13,23 @@ from atsfill.core import browser, matching
 from atsfill.core.adapter import Blocked, NotTaken, Unsupported
 from atsfill.core.results import AllOf, AnyOf, FieldType, Is, OptionSet
 
+pytestmark = pytest.mark.blocker
+
 PAGES = Path(__file__).parent / "pages/phenom"
 JOB = "https://careers.acme.example/us/en/job/ACMEUS1001EXTERNALENUS/Data-Analyst"
 APPLY = "https://careers.acme.example/us/en/apply?jobSeqNo=ACMEUS1001EXTERNALENUS"
+# The fixture page's slowest reply, a country's fields, comes 600 ms after the answer: half
+# the real site's settle still waits it out twice over.
+SETTLE_S = 0.5
+POLL_S = 0.1
+
+
+@pytest.fixture(autouse=True)
+def settle(monkeypatch) -> None:
+    monkeypatch.setattr(phenom, "SETTLE_S", SETTLE_S)
+    monkeypatch.setattr(phenom, "POLL_S", POLL_S)
+
+
 CONFIG = f"{phenom.CDN}/ACMEUS/workday/external/careersite/singlepage"
 MULTI_PAGE = f"{phenom.CDN}/ACMEUS/schema/apply/MULTI_PAGE"
 REFERENCES = json.loads((PAGES / "references.json").read_text())

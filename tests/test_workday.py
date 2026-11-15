@@ -34,6 +34,19 @@ class Profiles:
 
 
 APPLY = f"{JOB}/apply/applyManually"
+# The fixture page renders in one go, its slowest reply 300 ms after the press: no settle a
+# real tenant's sections need, each some seconds apart. The poll stays under the 500 ms the
+# page takes to post a definition, so a fill still meets its reply late.
+SETTLE_MS = 200
+STEP_POLL_MS = 100
+
+
+@pytest.fixture(autouse=True)
+def settle(monkeypatch) -> None:
+    monkeypatch.setattr(workday_module, "SETTLE_MS", SETTLE_MS)
+    monkeypatch.setattr(workday_module, "STEP_POLL_MS", STEP_POLL_MS)
+
+
 DEFINITION_MS = 1_000
 API = {
     "/wday/cxs/acme/Careers/job/Engineer_R123-1": "job.json",

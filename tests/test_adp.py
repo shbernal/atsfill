@@ -19,6 +19,17 @@ CENTER = f"{HOST}/mascsr/default/mdf/recruitment/recruitment.html?cid=acme&ccId=
 JOB = f"{CENTER}&jobId=5001_1&lang=en_US"
 SCOPE = "acme.19000101_000001"
 
+# The fixture page renders as soon as it is answered: no settle the real one needs, and a
+# Next that has not moved on in seconds never will.
+SETTLE_MS = 50
+STEP_TIMEOUT_MS = 5_000
+
+
+@pytest.fixture(autouse=True)
+def settle(monkeypatch) -> None:
+    monkeypatch.setattr(adp, "SETTLE_MS", SETTLE_MS)
+    monkeypatch.setattr(adp, "STEP_TIMEOUT_MS", STEP_TIMEOUT_MS)
+
 
 def yes_no(n: int, text: str, required: bool = True) -> dict:
     options = [{"answerID": "Yes", "answerValue": "Y"}, {"answerID": "No", "answerValue": "N"}]

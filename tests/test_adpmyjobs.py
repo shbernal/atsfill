@@ -17,6 +17,17 @@ PAGE = Path(__file__).parent / "pages/adpmyjobs/app.html"
 SITE = "https://myjobs.adp.com/acmecareers"
 JOB = f"{SITE}/cx/job/5001"
 
+# The fixture page renders as soon as it is answered: no settle the real one needs, and a
+# Next that has not moved on in seconds never will.
+SETTLE_MS = 50
+SECTION_TIMEOUT_MS = 5_000
+
+
+@pytest.fixture(autouse=True)
+def settle(monkeypatch) -> None:
+    monkeypatch.setattr(adpmyjobs, "SETTLE_MS", SETTLE_MS)
+    monkeypatch.setattr(adpmyjobs, "SECTION_TIMEOUT_MS", SECTION_TIMEOUT_MS)
+
 
 def options(codelist: str) -> list[dict]:
     return [{"linkID": "OPTIONS", "href": f"/codelists/{codelist}?rmapp=cla"}]

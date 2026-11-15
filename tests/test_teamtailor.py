@@ -13,6 +13,8 @@ from atsfill.core import browser, matching
 from atsfill.core.adapter import Held, Unsupported
 from atsfill.core.results import Answer, FieldType, Is
 
+pytestmark = pytest.mark.blocker
+
 PAGE = Path(__file__).parent / "pages/teamtailor/new.html"
 JOB = "https://careers.example.com/fr/jobs/1234567-solution-engineer"
 TAKEOVER = 7654321  # a job whose career site opens its cookie banner as a modal

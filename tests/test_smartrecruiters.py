@@ -8,6 +8,8 @@ from atsfill.adapters.smartrecruiters import SmartRecruiters
 from atsfill.core import browser, matching
 from atsfill.core.results import FieldType, Is
 
+pytestmark = pytest.mark.blocker
+
 PAGE = Path(__file__).parent / "pages/smartrecruiters/apply.html"
 JOB = "https://jobs.smartrecruiters.com/Acme/123456-engineer"
 FORM = "https://jobs.smartrecruiters.com/oneclick-ui/company/Acme/publication/p1?dcr_ci=Acme"

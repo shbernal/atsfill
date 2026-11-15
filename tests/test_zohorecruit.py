@@ -11,6 +11,8 @@ from atsfill.core.adapter import Blocked, Unsupported
 from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
+pytestmark = pytest.mark.blocker
+
 PAGES = Path(__file__).parent / "pages/zohorecruit"
 JOB = "https://acme.zohorecruit.com/jobs/Careers/1234567/Placeholder-Role?source=CareerSite"
 API = (

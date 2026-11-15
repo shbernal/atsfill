@@ -11,6 +11,8 @@ from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
+pytestmark = pytest.mark.blocker
+
 PAGES = Path(__file__).parent / "pages/rippling"
 JOB = "https://ats.rippling.com/acme/jobs/0b6a3f8e-1c2d-4e5f-8a9b-0c1d2e3f4a5b"
 GONE = "https://ats.rippling.com/acme/jobs/9f8e7d6c-5b4a-4321-8fed-cba987654321"

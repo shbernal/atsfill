@@ -62,6 +62,7 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
+markers = ["blocker: the module's pages hold a banner: the browser starts with the blocker"]
 testpaths = ["tests"]
 
 [[tool.uv.index]]
