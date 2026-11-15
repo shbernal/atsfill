@@ -11,6 +11,8 @@ from atsfill.core import browser, matching
 from atsfill.core.conditions import Form
 from atsfill.core.results import FieldType, Is
 
+pytestmark = pytest.mark.blocker
+
 PAGE = Path(__file__).parent / "pages/paylocity/apply.html"
 JOB = "https://recruiting.paylocity.com/Recruiting/Jobs/Details/1234"
 

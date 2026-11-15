@@ -11,6 +11,8 @@ from atsfill.core.adapter import Unsupported
 from atsfill.core.results import Answer, FieldType
 from tests import testuser
 
+pytestmark = pytest.mark.blocker
+
 PAGE = Path(__file__).parent / "pages/workable/apply.html"
 JOB = "https://apply.workable.com/acme/j/ABCDEF1234/"
 POSTING = "https://apply.workable.com/j/ABCDEF1234"

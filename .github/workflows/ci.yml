@@ -35,19 +35,6 @@ jobs:
       - run: uv run atsfill install-browser
         env:
           GITHUB_TOKEN: ${{ github.token }}  # the fetch asks GitHub's API, rate limited without one
-      - name: Time one browser launch, alone on the runner
-        run: |
-          echo "cores: $(nproc)"
-          uv run python - <<'EOF'
-          import tempfile, time
-          from pathlib import Path
-          from atsfill.core import browser
-          for run in (1, 2):
-              start = time.monotonic()
-              with browser.open_page(Path(tempfile.mkdtemp())) as page:
-                  page.goto("about:blank")
-              print(f"launch {run}: {time.monotonic() - start:.1f}s")
-          EOF
       - run: uv run pytest -n auto --dist loadscope --durations=20 --shard ${{ matrix.shard }}/3
 
   # Windows: the package imports and the data directory lock holds. No browser runs here.

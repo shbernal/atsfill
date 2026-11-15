@@ -1,9 +1,10 @@
 import functools
 import sys
 import threading
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import unquote
 
 import keyring
@@ -75,16 +76,32 @@ class MemoryKeyring(keyring.backend.KeyringBackend):
             raise keyring.errors.PasswordDeleteError(username)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def offline() -> Generator[None]:
+CAMOUFOX, WAIT_FOR_BLOCKER = browser.Camoufox, browser._wait_for_blocker
+
+
+def launch(blocked: bool) -> Callable[..., Any]:
     """Every host name resolves to this machine, so a request no route serves fails here
     instead of reaching a live site: a redirect `route.fulfill` answers is followed outside
     the context's routes."""
-    launch = functools.partial(
-        browser.Camoufox, firefox_user_prefs={"network.dns.forceResolve": "127.0.0.1"}
-    )
+
+    def start(**options: Any) -> Any:
+        if not blocked:
+            options["addons"] = []
+        return CAMOUFOX(**options, firefox_user_prefs={"network.dns.forceResolve": "127.0.0.1"})
+
+    return start
+
+
+@pytest.fixture(scope="module", autouse=True)
+def offline(request) -> Generator[None]:
+    """The browser starts offline. The blocker is most of a launch's time, so it starts only
+    for a module marked `blocker`: its pages hold a banner the blocker hides, as outside the
+    tests. Module-scoped, so a module's own browser starts after it."""
+    blocked = request.node.get_closest_marker("blocker") is not None
     with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(browser, "Camoufox", launch)
+        mp.setattr(browser, "Camoufox", launch(blocked))
+        if not blocked:
+            mp.setattr(browser, "_wait_for_blocker", lambda _: None)
         yield
 
 

@@ -9,6 +9,8 @@ from atsfill.core import browser, matching, otp
 from atsfill.core.adapter import Blocked, NotTaken, RevealsFields
 from atsfill.core.results import FieldType, Is, OptionSet
 
+pytestmark = pytest.mark.blocker
+
 PAGES = Path(__file__).parent / "pages/oracle"
 JOB = "https://acme.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/1234"
 

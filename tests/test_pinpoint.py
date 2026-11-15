@@ -12,6 +12,8 @@ from atsfill.core.adapter import NotTaken, Unsupported
 from atsfill.core.results import Answer, AnyOf, FieldType, Is
 from tests import testuser
 
+pytestmark = pytest.mark.blocker
+
 PAGES = Path(__file__).parent / "pages/pinpoint"
 UUID = "1a2b3c4d-0000-4000-8000-000000000001"
 JOB = f"https://acme.pinpointhq.com/en/postings/{UUID}"

@@ -12,6 +12,8 @@ from atsfill.core.adapter import Blocked, Unsupported
 from atsfill.core.results import Answer, FieldType, Is
 from tests import testuser
 
+pytestmark = pytest.mark.blocker
+
 PAGES = Path(__file__).parent / "pages/eightfold"
 SITE = "https://acme.eightfold.ai"
 JOB = f"{SITE}/careers/job/1234567?utm_source=x"
