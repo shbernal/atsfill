@@ -36,7 +36,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}  # the fetch asks GitHub's API, rate limited without one
       - run: >-
-          uv run pytest -n auto --dist loadgroup --durations=20 --shard ${{ matrix.shard }}/3
+          uv run pytest -n auto --dist loadscope --durations=20 --shard ${{ matrix.shard }}/3
           --store-durations "$RUNNER_TEMP/durations-${{ matrix.shard }}.json"
       # Merged, the shards' files refresh tests/durations.json, which deals the shards.
       - if: always()

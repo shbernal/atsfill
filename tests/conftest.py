@@ -1,6 +1,5 @@
 import functools
 import json
-import re
 import statistics
 import sys
 import threading
@@ -23,7 +22,6 @@ PAGES = Path(__file__).parent / "pages"
 # A test it lacks counts the median.
 DURATIONS = Path(__file__).parent / "durations.json"
 TIMES: dict[str, float] = {}
-GROUP = re.compile(r"@tests\.test_\w+$")
 
 
 class Pages(SimpleHTTPRequestHandler):
@@ -49,24 +47,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--store-durations", help="path: writes each test's seconds there")
 
 
-@pytest.hookimpl(tryfirst=True)  # before xdist names each test by its group
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Groups the tests on a module's browser, which `--dist loadgroup` runs on one worker,
-    the rest on any. Deals the suite into parts of about equal time, by `DURATIONS`: a
-    group as one unit, the rest one by one; the longest unit goes first, each to the part
-    with the least time yet. A test it does not know counts the median."""
-    units: dict[str, list[pytest.Item]] = {}
-    for item in items:
-        defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[missing-attribute]
-        if any(d[-1].scope == "module" for d in defs):
-            group = item.module.__name__  # ty: ignore[missing-attribute]
-            item.add_marker(pytest.mark.xdist_group(group))
-            units.setdefault(group, []).append(item)
-        else:
-            units[item.nodeid] = [item]
+    """Deals the suite into parts of about equal time, by `DURATIONS`: the tests on a
+    module's browser as one unit, the rest one by one; the longest unit goes first, each to
+    the part with the least time yet. A test it does not know counts the median."""
     if not (shard := config.getoption("shard")):
         return
     i, n = map(int, shard.split("/"))
+    units: dict[str, list[pytest.Item]] = {}
+    for item in items:
+        defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[missing-attribute]
+        shared = any(d[-1].scope == "module" for d in defs)
+        units.setdefault(item.module.__name__ if shared else item.nodeid, []).append(item)  # ty: ignore[missing-attribute]
     known = json.loads(DURATIONS.read_text()) if DURATIONS.exists() else {}
     default = statistics.median(known.values()) if known else 1.0
     weight = {k: sum(known.get(t.nodeid, default) for t in units[k]) for k in units}
@@ -82,8 +74,7 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
 
 
 def pytest_runtest_logreport(report: pytest.TestReport) -> None:
-    nodeid = GROUP.sub("", report.nodeid)  # as collected, without xdist's group
-    TIMES[nodeid] = TIMES.get(nodeid, 0.0) + report.duration
+    TIMES[report.nodeid] = TIMES.get(report.nodeid, 0.0) + report.duration
 
 
 def pytest_sessionfinish(session: pytest.Session) -> None:
