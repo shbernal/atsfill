@@ -25,7 +25,7 @@
     } else if (picklist) {
       d.kind = 'picklist';
       d.id = picklist.id;
-      d.owns = picklist.getAttribute('aria-owns');
+      d.owns = picklist.getAttribute('aria-owns') || picklist.getAttribute('aria-controls'); // its list, by either attribute
       d.placeholder = picklist.placeholder; // its empty item's text, in the page's language
       const opener = box.querySelector('button.rcmpaginatedselectbutton');
       d.disabled = !!opener && opener.disabled; // a cascading list before its parent is chosen
