@@ -1,12 +1,12 @@
 # Workable
 
-Observed on live postings, last on 2026-10-31. The fixture page is [tests/pages/workable/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
+Observed on live postings, last on 2026-11-15. The fixture page is [tests/pages/workable/apply.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/workable/apply.html), served as a posting's application page in `tests/test_workable.py`.
 
 ## Where the form is
 
 - Postings: `apply.workable.com/j/<shortcode>`, redirecting to `apply.workable.com/<account>/j/<shortcode>/`; the form is the posting's "Application" tab, `…/j/<shortcode>/apply/`, which atsfill opens. The shortcode is ten hex characters. The double-send key is `https://apply.workable.com/j/<shortcode>`.
 - A posting that is gone shows no `form[data-ui=application-form]`, read as `posting_gone`.
-- A cookie banner (`[data-ui=cookie-consent]`), a modal dialog in a wrapper styled `--color-cookie-consent`, shows a moment after the page; the blocker's lists hide it on `apply.workable.com`.
+- A cookie banner (`[data-ui=cookie-consent]`), a modal dialog in a wrapper styled `--color-cookie-consent`, shows a moment after the page, its backdrop over the form. The blocker's lists hide it on `apply.workable.com` but not on an employer's own careers domain (`apply.<employer>.com/_/j/<shortcode>/`, where some postings redirect), so the adapter's filter hides the wrapper everywhere.
 - Cloudflare's challenge script runs on the page; it has not stopped a dry run.
 
 ## Reading the form

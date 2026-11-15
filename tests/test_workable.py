@@ -14,6 +14,7 @@ from tests import testuser
 PAGE = Path(__file__).parent / "pages/workable/apply.html"
 JOB = "https://apply.workable.com/acme/j/ABCDEF1234/"
 POSTING = "https://apply.workable.com/j/ABCDEF1234"
+OWN_DOMAIN = "https://apply.acme.example/_/j/ABCDEF1234/apply/"  # an employer's careers domain
 
 
 def serve(route) -> None:
@@ -34,6 +35,7 @@ def page(tmp_path_factory):
     ):
         mp.setattr("atsfill.adapters.workable.FORM_TIMEOUT_MS", 5_000)
         page.context.route("https://apply.workable.com/**", serve)
+        page.context.route(OWN_DOMAIN, serve)
         yield page
 
 
@@ -131,6 +133,17 @@ def test_every_answer_reads_back(page, resume, photo):
     assert [(c.field_id, c.read_back) for c in checks if not c.match] == []
     assert len(checks) == len(answers)
     assert page.locator("[name=CA_2]").input_value() == "50,000"
+
+
+def test_the_cookie_banner_is_hidden_on_an_employers_own_domain(page):
+    """The lists hide it on Workable's domains only, and its backdrop takes the clicks."""
+    adapter = Workable()
+    page.goto(OWN_DOMAIN)
+    fields = adapter.browser_read(page)  # opens each dropdown for its options
+    assert page.locator("[data-ui=backdrop]").is_hidden()
+    answers: dict[str, Answer] = {"CA_1": "1 month"}
+    adapter.fill(page, answers)
+    assert matching.check(fields, answers, adapter.read_back(page))[0].match
 
 
 def test_a_number_input_keeps_digits_only(page):

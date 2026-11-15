@@ -153,6 +153,9 @@ class Workable:
         SideEffect("upload", "hiring_system", "an attached file is stored by Workable at once"),
         SideEffect("submit", "employer", "the application reaches the employer"),
     ]
+    # its banner and backdrop, in a wrapper styled with the employer's colour; the lists hide it
+    # on Workable's domains, not on an employer's own
+    filters = ['##div[style^="--color-cookie-consent:"]']
 
     def __init__(self) -> None:
         self._kinds: dict[str, str] = {}  # how the page renders each field
