@@ -58,6 +58,7 @@
           ]},
           {"id": "dates", "max_count": 1, "fields": [
             {"id": "start_date", "attributes": {"type": "month", "required": true, "maxlength": 255, "options": [], "value": null}},
+            {"id": "end_date", "attributes": {"type": "month", "required": true, "maxlength": 255, "options": [], "value": null}},
             {"id": "current", "attributes": {"type": "checkbox", "required": true, "maxlength": 255, "options": [], "value": null}}
           ]}
         ]
@@ -71,6 +72,10 @@
           ]},
           {"id": "institute_name", "max_count": 1, "fields": [
             {"id": "institute_name", "attributes": {"type": "text", "required": true, "maxlength": 255, "options": [], "value": null}}
+          ]},
+          {"id": "work", "max_count": 1, "fields": [
+            {"id": "part_time", "attributes": {"type": "radio", "required": true, "maxlength": 255, "options": [{"name": "Yes", "value": "true"}, {"name": "No", "value": "false"}], "value": "false"}},
+            {"id": "part_time_text", "attributes": {"type": "textarea", "required": true, "maxlength": 2048, "options": [], "value": null}}
           ]}
         ]
       },
