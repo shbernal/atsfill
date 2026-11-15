@@ -1,5 +1,6 @@
+from scripts import failures as failures_script
 from scripts import run_history
-from scripts.failures import Issue, actions, body, failures, title
+from scripts.failures import Issue, actions, body, failures, show, title
 
 DEV = "a" * 40
 FIX = "f" * 40
@@ -107,3 +108,13 @@ def test_a_closed_issue_without_a_fix_reopens_on_a_failure_after_it_closed():
     assert reopen.kind == "reopen"
     [edit] = actions(found(row("fail", 23)), [Issue(8, TITLE, ""), closed], never)
     assert (edit.kind, edit.number) == ("edit", 8)
+
+
+def test_a_posting_whose_url_is_null_is_looked_up_then_printed_unresolved(monkeypatch, capsys):
+    monkeypatch.setattr(run_history, "query", lambda key, q: [["p1", None]])
+    looked_up = []
+    monkeypatch.setattr(
+        failures_script, "_freehire", lambda system, hashes: looked_up.append(hashes) or {}
+    )
+    show(found(row("fail", 20)), "ashby", "fill", None, "key")
+    assert looked_up == [{"p1"}] and "unresolved" in capsys.readouterr().out
