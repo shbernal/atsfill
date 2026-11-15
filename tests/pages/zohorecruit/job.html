@@ -204,6 +204,10 @@ document.querySelector("#detail-page-applybtn button").addEventListener("click",
 document.querySelector(".tabular-group-add").addEventListener("click", e => {
   e.target.previousElementSibling.classList.remove("hidden");
 });
+// A box's first click is lost, as one is when the page shifts between press and release.
+document.querySelectorAll("crux-boolean-component label").forEach(label => {
+  label.addEventListener("click", e => e.preventDefault(), {once: true});
+});
 document.querySelectorAll("input[type=file]").forEach(input => input.addEventListener("change", () => {
   input.nextElementSibling.innerHTML = [...input.files].map(f => `<div class="lyteFileUpdListFile"><span class="lyteFileUpdFileName">${f.name}</span></div>`).join("");
 }));

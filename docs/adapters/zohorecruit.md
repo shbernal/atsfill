@@ -1,6 +1,6 @@
 # Zoho Recruit
 
-Zoho Recruit's career sites, observed on live postings, last on 2026-10-24. The fixture page is [tests/pages/zohorecruit/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/zohorecruit/job.html) with its form API answer [form.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/zohorecruit/form.json), served as `acme.zohorecruit.com` in `tests/test_zohorecruit.py`: one example of each rendering below, Zoho's Lyte components reduced to their markup and a few lines that act as they do.
+Zoho Recruit's career sites, observed on live postings, last on 2026-11-15. The fixture page is [tests/pages/zohorecruit/job.html](https://github.com/shbernal/atsfill/blob/main/tests/pages/zohorecruit/job.html) with its form API answer [form.json](https://github.com/shbernal/atsfill/blob/main/tests/pages/zohorecruit/form.json), served as `acme.zohorecruit.com` in `tests/test_zohorecruit.py`: one example of each rendering below, Zoho's Lyte components reduced to their markup and a few lines that act as they do.
 
 ## Where the form is
 
@@ -39,7 +39,7 @@ A component's own state lives in page scripts that Camoufox's isolated evaluatio
 ## Filling
 
 - The first entry of each repeatable section answered is added, then the fields are filled in the API's order. A field a rule shows is filled only when the answers show it, its control waited for briefly: a month range's end is hidden behind its dropdowns, so it is never tested for visibility. Once filled, the fields shown are those whose control is visible.
-- Text, number and date inputs are filled; a dropdown is opened and its item clicked; a box or a radio is clicked through its label.
+- Text, number and date inputs are filled; a dropdown is opened and its item clicked; a radio is clicked through its label, a box through its label until it shows the answer: a click can be lost while the page settles after scrolling to the box, press and release landing on different elements.
 
 ## Read-back and submit
 

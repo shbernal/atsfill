@@ -140,6 +140,13 @@ def test_every_answer_reads_back(page, resume, tmp_path):
     assert "Certificate_Link" in adapter.shown_fields(page)
 
 
+def test_a_box_whose_click_is_lost_is_clicked_again(page):
+    adapter, _ = opened(page)
+    answers: dict[str, Answer] = {"Experience_Details.I_currently_work_here": "Yes"}
+    adapter.fill(page, answers)
+    assert adapter.read_back(page)["Experience_Details.I_currently_work_here"] == "Yes"
+
+
 def test_a_field_its_answer_hides_is_not_filled(page):
     adapter, _ = opened(page)
     adapter.fill(page, {"Batch": "No Batch", "Certificate_Link": "https://example.com"})
