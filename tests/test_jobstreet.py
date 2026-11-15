@@ -118,28 +118,41 @@ def test_a_session_the_site_ended_is_signed_out(page):
         Jobstreet().browser_read(page)
 
 
-class Answered:
-    """A request answered `status` with `headers`, whatever it asks."""
+CLIENT = "AbC123"
+MARK = {"name": f"auth0.{CLIENT}.is.authenticated", "domain": "ph.jobstreet.com"}
+CALLBACK = f"{SITE}/oauth/callback/"
 
-    def __init__(self, status: int, headers: dict[str, str]) -> None:
-        self.status, self.headers = status, headers
+
+class Answered:
+    """A request carrying `cookies`, answered `status` with `headers`, whatever it asks."""
+
+    def __init__(self, cookies: list[dict], status: int, headers: dict[str, str]) -> None:
+        self.cookies, self.status, self.headers = cookies, status, headers
+        self.asked: list[str] = []
+
+    def storage_state(self) -> dict:
+        return {"cookies": self.cookies}
 
     def get(self, url: str, **kwargs) -> Answered:
+        self.asked.append(url)
         return self
 
 
 @pytest.mark.parametrize(
-    ("status", "headers", "signed_in"),
+    ("cookies", "status", "headers", "signed_in"),
     [
-        (307, {"location": "/profile/me"}, True),
-        (200, {}, False),
-        (403, {}, None),  # Cloudflare outside the browser
-        (200, {"cf-mitigated": "challenge"}, None),
+        ([MARK], 302, {"location": f"{CALLBACK}?code=c0de"}, True),
+        ([MARK], 302, {"location": f"{CALLBACK}?error=login_required"}, False),
+        ([{**MARK, "domain": "my.jobstreet.com"}], 302, {}, False),  # another site's client
+        ([], 302, {}, False),
+        ([MARK], 403, {"cf-mitigated": "challenge"}, None),  # Cloudflare outside the browser
     ],
 )
-def test_the_session_check_reads_profile(status, headers, signed_in):
-    request = cast(Request, Answered(status, headers))
-    assert Jobstreet().signed_in(request, "ph.jobstreet.com") is signed_in
+def test_the_session_check_asks_seek_for_the_sites_client(cookies, status, headers, signed_in):
+    request = Answered(cookies, status, headers)
+    assert Jobstreet().signed_in(cast(Request, request), "ph.jobstreet.com") is signed_in
+    for url in request.asked:
+        assert f"client_id={CLIENT}" in url and "prompt=none" in url
 
 
 def test_fill_walks_the_steps_and_reads_back_each(opened, page, resume):
@@ -174,13 +187,14 @@ def test_fill_walks_the_steps_and_reads_back_each(opened, page, resume):
 
 def test_fill_uploads_the_cover_letter_its_alternative(opened, page, resume, tmp_path):
     adapter, _ = opened
-    letter = tmp_path / "Letter Ada.pdf"
+    letter = tmp_path / "letter" / "CV Ada.pdf"  # named as the resume, as the profile's can be
+    letter.parent.mkdir()
     letter.write_bytes(b"%PDF-1.4")
     adapter.fill(page, {"resume": resume, "coverLetterFile": str(letter),
                         "question.PH_Q_1": "₱30K", "question.PH_Q_2": ["SAP"],
                         "question.PH_Q_3": "No"})  # fmt: skip
     read = adapter.read_back(page)
-    assert read["coverLetterFile"] == "Letter Ada.pdf"
+    assert read["coverLetterFile"] == "CV Ada.pdf"
     assert "coverLetter" not in read
 
 
@@ -199,12 +213,20 @@ def test_a_profile_without_a_career_history_is_a_known_gap(page):
         adapter.fill(page, answers)
 
 
+def test_a_resume_past_the_ten_seek_keeps_is_a_known_gap(page, resume):
+    adapter = Jobstreet()
+    page.goto(f"{JOB}?fullresumes")
+    adapter.browser_read(page)
+    with pytest.raises(Unsupported, match="unsupported_flow: resume_limit: the profile holds 10"):
+        adapter.fill(page, {"resume": resume})
+
+
 def test_sign_in_types_the_otp_after_the_recaptcha(page, otp_command):
     adapter = Jobstreet()
     page.goto(adapter.login_url("ph.jobstreet.com"))
     with otp.source("default", adapter.name, "ph.jobstreet.com"):
         adapter.sign_in_by_otp(page, "ada@example.com")
-    assert page.url == f"{SITE}/"
+    assert page.url == f"{SITE}/sign-in/onboarding?returnUrl=%2F"
 
 
 def test_an_email_without_an_account_stops_before_registering(page, otp_command):
