@@ -7,13 +7,13 @@ Nothing is sent before Send, so the read-back is the dialog's state. The account
 a wizard of profile steps, each saved on its own button: `profile` fills it (ADR 0017).
 """
 
-import contextlib
 import html
 import json
 import re
 import secrets
 import time
 import urllib.request
+from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import cache
 from typing import Any
@@ -45,7 +45,8 @@ DIALOG = "[role=dialog]"
 PROFILE = f"https://{WAAS}/application"
 WIZARD = "form:has(button[type=submit])"
 PROFILE_TIMEOUT_MS = 20_000
-MANUAL_TIMEOUT_MS = 2_000  # a profile with entries shows them, not the choice
+EDITOR_TIMEOUT_MS = 5_000  # an experience entry's editor closing
+ENTRIES = {"work": ("Work", "Add a role"), "education": ("Education", "Add a school")}
 SAVE_TIMEOUT_MS = 10_000
 SUGGEST_TIMEOUT_S = 5
 SUGGEST_POLL_MS = 250
@@ -323,30 +324,34 @@ class WorkAtAStartup:
             return False
         if step not in STEPS:
             raise Unsupported(f"unhandled_rendering: a profile step {step!r}")
-        if step == "experience":  # an upload or an import cannot be read back field by field
-            manually = page.get_by_role("button", name="fill in your experience manually")
-            with contextlib.suppress(Timeout):
-                manually.wait_for(timeout=MANUAL_TIMEOUT_MS)
-                manually.click()
         page.locator(WIZARD).last.wait_for(timeout=PROFILE_TIMEOUT_MS)
         self._step = step
         return True
 
     def profile_read(self, page: Page) -> list[Field]:
-        form = page.locator(WIZARD).last
         # a follow-up is listed before it shows: a fresh profile's role step shows its
         # questions only once a role is picked
-        return [_profile_field(form, c) for c in STEPS[self._step] if c.shown_when or c.shown(form)]
+        return [
+            _profile_field(form, c)
+            for form, controls in _forms(page, self._step)
+            for c in controls
+            if c.shown_when or c.shown(form)
+        ]
 
     def profile_fill(self, page: Page, answers: dict[str, Answer]) -> None:
-        form = page.locator(WIZARD).last
-        for control in STEPS[self._step]:  # in the page's order: a follow-up after what shows it
-            if control.id in answers:
-                _profile_fill(page, form, control, answers[control.id])
+        wanted = {c.entry for c in STEPS[self._step] if c.id in answers}
+        for form, controls in _forms(page, self._step, commit=True, entries=wanted):
+            for control in controls:  # in the page's order: a follow-up after what shows it
+                if control.id in answers:
+                    _profile_fill(page, form, control, answers[control.id])
 
     def profile_read_back(self, page: Page) -> dict[str, Answer]:
-        form = page.locator(WIZARD).last
-        values = {c.id: _value(form, c) for c in STEPS[self._step] if c.shown(form)}
+        values = {
+            c.id: _value(form, c)
+            for form, controls in _forms(page, self._step)
+            for c in controls
+            if c.shown(form)
+        }
         return {k: v for k, v in values.items() if v not in (None, "", [])}
 
     def save(self, page: Page) -> None:
@@ -386,11 +391,46 @@ class WorkAtAStartup:
             page.wait_for_url(f"**{urlsplit(to).path}", timeout=SAVE_TIMEOUT_MS)
 
 
+def _forms(
+    page: Page, step: str, commit: bool = False, entries: set[str | None] | None = None
+) -> Iterator[tuple[Locator, list[Control]]]:
+    """The step's form and its controls; on `experience`, the editor dialog of the first entry
+    of Work, then of Education, each with its controls, a new entry's where there is none.
+    Each editor is cancelled once its controls are done, or with `commit` kept in its list,
+    which Save & next posts. `entries` limits them to the entries named."""
+    controls = [c for c in STEPS[step] if entries is None or c.entry in entries]
+    if step != "experience":
+        if controls:
+            yield page.locator(WIZARD).last, controls
+        return
+    for entry, (heading, add) in ENTRIES.items():
+        mine = [c for c in controls if c.entry == entry]
+        if not mine:
+            continue
+        section = page.locator(WIZARD).first.locator(
+            f"xpath=.//h2[normalize-space() = '{heading}']/ancestor::div[2]"
+        )
+        edit = section.locator("button[aria-label^='Edit ']")
+        (edit.first if edit.count() else section.get_by_role("button", name=add)).click()
+        dialog = page.locator(DIALOG)
+        dialog.locator("form").wait_for(timeout=PROFILE_TIMEOUT_MS)
+        yield dialog.locator("form"), mine
+        if commit:
+            dialog.locator("button[type=submit]").click()
+        else:
+            dialog.get_by_role("button", name="Cancel").click()
+        try:
+            dialog.wait_for(state="hidden", timeout=EDITOR_TIMEOUT_MS)
+        except Timeout:
+            said = dialog.locator("[aria-invalid=true], :invalid").count()
+            raise Refused(f"step_refused: experience: {heading}: {said} fields invalid") from None
+
+
 @dataclass(frozen=True)
 class Control:
     """One profile field and how its control is found: `kind` names the rendering, `where`
     what finds it (an input's name, a combobox's aria-label, a date's name part), `entry` the
-    list it is in, the first entry of Work History or Education."""
+    list it is in, Work or Education, whose first entry's editor dialog holds it."""
 
     id: str
     label: str
@@ -409,31 +449,19 @@ class Control:
             case "country":
                 return form.locator(f'input[aria-label="{self.where}"]')
             case "combo":
-                return _in_entry(form, self.entry, f"input[@aria-label = '{self.where}']")
+                return form.locator(f'input[aria-label="{self.where}"]')
             case "companies":
                 return form.locator('input[aria-label="Company name"]')
             case "multi" | "skills":
                 return form.get_by_label(self.where, exact=False)
-            case "month":  # the selects' names carry the entry's id: <id>_start_date_month
-                suffix = f"_{self.where}_month"
-                ends = f"substring(@name, string-length(@name) - {len(suffix) - 1}) = '{suffix}'"
-                return _in_entry(form, self.entry, f"select[{ends}]")
+            case "month":  # named after the editor: experience-editor_start_date_month
+                return form.locator(f'select[name$="_{self.where}_month"]')
             case "current":
-                return _in_entry(form, self.entry, "input[@name = 'is_current']")
-            case _ if self.entry:
-                tag = "textarea" if self.where == "summary" else "input"
-                return _in_entry(form, self.entry, f"{tag}[@name = '{self.where}']")
+                return form.locator("input[name=is_current]")
         return form.locator(f'[name="{self.where or self.id}"]')
 
     def shown(self, form: Locator) -> bool:
         return self.locate(form).count() > 0
-
-
-def _in_entry(form: Locator, entry: str | None, node: str) -> Locator:
-    """The first entry's control in Work History, which comes before Education, or in
-    Education."""
-    axis = "preceding" if entry == "work" else "following"
-    return form.locator(f"xpath=(.//h4[contains(., 'Education')]/{axis}::{node})[1]")
 
 
 ENGINEERING = Is("role", ["Engineering"])
@@ -463,7 +491,8 @@ STEPS: dict[str, list[Control]] = {
         ),
         Control(
             "us_visa_sponsorship",
-            "I do not require visa sponsorship to work legally in the United States.",
+            "Do you require visa sponsorship to work legally in the United States (now or in the "
+            "future)?",
             "radio",
             C,
             True,
@@ -499,26 +528,14 @@ STEPS: dict[str, list[Control]] = {
         ),
     ],
     "experience": [
-        Control(
-            "work_employer",
-            "Work History: Employer Name",
-            "combo",
-            T,
-            False,
-            "Employer Name",
-            "work",
-        ),
-        Control("work_title", "Work History: Title", "combo", T, False, "Title", "work"),
-        Control("work_location", "Work History: Location", "input", T, False, "location", "work"),
-        Control(
-            "work_from", "Work History: From (MM/YYYY)", "month", T, False, "start_date", "work"
-        ),
-        Control(
-            "work_current", "Work History: I currently work here", "current", C, False, entry="work"
-        ),
+        Control("work_employer", "Work: Company", "combo", T, False, "Company", "work"),
+        Control("work_title", "Work: Job title", "combo", T, False, "Job title", "work"),
+        Control("work_location", "Work: Location", "input", T, False, "location", "work"),
+        Control("work_from", "Work: From (MM/YYYY)", "month", T, False, "start_date", "work"),
+        Control("work_current", "Work: I currently work here", "current", C, False, entry="work"),
         Control(
             "work_to",
-            "Work History: To (MM/YYYY)",
+            "Work: To (MM/YYYY)",
             "month",
             T,
             False,
@@ -526,34 +543,18 @@ STEPS: dict[str, list[Control]] = {
             "work",
             Is("work_current", ["No"]),
         ),
-        Control("work_summary", "Work History: Summary", "input", T, False, "summary", "work"),
-        Control(
-            "education_school",
-            "Education: School Name",
-            "combo",
-            T,
-            False,
-            "School Name",
-            "education",
-        ),
+        Control("work_summary", "Work: Summary", "input", T, False, "summary", "work"),
+        Control("education_school", "Education: School", "combo", T, False, "School", "education"),
         Control(
             "education_field",
-            "Education: Field of Study / Major",
+            "Education: Field of study",
             "combo",
             T,
             False,
-            "Field of Study / Major",
+            "Field of study",
             "education",
         ),
-        Control(
-            "education_degree",
-            "Education: Degree type",
-            "combo",
-            T,
-            False,
-            "Degree type",
-            "education",
-        ),
+        Control("education_degree", "Education: Degree", "combo", T, False, "Degree", "education"),
         Control(
             "education_from",
             "Education: From (MM/YYYY)",
@@ -621,7 +622,7 @@ def _profile_field(form: Locator, c: Control) -> Field:
 def _options(form: Locator, c: Control) -> list[str] | None:
     match c.kind:
         case "radio" | "checks":
-            return form.locator(f'input[name="{c.id}"]').evaluate_all(_LABELS)
+            return _choices(form, c).evaluate_all(_LABELS)
         case "grid":
             return [
                 a.rsplit(": ", 1)[-1]
@@ -634,17 +635,25 @@ def _options(form: Locator, c: Control) -> list[str] | None:
     return None
 
 
+# An option's name: its label's first text, before a description (Engineering's "Software,
+# hardware and data").
 _LABELS = """es => es.map(e => {
   const l = e.closest("label");
-  return (l.querySelector("b") ?? l).textContent.replace(/\\s+/g, " ").trim();
+  const name = [...l.querySelectorAll("span")].find(s => !s.querySelector("span, input"));
+  return (name ?? l).textContent.replace(/\\s+/g, " ").trim();
 })"""
+
+
+def _choices(form: Locator, c: Control, state: str = "") -> Locator:
+    """A radio or checkbox group's inputs, without the hidden one a checkbox group posts."""
+    return form.locator(f'input[name="{c.id}"]:not([type=hidden]){state}')
 
 
 def _value(form: Locator, c: Control) -> Answer | None:
     target = c.locate(form)
     match c.kind:
         case "radio" | "checks":
-            picked = form.locator(f'input[name="{c.id}"]:checked').evaluate_all(_LABELS)
+            picked = _choices(form, c, ":checked").evaluate_all(_LABELS)
             return picked if c.kind == "checks" else (picked[0] if picked else None)
         case "grid":
             picked = form.locator(f'input[name="{c.where}"]:checked')
@@ -700,10 +709,10 @@ def _profile_fill(page: Page, form: Locator, c: Control, answer: Answer) -> None
         case "input" | "phone", str():
             target.fill(answer)
         case "radio", str():
-            labels = form.locator(f'input[name="{c.id}"]').evaluate_all(_LABELS)
-            form.locator(f'input[name="{c.id}"]').nth(labels.index(answer)).check(force=True)
+            labels = _choices(form, c).evaluate_all(_LABELS)
+            _choices(form, c).nth(labels.index(answer)).check(force=True)
         case "checks", list():
-            boxes = form.locator(f'input[name="{c.id}"]')
+            boxes = _choices(form, c)
             for i, label in enumerate(boxes.evaluate_all(_LABELS)):
                 boxes.nth(i).set_checked(label in answer, force=True)
         case "grid", str():
@@ -758,7 +767,7 @@ def _pick(
     if strict:
         said = ", ".join(repr(t) for t in seen) or "none"
         raise NotTaken(f"no suggestion for {answer!r} in {c.id}; suggestions: {said}")
-    box.press("Escape")
+    box.press("Tab")  # leaves the menu: Escape would close the entry's editor dialog
 
 
 def _companies(page: Page, box: Locator, c: Control, answer: list[str]) -> None:
@@ -780,7 +789,7 @@ def _skills(page: Page, form: Locator, box: Locator, c: Control, answer: list[st
         wanted[skill if sep else level] = level if sep else ""
     have = [v.rsplit(": ", 1)[0] for v in form.evaluate(_SKILLS)]
     for skill in [h for h in have if h not in wanted]:
-        form.locator("[aria-label=remove]").nth(have.index(skill)).click()
+        form.locator(f'[aria-label="Delete {skill}"]').click()
         have.remove(skill)
     for skill in [w for w in wanted if w not in have]:
         _pick(page, c, box, skill, strict=True, exact=True)
@@ -827,10 +836,12 @@ def _option(block: browser.Locator, label: str) -> browser.Locator:
 
 
 def _props(page: Page, component: str) -> dict[str, Any] | None:
-    """The Inertia page's props, when it is `component`."""
+    """The Inertia page's props, when it is `component` in any version: the profile wizard is
+    `ProfileWizardV3Page`."""
     page.locator("[data-page]").first.wait_for(state="attached", timeout=DIALOG_TIMEOUT_MS)
     data = json.loads(page.locator("[data-page]").first.get_attribute("data-page") or "{}")
-    return data.get("props") if data.get("component", "").endswith(component) else None
+    name = re.sub(r"V\d+Page$", "Page", data.get("component", ""))
+    return data.get("props") if name.endswith(component) else None
 
 
 @cache
