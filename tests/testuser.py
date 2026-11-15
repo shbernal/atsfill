@@ -85,7 +85,8 @@ _OBJECTS = [
 
 
 def resume(path: Path) -> Path:
-    """Writes the Test user's résumé to `path`."""
+    """Writes the Test user's résumé to `path`, left as it is when it holds it already: a hiring
+    system can tell a stored copy by the file's name and when it last changed."""
     out, offsets = bytearray(b"%PDF-1.4\n"), []
     for n, body in enumerate(_OBJECTS, 1):
         offsets.append(len(out))
@@ -97,7 +98,8 @@ def resume(path: Path) -> Path:
         len(_OBJECTS) + 1,
         xref,
     )
-    path.write_bytes(out)
+    if not path.exists() or path.read_bytes() != out:
+        path.write_bytes(out)
     return path
 
 

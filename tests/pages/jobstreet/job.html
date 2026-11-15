@@ -6,9 +6,8 @@
 <!-- One rendering of each kind Quick apply showed (docs/adapters/jobstreet.md), not one posting.
      The page routes itself: the posting, then /apply, /role-requirements, /profile and /review,
      loading its data from /graphql as the apply app does. `?linkout` gives an Apply that links
-     out; `?nohistory` a profile without a career history; `?fullresumes` a profile holding the ten
-     resumes SEEK keeps; `?ended` a session the site ended, whose Quick apply goes to SEEK's
-     sign-in. -->
+     out; `?nohistory` a profile without a career history; `?ended` a session the site ended, whose
+     Quick apply goes to SEEK's sign-in. The profile's stored resumes are DocumentsQuery's. -->
 </head>
 <body>
 <main id="app"></main>
@@ -22,7 +21,7 @@ let data = null;
 const UPLOAD_MS = 300;  // an upload's radio shows once the file is stored
 
 async function load() {
-  const ops = ["GetUser", "GetPersonalDetails", "GetJobApplicationProcess"];
+  const ops = ["GetUser", "GetPersonalDetails", "GetJobApplicationProcess", "DocumentsQuery"];
   const response = await fetch("/graphql", {method: "POST", headers: {"content-type": "application/json"},
     body: JSON.stringify(ops.map(operationName => ({operationName, variables: {jobId: "1"}})))});
   data = Object.fromEntries((await response.json()).map((r, i) => [ops[i], r.data]));
@@ -37,7 +36,6 @@ function posting() {
   const out = params.has("linkout");
   state.nohistory = params.has("nohistory");
   state.ended = params.has("ended");
-  state.stored = params.has("fullresumes") ? 10 : 0;
   save();
   app.innerHTML = `<h1>Engineer</h1><a data-automation="job-detail-apply" href="${JOB}/apply"
     target="${out ? "_blank" : "_self"}">${out ? "Apply" : "Quick apply"}</a>`;
@@ -61,8 +59,10 @@ function documents() {
     <h3>Resumé</h3><input id="resume-fileFile" type="file" accept=".doc,.docx,application/pdf" hidden>
     <div id="resumes">${state.resume ? `<input type="radio" name="document-select-r" id="r1" value="r1" checked>
       <label for="r1">${state.resume}</label>` : ""}
-    ${Array.from({length: state.stored}, (_, i) => `<input type="radio" name="document-select-r"
-      id="s${i}" value="s${i}"><label for="s${i}">resume.pdf</label>`).join("")}
+    ${data.DocumentsQuery.viewer.resumes.map((r, i) => `<div><fieldset role="radiogroup">
+      <input type="radio" name="document-select-r" id="s${i}" ${!state.resume && r.isDefault ? "checked" : ""}>
+      <label for="s${i}"><strong>${r.fileMetadata.name}</strong></label></fieldset>
+      <button type="button" id="resume-options-${r.id}" aria-label="Options"></button></div>`).join("")}
     <input type="radio" name="document-select-r" id="r0" value="dont-include"><label for="r0">Don't include a resumé</label></div>
     <h3>Cover letter</h3><input id="coverLetter-fileFile" type="file" accept=".doc,.docx,application/pdf" hidden>
     <button type="button" data-testid="coverLetter-method-upload">Upload</button>

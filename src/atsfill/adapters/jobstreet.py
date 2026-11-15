@@ -10,6 +10,8 @@ step's inputs as they stood when it was left.
 import re
 import time
 from contextlib import suppress
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urlsplit
 
@@ -104,6 +106,16 @@ _NAMED = """([radios, name, checked]) => [...document.querySelectorAll(radios)]
   .map(e => e.value)"""
 
 
+# The id of the radio picking a stored resume: the row holding the resume's Options button,
+# whose id ends with the resume's.
+_STORED = """id => {
+  let row = document.querySelector(`button[id$="-options-${id}"]`);
+  const radios = 'input[type=radio][name^=document-select]';
+  while (row && row.querySelectorAll(radios).length !== 1) row = row.parentElement;
+  return row?.querySelector(radios).id ?? null;
+}"""
+
+
 # The questions the employer's step shows, by control name.
 _ASKED = """() => [...document.querySelectorAll('[name^="questionnaire."]')].map(e => e.name)"""
 
@@ -116,7 +128,9 @@ class Jobstreet:
     side_effects = [
         SideEffect("sign_up", "hiring_system", "login --create creates the SEEK account"),
         SideEffect("fill", "hiring_system", "the personal details are saved to the SEEK profile"),
-        SideEffect("upload", "hiring_system", "a resume is stored as the SEEK profile's default"),
+        SideEffect(
+            "upload", "hiring_system", "a resume the SEEK profile lacks is stored as its default"
+        ),
         SideEffect("submit", "employer", "the application and the SEEK profile reach the employer"),
     ]
 
@@ -210,7 +224,7 @@ class Jobstreet:
             page.goto(f"https://{host}/job/{job[1]}/apply")
             _opened(page)
             deadline = time.monotonic() + STEP_TIMEOUT_MS / 1000
-            needed = {"GetPersonalDetails", "GetJobApplicationProcess", "GetUser"}
+            needed = {"GetPersonalDetails", "GetJobApplicationProcess", "GetUser", "DocumentsQuery"}
             while not needed <= answers.keys() and time.monotonic() < deadline:
                 page.wait_for_timeout(POLL_MS)
         finally:
@@ -232,6 +246,7 @@ class Jobstreet:
             fields.append(Field("profileVisibility", "Profile visibility", FieldType.CHOICE, True,
                                 VISIBILITY))  # fmt: skip
         self._fields = {f.id: f for f in fields}
+        self._resumes = answers["DocumentsQuery"]["viewer"]["resumes"]
         self._read = {}
         return fields
 
@@ -241,11 +256,12 @@ class Jobstreet:
         self._asked = []
         self._read = {k: f.prefilled for k in DETAILS if (f := self._fields[k]).prefilled}
         self._read |= _personal_details(page, self._fields, answers)
-        stored = page.locator(f"{RESUMES}:not([value=dont-include])").count()
-        if answers.get("resume") is not None and stored >= RESUMES_KEPT:
-            detail = f"the profile holds {stored} resumes, and SEEK refuses another upload"
+        resume = answers.get("resume")
+        stored = _stored(self._resumes, str(resume)) if resume is not None else None
+        if resume is not None and not stored and (kept := len(self._resumes)) >= RESUMES_KEPT:
+            detail = f"the profile holds {kept} resumes, and SEEK refuses another upload"
             raise Unsupported(known_gap(self, "resume_limit", detail))
-        _documents_fill(page, answers)
+        _documents_fill(page, answers, stored)
         documents = page.evaluate(_STEP_ONE)
         self._read |= {k: documents[k] for k in DOCUMENTS if documents[k]}
         _continue(page)
@@ -466,10 +482,29 @@ def _phone(page: Page, answer: str) -> None:
     page.locator("#phoneNumber").fill(answer.removeprefix(picked[1]))
 
 
-def _documents_fill(page: Page, answers: dict[str, Answer]) -> None:
-    """Uploads the resume, which the page then picks, or leaves it out; the same for the cover
-    letter, uploaded or written in its box."""
-    if (resume := answers.get("resume")) is not None:
+def _stored(resumes: list[dict[str, Any]], path: str) -> str | None:
+    """The id of the newest resume the profile stored under the file's name since the file last
+    changed: the same file, which picking spares the profile another copy."""
+    name = path.rsplit("/", 1)[-1]
+    changed = datetime.fromtimestamp(Path(path).stat().st_mtime, UTC)
+    same = [
+        r
+        for r in resumes
+        if r["fileMetadata"]["name"] == name
+        and datetime.fromisoformat(r["createdDateUtc"].replace("Z", "+00:00")) >= changed
+    ]
+    return max(same, key=lambda r: r["createdDateUtc"])["id"] if same else None
+
+
+def _documents_fill(page: Page, answers: dict[str, Answer], stored: str | None) -> None:
+    """Picks the resume the profile stored already, or uploads it, which the page then picks,
+    or leaves it out; the cover letter is uploaded, written in its box or left out."""
+    if stored:
+        radio = page.evaluate(_STORED, stored)
+        if radio is None:
+            raise RuntimeError(f"the stored resume {stored} shows no radio")
+        page.locator(f"[id='{radio}']").check(force=True)
+    elif (resume := answers.get("resume")) is not None:
         _upload(page, RESUME_FILE, RESUMES, str(resume))
     elif (none := page.locator("input[type=radio][value=dont-include]")).count():
         none.check(force=True)

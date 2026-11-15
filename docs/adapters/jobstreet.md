@@ -20,14 +20,14 @@ SEEK's job boards in Southeast Asia (`<country>.jobstreet.com`: `ph`, `sg`, `my`
 
 ## Reading and filling
 
-The page loads `GetPersonalDetails` (the profile's name, phone with its calling code, home location), `GetUser` (`profileVisibility2`) and `GetJobApplicationProcess` (`linkOut`, and `questionnaire.questions`: `id`, `text`, `__typename`, `options`) from `<site>/graphql` with the session's token; atsfill reads them from those answers.
+The page loads `GetPersonalDetails` (the profile's name, phone with its calling code, home location), `GetUser` (`profileVisibility2`), `DocumentsQuery` (the profile's resumes: `id`, `createdDateUtc`, `isDefault`, `fileMetadata.name`, and `fileMetadata.size` as shown, `588 B`) and `GetJobApplicationProcess` (`linkOut`, and `questionnaire.questions`: `id`, `text`, `__typename`, `options`) from `<site>/graphql` with the session's token; atsfill reads them from those answers.
 
 | Step | Field | Type | Rendering | Postings |
 |---|---|---|---|---|
 | `/apply` | `firstName`, `lastName` | `text` | inputs, the profile's values; required | 5 walked |
 | `/apply` | `currentLocation` | `typeahead` | `#currentLocation2`, suggestions while typing (`Makati City Metro Manila`); required | 5 walked |
 | `/apply` | `phone` | `phone` | a calling code select (`#countryCallingCode`, `Philippines (+63)`) and `#phoneNumber`; "recommended" | 5 walked |
-| `/apply` | `resume` | `file` | Upload (`#resume-fileFile`), then a radio named for the file, beside the profile's resumes of the same name; or "Don't include a resumé" | 5 walked |
+| `/apply` | `resume` | `file` | the profile's resumes, each a radio named for its file beside an Options button whose id ends `-options-<id>`, the default picked; Upload (`#resume-fileFile`), then a radio named for the file; or "Don't include a resumé" | 5 walked |
 | `/apply` | `coverLetter` | `text` | "Write a cover letter" with its box, or "Don't include a cover letter"; `one_of` `coverLetter` | 5 walked |
 | `/apply` | `coverLetterFile` | `file` | Upload (`[data-testid=coverLetter-method-upload]`, a button over `#coverLetter-fileFile`), then a radio of the same test id named for the file; `one_of` `coverLetter` | 1 walked |
 | `/apply/role-requirements` | `question.<id>` | `choice` | `SingleChoiceQuestion`: a native select named `questionnaire.<id>`, or radios (`Ya`, `Tidak`) whose labels take the click | selects on 9 postings, radios on 1 |
@@ -35,7 +35,7 @@ The page loads `GetPersonalDetails` (the profile's name, phone with its calling 
 | `/apply/review` | `profileVisibility` | `choice` | Public, Standard, Limited, Hidden radios, while the profile has none | 2 walked |
 
 - The personal details open for editing with the profile's values, and the step does not continue until they are saved: Save writes them to the profile (`UpdatePersonalDetails`), changed or not. The read-back is what Save was given, or the profile's values when the details opened saved.
-- An uploaded resume is stored in the profile at once (`ApplyProcessUploadedResume`) and made its default (`SetDefaultResume`). A profile keeps ten: past them the upload is answered `BAD_USER_INPUT` and the page shows nothing, the known gap `resume_limit`. An uploaded cover letter is not stored: the next Quick apply offers only the box and "Don't include".
+- An uploaded resume is stored in the profile at once (`ApplyProcessUploadedResume`) and made its default (`SetDefaultResume`). A profile keeps ten: past them the upload is answered `BAD_USER_INPUT` and the page shows nothing, the known gap `resume_limit`. A resume the profile stored under the file's name since the file last changed is picked rather than uploaded again, so the same file adds one copy, not one per fill. Options → Delete removes a stored resume, after a confirmation; atsfill never deletes one. An uploaded cover letter is not stored: the next Quick apply offers only the box and "Don't include".
 - An upload's radio shows a few seconds after the file is set: atsfill waits for a picked radio named for the file that was not there before, since the profile's resumes can share the name.
 - The cover letter is written or uploaded, two alternatives sharing the key `coverLetter` (ADR 0005): the answers pick one, and neither leaves it out where the page allows.
 - Every question was required; the page marks none.
