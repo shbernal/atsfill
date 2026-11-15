@@ -29,6 +29,7 @@ from atsfill.core.adapter import (
     KeepsProfile,
     ListsShownFields,
     NeedsAccount,
+    NotSent,
     NotTaken,
     OpensForm,
     ProfileIncomplete,
@@ -246,8 +247,8 @@ def _read_signed_in(page: Page, adapter: Adapter, mine: Path, user: str, url: st
 def _open(page: Page, adapter: SendsToOpen, mine: Path, user: str, url: str) -> None:
     """Opens a form whose system sends the application to show it, under a send's rules: the
     adapter in `submit-allowed`, and the send recorded `opened`, which the send of that same
-    application does not count against (ADR 0006). An error past the adapter's own stops may
-    follow the send: it is recorded `unknown`."""
+    application does not count against (ADR 0006). An error the adapter does not say came
+    before the send (`NotSent`) may follow it: it is recorded `unknown`."""
     if not paths.submit_enabled(adapter.name, user):
         raise Refused(f"{_not_enabled(adapter, user)}; opening its form sends the application")
     posting = adapter.posting(page.url)
@@ -255,6 +256,8 @@ def _open(page: Page, adapter: SendsToOpen, mine: Path, user: str, url: str) -> 
         evidence = adapter.open(page)
     except SignedOut, Unsupported, Blocked:
         raise
+    except NotSent as e:
+        raise e.cause from None
     except Exception as e:
         reason = f"error_after_click: {type(e).__name__}: {e}"
         attempts.record(mine, posting, Status.UNKNOWN, reason=reason)

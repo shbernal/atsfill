@@ -6,7 +6,15 @@ import pytest
 from atsfill import core
 from atsfill.cli import parser, run
 from atsfill.core import attempts, commands, registry, telemetry
-from atsfill.core.adapter import Blocked, Held, NotTaken, Unsupported, known_gap, out_of_scope
+from atsfill.core.adapter import (
+    Blocked,
+    Held,
+    NotSent,
+    NotTaken,
+    Unsupported,
+    known_gap,
+    out_of_scope,
+)
 from atsfill.core.browser import Timeout
 from atsfill.core.results import Field, FieldType, Is, Status
 from tests.fake import FIELDS, Fake, FakeOpens, FakeOpensForm, FakeProfile, FakeReveals
@@ -466,6 +474,19 @@ def test_an_unexpected_error_opening_may_have_sent(opens, config, url, answers, 
     assert (core.send(url, answers, data_dir=data).reason or "").startswith(
         "already_sent: last attempt ended unknown"
     )
+
+
+def test_an_error_the_adapter_says_came_before_sending_is_not_sent(
+    opens, config, url, answers, data
+):
+    config('submit-allowed = ["fake"]')
+    opens.open_raises = NotSent(RuntimeError("no section"))
+    result = core.fill(url, answers, data_dir=data)
+    assert (result.status, result.reason) == (
+        Status.UNSUPPORTED,
+        "adapter_error: RuntimeError: no section",
+    )
+    assert attempts.last(data / "users/default", url) is None
 
 
 def test_a_stop_before_opening_records_nothing(opens, config, url, answers, data):

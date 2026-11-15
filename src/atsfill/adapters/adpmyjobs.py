@@ -26,6 +26,7 @@ from atsfill.core.adapter import (
     SignedOut,
     SignUpDetails,
     Unsupported,
+    before_send,
     known_gap,
 )
 from atsfill.core.browser import Locator, Page, Request, Timeout
@@ -124,58 +125,60 @@ class ADPMyJobs:
 
     def open(self, page: Page) -> str | None:
         """Loads the posting signed in: Apply sends the application. One the account applied
-        to has its unfinished workflow continued, as My Jobs does."""
-        found = _posting(page.url)
-        if found is None:
-            raise RuntimeError(f"{page.url} is not an ADP MyJobs posting")
-        site, req = found
-        # Left before it settles, the first page's loader wedges the tab: no workflow shows in it
-        with suppress(Timeout):
-            page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
-        settings = _career_site(page, site)
-        self._site_id = str(settings["externalId"])
-        if not (settings.get("enabledFeatures") or {}).get("candidateApplicationWorkflow"):
-            detail = f"{site} continues each application on ADP Recruiting, after Apply"
-            raise Unsupported(known_gap(self, "recruiting_workflow", detail))
-        page.goto(f"https://{HOST}/{site}/cx/job-details?reqId={req}")
-        deadline = time.monotonic() + POSTING_TIMEOUT_MS / 1000
-        while not page.evaluate("() => !!sessionStorage.getItem('myJobsToken')"):
-            if urlsplit(page.url).path.endswith("/auth"):
-                raise SignedOut("login_required: the posting sent to the sign-in")
-            if time.monotonic() > deadline:
-                raise RuntimeError("the posting loaded without a session token")
-            page.wait_for_timeout(SETTLE_MS)
-        with suppress(Timeout):  # left with its requests in flight, the workflow can spin
-            page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
-        if application := self._application(page, req):
-            if (application.get("applicationStatusCode") or {}).get("label") != "CONTINUE":
-                raise Unsupported(f"already_sent: the account applied ({_status(application)})")
-            assignment = application["assignmentID"]
-            workflow = self._get(
-                page, f"{QUESTIONNAIRES}/WORKFLOW?assignmentID={assignment}&rmapp=forms"
-            )
-            component = next(
-                (
-                    labels["component"]
-                    for raw in workflow.get("questionSections") or []
-                    if raw.get("completionStatusCode") != "completed"
-                    and "component" in (labels := _labels(raw))
-                ),
-                None,
-            )
-            if component is None:
-                raise Unsupported("already_sent: the account completed its application")
-            page.goto(
-                f"https://{HOST}/{site}/cx/app?reqId={req}&assignmentId={assignment}"
-                f"&workflowComponent={component}"
-            )
-            self._wait_for_section(page)
-            return None
-        apply = page.get_by_role("button", name="Apply", exact=True)
-        try:
-            apply.first.wait_for(timeout=max(0, deadline - time.monotonic()) * 1000)
-        except Timeout:
-            raise Unsupported("posting_gone: the posting shows no Apply") from None
+        to has its unfinished workflow continued, as My Jobs does: nothing is sent but by the
+        click on Apply."""
+        with before_send():  # all of it but the click, which sends
+            found = _posting(page.url)
+            if found is None:
+                raise RuntimeError(f"{page.url} is not an ADP MyJobs posting")
+            site, req = found
+            # Left before it settles, the first page's loader wedges the tab: no workflow shows
+            with suppress(Timeout):
+                page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
+            settings = _career_site(page, site)
+            self._site_id = str(settings["externalId"])
+            if not (settings.get("enabledFeatures") or {}).get("candidateApplicationWorkflow"):
+                detail = f"{site} continues each application on ADP Recruiting, after Apply"
+                raise Unsupported(known_gap(self, "recruiting_workflow", detail))
+            page.goto(f"https://{HOST}/{site}/cx/job-details?reqId={req}")
+            deadline = time.monotonic() + POSTING_TIMEOUT_MS / 1000
+            while not page.evaluate("() => !!sessionStorage.getItem('myJobsToken')"):
+                if urlsplit(page.url).path.endswith("/auth"):
+                    raise SignedOut("login_required: the posting sent to the sign-in")
+                if time.monotonic() > deadline:
+                    raise RuntimeError("the posting loaded without a session token")
+                page.wait_for_timeout(SETTLE_MS)
+            with suppress(Timeout):  # left with its requests in flight, the workflow can spin
+                page.wait_for_load_state("networkidle", timeout=POSTING_TIMEOUT_MS)
+            if application := self._application(page, req):
+                if (application.get("applicationStatusCode") or {}).get("label") != "CONTINUE":
+                    raise Unsupported(f"already_sent: the account applied ({_status(application)})")
+                assignment = application["assignmentID"]
+                workflow = self._get(
+                    page, f"{QUESTIONNAIRES}/WORKFLOW?assignmentID={assignment}&rmapp=forms"
+                )
+                component = next(
+                    (
+                        labels["component"]
+                        for raw in workflow.get("questionSections") or []
+                        if raw.get("completionStatusCode") != "completed"
+                        and "component" in (labels := _labels(raw))
+                    ),
+                    None,
+                )
+                if component is None:
+                    raise Unsupported("already_sent: the account completed its application")
+                page.goto(
+                    f"https://{HOST}/{site}/cx/app?reqId={req}&assignmentId={assignment}"
+                    f"&workflowComponent={component}"
+                )
+                self._wait_for_section(page)
+                return None
+            apply = page.get_by_role("button", name="Apply", exact=True)
+            try:
+                apply.first.wait_for(timeout=max(0, deadline - time.monotonic()) * 1000)
+            except Timeout:
+                raise Unsupported("posting_gone: the posting shows no Apply") from None
         apply.first.click()
         deadline = time.monotonic() + POSTING_TIMEOUT_MS / 1000
         while not (made := self._application(page, req)):
