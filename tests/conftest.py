@@ -1,4 +1,6 @@
 import functools
+import json
+import statistics
 import sys
 import threading
 from collections.abc import Callable, Generator
@@ -15,6 +17,10 @@ import pytest
 from atsfill.core import browser, otp
 
 PAGES = Path(__file__).parent / "pages"
+# Each test's seconds in CI, all phases: the `durations` artifact of a CI run, its shards'
+# files merged. Refreshed when the parts drift apart; a test it lacks counts the median.
+DURATIONS = Path(__file__).parent / "durations.json"
+TIMES: dict[str, float] = {}
 
 
 class Pages(SimpleHTTPRequestHandler):
@@ -37,11 +43,13 @@ class Pages(SimpleHTTPRequestHandler):
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--shard", help="i/n: runs the i-th of n parts of the suite")
+    parser.addoption("--store-durations", help="path: writes each test's seconds there")
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
-    """Deals the suite into parts in turn: the tests on a module's browser as one, then the
-    rest one by one."""
+    """Deals the suite into parts of about equal time, by `DURATIONS`: the tests on a
+    module's browser as one unit, the rest one by one; the longest unit goes first, each to
+    the part with the least time yet. A test it does not know counts the median."""
     if not (shard := config.getoption("shard")):
         return
     i, n = map(int, shard.split("/"))
@@ -50,10 +58,31 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item
         defs = item._fixtureinfo.name2fixturedefs.values()  # ty: ignore[missing-attribute]
         shared = any(d[-1].scope == "module" for d in defs)
         units.setdefault(item.module.__name__ if shared else item.nodeid, []).append(item)  # ty: ignore[missing-attribute]
-    order = sorted(units, key=lambda key: ("::" in key, key))
-    kept = {id(t) for k, key in enumerate(order) if k % n == i - 1 for t in units[key]}
+    known = json.loads(DURATIONS.read_text()) if DURATIONS.exists() else {}
+    default = statistics.median(known.values()) if known else 1.0
+    weight = {k: sum(known.get(t.nodeid, default) for t in units[k]) for k in units}
+    loads = [0.0] * n
+    kept: set[int] = set()
+    for key in sorted(units, key=lambda k: (-weight[k], k)):
+        part = loads.index(min(loads))
+        loads[part] += weight[key]
+        if part == i - 1:
+            kept |= {id(t) for t in units[key]}
     config.hook.pytest_deselected(items=[t for t in items if id(t) not in kept])
     items[:] = [t for t in items if id(t) in kept]
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    TIMES[report.nodeid] = TIMES.get(report.nodeid, 0.0) + report.duration
+
+
+def pytest_sessionfinish(session: pytest.Session) -> None:
+    """Under xdist, the controller sees every worker's reports and writes them."""
+    path = session.config.getoption("store_durations")
+    if path and not hasattr(session.config, "workerinput"):
+        Path(path).write_text(
+            json.dumps({k: round(v, 2) for k, v in sorted(TIMES.items())}, indent=0) + "\n"
+        )
 
 
 class MemoryKeyring(keyring.backend.KeyringBackend):

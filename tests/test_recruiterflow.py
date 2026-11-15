@@ -11,6 +11,8 @@ from atsfill.core.adapter import Unsupported
 from atsfill.core.results import FieldType
 from tests import testuser
 
+pytestmark = pytest.mark.blocker
+
 PAGE = Path(__file__).parent / "pages/recruiterflow/form.html"
 URL = "https://recruiterflow.com/acme/jobs/1"
 CLOSED = "https://recruiterflow.com/acme/jobs/2"

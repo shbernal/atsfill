@@ -35,7 +35,15 @@ jobs:
       - run: uv run atsfill install-browser
         env:
           GITHUB_TOKEN: ${{ github.token }}  # the fetch asks GitHub's API, rate limited without one
-      - run: uv run pytest -n auto --dist loadscope --durations=20 --shard ${{ matrix.shard }}/3
+      - run: >-
+          uv run pytest -n auto --dist loadscope --durations=20 --shard ${{ matrix.shard }}/3
+          --store-durations "$RUNNER_TEMP/durations-${{ matrix.shard }}.json"
+      # Merged, the shards' files refresh tests/durations.json, which deals the shards.
+      - if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: durations-${{ matrix.shard }}
+          path: ${{ runner.temp }}/durations-${{ matrix.shard }}.json
 
   # Windows: the package imports and the data directory lock holds. No browser runs here.
   windows:
