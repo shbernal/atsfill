@@ -43,7 +43,8 @@ function footer(ready) {
 function go(step) {
   history.pushState({}, "", `${BASE}/apply/${step}`);
   if (!LATE) return render();
-  rendering = true;
+  rendering = true;  // the step before's Continue shows disabled meanwhile
+  document.querySelectorAll("footer button:not([hidden])")[1]?.setAttribute("disabled", "");
   setTimeout(() => { rendering = false; render(); }, RENDER_MS);
 }
 
