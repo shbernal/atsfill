@@ -600,7 +600,8 @@ def _read(data: Path, user: str, url: str, sessions: Sessions | None, seen: Seen
             try:
                 _listed(result, fields)
             except ValueError as e:
-                return Result(Status.UNSUPPORTED, url, adapter.name, f"adapter_error: {e}")
+                reason = f"adapter_error: {type(e).__name__}: {e}"
+                return Result(Status.UNSUPPORTED, url, adapter.name, reason)
             _unfillable(result)
             return result
     return _in_budget(url, seen, lambda: _browser_read(data, user, url, sessions, seen))
