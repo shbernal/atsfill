@@ -275,8 +275,9 @@ def answers(
             continue
         if f.type in (FieldType.CHOICE, FieldType.MULTI_CHOICE):
             a = _showing_most(f, fields, given, cv, picture, video)
-        given[f.id] = a
         answered.add(f.one_of)
         if f.prefilled is None or f.type is FieldType.FILE:
-            out[f.id] = a
+            out[f.id] = given[f.id] = a
+        else:  # left to the account: what it shows is what the prefilled value shows
+            given[f.id] = f.prefilled
     return out

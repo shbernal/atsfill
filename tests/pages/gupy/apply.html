@@ -105,8 +105,8 @@ async function sendAnswers() {
   screen.innerHTML = "<p>Application sent</p>";
 }
 
-fetch(APPLICATION).then(r => r.json()).then(body => {
-  questions = body.questionForm.questions;
+fetch(APPLICATION).then(r => r.ok ? r.json() : {}).then(body => {  // 404 without a form
+  questions = body.questionForm?.questions ?? [];
   show("resume");
 });
 </script>

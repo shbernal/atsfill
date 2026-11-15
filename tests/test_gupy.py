@@ -19,12 +19,15 @@ REFERRER_EMAIL = "guiddedApplicationAdditionalDataIndicatedByEmailInput"
 CORPORATE_EMAIL = "guiddedApplicationAdditionalDataCorporateEmailInput"
 saved: list[str] = []
 incomplete: list[bool] = []  # the next apply page's resume is incomplete
+formless: list[bool] = []  # the next posting has no question form
 
 
 def serve(route) -> None:
     request = route.request
     path = request.url.split("?")[0]
-    if path.endswith("/forms"):
+    if path.endswith("/forms") and formless:
+        route.fulfill(status=404, body="", headers={"access-control-allow-origin": "*"})
+    elif path.endswith("/forms"):
         route.fulfill(path=PAGES / "forms.json", headers={"access-control-allow-origin": "*"})
     elif "private-api" in path:
         saved.append(f"{request.method} {path.rsplit('/', 1)[-1]}")
@@ -228,6 +231,16 @@ def test_an_incomplete_resume_is_the_known_gap(page, monkeypatch):
             Gupy().browser_read(page)
     finally:
         incomplete.clear()
+
+
+def test_a_posting_without_a_question_form_lists_additional_information_only(page):
+    page.goto(JOB)
+    formless.append(True)
+    try:
+        fields = Gupy().browser_read(page)
+    finally:
+        formless.clear()
+    assert fields and not [f for f in fields if f.id.startswith("question-")]
 
 
 def test_an_unknown_question_type_is_listed_unhandled():

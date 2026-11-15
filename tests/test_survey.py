@@ -143,6 +143,14 @@ def test_a_choice_takes_the_option_that_shows_the_most_follow_ups(tmp_path):
     assert answers == {"w": "Yes", "i": testuser.TEXT}
 
 
+def test_a_choice_left_to_the_account_shows_only_what_its_prefilled_option_shows(tmp_path):
+    fields = [
+        Field("w", "Referred?", FieldType.CHOICE, True, ["Yes", "No"], prefilled="No"),
+        Field("i", "Referrer", FieldType.TEXT, True, shown_when=Is("w", ["Yes"])),
+    ]
+    assert testuser.answers(fields, testuser.resume(tmp_path / "resume.pdf")) == {}
+
+
 def test_the_test_user_gives_no_preferred_name_whatever_it_shows(tmp_path):
     fields = [
         Field("p", "I have preferred name", FieldType.CHOICE, False, ["Yes", "No"]),
