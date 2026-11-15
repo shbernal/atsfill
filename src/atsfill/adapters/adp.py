@@ -171,7 +171,7 @@ class ADP:
         asked = self._questions(control, transforms)
         self._steps = [
             Step("Personal Information", PERSONAL[0][1], self._personal(page, transforms)),
-            Step("Resume", "input[type=file]", [self._resume(), self._opt_out()]),
+            Step("Resume", "input[type=file]", [self._resume(), *self._opt_out(indicators)]),
         ]  # fmt: skip
         # A wizard with nothing to ask has no Questions step; one that asks nothing the meta
         # lists has no box of its own: Next moves past it
@@ -270,16 +270,18 @@ class ADP:
         self._boxes["resume"] = "input[type=file]"
         return Field("resume", "Resume", FieldType.FILE, True, accept=[".pdf", ".doc", ".docx"])
 
-    def _opt_out(self) -> Field:
-        """The opt-out an employer's uploaded résumé shows, in no meta: listed on every form,
-        its box left alone unless answered."""
+    def _opt_out(self, indicators: dict[str, bool]) -> list[Field]:
+        """The opt-out an uploaded résumé shows where the meta's `ProfileRelevanceIndicator` is
+        on, its box left alone unless answered."""
+        if not indicators.get("ProfileRelevanceIndicator"):
+            return []
         self._boxes[OPT_OUT] = "input[name=candidateProfileRelevanceOptionDivId]"
         label = (
             "I want to opt out from having my resume reviewed by artificial intelligence as "
             "part of the application process."
         )
-        return Field(OPT_OUT, label, FieldType.CHOICE, False, YES_NO, default="No",
-                     shown_when=Is("resume"))  # fmt: skip
+        return [Field(OPT_OUT, label, FieldType.CHOICE, False, YES_NO, default="No",
+                      shown_when=Is("resume"))]  # fmt: skip
 
     def _questions(self, control: dict[str, Any], transforms: dict[str, Any]) -> list[Field]:
         """The questionnaire, each question its `#question_<n>` by position; then the desired

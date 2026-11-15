@@ -104,10 +104,14 @@ async function posting() {
 // The wizard: its steps in a bar, Next moving step by step on the client.
 let steps = [], number = 0, meta = null;
 
+// Each indicator by its code, or its short name where it has no code
+const indicators = () => Object.fromEntries(meta.data.control.customIndicators
+  .map(i => [i.nameCode.codeValue ?? i.nameCode.shortName, i.indicatorValue]));
+
 async function wizard() {
   meta = await api(`${EVENTS}/v1/job-application.submit/meta?cid=${params.get("cid")}&ccId=${
     params.get("ccId")}&lang=en_US`, {headers: {requisitionoid: params.get("jobId")}});
-  const on = Object.fromEntries(meta.data.control.customIndicators.map(i => [i.nameCode.codeValue, i.indicatorValue]));
+  const on = indicators();
   // Questions only where there is something to ask: a questionnaire, the pay, the referral or the comment
   const all = Object.assign({}, ...meta.meta["/data/transforms"]);
   const asks = meta.data.control.questionnaire?.questions?.length || [
@@ -236,7 +240,7 @@ function questions() {
 }
 
 function selfId() {
-  const on = Object.fromEntries(meta.data.control.customIndicators.map(i => [i.nameCode.codeValue, i.indicatorValue]));
+  const on = indicators();
   const person = "/jobApplication/applicant/person";
   const pairs = path => codes(`${person}/${path}`).map(i => [i.codeValue, i.longName]);
   return `<sdf-button id="vsidWhy" role="button">Why are we asking?</sdf-button>` +
@@ -314,7 +318,7 @@ function wire() {
   if (file) file.onchange = async () => {
     await api(`/mascsr/applicant/work-fulfillment/document.upload`, {method: "POST", body: "{}"});
     app.querySelector("#uploaded").textContent = file.files[0].name;
-    app.querySelector("#uploaded").insertAdjacentHTML("afterend",
+    if (indicators().ProfileRelevanceIndicator) app.querySelector("#uploaded").insertAdjacentHTML("afterend",
       `<div id="candidateProfileRelevanceOptionDivId"><input id="checkbox_2" type="checkbox"
         name="candidateProfileRelevanceOptionDivId" class="hidden"><label for="checkbox_2">I want to opt out</label></div>`);
   };

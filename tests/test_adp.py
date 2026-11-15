@@ -84,12 +84,15 @@ TRANSFORMS = {
 }
 INDICATORS = {"VSID": True, "GENDER": True, "RACE": True, "VSID_VeteranEnabledIndicator": True,
               "VSID_DisabilityEnabledIndicator": False}  # fmt: skip
+NAMED = {"ProfileRelevanceIndicator": True}  # indicators with a short name and no code
 
 
 def meta(requisition: str | None) -> dict:
     """The wizard's meta; its questionnaire only for the posting its header names."""
     indicators = [{"nameCode": {"codeValue": k}, "indicatorValue": v}
-                  for k, v in INDICATORS.items()]  # fmt: skip
+                  for k, v in INDICATORS.items()] + [
+        {"nameCode": {"shortName": k}, "indicatorValue": v} for k, v in NAMED.items()
+    ]  # fmt: skip
     control = {"attestations": [{"messageTxt": "I certify my answers are true."}],
                "customIndicators": indicators}  # fmt: skip
     if requisition == "5001_1":
@@ -256,6 +259,17 @@ def test_the_opt_out_a_resume_shows_is_answered(opened, page, resume):
     assert adapter.read_back(page)["resume.ai_opt_out"] == "Yes"
     assert "resume.ai_opt_out" in adapter.shown_fields(page)
     assert unmet(adapter, page, fields, answers) == []
+
+
+def test_an_employer_without_profile_relevance_has_no_opt_out(signed_in, monkeypatch, resume):
+    monkeypatch.setitem(NAMED, "ProfileRelevanceIndicator", False)
+    adapter = ADP()
+    signed_in.goto(JOB)
+    fields = adapter.browser_read(signed_in)
+    assert "resume.ai_opt_out" not in {f.id for f in fields}
+    adapter.fill(signed_in, complete(resume))
+    assert "resume.ai_opt_out" not in adapter.read_back(signed_in)
+    assert "resume.ai_opt_out" not in adapter.shown_fields(signed_in)
 
 
 def test_a_next_left_disabled_is_not_taken(page, monkeypatch):
